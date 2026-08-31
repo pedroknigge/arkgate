@@ -15,7 +15,12 @@ export type FieldEvent = {
 
 export type Release = {
   readonly version: number;
+  /** Combined ξ+σ fingerprint. 4.8.x compatible when no catalog digest is mixed in. */
   readonly hash: string;
+  /** ξ identity. Saldo / clock refresh must not change this. */
+  readonly xiHash: string;
+  /** σ stamp. Independent of xiHash. */
+  readonly sigmaHash: string;
   readonly xi: XiRecord;
   readonly sigma: SigmaRecord;
   readonly releasedAt: number;
@@ -40,7 +45,15 @@ export type IngestEscalate = {
   readonly target: EscalationTarget;
 };
 
-export type IngestResult = IngestAbsorb | IngestEscalate;
+export type IngestHold = {
+  readonly kind: 'hold';
+  readonly event: FieldEvent;
+  readonly xiHash: string;
+  readonly reasonCode: 'stale-sigma';
+  readonly reason?: string;
+};
+
+export type IngestResult = IngestAbsorb | IngestEscalate | IngestHold;
 
 export type ProposeResult = {
   readonly nextXi: XiRecord;

@@ -73,6 +73,12 @@ export function assertXiSchema(xi, schema) {
 export function hashReleasePayload(xi, sigma) {
     return deterministicHash(stableSerialize({ xi, sigma }));
 }
+export function hashXiIdentity(xi) {
+    return deterministicHash(stableSerialize({ xi }));
+}
+export function hashSigmaIdentity(sigma) {
+    return deterministicHash(stableSerialize({ sigma }));
+}
 export function xiRecordsEqual(left, right) {
     return stableSerialize(left) === stableSerialize(right);
 }
@@ -93,11 +99,26 @@ export function createFrozenRelease(input) {
     const release = Object.freeze({
         version: input.version,
         hash: hashReleasePayload(xi, sigma),
+        xiHash: hashXiIdentity(xi),
+        sigmaHash: hashSigmaIdentity(sigma),
         xi,
         sigma,
         releasedAt: input.now,
     });
     return release;
+}
+/** D2: refresh σ without minting a pattern. xiHash must not change. */
+export function refreshSigmaRecord(input) {
+    const sigma = freezeRecord(input.sigma, 'σ');
+    return Object.freeze({
+        version: input.current.version,
+        hash: hashReleasePayload(input.current.xi, sigma),
+        xiHash: input.current.xiHash,
+        sigmaHash: hashSigmaIdentity(sigma),
+        xi: input.current.xi,
+        sigma,
+        releasedAt: input.now,
+    });
 }
 const XI_TTL_KEY_RE = /^(ttl|freshUntil|fresh_until|maxAge|max_age)$/i;
 export function assertXiHasNoTtl(xi) {

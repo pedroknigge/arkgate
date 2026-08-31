@@ -109,6 +109,14 @@ export function hashReleasePayload(xi: XiRecord, sigma: SigmaRecord): string {
   return deterministicHash(stableSerialize({ xi, sigma }));
 }
 
+export function hashXiIdentity(xi: XiRecord): string {
+  return deterministicHash(stableSerialize({ xi }));
+}
+
+export function hashSigmaIdentity(sigma: SigmaRecord): string {
+  return deterministicHash(stableSerialize({ sigma }));
+}
+
 export function xiRecordsEqual(left: XiRecord, right: XiRecord): boolean {
   return stableSerialize(left) === stableSerialize(right);
 }
@@ -139,11 +147,31 @@ export function createFrozenRelease(input: {
   const release: Release = Object.freeze({
     version: input.version,
     hash: hashReleasePayload(xi, sigma),
+    xiHash: hashXiIdentity(xi),
+    sigmaHash: hashSigmaIdentity(sigma),
     xi,
     sigma,
     releasedAt: input.now,
   });
   return release;
+}
+
+/** D2: refresh σ without minting a pattern. xiHash must not change. */
+export function refreshSigmaRecord(input: {
+  current: Release;
+  sigma: Record<string, unknown>;
+  now: number;
+}): Release {
+  const sigma = freezeRecord(input.sigma, 'σ');
+  return Object.freeze({
+    version: input.current.version,
+    hash: hashReleasePayload(input.current.xi, sigma),
+    xiHash: input.current.xiHash,
+    sigmaHash: hashSigmaIdentity(sigma),
+    xi: input.current.xi,
+    sigma,
+    releasedAt: input.now,
+  });
 }
 
 const XI_TTL_KEY_RE = /^(ttl|freshUntil|fresh_until|maxAge|max_age)$/i;

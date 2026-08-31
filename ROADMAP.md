@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-08-31 (Engineering doing: none; Phase **LV** ArkOrder valved loop `LV01`–`LV02` **done**, `LV03`–`LV09` **todo**; Phase **XP** ArkOrder x ArkRun convergence **done** (`XP01`-`XP08`); Patch **4.8.5** `AGY01`+XP **done** — published; Patch **4.8.5** `AGY01` **done** — Antigravity skill refresh (`--antigravity-home` + default tools + dogfood `.agents/skills`); published; Patch **4.8.4** **done** — three false greens closed (coverage certifying tests no runner runs, an empty analysis passing, a symlink-forgeable coverage gate), `--path-drift`, `--sensors`/`--promote`, peerIsolation `sharedRoots`+`allowedCrossSlice`, git install without a build allowlist entry, `--plan` surfaced on a green run; published; Patch **4.8.3** `AW01`+`OR08` **done** — `writes-via-aggregate` + ArkOrder `xiKeys`; Phase OR `OR01`–`OR08` **done**; published `arkgate@4.8.2` (skills four-plane honesty over **4.8.1**); `arkgate/order` is an extra **inside** package `arkgate` (ADR 0030), not `@arkgate/order`; `PK01` **done** (ADR 0031: `arkgate/runtime` + `arkgate/nestjs` real subpaths; `@arkgate/runtime` deprecated); `WH01` **done** (ADR 0026); `K01` **parked** — 4.7.6 shipped workflow primitives, bus commit gaps and durable outbox remain; Phase DX `DX01`–`DX03` **done** and shipped in published `arkgate@4.8.0+` (4.7.6 predates them); Phase HS `HS01`–`HS05` **done**; `RN16` **done**; `RN17` **done**; Phase RN ArkRun shipped **4.7.0**; Write. Check. Ship. patch **4.7.5** published; npm `latest` is **4.8.5**; `AL05` parked; Z09 still parked)
+- **Status date:** 2026-08-31 (Engineering doing: none; Phase **LV** ArkOrder valved loop `LV01`–`LV03` **done**, `LV04`–`LV09` **todo**; Phase **XP** ArkOrder x ArkRun convergence **done** (`XP01`-`XP08`); Patch **4.8.5** `AGY01`+XP **done** — published; Patch **4.8.5** `AGY01` **done** — Antigravity skill refresh (`--antigravity-home` + default tools + dogfood `.agents/skills`); published; Patch **4.8.4** **done** — three false greens closed (coverage certifying tests no runner runs, an empty analysis passing, a symlink-forgeable coverage gate), `--path-drift`, `--sensors`/`--promote`, peerIsolation `sharedRoots`+`allowedCrossSlice`, git install without a build allowlist entry, `--plan` surfaced on a green run; published; Patch **4.8.3** `AW01`+`OR08` **done** — `writes-via-aggregate` + ArkOrder `xiKeys`; Phase OR `OR01`–`OR08` **done**; published `arkgate@4.8.2` (skills four-plane honesty over **4.8.1**); `arkgate/order` is an extra **inside** package `arkgate` (ADR 0030), not `@arkgate/order`; `PK01` **done** (ADR 0031: `arkgate/runtime` + `arkgate/nestjs` real subpaths; `@arkgate/runtime` deprecated); `WH01` **done** (ADR 0026); `K01` **parked** — 4.7.6 shipped workflow primitives, bus commit gaps and durable outbox remain; Phase DX `DX01`–`DX03` **done** and shipped in published `arkgate@4.8.0+` (4.7.6 predates them); Phase HS `HS01`–`HS05` **done**; `RN16` **done**; `RN17` **done**; Phase RN ArkRun shipped **4.7.0**; Write. Check. Ship. patch **4.7.5** published; npm `latest` is **4.8.5**; `AL05` parked; Z09 still parked)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -255,16 +255,16 @@ Plan: [docs/plans/arkorder-valve-loop/README.md](docs/plans/arkorder-valve-loop/
 Target additive **`arkgate@4.9.0`** when public verbs ship (`apply` / `refreshSigma` /
 ingest residual). Does **not** close `Z09` / `K01`. Does **not** copy Orderfield.
 No new skill names. No `ark.config` schema bump unless a later item proves a config key.
-Engineering doing: none — `LV02` done; next `doing` is `LV03`.
+Engineering doing: none — `LV03` done; next `doing` is `LV04`.
 
-ArkOrder 4.8.5 classified; LV02 valves the second freeze. σ is still hashed with
-the pattern; ingest ignores payload; absorb does not travel.
+ArkOrder 4.8.5 classified; LV02 valves the second freeze; LV03 splits xiHash from σ.
+Ingest still ignores payload; absorb does not travel.
 
 | Order | ID | Status | Size | Depends on | Outcome |
 |---:|---|---|---:|---|---|
 | 223 | `LV01` | `done` | M | XP08 | ADR 0034: valved circular causality (D1–D9). Plan lock only — no plane code |
 | 224 | `LV02` | `done` | L | LV01 | `apply(ProposeResult)`; unvalved second freeze fails `ARKORDER_UNVALVED_RELEASE` |
-| 225 | `LV03` | `todo` | L | LV01 | `xiHash` vs σ; `refreshSigma`; stale σ → residual `hold` (not a new Release) |
+| 225 | `LV03` | `done` | L | LV01 | `xiHash` vs σ; `refreshSigma`; stale σ → residual `hold` (not a new Release) |
 | 226 | `LV04` | `todo` | L | LV02+LV03 | Ingest residual bound to `xiHash`; closed `absorb \| escalate_up \| hold` + `reasonCode` |
 | 227 | `LV05` | `todo` | M | LV04 | Capacity pack as data (`kind` / `sigmaKey` / `payloadKey` / `op`); no user predicates |
 | 228 | `LV06` | `todo` | L | LV04 | Decision tape on ArkRun information package; shadow/replay/compare the tape |
@@ -300,7 +300,7 @@ Plan: [docs/plans/alive-in-six-months/README.md](docs/plans/alive-in-six-months/
 | 183 | `AL05` | `parked` | S | required-status possible + 3 partners | Field enrollment. Does **not** close Z09 |
 | 184 | `AL06` | `done` | S | AL04 | Compact first-screen vs Details independently invocable; first-screen honesty stays |
 
-Engineering doing: none. Phase **LV** `LV01`–`LV02` **done**; `LV03`–`LV09` **todo**. `AGY01` **done** (4.8.5 published). `OR01`–`OR07` **done**. `WH01` **done** (ADR 0026). `PK01` **done**.
+Engineering doing: none. Phase **LV** `LV01`–`LV03` **done**; `LV04`–`LV09` **todo**. `AGY01` **done** (4.8.5 published). `OR01`–`OR07` **done**. `WH01` **done** (ADR 0026). `PK01` **done**.
 `K01` **parked** (4.7.6 primitives only).
 Phase DX (`DX01`–`DX03`) **done** and present in published `arkgate@4.8.0+` (4.7.6 predates them).
 Phase HS (`HS01`–`HS05`) **done**. Remaining first-contact copy **4.7.3** published. Write. Check. Ship. patch **4.7.5** published. **4.8.5** is on npm `latest`.

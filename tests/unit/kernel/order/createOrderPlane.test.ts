@@ -181,12 +181,11 @@ describe('createOrderPlane (Haken slaving)', () => {
       clocks: { now: () => 100 },
     });
     aged.release({ plan: 'free', cycle: 'monthly', tenancy: 'single' }, { freshUntil: 50 });
-    try {
-      aged.ingest({ kind: 'InvoicePosted' });
-      throw new Error('expected stale sigma');
-    } catch (error) {
-      expect(error).toBeInstanceOf(ArkOrderError);
-      expect((error as ArkOrderError).code).toBe('ARKORDER_STALE_SIGMA');
+    const stale = aged.ingest({ kind: 'InvoicePosted' });
+    expect(stale.kind).toBe('hold');
+    if (stale.kind === 'hold') {
+      expect(stale.reasonCode).toBe('stale-sigma');
+      expect(stale.xiHash).toBe(aged.current()?.xiHash);
     }
 
     let now = 1;
@@ -197,13 +196,26 @@ describe('createOrderPlane (Haken slaving)', () => {
     });
     fromReleaseClock.release({ plan: 'free', cycle: 'monthly', tenancy: 'single' });
     now = 20;
-    try {
-      fromReleaseClock.ingest({ kind: 'InvoicePosted' });
-      throw new Error('expected stale sigma from release.releasedAt');
-    } catch (error) {
-      expect(error).toBeInstanceOf(ArkOrderError);
-      expect((error as ArkOrderError).code).toBe('ARKORDER_STALE_SIGMA');
-    }
+    const staleFromClock = fromReleaseClock.ingest({ kind: 'InvoicePosted' });
+    expect(staleFromClock.kind).toBe('hold');
+    if (staleFromClock.kind === 'hold') expect(staleFromClock.reasonCode).toBe('stale-sigma');
+  });
+
+  it('refreshSigma does not change xiHash (LV03)', () => {
+    const p = plane();
+    const first = p.release(
+      { plan: 'free', cycle: 'monthly', tenancy: 'single' },
+      { graceDays: 0, seatCap: 5 }
+    );
+    expect(first.xiHash).not.toBe(first.sigmaHash);
+    expect(first.hash).not.toBe(first.xiHash);
+    const refreshed = p.refreshSigma({ graceDays: 14, seatCap: 5 });
+    expect(refreshed.xiHash).toBe(first.xiHash);
+    expect(refreshed.sigmaHash).not.toBe(first.sigmaHash);
+    expect(refreshed.hash).not.toBe(first.hash);
+    expect(refreshed.version).toBe(first.version);
+    expect(refreshed.xi.plan).toBe('free');
+    expect(refreshed.sigma.graceDays).toBe(14);
   });
 
   it('escalate names a human target by default (XP06)', () => {

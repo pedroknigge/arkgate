@@ -15,6 +15,7 @@ import {
   freezeRecord,
   isForbiddenPlaneMethod,
   proposePatternChange,
+  refreshSigmaRecord,
 } from '../../domain/arkOrderInvariants';
 import type {
   ConstraintPack,
@@ -45,6 +46,7 @@ export type OrderPlane = {
   ingest(event: FieldEvent): IngestResult;
   proposeRelease(delta: Record<string, unknown>): ProposeResult;
   apply(proposal: ProposeResult): Release;
+  refreshSigma(sigma: Record<string, unknown>): Release;
   current(): Release | null;
 };
 
@@ -97,12 +99,25 @@ export function createOrderPlane(options: CreateOrderPlaneOptions): OrderPlane {
     },
     ingest(event) {
       const release = requireCurrent();
-      assertSigmaFresh({
-        sigma: release.sigma,
-        now: clock.now(),
-        maxAgeMs: options.sigmaMaxAgeMs,
-        releasedAt: release.releasedAt,
-      });
+      try {
+        assertSigmaFresh({
+          sigma: release.sigma,
+          now: clock.now(),
+          maxAgeMs: options.sigmaMaxAgeMs,
+          releasedAt: release.releasedAt,
+        });
+      } catch (error) {
+        if (error instanceof ArkOrderError && error.code === 'ARKORDER_STALE_SIGMA') {
+          return {
+            kind: 'hold' as const,
+            event,
+            xiHash: release.xiHash,
+            reasonCode: 'stale-sigma' as const,
+            reason: error.message,
+          };
+        }
+        throw error;
+      }
       const projection = options.projector(release, release.sigma);
       assertInformationBudget(projection, options.informationBudget);
       return classifyIngest(projection, event, packs);
@@ -128,6 +143,14 @@ export function createOrderPlane(options: CreateOrderPlaneOptions): OrderPlane {
       });
       version = next.version;
       current = next;
+      return current;
+    },
+    refreshSigma(sigma) {
+      current = refreshSigmaRecord({
+        current: requireCurrent(),
+        sigma,
+        now: clock.now(),
+      });
       return current;
     },
     current() {

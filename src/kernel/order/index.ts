@@ -10,6 +10,7 @@ export type {
   EscalationTarget,
   FieldEvent,
   InformationBudget,
+  IngestHold,
   IngestResult,
   InjectedClock,
   Projection,
