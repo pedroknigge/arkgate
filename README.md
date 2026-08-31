@@ -238,8 +238,8 @@ npx arkgate-check --path-drift --base-ref origin/main   # stale paths in strings
 npx arkgate-check --sensors        # which sensors can EVER be enforced, and which of your rules can be promoted
 npx arkgate-check --promote        # what enforcing each advisory rule would cost, from one run
 npx arkgate-check --strict-merge   # CI / required status
-npx arkgate-check --install-agent-gates --tools claude,cursor,codex,grok
-# optional: refresh shared home skills (Claude/Grok/Codex; never downgrades)
+npx arkgate-check --install-agent-gates --tools claude,cursor,codex,grok,antigravity
+# optional: refresh shared home skills (Claude/Grok/Antigravity/Codex; never downgrades)
 # npx arkgate-check --install-agent-gates --skills-only --agent-homes --force
 # optional: same 13 skills via Agent Skills ecosystem (no new names)
 # npx skills add ./node_modules/arkgate/templates/agent-skills
@@ -287,7 +287,8 @@ In-memory. Not durable. Does not replace ArkRun.
 
 Copy [examples/arkorder-billing/](examples/arkorder-billing/) and rename the
 three keys. Compact starters leave it off. Details:
-[configuration](docs/configuration.md) · [package surface](docs/package-surface.md).
+[ArkOrder](docs/arkorder.md) · [configuration](docs/configuration.md) ·
+[package surface](docs/package-surface.md).
 
 ---
 

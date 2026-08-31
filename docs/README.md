@@ -36,6 +36,7 @@ Product site: [arkgate.online](https://www.arkgate.online/) · npm: [`arkgate`](
 | [agent-guide.md](agent-guide.md) | Agent, CLI, and MCP reference (incl. `ark status --json` / MCP `ark_status`) |
 | [diagnostics.md](diagnostics.md) | Public diagnostic `ruleId` catalog (why / fix anchors) |
 | [configuration.md](configuration.md) | `ark.config.json` contract |
+| [arkorder.md](arkorder.md) | Optional ArkOrder extra: library + sensors, not a service |
 | [brownfield-adoption.md](brownfield-adoption.md) | Existing messy repos |
 | [package-surface.md](package-surface.md) | Stable vs experimental package surface |
 | [typescript-support.md](typescript-support.md) | TS 5 / 6 / 7 analysis boundary |
@@ -45,7 +46,7 @@ Product site: [arkgate.online](https://www.arkgate.online/) · npm: [`arkgate`](
 |-----|------------|
 | [CONTRIBUTING.md](../CONTRIBUTING.md) | Setup, rules, PR/release |
 | [ROADMAP.md](../ROADMAP.md) | Live implementation queue (one `doing` at a time). History: [archive/roadmap-history.md](archive/roadmap-history.md) |
-| [adr/](adr/README.md) | Architecture decisions ([0032](adr/0032-writes-via-aggregate-sensor.md) writes-via-aggregate) |
+| [adr/](adr/README.md) | Architecture decisions ([0032](adr/0032-writes-via-aggregate-sensor.md) writes-via-aggregate · [0033](adr/0033-arkorder-runtime-half-is-arkrun.md) ArkOrder runtime half) |
 | [SECURITY.md](../SECURITY.md) · [threat-model.md](threat-model.md) | Security |
 
 ---
