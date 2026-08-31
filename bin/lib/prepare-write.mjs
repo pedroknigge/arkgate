@@ -9,18 +9,30 @@ import { validateWithAutoPatch } from './auto-patch.mjs';
 import { classifyRemediation, enrichViolationWithFixClass } from './remediation.mjs';
 
 /**
- * Project `layers[].description` onto place / prepare-write JSON (ADR 0035 D5).
- * Present non-empty caption is copied; absence omits the field (never empty string).
+ * App-context caption from `layers[].description` (ADR 0035 D5).
+ * Present non-empty string is returned; absence/empty/non-string is undefined.
+ *
+ * @param {{ description?: unknown } | null | undefined} layerOrPlacement
+ * @returns {string | undefined}
+ */
+export function layerDescriptionCaption(layerOrPlacement) {
+  const caption =
+    layerOrPlacement && typeof layerOrPlacement === 'object'
+      ? layerOrPlacement.description
+      : undefined;
+  return typeof caption === 'string' && caption.length > 0 ? caption : undefined;
+}
+
+/**
+ * Project the caption onto place / prepare-write / coverage / doctor JSON.
+ * Absence omits the field (never empty string).
  *
  * @param {{ description?: unknown } | null | undefined} layerOrPlacement
  * @returns {{ description: string } | {}}
  */
 export function placementDescriptionFields(layerOrPlacement) {
-  const caption =
-    layerOrPlacement && typeof layerOrPlacement === 'object'
-      ? layerOrPlacement.description
-      : undefined;
-  return typeof caption === 'string' && caption.length > 0 ? { description: caption } : {};
+  const caption = layerDescriptionCaption(layerOrPlacement);
+  return caption ? { description: caption } : {};
 }
 
 /**

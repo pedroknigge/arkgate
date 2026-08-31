@@ -5,7 +5,7 @@
 > [ROADMAP.md](../../../ROADMAP.md). Hub: [AGENTS.md](../../../AGENTS.md) ·
 > [Configuration](../../configuration.md) · [ADR index](../../adr/README.md)
 
-**Status:** In progress (`LD01` done — [ADR 0035](../../adr/0035-layer-description-projection.md) accepted; `LD02` done — policyHash omits `layers[].description`; `LD03` done — place / prepare-write / MCP JSON project `description`; `LD04`–`LD06` `todo`; target **4.8.7**).<br>
+**Status:** In progress (`LD01` done — [ADR 0035](../../adr/0035-layer-description-projection.md) accepted; `LD02` done — policyHash omits `layers[].description`; `LD03` done — place / prepare-write / MCP JSON project `description`; `LD04` done — doctor JSON + human, coverage JSON, HTML Purpose column; `LD05`–`LD06` `todo`; target **4.8.7**).<br>
 **Slug:** `layer-description-projection`<br>
 **Kind:** epic / contract caption projection<br>
 **Prefix:** `LD`<br>
@@ -48,9 +48,9 @@ What is **missing** is the *use*:
 | Surface | Today |
 |---------|-------|
 | `ark.config.json` | Field accepted |
-| HTML report | Shown (or fallback / —) |
+| HTML report | Purpose column shows caption when present (`LD04`); fallback — / See ark.config.json when absent |
 | `ark_place` / prepare-write / MCP | Projected when present (`LD03`); omitted when absent |
-| doctor / coverage / status | **Not** a folder caption |
+| doctor / coverage | Projected when present (`LD04`); omitted when absent; never a residual |
 | Skills adopt / place | Glossary is process; they do not write or read the field with teeth |
 | `docs/configuration.md` | **Does not name** `layers[].description` |
 | `policyHash` | Omits the string (`LD02`); same strip as `stewards` (`effectiveContractPolicyPayload`) |

@@ -15,6 +15,7 @@ import { describePackageVersionDualTruth } from './field-install.mjs';
 import { detectAgentHomeGaps } from './agent-homes.mjs';
 import { collectDoctorNextActions } from './doctor-next-actions.mjs';
 import { printDoctorCompactHuman, printDoctorDetailsHuman } from './doctor-human.mjs';
+import { placementDescriptionFields } from './prepare-write.mjs';
 export { printDoctorCompactHuman, printDoctorDetailsHuman };
 export { summarizeRulesUnderContract };
 
@@ -117,6 +118,7 @@ export function computeCoverage(root, config, files, rules) {
     name: layer.name,
     patterns: layer.patterns ?? [],
     files: counts.get(layer.name) ?? 0,
+    ...placementDescriptionFields(layer),
   }));
   // A layer whose patterns match zero files is dead config — it enforces nothing, usually a
   // wrong glob (the #1 monorepo mistake). A layer with no rule edge can import anything.
@@ -171,7 +173,8 @@ export function runCoverage(root, config, files, rules, asJson) {
   console.log(`  ${pad('Layer')}  Files`);
   for (const row of layerRows) {
     const flag = row.files === 0 ? '   (pattern matches nothing)' : '';
-    console.log(`  ${pad(row.name)}  ${String(row.files).padStart(5)}${flag}`);
+    const caption = row.description ? `  ${row.description}` : '';
+    console.log(`  ${pad(row.name)}  ${String(row.files).padStart(5)}${flag}${caption}`);
   }
   console.log(`  ${pad('(unclassified)')}  ${String(unclassified.length).padStart(5)}`);
   console.log('');
@@ -758,6 +761,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
             productHonesty,
             governed: cov.governed,
             coverageHonesty,
+            layers: cov.layers,
             emptyLayers: cov.emptyLayers,
             layersWithoutRules: cov.layersWithoutRules,
             ungovernedDirs: cov.suggestions.length,
