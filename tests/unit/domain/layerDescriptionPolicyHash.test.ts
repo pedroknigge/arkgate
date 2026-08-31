@@ -6,6 +6,7 @@ import {
   resolveEffectiveContract,
 } from '../../../src/domain/effectiveContract';
 import { analyzePolicyDelta, loadContract } from '../../../src/kernel/analysisCore';
+import { loadContract as loadContractFromBundle } from '../../../bin/lib/analysis-engine.mjs';
 
 const BASE = {
   schemaVersion: '1.1' as const,
@@ -46,6 +47,11 @@ describe('LD02 layers[].description policyHash strip (ADR 0035 D4)', () => {
     const typoFix = loadContract(withCaption('Purchase requests — from asked to received'));
     expect(absent.policyHash).toBe(present.policyHash);
     expect(present.policyHash).toBe(typoFix.policyHash);
+    expect(loadContractFromBundle(withCaption(CAPTION)).policyHash).toBe(
+      loadContractFromBundle(BASE).policyHash
+    );
+    expect(loadContractFromBundle(withCaption(CAPTION)).policyHash).toBe(present.policyHash);
+    expect(loadContractFromBundle(withCaption(CAPTION))).toEqual(present);
     expect(present.config.layers[0]?.description).toBe(CAPTION);
     expect(typoFix.config.layers[0]?.description).toBe(
       'Purchase requests — from asked to received'

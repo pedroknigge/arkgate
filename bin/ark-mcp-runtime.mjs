@@ -26,7 +26,8 @@ import {
 import { effectiveCapabilityDeny, stableSerialize } from './lib/analysis-engine.mjs';
 import { createImportTargetResolver } from './lib/import-resolve.mjs';
 import { validateWithAutoPatch, resolveImportFileAbs } from './lib/auto-patch.mjs';
-import { composePrepareWrite, placementDescriptionFields } from './lib/prepare-write.mjs';
+import { composePrepareWrite } from './lib/prepare-write.mjs';
+import { placementDescriptionFields } from './lib/layer-description.mjs';
 import { loadArkConfigContract } from './lib/config-contract.mjs';
 import { loadEffectiveArkRulesFromDisk } from './lib/effective-contract-load.mjs';
 import {

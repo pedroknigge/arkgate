@@ -10,10 +10,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { collectAnalysisConfigWarnings } from '../../../src/kernel/configWarnings';
 import { loadArkConfigContract } from '../../../src/domain/configContract';
 import { runDoctor } from '../../../bin/lib/doctor-plan.mjs';
-import {
-  composePrepareWrite,
-  placementDescriptionFields,
-} from '../../../bin/lib/prepare-write.mjs';
+import { composePrepareWrite } from '../../../bin/lib/prepare-write.mjs';
+import { placementDescriptionFields } from '../../../bin/lib/layer-description.mjs';
 
 const require = createRequire(import.meta.url);
 const CAPTION = 'Purchase requests — from asked to received.';

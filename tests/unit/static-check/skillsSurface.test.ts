@@ -501,7 +501,8 @@ describe('LD05 layer description skill deepen (no new skill names)', () => {
     expect(body).toMatch(/app context|app-context/);
     expect(body).toMatch(/compact starter/i);
     expect(body).toMatch(/Do \*\*not\*\* invent captions|Do not invent captions/);
-    expect(body).toMatch(/Do not invent `\/ark-describe`|Invent `\/ark-describe`/);
+    expect(body).toMatch(/Do (?:\*\*not\*\*|not) invent `\/ark-describe`/);
+    expect(body).not.toMatch(/(?:^|[^*n])Invent `\/ark-describe`/);
   });
 
   it('ark-place prints the caption next to layer name and globs when present', () => {

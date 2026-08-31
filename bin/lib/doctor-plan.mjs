@@ -15,7 +15,7 @@ import { describePackageVersionDualTruth } from './field-install.mjs';
 import { detectAgentHomeGaps } from './agent-homes.mjs';
 import { collectDoctorNextActions } from './doctor-next-actions.mjs';
 import { printDoctorCompactHuman, printDoctorDetailsHuman } from './doctor-human.mjs';
-import { placementDescriptionFields } from './prepare-write.mjs';
+import { placementDescriptionFields } from './layer-description.mjs';
 export { printDoctorCompactHuman, printDoctorDetailsHuman };
 export { summarizeRulesUnderContract };
 

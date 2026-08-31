@@ -25,7 +25,7 @@ import { capabilityBadgesFor, renderAdvisorySections } from './html-report-advis
 import { renderEvolutionSection } from './html-report-evolution.mjs';
 import { arkGitignoreAppendDecision } from './ark-gitignore.mjs';
 import { captureGitSnapshot } from './report-snapshot-context.mjs';
-import { layerDescriptionCaption } from './prepare-write.mjs';
+import { layerDescriptionCaption } from './layer-description.mjs';
 
 export { arkGitignoreAppendDecision, gitignoreCoversArkState, gitignoreHasArkNegationException } from './ark-gitignore.mjs';
 

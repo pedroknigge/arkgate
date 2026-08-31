@@ -17,13 +17,14 @@ import {
   printDoctorDetailsHuman,
 } from '../../../bin/lib/doctor-human.mjs';
 import {
+  htmlEscape,
   renderBeginnerHtmlReport,
   renderHtmlReport,
 } from '../../../bin/lib/html-report.mjs';
 import {
   layerDescriptionCaption,
   placementDescriptionFields,
-} from '../../../bin/lib/prepare-write.mjs';
+} from '../../../bin/lib/layer-description.mjs';
 
 const CAPTION = 'Purchase requests — from asked to received.';
 const identityColor = {
@@ -451,5 +452,54 @@ describe('LD04 HTML report Purpose column parity (ADR 0035 D5)', () => {
     expect(beginner.match(/<th>Purpose<\/th>/g)).toHaveLength(1);
     expect(beginner).not.toMatch(/<th>Description<\/th>/);
     silentResidual(beginner);
+  });
+
+  it('escapes HTML special characters in the Purpose column', () => {
+    tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-ld04-html-esc-'));
+    fs.writeFileSync(path.join(tmp, 'package.json'), JSON.stringify({ name: 'ld04-esc' }));
+    const evil = '<script>alert(1)</script>&"';
+    const escaped = htmlEscape(evil);
+    const config = {
+      layers: [
+        { name: 'DomainModel', patterns: ['src/domain/**'], description: evil },
+        { name: 'Kernel', patterns: ['src/kernel/**'] },
+      ],
+      rules: [{ from: 'DomainModel', to: 'Kernel', allowed: false }],
+    };
+    const coverage = {
+      governed: { percent: 100, classifiedFiles: 1, totalFiles: 1 },
+      layers: [
+        { name: 'DomainModel', files: 1, patterns: ['src/domain/**'], description: evil },
+        { name: 'Kernel', files: 0, patterns: ['src/kernel/**'] },
+      ],
+      unclassified: { count: 0, files: [] },
+      emptyLayers: ['Kernel'],
+      layersWithoutRules: [],
+      suggestions: [],
+      include: ['src'],
+    };
+    const html = renderHtmlReport({
+      root: tmp,
+      config,
+      coverage,
+      violations: [],
+      ok: true,
+      version: '4.8.7',
+      configPath: 'ark.config.json',
+      generatedAt: '2026-08-31',
+    });
+    expect(html).not.toContain(evil);
+    expect(html).toContain(escaped);
+    const beginner = renderBeginnerHtmlReport({
+      root: tmp,
+      config,
+      violations: [],
+      ok: true,
+      version: '4.8.7',
+      configPath: 'ark.config.json',
+      generatedAt: '2026-08-31',
+    });
+    expect(beginner).not.toContain(evil);
+    expect(beginner).toContain(escaped);
   });
 });
