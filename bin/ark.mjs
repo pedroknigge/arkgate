@@ -40,18 +40,9 @@ import { setupUsage, setupUsageAll, upgradeUsage } from './lib/first-run-help.mj
 const here = path.dirname(fileURLToPath(import.meta.url));
 const arkCheck = path.join(here, 'ark-check.mjs');
 const arkDashboard = path.join(here, 'ark-dashboard.mjs');
-
-function dashboardUsage() {
-  return `arkgate dashboard (alias ark dashboard) — observability TUI.
-
-  arkgate dashboard [--url <snapshot-url>] [--interval <ms>]
-
-Polls a running ArkRun inspector (ANSI + polling). Does not start the kernel.
-Default: --url http://127.0.0.1:3000/snapshot --interval 2000 (ms clamped 200–60000).
-
-Same script as arkgate-dashboard / ark-dashboard.
-`;
-}
+const dashboardHelp = `arkgate dashboard (alias ark dashboard) — observability TUI.
+Usage: arkgate dashboard [--url <snapshot-url>] [--interval <ms>]
+Polls an ArkRun inspector; it does not start the kernel.`;
 
 function withDashboardHelp(text, detailed) {
   if (detailed) {
@@ -829,14 +820,8 @@ async function main() {
     console.log(upgradeUsage());
     return 0;
   }
-  if (
-    args.command === 'dashboard' &&
-    (args.help ||
-      args.passthrough.includes('--help') ||
-      args.passthrough.includes('-h') ||
-      args.passthrough.includes('help'))
-  ) {
-    console.log(dashboardUsage());
+  if (args.command === 'dashboard' && args.passthrough.some((arg) => ['--help', '-h', 'help'].includes(arg))) {
+    console.log(dashboardHelp);
     return 0;
   }
   if (args.help || !args.command) {
