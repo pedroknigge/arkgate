@@ -126,17 +126,23 @@ Top-level fields:
   preflight / CI verdict and arm only when the layer plane is classified (same ≥50%
   governed and ≥1 populated-layer floor as ArkRules).
 - **`arkOrder`** (optional, schema `1.3+`) — inline ArkOrder extra (`mode`, `planeRoots`,
-  `managedLayers`, `maxXiKeys`, **`xiKeys`**). Absence is silent. Unknown keys fail closed.
-  Import `createOrderPlane` from `arkgate/order` (same package). Empty `planeRoots` in
-  `enforced` mode fails closed (`ARKORDER_MISSING_PLANE`). `xiKeys` are the 3–5 slow
-  names the product already knows (plan, protocol, cost-code bound). Empty `xiKeys`
-  leaves `ARKORDER_XI_FIELD_WRITE` silent. Membership ids and recomputable statuses
-  such as `paid` / `overdue` are not keys. Factory options
-  `informationBudget`, `sigmaMaxAgeMs`, `store` (`ReleaseStore`), and capacity packs
-  belong on `createOrderPlane`, not this extra object. Later ξ is `proposeRelease`
-  then `apply`; `refreshSigma`; ingest residual `absorb | escalate_up | hold`.
-  Demotion or deletion is a policy-delta **weakening**. Field ingest never mints
-  a pattern.
+  `managedLayers`, `maxXiKeys`, **`xiKeys`**, optional **`appliesTo`**). Absence is silent.
+  Unknown keys fail closed. Import `createOrderPlane` from `arkgate/order` (same package).
+  Empty `planeRoots` in `enforced` mode fails closed (`ARKORDER_MISSING_PLANE`).
+  `xiKeys` is a repo-wide watchlist of slow names the product already knows (plan,
+  protocol, cost-code bound). Empty `xiKeys` leaves `ARKORDER_XI_FIELD_WRITE` silent.
+  `maxXiKeys` (default 7) is the Haken cap on one `release()` / `assertXiKeyCap`, not
+  a cap on watchlist length: eight named `xiKeys` with `maxXiKeys` 7 is valid.
+  `ARKORDER_TOO_MANY_PARAMS` fires when `release()` `keyCount` exceeds `maxXiKeys`.
+  Optional `appliesTo` uses the same glob engine as `layers[].patterns`. Absence or
+  empty keeps current behavior (every file in `managedLayers`). Non-empty emits
+  `ARKORDER_XI_FIELD_WRITE` only when the layer is managed **and** the file matches
+  at least one glob. Membership ids and recomputable statuses such as `paid` /
+  `overdue` are not keys. Factory options `informationBudget`, `sigmaMaxAgeMs`,
+  `store` (`ReleaseStore`), and capacity packs belong on `createOrderPlane`, not this
+  extra object. Later ξ is `proposeRelease` then `apply`; `refreshSigma`; ingest
+  residual `absorb | escalate_up | hold`. Demotion or deletion is a policy-delta
+  **weakening**. Field ingest never mints a pattern.
 
 **Activation is one shape.** ArkRun and ArkOrder both use `mode` + `managedLayers`.
 Absence of either extra is silent. They keep different *root* names because they

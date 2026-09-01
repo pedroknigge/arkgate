@@ -9,12 +9,23 @@ in the immutable pre-2.0 archive linked below.
 `peerIsolation` walls are not dead rules, skippable CI is `ci-not-fail-closed`
 not `missing-gates`, blocked upgrade JSON carries `reasonCode` + `nextCommand`,
 content identity vs raw `afterHash`, cross-layer `peerIsolation` docs, and
-intent-reference checks share the import classifier.
-**No required config migration.** No `ark.config.json` schema bump. Does not close
-`K01` / `Z09`. No new skill names.
+intent-reference checks share the import classifier. Amarilla ArkOrder:
+`appliesTo`, watchlist vs `maxXiKeys`, `restore`, default clock, `hashOf`,
+`.d.ts` honesty, packaged example URL, and ingest-payload honesty.
+**No required config migration.** No `ark.config.json` schema bump. Does not close `K01` / `Z09`.
+No new skill names.
 
 **Status: prepared** (tree candidate; npm `latest` remains **4.8.8** until the
 signed-tag provenance workflow succeeds).
+
+### Added
+- Optional `arkOrder.appliesTo` globs (same engine as layers). `managedLayers`
+  still required; empty or absent `appliesTo` keeps today's all-files-in-layer
+  emit; a Persistence write outside the globs stays silent.
+- `OrderPlane.restore(release)` installs a previously frozen `Release` (current
+  + version). Hash remains the identity. Not durable. Does not close `K01`.
+- Public `arkgate/order` exports `hashOf` (alias of `hashReleasePayload`) so a
+  stored `Release.hash` can be verified without calling `release()`.
 
 ### Fixed
 - `--doctor` no longer throws when `CLAUDE_HOME` / `GROK_HOME` / `ANTIGRAVITY_HOME`
@@ -31,6 +42,8 @@ signed-tag provenance workflow succeeds).
 - `LAYER_INTENT_REFERENCE_VIOLATION` uses the same `peerIsolation` classifier as
   imports (`fromPath` + `sharedRoots`). Shared-root files do not inherit the
   slice-wall message. Cross-slice file imports still deny.
+- Default `createOrderPlane` clock is Kernel `Date.now()` (was `0` with no
+  warning). Domain stays clock-free. Tests that need determinism still inject.
 
 ### Changed
 - Public managed-upgrade assets expose `beforeIdentity` / `afterIdentity`.
@@ -39,6 +52,18 @@ signed-tag provenance workflow succeeds).
 - Docs: a slice wall on a cross-layer edge is a `peerIsolation` rule on that
   `from`/`to` pair (`allowed: false`). Domain files without a slice fail-closed
   unless listed in `sharedRoots`. No new engine mode, key, or skill.
+- `maxXiKeys` caps one `release()` / `assertXiKeyCap` only. `xiKeys` is a
+  repo-wide watchlist; eight named keys with `maxXiKeys` 7 is valid config.
+  Sensor `arkorder-too-many-params` fires on `release()` `keyCount`, not on
+  config list length.
+- Public `dist/order` `.d.ts` no longer says declarations-only / no runtime.
+- Packaged docs point the billing gallery at the GitHub tree
+  (`https://github.com/pedroknigge/arkgate/tree/main/examples/arkorder-billing`).
+  The folder is not in the npm tarball; `examples/` is not added to
+  `package.json` `files`.
+- Ingest payload-dependent escalation stays deliberate: `classifyIngest` uses
+  `kind`; `ConstraintPack` forbids user predicates. "Second week failing a
+  goal" is a domain/projector kind, not a pack function.
 
 ## 4.8.8 — 2026-09-01
 

@@ -1,6 +1,7 @@
 /**
- * ArkOrder vocabulary (ADR 0027–0030). Declarations only — no runtime.
+ * ArkOrder vocabulary (ADR 0027–0030). Runtime constants plus types.
  * Haken: a few slow keys (ξ) slave derived fast state (s).
+ * The public module `arkgate/order` is runtime (`createOrderPlane`).
  */
 export const DEFAULT_MAX_XI_KEYS = 7;
 

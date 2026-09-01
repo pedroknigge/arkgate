@@ -42,6 +42,7 @@ export const ARK_ORDER_SCHEMA_DEF = {
         managedLayers: { ...stringArraySchema, default: [] },
         maxXiKeys: { type: 'integer', minimum: 1, default: 7 },
         xiKeys: { ...stringArraySchema, default: [] },
+        appliesTo: { ...stringArraySchema, default: [] },
     },
 };
 function isObject(value) {

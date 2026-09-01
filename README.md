@@ -321,8 +321,10 @@ PATCHes those keys through Prisma is named. Same npm package.
 In-memory. Not durable. Does not replace ArkRun.
 **ArkOrder freezes the pattern through a valve. ArkRun is how the residual travels.**
 
-Copy [examples/arkorder-billing/](examples/arkorder-billing/) and rename the
-three keys. Compact starters leave it off. Details:
+The billing gallery (`plan` / `cycle` / `tenancy`) lives on GitHub, not in the
+npm tarball:
+[examples/arkorder-billing](https://github.com/pedroknigge/arkgate/tree/main/examples/arkorder-billing).
+Rename the three keys. Compact starters leave it off. Details:
 [ArkOrder](docs/arkorder.md) · [configuration](docs/configuration.md) ·
 [package surface](docs/package-surface.md).
 

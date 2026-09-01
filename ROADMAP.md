@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-09-01 (Engineering doing: `RL89`; Patch `AH01`/`CS01`/`CI01`/`UP01`/`PX01`/`INT01` **done** on the 4.8.9 prepared tree; Release `RL88` **done** — 4.8.8 published on npm `latest`, MCP Registry, and website; Phase **LD** `LD01`–`LD06` **done** (4.8.7 published); Patch `ST02` **done** — unlabeled public story; Patch `ST01` **done** — beginner-clear STAR openings; Patch `AO09` **done** — ArkOrder recomputable-status honesty; Phase **LV** ArkOrder valved loop `LV01`–`LV09` **done** (4.8.6 published); Phase **XP** ArkOrder x ArkRun convergence **done** (`XP01`-`XP08`); Patch **4.8.5** `AGY01`+XP **done** — published; Patch **4.8.5** `AGY01` **done** — Antigravity skill refresh (`--antigravity-home` + default tools + dogfood `.agents/skills`); published; Patch **4.8.4** **done** — three false greens closed (coverage certifying tests no runner runs, an empty analysis passing), `--path-drift`, `--sensors`/`--promote`, peer isolation, git install without a build allowlist entry, and honest `--plan`; Phase OR `OR01`–`OR08` **done**; `K01` remains parked; Z09 still parked; npm `latest` is **4.8.8**)
+- **Status date:** 2026-09-01 (Engineering doing: `RL89`; Patch `AH01`/`CS01`/`CI01`/`UP01`/`PX01`/`INT01` **done** and Amarilla ArkOrder `AO10`–`AO16` **done** on the 4.8.9 prepared tree; Release `RL88` **done** — 4.8.8 published on npm `latest`, MCP Registry, and website; Phase **LD** `LD01`–`LD06` **done** (4.8.7 published); Patch `ST02` **done** — unlabeled public story; Patch `ST01` **done** — beginner-clear STAR openings; Patch `AO09` **done** — ArkOrder recomputable-status honesty; Phase **LV** ArkOrder valved loop `LV01`–`LV09` **done** (4.8.6 published); Phase **XP** ArkOrder x ArkRun convergence **done** (`XP01`-`XP08`); Patch **4.8.5** `AGY01`+XP **done** — published; Patch **4.8.5** `AGY01` **done** — Antigravity skill refresh (`--antigravity-home` + default tools + dogfood `.agents/skills`); published; Patch **4.8.4** **done** — three false greens closed (coverage certifying tests no runner runs, an empty analysis passing), `--path-drift`, `--sensors`/`--promote`, peer isolation, git install without a build allowlist entry, and honest `--plan`; Phase OR `OR01`–`OR08` **done**; `K01` remains parked; Z09 still parked; npm `latest` is **4.8.8**)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -340,11 +340,27 @@ Does not close `Z09` / `K01`. One `doing` at a time.
 | 246 | `PX01` | `done` | S | AH01 | Docs: a slice wall on a cross-layer edge is a `peerIsolation` rule on that `from`/`to` pair (`allowed: false`); unslice Domain fail-closed unless `sharedRoots`. No new engine mode, key, or skill. Does not close `Z09` / `K01` |
 | 247 | `INT01` | `done` | S | PX01 | Intent-reference checks share the import `peerIsolation` classifier (`fromPath` + `sharedRoots`); shared-root files do not inherit the slice-wall message; cross-slice file imports still deny |
 
+### Patch 4.8.9 — Amarilla ArkOrder findings
+
+Seven Amarilla findings plus ingest-payload honesty. No `schemaVersion` bump, no
+new skill names. Does not close `Z09` / `K01`. Gallery stays out of the npm
+tarball.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 249 | `AO10` | `done` | S | INT01 | Optional `arkOrder.appliesTo` globs (same engine as layers); `managedLayers` still required; empty/absent = current all-files-in-layer; Persistence write outside the globs stays silent |
+| 250 | `AO11` | `done` | S | INT01 | `xiKeys` is a watchlist; `maxXiKeys` caps one `release()` only. Eight named keys with `maxXiKeys` 7 is valid config |
+| 251 | `AO12` | `done` | S | INT01 | `OrderPlane.restore(release)` installs a previously frozen Release; hash remains identity; does not invent durability / does not close `K01` |
+| 252 | `AO13` | `done` | S | INT01 | Default Kernel clock is `Date.now()`; Domain stays clock-free; callers may still inject |
+| 253 | `AO14` | `done` | S | INT01 | Public `arkgate/order` exports `hashOf` (alias of `hashReleasePayload`) so a stored `Release.hash` can be verified without `release()` |
+| 254 | `AO15` | `done` | S | INT01 | Public `dist/order` `.d.ts` must not say declarations-only / no runtime |
+| 255 | `AO16` | `done` | S | INT01 | Packaged docs point the billing gallery at the GitHub tree URL; do not add `examples/` to `package.json` `files` |
+
 ### Release 4.8.9 — complete publish
 
 | Order | ID | Status | Size | Depends on | Outcome |
 |---:|---|---|---:|---|---|
-| 248 | `RL89` | `doing` | M | INT01 | Prepare, tag, and publish **4.8.9** (AH01+CS01+CI01+UP01+PX01+INT01). Does not close `Z09` / `K01` |
+| 248 | `RL89` | `doing` | M | AO16 | Prepare, tag, and publish **4.8.9** (AH01+CS01+CI01+UP01+PX01+INT01+AO10–AO16). Does not close `Z09` / `K01` |
 
 ### Patch 4.8.5 — Antigravity skills refresh
 
@@ -374,7 +390,7 @@ Plan: [docs/plans/alive-in-six-months/README.md](docs/plans/alive-in-six-months/
 | 183 | `AL05` | `parked` | S | required-status possible + 3 partners | Field enrollment. Does **not** close Z09 |
 | 184 | `AL06` | `done` | S | AL04 | Compact first-screen vs Details independently invocable; first-screen honesty stays |
 
-Engineering doing: `RL89`. `AH01`/`CS01`/`CI01`/`UP01`/`PX01`/`INT01` **done** (4.8.9 prepared tree). `RL88` **done** (4.8.8 published). Phase **LD** `LD01`–`LD06` **done** (4.8.7 published). `ST02`, `ST01`, and `AO09` **done**. Phase **LV** `LV01`–`LV09` **done** (4.8.6 published). `AGY01` **done** (4.8.5 published). `OR01`–`OR07` **done**. `WH01` **done** (ADR 0026). `PK01` **done**.
+Engineering doing: `RL89`. `AH01`/`CS01`/`CI01`/`UP01`/`PX01`/`INT01` **done**. Amarilla ArkOrder `AO10`–`AO16` **done** (4.8.9 prepared tree). `RL88` **done** (4.8.8 published). Phase **LD** `LD01`–`LD06` **done** (4.8.7 published). `ST02`, `ST01`, and `AO09` **done**. Phase **LV** `LV01`–`LV09` **done** (4.8.6 published). `AGY01` **done** (4.8.5 published). `OR01`–`OR07` **done**. `WH01` **done** (ADR 0026). `PK01` **done**.
 `K01` **parked** (4.7.6 primitives only).
 Phase DX (`DX01`–`DX03`) **done** and present in published `arkgate@4.8.0+` (4.7.6 predates them).
 Phase HS (`HS01`–`HS05`) **done**. Remaining first-contact copy **4.7.3** published. Write. Check. Ship. patch **4.7.5** published. **4.8.8** is on npm `latest`.
