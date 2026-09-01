@@ -2,8 +2,20 @@
 
 **Write. Check. Ship.**
 **When the agent writes a bad import, the write doesn’t land. The same check fails the pull request.**
+
+Not an API Gateway. Not a folder linter. If the check is not required on the PR, the config
+is just documentation.
+
+AI can build fast—and make a mess just as fast.
+
+Keep the product easy to understand, change, and trust.
+
+ArkGate stops bad shortcuts. ArkRules protects how each part should behave. ArkRun keeps work moving. ArkOrder protects the few big choices that should not change by accident.
+
+Safer changes, fewer surprises, and extra protection only when you choose it.
+
 This guide is the **develop** reference for agents and codegen: write hooks, advisory MCP tools,
-CI, and `/ark-*` skills. Not an API Gateway. Not a folder linter.
+CI, and `/ark-*` skills.
 
 - Product path (anyone): [use.md](use.md)  
 - Integration overview: [develop.md](develop.md)  
@@ -1413,3 +1425,26 @@ doctor → compact router (and `/ark-autopilot` only after the skill pack).
 6. **Wire** relationships via `registry.define(..., { dependsOn, produces })`
 7. **Register** event contracts before publishing in strict mode
 8. **Observe** runtime via `bus.getTrace()`, `auditTrail.query()`, outbox records, projection checkpoints, and `ark.observability.report()`
+9. **Optional loopback inspector** via `ark.startInspector()` — JSON facts only (see below); poll with `ark-dashboard` / `arkgate-dashboard` when you want a terminal view
+
+### Dev inspector queue endpoints and dashboard bins
+
+`startInspector()` / `startArkRunInspector()` bind loopback only, refuse
+`NODE_ENV=production`, and lazy-load HTTP. The kernel exposes JSON monitor facts
+(snapshot / graph / queue endpoints) — not a TUI.
+
+| Method + path | Role |
+|---------------|------|
+| `GET /snapshot` (also `/`) | Information package + transport + observability snapshot |
+| `GET /events` | SSE of the same snapshot |
+| `GET /graph` | `requestGraph` slice (+ Mermaid helper) |
+| `GET /outbox` | Outbox monitor: `available`, `pendingCount`, `failedCount`, `pending[]` / `failed[]` row summaries (`id`, `status`, `attempts`, optional `intent` / `error` / `updatedAt`) — **no event payloads** |
+| `GET /workflows` | Workflows monitor: counts + `workflows[]` summaries (`id`, `name`, `status`, optional `currentStep` / `error`) |
+
+Dual package bins **`ark-dashboard`** and **`arkgate-dashboard`**
+(`bin/ark-dashboard.mjs`) poll `--url` (default `http://127.0.0.1:3000/snapshot`)
+and sibling `/outbox` + `/workflows` on an interval (`--interval`, 200–60000 ms).
+ANSI escape sequences + polling only — no React, Ink, or Blessed. Use
+`ark dashboard` / `arkgate dashboard` (passthrough to `bin/ark-dashboard.mjs`) or the
+dual bins `ark-dashboard` / `arkgate-dashboard`.
+Presentation stays in Tooling (`bin/`); do not couple a TUI into `src/kernel`.

@@ -1,5 +1,12 @@
 import { requestArkRunGraph } from '../../domain/arkRunGraph';
-import { buildArkRunInspectorSnapshot } from '../../domain/arkRunInspector';
+import {
+  ARK_RUN_INSPECTOR_MONITOR_SAMPLE_LIMIT,
+  buildArkRunInspectorHardening,
+  buildArkRunInspectorOutboxMonitor,
+  buildArkRunInspectorSnapshot,
+  buildArkRunInspectorWorkflowsMonitor,
+  classifyArkRunInspectorStoreDurability,
+} from '../../domain/arkRunInspector';
 import { buildDependencyInformationPackage } from '../../domain/arkRunInformationPackage';
 import { ARK_RUN_EPHEMERAL_DEFAULT } from '../../domain/arkRunTransport';
 import { createAuditTrail } from '../audit';
@@ -22,7 +29,7 @@ import {
 import { createProjectionRegistry } from '../projections';
 import { createWorkflowEngine } from '../workflow';
 import { createComponentRegistry } from './componentRegistry';
-import { startArkRunInspector } from './inspector';
+import { startArkRunInspector, type ArkRunInspectorSource } from './inspector';
 import { sendOnArkRunTransport } from './transport';
 import type {
   ArkKernel,
@@ -45,6 +52,11 @@ function nextKernelInstanceId(): string {
   return `ark-kernel-${Date.now()}-${kernelSequence}`;
 }
 
+function portConstructorId(port: object, fallback: string): string {
+  const name = (port as { constructor?: { name?: string } }).constructor?.name;
+  return typeof name === 'string' && name.length > 0 ? name : fallback;
+}
+
 export function createArkKernel(options: CreateArkKernelOptions = {}): ArkKernel {
   const strict = options.strict ?? true;
   const instanceId = options.instanceId ?? nextKernelInstanceId();
@@ -53,8 +65,10 @@ export function createArkKernel(options: CreateArkKernelOptions = {}): ArkKernel
   const registry = createIntentRegistry();
   const graph = createDependencyGraph();
   const metadata = options.metadata ?? createMetadataRegistry();
+  const usedDefaultAudit = options.auditTrail === undefined;
   const auditTrail = options.auditTrail ?? createAuditTrail({ maxRecords: maxHistorySize });
   const eventContracts = options.eventContracts ?? createEventContractRegistry();
+  const usedDefaultEventBuffer = options.eventBuffer === undefined && options.outbox === undefined;
   const eventBuffer = options.eventBuffer ?? options.outbox ?? new InMemoryEventBuffer();
   const projections =
     options.projections ?? createProjectionRegistry({ auditTrail });
@@ -92,6 +106,7 @@ export function createArkKernel(options: CreateArkKernelOptions = {}): ArkKernel
         },
   });
 
+  // createWorkflowEngine defaults to InMemoryWorkflowStore (not injectable via kernel options).
   const workflowEngine = createWorkflowEngine(eventBus, { auditTrail });
   const observability = createObservabilityReporter({
     registry,
@@ -100,6 +115,20 @@ export function createArkKernel(options: CreateArkKernelOptions = {}): ArkKernel
   });
   const components = createComponentRegistry();
   const brokerBound = typeof broker?.send === 'function';
+
+  const outboxStoreId = usedDefaultEventBuffer
+    ? 'InMemoryEventBuffer'
+    : portConstructorId(eventBuffer, 'EventBufferStore');
+  const auditStoreId = usedDefaultAudit
+    ? 'InMemoryAuditStore'
+    : portConstructorId(auditTrail, 'AuditTrail');
+  const hardening = buildArkRunInspectorHardening({
+    stores: [
+      classifyArkRunInspectorStoreDurability(outboxStoreId, 'outbox'),
+      classifyArkRunInspectorStoreDurability(auditStoreId, 'audit'),
+      classifyArkRunInspectorStoreDurability('InMemoryWorkflowStore', 'workflow'),
+    ],
+  });
 
   const kernel: ArkKernel = {
     instanceId,
@@ -175,10 +204,29 @@ export function createArkKernel(options: CreateArkKernelOptions = {}): ArkKernel
         observability: observability.report(),
         ephemeralDefault: defaultEphemeral,
         brokerBound,
+        hardening,
       });
     },
     startInspector(options) {
-      return startArkRunInspector(kernel, options);
+      const inspectorSource: ArkRunInspectorSource = {
+        getInspectorSnapshot: (bind) => kernel.getInspectorSnapshot(bind),
+        requestGraph: (query) => kernel.requestGraph(query),
+        async listInspectorOutbox() {
+          const [pending, failed] = await Promise.all([
+            eventBuffer.list('pending'),
+            eventBuffer.list('failed'),
+          ]);
+          return buildArkRunInspectorOutboxMonitor([...pending, ...failed], {
+            sampleLimit: ARK_RUN_INSPECTOR_MONITOR_SAMPLE_LIMIT,
+          });
+        },
+        async listInspectorWorkflows() {
+          return buildArkRunInspectorWorkflowsMonitor(await workflowEngine.list(), {
+            sampleLimit: ARK_RUN_INSPECTOR_MONITOR_SAMPLE_LIMIT,
+          });
+        },
+      };
+      return startArkRunInspector(inspectorSource, options);
     },
     syncGraph,
     manifest() {

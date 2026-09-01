@@ -7,6 +7,14 @@
 Not an API Gateway. Not a folder linter. If the check is not required on the PR, the config
 is just documentation.
 
+AI can build fast—and make a mess just as fast.
+
+Keep the product easy to understand, change, and trust.
+
+ArkGate stops bad shortcuts. ArkRules protects how each part should behave. ArkRun keeps work moving. ArkOrder protects the few big choices that should not change by accident.
+
+Safer changes, fewer surprises, and extra protection only when you choose it.
+
 Works with Cursor, Claude, Codex, and Grok.
 
 [![Website](https://img.shields.io/badge/website-arkgate.online-0a0a0a)](https://www.arkgate.online/)
@@ -29,7 +37,7 @@ Works with Cursor, Claude, Codex, and Grok.
 
 </div>
 
-> **ArkGate 4.8.7** is on npm `latest`.
+> **ArkGate 4.8.8** is prepared on this tree; npm `latest` remains **4.8.7**.
 > Write. Check. Ship. Adopted = required GitHub
 > status running `arkgate-check --strict-merge`, or an explicit `advisory-only` stance.
 > Status is compact (`arkgate-check --doctor`; `--all` for Details). Optional **ArkRun**
@@ -37,7 +45,7 @@ Works with Cursor, Claude, Codex, and Grok.
 > (`arkgate/order`) stops the agent rewriting the few slow product decisions as CRUD;
 > later pattern change is `proposeRelease` then `apply`.
 > `@arkgate/runtime` is deprecated.
-> [4.8.6](docs/releases/4.8.6.md) · [4.8.5](docs/releases/4.8.5.md) · [4.8.4](docs/releases/4.8.4.md) · [4.8.3](docs/releases/4.8.3.md) · [4.8.2](docs/releases/4.8.2.md) · [4.8.1](docs/releases/4.8.1.md) · [4.8.0](docs/releases/4.8.0.md) · [Docs hub](docs/README.md) · [Voice](docs/product-voice.md)
+> [4.8.8 prepared](docs/releases/4.8.8.md) · [4.8.7 published](docs/releases/4.8.7.md) · [4.8.6](docs/releases/4.8.6.md) · [4.8.5](docs/releases/4.8.5.md) · [4.8.4](docs/releases/4.8.4.md) · [4.8.3](docs/releases/4.8.3.md) · [4.8.2](docs/releases/4.8.2.md) · [4.8.1](docs/releases/4.8.1.md) · [4.8.0](docs/releases/4.8.0.md) · [Docs hub](docs/README.md) · [Voice](docs/product-voice.md)
 
 ---
 
@@ -245,6 +253,8 @@ npx arkgate-check --install-agent-gates --tools claude,cursor,codex,grok,antigra
 # npx arkgate-check --install-agent-gates --skills-only --agent-homes --force
 # optional: same 13 skills via Agent Skills ecosystem (no new names)
 # npx skills add ./node_modules/arkgate/templates/agent-skills
+# optional ArkRun: poll the loopback inspector (ANSI TUI — not a gate)
+# npx ark-dashboard --url http://127.0.0.1:<port>/snapshot
 ```
 
 More: [docs/develop.md](docs/develop.md) · skills install: [docs/agent-guide.md](docs/agent-guide.md#install-skills-ark-and-ecosystem) · enthusiast track: [docs/enthusiast/](docs/enthusiast/README.md)
@@ -260,6 +270,26 @@ for decoupling.
 `createStrictArkKernel()` call is a new instance — no process singleton. Data
 lives in memory and **dies on restart**. Fine for local. Not Postgres, not an
 outbox, not Temporal. `@arkgate/runtime` is deprecated.
+
+### Dev inspector and observability dashboard
+
+Opt-in `startInspector()` binds **loopback only** (`127.0.0.1`), refuses
+`NODE_ENV=production`, and serves JSON facts — not a TUI. Alongside
+`GET /snapshot`, `GET /events` (SSE), and `GET /graph`, the inspector exposes
+queue monitors:
+
+| Path | Body (JSON) |
+|------|-------------|
+| `GET /outbox` | Pending/failed outbox **summaries** + counts (`available`, `pendingCount`, `failedCount`, `pending`, `failed`) — no event payloads |
+| `GET /workflows` | Workflow **summaries** + counts (`available`, `total`, `runningCount`, …, `workflows`) |
+
+Poll those facts from the dual bins **`ark-dashboard`** / **`arkgate-dashboard`**
+(`bin/ark-dashboard.mjs`). ANSI + polling only (no React/Ink/Blessed). Point
+`--url` / `-u` at the inspector snapshot (default
+`http://127.0.0.1:3000/snapshot`); the dashboard also fetches sibling `/outbox`
+and `/workflows`. `--interval` / `-i` is clamped to 200–60000 ms (default 2000).
+Also available as `ark dashboard` / `arkgate dashboard` (passthrough to the same bin). Kernel stays
+JSON-only; presentation stays in `bin/`.
 
 ### Durability stance
 
@@ -282,6 +312,7 @@ because “what may be the plan” was never a rule.
 
 **ArkOrder** (`arkgate/order`) is that rule. Off unless you add `arkOrder`.
 Name the slow keys (`xiKeys`: plan, protocol, cost-code bound — not `projectId`).
+A status you can recompute from data you already have is not a slow decision. Derive it. Do not freeze it.
 Posting an invoice is absorbed. Changing plan is `proposeRelease` then `apply`.
 `refreshSigma`; ingest residual `absorb | escalate_up | hold` + `reasonCode`;
 capacity pack as data; in-memory `ReleaseStore`; `ingestTravelAction`; ArkRun
@@ -309,6 +340,7 @@ three keys. Compact starters leave it off. Details:
 | Config · package surface · TS | [configuration](docs/configuration.md) · [package-surface](docs/package-surface.md) · [typescript-support](docs/typescript-support.md) |
 | Brownfield | [docs/brownfield-adoption.md](docs/brownfield-adoption.md) |
 | Security | [SECURITY.md](SECURITY.md) |
+| Prepared (4.8.8; not published) | [docs/releases/4.8.8.md](docs/releases/4.8.8.md) · [CHANGELOG](CHANGELOG.md) |
 | Current published (4.8.7 on npm `latest`) | [docs/releases/4.8.7.md](docs/releases/4.8.7.md) · [CHANGELOG](CHANGELOG.md) |
 | Prior published (4.8.6) | [docs/releases/4.8.6.md](docs/releases/4.8.6.md) |
 | Prior published (4.8.5) | [docs/releases/4.8.5.md](docs/releases/4.8.5.md) |

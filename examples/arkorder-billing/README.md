@@ -10,7 +10,7 @@ Consumer physics for the ArkOrder plane. The core does not know these keys.
 σ: `graceDays`  
 s (fast): invoices, seats, members — derived by `h(ξ)`
 
-Rename the three keys to *your* slow decisions. Construction: catalog-bound / specified-crossing / billing-basis. Clinical: protocol / cycle / site. Keep invoices, hours, and logs as ingest. Membership (`projectId`) is not a slow key — `proposeRelease` of a key that changes nothing throws empty blast.
+Rename the three keys to *your* slow decisions. Construction: catalog-bound / specified-crossing / billing-basis. Clinical: protocol / cycle / site. Keep invoices, hours, and logs as ingest. Membership (`projectId`) is not a slow key — `proposeRelease` of a key that changes nothing throws empty blast. `paid` is not a fourth key either: cash received against the invoice amount entails it, so keep it off ξ and derive it.
 
 ```json
 {

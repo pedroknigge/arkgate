@@ -19,8 +19,78 @@ export const ARK_RUN_INSPECTOR_DEFAULT_PORT = 0;
 export const ARK_RUN_INSPECTOR_SNAPSHOT_PATH = '/snapshot';
 export const ARK_RUN_INSPECTOR_EVENTS_PATH = '/events';
 export const ARK_RUN_INSPECTOR_GRAPH_PATH = '/graph';
+export const ARK_RUN_INSPECTOR_OUTBOX_PATH = '/outbox';
+export const ARK_RUN_INSPECTOR_WORKFLOWS_PATH = '/workflows';
 export const ARK_RUN_INSPECTOR_SSE_EVENT = 'snapshot';
 export const ARK_RUN_INSPECTOR_TRANSPORT_FALLBACK = 'in-process-local' as const;
+/** Server-side sample cap for outbox/workflows monitors (DoS floor). */
+export const ARK_RUN_INSPECTOR_MONITOR_SAMPLE_LIMIT = 32;
+
+/** Outbox statuses the Queues monitor surfaces (dispatched is omitted). */
+export const ARK_RUN_INSPECTOR_OUTBOX_MONITOR_STATUSES = ['pending', 'failed'] as const;
+export type ArkRunInspectorOutboxMonitorStatus =
+  (typeof ARK_RUN_INSPECTOR_OUTBOX_MONITOR_STATUSES)[number];
+
+export type ArkRunInspectorStoreDurabilityKind = 'memory' | 'durable';
+export type ArkRunInspectorStoreRole = 'outbox' | 'audit' | 'workflow';
+
+export type ArkRunInspectorStoreDurability = {
+  role: ArkRunInspectorStoreRole;
+  id: string;
+  kind: ArkRunInspectorStoreDurabilityKind;
+};
+
+export type ArkRunInspectorHardeningDurability = {
+  stores: ArkRunInspectorStoreDurability[];
+};
+
+export type ArkRunInspectorHardening = {
+  durability: ArkRunInspectorHardeningDurability;
+};
+
+export type ArkRunInspectorOutboxRecordSummary = {
+  id: string;
+  status: ArkRunInspectorOutboxMonitorStatus;
+  attempts: number;
+  intent?: string;
+  error?: string;
+  updatedAt?: string;
+};
+
+export type ArkRunInspectorOutboxMonitor = {
+  available: boolean;
+  pendingCount: number;
+  failedCount: number;
+  pending: ArkRunInspectorOutboxRecordSummary[];
+  failed: ArkRunInspectorOutboxRecordSummary[];
+  /** Cap applied to pending/failed sample arrays (counts remain accurate). */
+  sampleLimit: number;
+};
+
+export type ArkRunInspectorWorkflowSummary = {
+  id: string;
+  name: string;
+  status: string;
+  currentStep?: string;
+  error?: string;
+};
+
+export type ArkRunInspectorWorkflowsMonitor = {
+  available: boolean;
+  total: number;
+  runningCount: number;
+  compensatingCount: number;
+  failedCount: number;
+  pendingCount: number;
+  workflows: ArkRunInspectorWorkflowSummary[];
+  /** Cap applied to workflows sample array (counts remain accurate). */
+  sampleLimit: number;
+};
+
+export type ArkRunInspectorMonitorBuildOptions = {
+  /** Bound samples; clamped to 0…ARK_RUN_INSPECTOR_MONITOR_SAMPLE_LIMIT. Default 32. */
+  sampleLimit?: number;
+};
 
 export class ArkRunInspectorProductionError extends Error {
   constructor() {
@@ -58,6 +128,12 @@ export type ArkRunInspectorSnapshot = {
   package: DependencyInformationPackage;
   transport: ArkRunInspectorTransportFacts;
   observability: unknown;
+  /** Explicit store durability facts from real kernel ports (never component-id inference). */
+  hardening: ArkRunInspectorHardening;
+  /** Optional OD04 queue facts when the caller supplies them (endpoints preferred). */
+  outbox?: ArkRunInspectorOutboxMonitor;
+  /** Optional OD04 workflow facts when the caller supplies them (endpoints preferred). */
+  workflows?: ArkRunInspectorWorkflowsMonitor;
 };
 
 export type ArkRunInspectorBindInput = {
@@ -75,6 +151,9 @@ export type ArkRunInspectorSnapshotInput = {
   observability?: unknown;
   ephemeralDefault?: unknown;
   brokerBound?: unknown;
+  hardening?: unknown;
+  outbox?: unknown;
+  workflows?: unknown;
 };
 
 const PUBLIC_HOSTS = new Set([
@@ -194,6 +273,277 @@ function closedTransportFacts(input: {
   };
 }
 
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  return value as Record<string, unknown>;
+}
+
+function closedOutboxSummary(value: unknown): ArkRunInspectorOutboxRecordSummary | undefined {
+  const row = asRecord(value);
+  if (!row || typeof row.id !== 'string') return undefined;
+  const status = row.status;
+  if (status !== 'pending' && status !== 'failed') return undefined;
+  const event = asRecord(row.event);
+  const intent =
+    event && typeof event.intent === 'string'
+      ? event.intent
+      : typeof row.intent === 'string'
+        ? row.intent
+        : undefined;
+  const summary: ArkRunInspectorOutboxRecordSummary = {
+    id: row.id,
+    status,
+    attempts: typeof row.attempts === 'number' && Number.isFinite(row.attempts) ? row.attempts : 0,
+  };
+  if (intent) summary.intent = intent;
+  if (typeof row.error === 'string' && row.error.length > 0) summary.error = row.error;
+  if (typeof row.updatedAt === 'string') summary.updatedAt = row.updatedAt;
+  return summary;
+}
+
+function closedSampleLimit(value: unknown): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return ARK_RUN_INSPECTOR_MONITOR_SAMPLE_LIMIT;
+  }
+  const n = Math.trunc(value);
+  if (n < 0) return 0;
+  if (n > ARK_RUN_INSPECTOR_MONITOR_SAMPLE_LIMIT) {
+    return ARK_RUN_INSPECTOR_MONITOR_SAMPLE_LIMIT;
+  }
+  return n;
+}
+
+/**
+ * Classify a store port by constructor / declared id. `InMemory*` → memory; else durable.
+ */
+export function classifyArkRunInspectorStoreDurability(
+  id: unknown,
+  role: ArkRunInspectorStoreRole
+): ArkRunInspectorStoreDurability {
+  const name =
+    typeof id === 'string' && id.trim().length > 0
+      ? id.trim()
+      : id && typeof id === 'object' && 'constructor' in id
+        ? String((id as { constructor?: { name?: string } }).constructor?.name ?? role)
+        : role;
+  const kind: ArkRunInspectorStoreDurabilityKind = /^InMemory/i.test(name)
+    ? 'memory'
+    : 'durable';
+  return { role, id: name, kind };
+}
+
+/**
+ * Build hardening.durability facts from explicit store rows (not package.components).
+ */
+export function buildArkRunInspectorHardening(input: unknown = {}): ArkRunInspectorHardening {
+  const row = asRecord(input);
+  const durability = asRecord(row?.durability) ?? row;
+  const rawStores = Array.isArray(durability?.stores)
+    ? durability.stores
+    : Array.isArray(row?.stores)
+      ? row.stores
+      : [];
+  const stores: ArkRunInspectorStoreDurability[] = [];
+  for (const entry of rawStores) {
+    const item = asRecord(entry);
+    if (!item) continue;
+    const role = item.role;
+    if (role !== 'outbox' && role !== 'audit' && role !== 'workflow') continue;
+    const id =
+      typeof item.id === 'string'
+        ? item.id
+        : typeof item.name === 'string'
+          ? item.name
+          : undefined;
+    if (!id) continue;
+    const kind =
+      item.kind === 'memory' || item.kind === 'durable'
+        ? item.kind
+        : classifyArkRunInspectorStoreDurability(id, role).kind;
+    stores.push({ role, id, kind });
+  }
+  return { durability: { stores } };
+}
+
+/**
+ * Sanitize EventBufferStore.list rows into pending/failed monitor facts (no payloads).
+ * Counts cover the full input; sample arrays are capped at sampleLimit (≤32).
+ */
+export function buildArkRunInspectorOutboxMonitor(
+  records: unknown = [],
+  options: ArkRunInspectorMonitorBuildOptions = {}
+): ArkRunInspectorOutboxMonitor {
+  const sampleLimit = closedSampleLimit(options.sampleLimit);
+  const list = Array.isArray(records) ? records : [];
+  const pending: ArkRunInspectorOutboxRecordSummary[] = [];
+  const failed: ArkRunInspectorOutboxRecordSummary[] = [];
+  for (const row of list) {
+    const summary = closedOutboxSummary(row);
+    if (!summary) continue;
+    if (summary.status === 'pending') pending.push(summary);
+    else failed.push(summary);
+  }
+  return {
+    available: true,
+    pendingCount: pending.length,
+    failedCount: failed.length,
+    pending: pending.slice(0, sampleLimit),
+    failed: failed.slice(0, sampleLimit),
+    sampleLimit,
+  };
+}
+
+export function unavailableArkRunInspectorOutboxMonitor(): ArkRunInspectorOutboxMonitor {
+  return {
+    available: false,
+    pendingCount: 0,
+    failedCount: 0,
+    pending: [],
+    failed: [],
+    sampleLimit: ARK_RUN_INSPECTOR_MONITOR_SAMPLE_LIMIT,
+  };
+}
+
+function closedWorkflowSummary(value: unknown): ArkRunInspectorWorkflowSummary | undefined {
+  const row = asRecord(value);
+  if (!row || typeof row.id !== 'string') return undefined;
+  const name =
+    typeof row.workflowName === 'string'
+      ? row.workflowName
+      : typeof row.name === 'string'
+        ? row.name
+        : undefined;
+  if (!name) return undefined;
+  const summary: ArkRunInspectorWorkflowSummary = {
+    id: row.id,
+    name,
+    status: typeof row.status === 'string' ? row.status : 'unknown',
+  };
+  if (typeof row.currentStep === 'string') summary.currentStep = row.currentStep;
+  if (typeof row.error === 'string' && row.error.length > 0) summary.error = row.error;
+  return summary;
+}
+
+function isPendingWorkflowStatus(status: string): boolean {
+  return status === 'idle' || status === 'waiting';
+}
+
+/**
+ * Sanitize WorkflowEngine.list rows into monitor facts (id/name/status/step/error only).
+ * Counts cover the full input; the workflows sample is capped at sampleLimit (≤32).
+ */
+export function buildArkRunInspectorWorkflowsMonitor(
+  snapshots: unknown = [],
+  options: ArkRunInspectorMonitorBuildOptions = {}
+): ArkRunInspectorWorkflowsMonitor {
+  const sampleLimit = closedSampleLimit(options.sampleLimit);
+  const list = Array.isArray(snapshots) ? snapshots : [];
+  const workflows: ArkRunInspectorWorkflowSummary[] = [];
+  let runningCount = 0;
+  let compensatingCount = 0;
+  let failedCount = 0;
+  let pendingCount = 0;
+  for (const row of list) {
+    const summary = closedWorkflowSummary(row);
+    if (!summary) continue;
+    workflows.push(summary);
+    if (summary.status === 'running') runningCount += 1;
+    else if (summary.status === 'compensating') compensatingCount += 1;
+    else if (summary.status === 'failed') failedCount += 1;
+    else if (isPendingWorkflowStatus(summary.status)) pendingCount += 1;
+  }
+  return {
+    available: true,
+    total: workflows.length,
+    runningCount,
+    compensatingCount,
+    failedCount,
+    pendingCount,
+    workflows: workflows.slice(0, sampleLimit),
+    sampleLimit,
+  };
+}
+
+export function unavailableArkRunInspectorWorkflowsMonitor(): ArkRunInspectorWorkflowsMonitor {
+  return {
+    available: false,
+    total: 0,
+    runningCount: 0,
+    compensatingCount: 0,
+    failedCount: 0,
+    pendingCount: 0,
+    workflows: [],
+    sampleLimit: ARK_RUN_INSPECTOR_MONITOR_SAMPLE_LIMIT,
+  };
+}
+
+function closedOutboxMonitor(value: unknown): ArkRunInspectorOutboxMonitor | undefined {
+  if (value === undefined) return undefined;
+  const row = asRecord(value);
+  if (!row) return unavailableArkRunInspectorOutboxMonitor();
+  if (row.available === false) return unavailableArkRunInspectorOutboxMonitor();
+  const sampleLimit = closedSampleLimit(row.sampleLimit);
+  if (Array.isArray(row.pending) || Array.isArray(row.failed) || Array.isArray(row.records)) {
+    const records = [
+      ...(Array.isArray(row.pending) ? row.pending : []),
+      ...(Array.isArray(row.failed) ? row.failed : []),
+      ...(Array.isArray(row.records) ? row.records : []),
+    ];
+    const built = buildArkRunInspectorOutboxMonitor(records, { sampleLimit });
+    const pendingCount =
+      typeof row.pendingCount === 'number' && Number.isFinite(row.pendingCount)
+        ? Math.max(0, Math.trunc(row.pendingCount))
+        : built.pendingCount;
+    const failedCount =
+      typeof row.failedCount === 'number' && Number.isFinite(row.failedCount)
+        ? Math.max(0, Math.trunc(row.failedCount))
+        : built.failedCount;
+    return { ...built, pendingCount, failedCount, sampleLimit };
+  }
+  return unavailableArkRunInspectorOutboxMonitor();
+}
+
+function closedWorkflowsMonitor(value: unknown): ArkRunInspectorWorkflowsMonitor | undefined {
+  if (value === undefined) return undefined;
+  const row = asRecord(value);
+  if (!row) return unavailableArkRunInspectorWorkflowsMonitor();
+  if (row.available === false) return unavailableArkRunInspectorWorkflowsMonitor();
+  const sampleLimit = closedSampleLimit(row.sampleLimit);
+  if (Array.isArray(row.workflows)) {
+    const built = buildArkRunInspectorWorkflowsMonitor(row.workflows, { sampleLimit });
+    const total =
+      typeof row.total === 'number' && Number.isFinite(row.total)
+        ? Math.max(0, Math.trunc(row.total))
+        : built.total;
+    const runningCount =
+      typeof row.runningCount === 'number' && Number.isFinite(row.runningCount)
+        ? Math.max(0, Math.trunc(row.runningCount))
+        : built.runningCount;
+    const compensatingCount =
+      typeof row.compensatingCount === 'number' && Number.isFinite(row.compensatingCount)
+        ? Math.max(0, Math.trunc(row.compensatingCount))
+        : built.compensatingCount;
+    const failedCount =
+      typeof row.failedCount === 'number' && Number.isFinite(row.failedCount)
+        ? Math.max(0, Math.trunc(row.failedCount))
+        : built.failedCount;
+    const pendingCount =
+      typeof row.pendingCount === 'number' && Number.isFinite(row.pendingCount)
+        ? Math.max(0, Math.trunc(row.pendingCount))
+        : built.pendingCount;
+    return {
+      ...built,
+      total,
+      runningCount,
+      compensatingCount,
+      failedCount,
+      pendingCount,
+      sampleLimit,
+    };
+  }
+  return unavailableArkRunInspectorWorkflowsMonitor();
+}
+
 export function buildArkRunInspectorSnapshot(
   input: ArkRunInspectorSnapshotInput = {}
 ): ArkRunInspectorSnapshot {
@@ -211,7 +561,9 @@ export function buildArkRunInspectorSnapshot(
         ? (input.package as { components: unknown[] }).components
         : [],
   });
-  return {
+  const outbox = closedOutboxMonitor(input.outbox);
+  const workflows = closedWorkflowsMonitor(input.workflows);
+  const snapshot: ArkRunInspectorSnapshot = {
     schemaVersion: ARK_RUN_INSPECTOR_SCHEMA_VERSION,
     kernelInstanceId:
       typeof input.kernelInstanceId === 'string'
@@ -224,7 +576,11 @@ export function buildArkRunInspectorSnapshot(
     },
     transport: closedTransportFacts(input),
     observability: jsonClone(input.observability) ?? {},
+    hardening: buildArkRunInspectorHardening(input.hardening),
   };
+  if (outbox) snapshot.outbox = outbox;
+  if (workflows) snapshot.workflows = workflows;
+  return snapshot;
 }
 
 export function formatArkRunInspectorSseEvent(snapshot: unknown): string {

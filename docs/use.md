@@ -2,12 +2,20 @@
 
 **Write. Check. Ship.**
 
-For **anyone** shipping TypeScript with an AI coding agent.
-
 **When the agent writes a bad import, the write doesn’t land. The same check fails the pull request.**
 
 Not an API Gateway. Not a folder linter. If the check is not required on the PR, the config
 is just documentation.
+
+AI can build fast—and make a mess just as fast.
+
+Keep the product easy to understand, change, and trust.
+
+ArkGate stops bad shortcuts. ArkRules protects how each part should behave. ArkRun keeps work moving. ArkOrder protects the few big choices that should not change by accident.
+
+Safer changes, fewer surprises, and extra protection only when you choose it.
+
+For **anyone** shipping TypeScript with an AI coding agent.
 
 ---
 
@@ -81,7 +89,7 @@ The config only binds when the write doesn’t land and CI is required.
 | **ArkGate** (layers) | Import rules. The write doesn’t land. The PR fails. | Always — this is the product |
 | **ArkRules** | Optional policies *inside* a layer. | Off until you turn it on (start may ship advisory templates) |
 | **ArkRun** | Optional experimental runtime (`arkgate/runtime`) | Off. In-memory. Not Postgres. |
-| **ArkOrder** | Stops the agent rewriting the few slow product decisions as CRUD (`arkgate/order`). Library + sensors, [not a service](arkorder.md). Valve: `proposeRelease` then `apply`; `refreshSigma`; ingest residual; capacity pack; `ReleaseStore`; ArkRun `decisionTape`. ArkOrder freezes the pattern through a valve. ArkRun is how the residual travels. | Off. Name `xiKeys` (plan / protocol, not `projectId`). Invoices and seats still flow. In-memory. Not durable. |
+| **ArkOrder** | Stops the agent rewriting the few slow product decisions as CRUD (`arkgate/order`). Library + sensors, [not a service](arkorder.md). Valve: `proposeRelease` then `apply`; `refreshSigma`; ingest residual; capacity pack; `ReleaseStore`; ArkRun `decisionTape`. ArkOrder freezes the pattern through a valve. ArkRun is how the residual travels. | Off. Name `xiKeys` (plan / protocol, not `projectId`). Derive recomputable statuses; invoices and seats still flow. In-memory. Not durable. |
 
 Start always gives you **layers**. Compact starters do **not** turn on ArkRun or
 ArkOrder. No extras is fine — only ArkGate runs. Leftovers are labeled

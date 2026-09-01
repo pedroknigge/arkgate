@@ -39,6 +39,36 @@ import { setupUsage, setupUsageAll, upgradeUsage } from './lib/first-run-help.mj
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const arkCheck = path.join(here, 'ark-check.mjs');
+const arkDashboard = path.join(here, 'ark-dashboard.mjs');
+const dashboardHelp = `arkgate dashboard (alias ark dashboard) — observability TUI.
+Usage: arkgate dashboard [--url <snapshot-url>] [--interval <ms>]
+Polls an ArkRun inspector; it does not start the kernel.`;
+
+function withDashboardHelp(text, detailed) {
+  if (detailed) {
+    return text
+      .replace(
+        '  arkgate agents-md [--root',
+        '  arkgate dashboard [--url <snapshot-url>] [--interval <ms>]\n  arkgate agents-md [--root'
+      )
+      .replace(
+        '  agents-md Version-matched',
+        '  dashboard  ANSI observability TUI against a running ArkRun inspector (spawns ark-dashboard).\n  agents-md Version-matched'
+      );
+  }
+  return text.replace(
+    '  arkgate-check --doctor     status — one next step\n',
+    '  arkgate-check --doctor     status — one next step\n  arkgate dashboard         observability TUI (inspector)\n'
+  );
+}
+
+function runDashboard(passthroughArgs) {
+  const result = spawnSync(process.execPath, [arkDashboard, ...passthroughArgs], {
+    stdio: 'inherit',
+    encoding: 'utf8',
+  });
+  return result.status ?? 1;
+}
 
 /**
  * Day-zero architecture picture: freeze origin under `.ark/reports/` as soon as
@@ -93,6 +123,7 @@ function parseArgs(argv) {
     help: false,
     all: false,
     version: false,
+    passthrough: [],
   };
 
   const requireValue = (flag, index) => {
@@ -147,7 +178,14 @@ function parseArgs(argv) {
     else if (arg === '--help' || arg === '-h' || arg === 'help') args.help = true;
     else if (arg === '--all') args.all = true;
     else if (arg === '--version' || arg === '-V') args.version = true;
-    else if (!arg.startsWith('-') && args.command === undefined) args.command = arg;
+    else if (!arg.startsWith('-') && args.command === undefined) {
+      args.command = arg;
+      // Dashboard owns its flags (--url/--interval); pass the rest through untouched.
+      if (arg === 'dashboard') {
+        args.passthrough = argv.slice(i + 1);
+        break;
+      }
+    }
     else throw new Error(`Unknown argument: ${arg}. Run arkgate --help for usage.`);
   }
 
@@ -782,9 +820,19 @@ async function main() {
     console.log(upgradeUsage());
     return 0;
   }
-  if (args.help || !args.command) {
-    console.log(args.all ? setupUsageAll() : setupUsage());
+  if (args.command === 'dashboard' && args.passthrough.some((arg) => ['--help', '-h', 'help'].includes(arg))) {
+    console.log(dashboardHelp);
     return 0;
+  }
+  if (args.help || !args.command) {
+    console.log(
+      withDashboardHelp(args.all ? setupUsageAll() : setupUsage(), Boolean(args.all))
+    );
+    return 0;
+  }
+
+  if (args.command === 'dashboard') {
+    return runDashboard(args.passthrough);
   }
 
   if (args.requireWriteHook && !['start', 'init'].includes(args.command)) {
@@ -913,7 +961,7 @@ async function main() {
   }
 
   console.error(`Unknown command: ${args.command}`);
-  console.error(setupUsage());
+  console.error(withDashboardHelp(setupUsage(), false));
   return 2;
 }
 

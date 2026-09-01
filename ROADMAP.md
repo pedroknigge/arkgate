@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-08-31 (Engineering doing: none; Phase **LD** `LD01`–`LD06` **done** (4.8.7 published); Phase **LV** ArkOrder valved loop `LV01`–`LV09` **done** (4.8.6 published); Phase **XP** ArkOrder x ArkRun convergence **done** (`XP01`-`XP08`); Patch **4.8.5** `AGY01`+XP **done** — published; Patch **4.8.5** `AGY01` **done** — Antigravity skill refresh (`--antigravity-home` + default tools + dogfood `.agents/skills`); published; Patch **4.8.4** **done** — three false greens closed (coverage certifying tests no runner runs, an empty analysis passing, a symlink-forgeable coverage gate), `--path-drift`, `--sensors`/`--promote`, peerIsolation `sharedRoots`+`allowedCrossSlice`, git install without a build allowlist entry, `--plan` surfaced on a green run; published; Patch **4.8.3** `AW01`+`OR08` **done** — `writes-via-aggregate` + ArkOrder `xiKeys`; Phase OR `OR01`–`OR08` **done**; published `arkgate@4.8.2` (skills four-plane honesty over **4.8.1**); `arkgate/order` is an extra **inside** package `arkgate` (ADR 0030), not `@arkgate/order`; `PK01` **done** (ADR 0031: `arkgate/runtime` + `arkgate/nestjs` real subpaths; `@arkgate/runtime` deprecated); `WH01` **done** (ADR 0026); `K01` **parked** — 4.7.6 shipped workflow primitives, bus commit gaps and durable outbox remain; Phase DX `DX01`–`DX03` **done** and shipped in published `arkgate@4.8.0+` (4.7.6 predates them); Phase HS `HS01`–`HS05` **done**; `RN16` **done**; `RN17` **done**; Phase RN ArkRun shipped **4.7.0**; Write. Check. Ship. patch **4.7.5** published; npm `latest` is **4.8.7**; `AL05` parked; Z09 still parked)
+- **Status date:** 2026-09-01 (Engineering doing: `RL88`; Phase **LD** `LD01`–`LD06` **done** (4.8.7 published); Patch `ST02` **done** — unlabeled public story; Patch `ST01` **done** — beginner-clear STAR openings; Patch `AO09` **done** — ArkOrder recomputable-status honesty; Phase **LV** ArkOrder valved loop `LV01`–`LV09` **done** (4.8.6 published); Phase **XP** ArkOrder x ArkRun convergence **done** (`XP01`-`XP08`); Patch **4.8.5** `AGY01`+XP **done** — published; Patch **4.8.5** `AGY01` **done** — Antigravity skill refresh (`--antigravity-home` + default tools + dogfood `.agents/skills`); published; Patch **4.8.4** **done** — three false greens closed (coverage certifying tests no runner runs, an empty analysis passing), `--path-drift`, `--sensors`/`--promote`, peer isolation, git install without a build allowlist entry, and honest `--plan`; Phase OR `OR01`–`OR08` **done**; `K01` remains parked; Z09 still parked; npm `latest` is **4.8.7**)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -278,7 +278,7 @@ Plan: [docs/plans/arkorder-valve-loop/README.md](docs/plans/arkorder-valve-loop/
 Target additive **`arkgate@4.8.6`** when public verbs ship (`apply` / `refreshSigma` /
 ingest residual). Does **not** close `Z09` / `K01`. Does **not** copy Orderfield.
 No new skill names. No `ark.config` schema bump unless a later item proves a config key.
-Engineering doing: none — Phase LV done; 4.8.6 published.
+Engineering doing: `RL88` — prepare and publish 4.8.8. `ST02`, `ST01`, and `AO09` done; Phase LV done.
 
 ArkOrder 4.8.5 classified; LV02 valves the second freeze; LV03 splits xiHash from σ;
 LV04 binds ingest residual to xiHash. Payload capacity is still LV05; absorb does not travel.
@@ -294,6 +294,30 @@ LV04 binds ingest residual to xiHash. Payload capacity is still LV05; absorb doe
 | 229 | `LV07` | `done` | M | LV06 | Thin bridge: absorb → `send`; escalate_up human → `raises`. Gallery wiring. No new skill |
 | 230 | `LV08` | `done` | M | LV02+LV03 | `ReleaseStore` port, in-memory default; optional catalog digest. Not K01 |
 | 231 | `LV09` | `done` | M | LV05+LV07+LV08 | Docs + skills deepen + billing uses the loop; **4.8.6** published. No `/ark-order` |
+
+### Patch 4.8.8 — ArkOrder recomputable-status honesty
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 238 | `AO09` | `done` | S | LV09 | Deepen existing skills and ArkOrder docs with the elimination test; billing names `paid` as derived, not a slow key. No sensor, schema, config key, runtime tooth, or new skill. Does not close `Z09` / `K01` |
+
+### Patch 4.8.8 — beginner-clear STAR openings
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 239 | `ST01` | `done` | S | AO09 | Explain ArkGate, ArkRules, ArkRun, and ArkOrder in the same four plain-English STAR lines across all eight canonical public openings. Documentation and static parity only; no code, config, schema, runtime, or publish change |
+
+### Patch 4.8.8 — unlabeled public story
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 240 | `ST02` | `done` | S | ST01 | Keep STAR as invisible writing structure: the same four natural English paragraphs across all eight public openings, with no formula heading or visible labels. Docs and static parity only |
+
+### Release 4.8.8 — complete publish
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 241 | `RL88` | `doing` | M | ST02 | Reconcile 4.8.7 with the dashboard train and honesty copy; verify, sign, publish npm + MCP Registry, update the website, then verify every public pointer. Does not close `Z09` / `K01` |
 
 ### Patch 4.8.5 — Antigravity skills refresh
 
@@ -323,7 +347,7 @@ Plan: [docs/plans/alive-in-six-months/README.md](docs/plans/alive-in-six-months/
 | 183 | `AL05` | `parked` | S | required-status possible + 3 partners | Field enrollment. Does **not** close Z09 |
 | 184 | `AL06` | `done` | S | AL04 | Compact first-screen vs Details independently invocable; first-screen honesty stays |
 
-Engineering doing: none. Phase **LD** `LD01`–`LD06` **done** (4.8.7 published). Phase **LV** `LV01`–`LV09` **done** (4.8.6 published). `AGY01` **done** (4.8.5 published). `OR01`–`OR07` **done**. `WH01` **done** (ADR 0026). `PK01` **done**.
+Engineering doing: `RL88`. Phase **LD** `LD01`–`LD06` **done** (4.8.7 published). `ST02`, `ST01`, and `AO09` **done**. Phase **LV** `LV01`–`LV09` **done** (4.8.6 published). `AGY01` **done** (4.8.5 published). `OR01`–`OR07` **done**. `WH01` **done** (ADR 0026). `PK01` **done**.
 `K01` **parked** (4.7.6 primitives only).
 Phase DX (`DX01`–`DX03`) **done** and present in published `arkgate@4.8.0+` (4.7.6 predates them).
 Phase HS (`HS01`–`HS05`) **done**. Remaining first-contact copy **4.7.3** published. Write. Check. Ship. patch **4.7.5** published. **4.8.7** is on npm `latest`.
@@ -510,3 +534,15 @@ gate is not a superset of the required CI job.
 |---:|---|---|---:|---|---|
 | 220 | `AW01` | `done` | M | — | Closed sensor `writes-via-aggregate`; Application + vertical-slice Features templates advisory; deepen place/adopt/contract |
 | 221 | `OR08` | `done` | M | OR06 | `arkOrder.xiKeys`; `ARKORDER_XI_FIELD_WRITE`; `too-many-params` / `ingest-writes-xi` emit; billing rename recipe |
+
+### Phase OD — Observability Dashboard (TUI)
+
+Plan: [docs/plans/observability-tui/README.md](docs/plans/observability-tui/README.md).
+Interactive terminal dashboard consuming kernel ports to enforce production readiness and visualize architectural drift.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 222 | `OD01` | `done` | M | — | TUI Foundation & CLI Entrypoint (`ark dashboard` / `ark-dashboard`) |
+| 223 | `OD02` | `done` | M | OD01 | Hardening Status Panel (Memory defaults vs real stores) |
+| 224 | `OD03` | `done` | L | OD01 | Drift Radar (Live `ObservabilityDriftReport` visualization) |
+| 225 | `OD04` | `done` | M | OD01 | Sagas & Outbox Queue monitor |

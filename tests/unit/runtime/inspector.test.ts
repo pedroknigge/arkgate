@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import * as gate from '../../../src/gate';
 import {
   ARK_RUN_INSPECTOR_DEFAULT_HOST,
+  ARK_RUN_INSPECTOR_MONITOR_SAMPLE_LIMIT,
   ARK_RUN_INSPECTOR_SSE_EVENT,
   ArkRunInspectorBindError,
   ArkRunInspectorProductionError,
@@ -171,5 +172,160 @@ describe('RN12 ArkRun inspector HTTP', () => {
     await expect(ark.startInspector({ host: '8.8.8.8', nodeEnv: 'test' })).rejects.toBeInstanceOf(
       ArkRunInspectorBindError
     );
+  });
+});
+
+describe('PROD-004 inspector durability + /outbox /workflows routes', () => {
+  it('default createStrictArkKernel snapshot.hardening shows memory kinds (false-green impossible)', () => {
+    const ark = createStrictArkKernel({ instanceId: 'prod-004-harden' });
+    const snapshot = ark.getInspectorSnapshot();
+    expect(snapshot.package.components).toEqual([]);
+    const stores = snapshot.hardening.durability.stores;
+    expect(stores).toHaveLength(3);
+    expect(stores.map((s) => s.role).sort()).toEqual(['audit', 'outbox', 'workflow']);
+    expect(stores.every((s) => s.kind === 'memory')).toBe(true);
+    expect(stores.every((s) => /^InMemory/i.test(s.id))).toBe(true);
+    // Same predicate dashboard uses: any memory → never "[OK] Durable Stores Configured".
+    const wouldPrintGreenOk =
+      stores.filter((s) => s.kind === 'memory').length === 0 && stores.length > 0;
+    expect(wouldPrintGreenOk).toBe(false);
+  });
+
+  it('GET /outbox happy path returns capped samples without payloads', async () => {
+    const { ark, handle } = await started();
+    await ark.eventBuffer.enqueue({
+      intent: 'Order.Placed',
+      payload: { secret: 'do-not-leak' },
+      metadata: { source: 'test', occurredAt: new Date().toISOString() },
+    } as never);
+    const pending = await ark.eventBuffer.list('pending');
+    expect(pending.length).toBeGreaterThan(0);
+    await ark.eventBuffer.markFailed(pending[0]!.id, new Error('dispatch failed'));
+
+    const res = await fetch(handle.outboxUrl);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      available: boolean;
+      pendingCount: number;
+      failedCount: number;
+      pending: unknown[];
+      failed: Array<{ id: string; status: string; error?: string }>;
+      sampleLimit: number;
+    };
+    expect(body.available).toBe(true);
+    expect(body.failedCount).toBeGreaterThanOrEqual(1);
+    expect(body.sampleLimit).toBe(ARK_RUN_INSPECTOR_MONITOR_SAMPLE_LIMIT);
+    expect(body.failed.some((row) => row.status === 'failed')).toBe(true);
+    expect(JSON.stringify(body)).not.toMatch(/do-not-leak|payload|secret/);
+  });
+
+  it('GET /workflows happy path returns available monitor with sampleLimit', async () => {
+    const { handle } = await started();
+    const res = await fetch(handle.workflowsUrl);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      available: boolean;
+      total: number;
+      workflows: unknown[];
+      sampleLimit: number;
+    };
+    expect(body.available).toBe(true);
+    expect(body.sampleLimit).toBe(ARK_RUN_INSPECTOR_MONITOR_SAMPLE_LIMIT);
+    expect(Array.isArray(body.workflows)).toBe(true);
+    expect(typeof body.total).toBe('number');
+  });
+
+  it('GET /outbox and /workflows return unavailable when ports are missing', async () => {
+    const handle = await startArkRunInspector(
+      {
+        getInspectorSnapshot: () =>
+          ({
+            schemaVersion: '1.0',
+            kernelInstanceId: 'bare',
+            bind: { host: '127.0.0.1', port: 0, loopback: true },
+            package: {
+              schemaVersion: '1.0',
+              kernelInstanceId: 'bare',
+              components: [],
+            },
+            transport: {
+              kinds: ['local', 'localBlocking', 'broker'],
+              ephemeralDefault: true,
+              brokerBound: false,
+              cloudSdksShipped: false,
+              fallback: 'in-process-local',
+            },
+            observability: {},
+            hardening: { durability: { stores: [] } },
+          }) as never,
+        requestGraph: () => ({ slice: 'process', nodes: [], edges: [], mermaid: '' }) as never,
+      },
+      { port: 0, sseIntervalMs: 0, nodeEnv: 'test' }
+    );
+    handles.push(handle);
+
+    const outbox = await fetch(handle.outboxUrl);
+    expect(outbox.status).toBe(200);
+    expect(await outbox.json()).toMatchObject({
+      available: false,
+      pendingCount: 0,
+      failedCount: 0,
+      pending: [],
+      failed: [],
+      sampleLimit: ARK_RUN_INSPECTOR_MONITOR_SAMPLE_LIMIT,
+    });
+
+    const workflows = await fetch(handle.workflowsUrl);
+    expect(workflows.status).toBe(200);
+    expect(await workflows.json()).toMatchObject({
+      available: false,
+      total: 0,
+      workflows: [],
+      sampleLimit: ARK_RUN_INSPECTOR_MONITOR_SAMPLE_LIMIT,
+    });
+  });
+
+  it('GET /outbox and /workflows return 500 when list helpers throw', async () => {
+    const handle = await startArkRunInspector(
+      {
+        getInspectorSnapshot: () =>
+          ({
+            schemaVersion: '1.0',
+            kernelInstanceId: 'boom',
+            bind: { host: '127.0.0.1', port: 0, loopback: true },
+            package: {
+              schemaVersion: '1.0',
+              kernelInstanceId: 'boom',
+              components: [],
+            },
+            transport: {
+              kinds: ['local', 'localBlocking', 'broker'],
+              ephemeralDefault: true,
+              brokerBound: false,
+              cloudSdksShipped: false,
+              fallback: 'in-process-local',
+            },
+            observability: {},
+            hardening: { durability: { stores: [] } },
+          }) as never,
+        requestGraph: () => ({ slice: 'process', nodes: [], edges: [], mermaid: '' }) as never,
+        async listInspectorOutbox() {
+          throw new Error('outbox exploded');
+        },
+        async listInspectorWorkflows() {
+          throw new Error('workflows exploded');
+        },
+      },
+      { port: 0, sseIntervalMs: 0, nodeEnv: 'test' }
+    );
+    handles.push(handle);
+
+    const outbox = await fetch(handle.outboxUrl);
+    expect(outbox.status).toBe(500);
+    expect(await outbox.json()).toEqual({ error: 'outbox exploded' });
+
+    const workflows = await fetch(handle.workflowsUrl);
+    expect(workflows.status).toBe(500);
+    expect(await workflows.json()).toEqual({ error: 'workflows exploded' });
   });
 });
