@@ -15,8 +15,7 @@ intent-reference checks share the import classifier. Amarilla ArkOrder:
 **No required config migration.** No `ark.config.json` schema bump. Does not close `K01` / `Z09`.
 No new skill names.
 
-**Status: prepared** (tree candidate; npm `latest` remains **4.8.8** until the
-signed-tag provenance workflow succeeds).
+**Status: published** (on npm `latest`; see `docs/releases/4.8.9.md`).
 
 ### Added
 - Optional `arkOrder.appliesTo` globs (same engine as layers). `managedLayers`
@@ -72,7 +71,7 @@ payload-free inspector monitors. ArkOrder and first-contact docs gain honesty co
 **No required config migration.** No `ark.config.json` schema bump. Does not close
 `K01` / `Z09`.
 
-**Status: published** (on npm `latest`; see `docs/releases/4.8.8.md`).
+**Status: published** (see `docs/releases/4.8.8.md`).
 
 ### Added
 - Dual **`ark-dashboard` / `arkgate-dashboard`** bins render the loopback ArkRun
