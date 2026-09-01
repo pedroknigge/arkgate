@@ -1413,3 +1413,25 @@ doctor → compact router (and `/ark-autopilot` only after the skill pack).
 6. **Wire** relationships via `registry.define(..., { dependsOn, produces })`
 7. **Register** event contracts before publishing in strict mode
 8. **Observe** runtime via `bus.getTrace()`, `auditTrail.query()`, outbox records, projection checkpoints, and `ark.observability.report()`
+9. **Optional loopback inspector** via `ark.startInspector()` — JSON facts only (see below); poll with `ark-dashboard` / `arkgate-dashboard` when you want a terminal view
+
+### Dev inspector queue endpoints and dashboard bins
+
+`startInspector()` / `startArkRunInspector()` bind loopback only, refuse
+`NODE_ENV=production`, and lazy-load HTTP. The kernel exposes JSON durability and
+monitor facts — not a TUI.
+
+| Method + path | Role |
+|---------------|------|
+| `GET /snapshot` (also `/`) | Information package + transport + observability snapshot |
+| `GET /events` | SSE of the same snapshot |
+| `GET /graph` | `requestGraph` slice (+ Mermaid helper) |
+| `GET /outbox` | Outbox monitor: `available`, `pendingCount`, `failedCount`, `pending[]` / `failed[]` row summaries (`id`, `status`, `attempts`, optional `intent` / `error` / `updatedAt`) — **no event payloads** |
+| `GET /workflows` | Workflows monitor: counts + `workflows[]` summaries (`id`, `name`, `status`, optional `currentStep` / `error`) |
+
+Dual package bins **`ark-dashboard`** and **`arkgate-dashboard`**
+(`bin/ark-dashboard.mjs`) poll `--url` (default `http://127.0.0.1:3000/snapshot`)
+and sibling `/outbox` + `/workflows` on an interval (`--interval`, 200–60000 ms).
+ANSI escape sequences + polling only — no React, Ink, or Blessed. There is no
+`ark dashboard` dispatcher subcommand; invoke the dashboard bins directly.
+Presentation stays in Tooling (`bin/`); do not couple a TUI into `src/kernel`.

@@ -245,6 +245,8 @@ npx arkgate-check --install-agent-gates --tools claude,cursor,codex,grok,antigra
 # npx arkgate-check --install-agent-gates --skills-only --agent-homes --force
 # optional: same 13 skills via Agent Skills ecosystem (no new names)
 # npx skills add ./node_modules/arkgate/templates/agent-skills
+# optional ArkRun: poll the loopback inspector (ANSI TUI — not a gate)
+# npx ark-dashboard --url http://127.0.0.1:<port>/snapshot
 ```
 
 More: [docs/develop.md](docs/develop.md) · skills install: [docs/agent-guide.md](docs/agent-guide.md#install-skills-ark-and-ecosystem) · enthusiast track: [docs/enthusiast/](docs/enthusiast/README.md)
@@ -260,6 +262,26 @@ for decoupling.
 `createStrictArkKernel()` call is a new instance — no process singleton. Data
 lives in memory and **dies on restart**. Fine for local. Not Postgres, not an
 outbox, not Temporal. `@arkgate/runtime` is deprecated.
+
+### Dev inspector and observability dashboard
+
+Opt-in `startInspector()` binds **loopback only** (`127.0.0.1`), refuses
+`NODE_ENV=production`, and serves JSON facts — not a TUI. Alongside
+`GET /snapshot`, `GET /events` (SSE), and `GET /graph`, the inspector exposes
+queue monitors:
+
+| Path | Body (JSON) |
+|------|-------------|
+| `GET /outbox` | Pending/failed outbox **summaries** + counts (`available`, `pendingCount`, `failedCount`, `pending`, `failed`) — no event payloads |
+| `GET /workflows` | Workflow **summaries** + counts (`available`, `total`, `runningCount`, …, `workflows`) |
+
+Poll those facts from the dual bins **`ark-dashboard`** / **`arkgate-dashboard`**
+(`bin/ark-dashboard.mjs`). ANSI + polling only (no React/Ink/Blessed). Point
+`--url` / `-u` at the inspector snapshot (default
+`http://127.0.0.1:3000/snapshot`); the dashboard also fetches sibling `/outbox`
+and `/workflows`. `--interval` / `-i` is clamped to 200–60000 ms (default 2000).
+There is no `ark dashboard` subcommand — use the dashboard bins. Kernel stays
+JSON-only; presentation stays in `bin/`.
 
 ### Durability stance
 
