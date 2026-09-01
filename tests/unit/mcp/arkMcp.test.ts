@@ -2148,6 +2148,7 @@ describe('ark-mcp read-side tools (ark_check / ark_coverage / ark_place)', () =>
     expect(payload.forbiddenGlobals).toContain('Date.now');
     expect(payload.mustNotImport).toContain('PersistenceAdapters');
     expect(payload.mayImport).not.toContain('PersistenceAdapters');
+    expect(payload).not.toHaveProperty('description');
   });
 
   it('ark_place flags an ungoverned path with placement suggestions', async () => {
@@ -2159,11 +2160,98 @@ describe('ark-mcp read-side tools (ark_check / ark_coverage / ark_place)', () =>
     expect(payload.layer).toBeNull();
     expect(payload.governed).toBe(false);
     expect(Array.isArray(payload.suggestedLayers)).toBe(true);
+    expect(payload).not.toHaveProperty('description');
   });
 
   it('rejects an unknown tool name', async () => {
     const res = await client.request('tools/call', { name: 'nope', arguments: {} });
     expect(res.error.code).toBe(-32602);
+  });
+});
+
+describe('LD03 ark_place / ark_prepare_write layer description (ADR 0035 D5)', () => {
+  const CAPTION = 'Purchase requests — from asked to received.';
+  let projectRoot: string;
+  let client: ReturnType<typeof createClient>;
+
+  beforeAll(() => {
+    prepareMcpRuntime();
+    projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-mcp-ld03-'));
+    fs.writeFileSync(
+      path.join(projectRoot, 'ark.config.json'),
+      JSON.stringify({
+        include: ['src'],
+        layers: [
+          {
+            name: 'DomainModel',
+            patterns: ['src/domain/**'],
+            forbiddenGlobals: ['Date.now'],
+            description: CAPTION,
+          },
+          { name: 'Kernel', patterns: ['src/kernel/**'] },
+        ],
+        rules: [{ from: 'DomainModel', to: 'Kernel', allowed: false }],
+      })
+    );
+    fs.mkdirSync(path.join(projectRoot, 'src/domain'), { recursive: true });
+    fs.mkdirSync(path.join(projectRoot, 'src/kernel'), { recursive: true });
+    client = createClient(projectRoot, ['--config', 'ark.config.json']);
+  }, 120000);
+
+  afterAll(() => {
+    client?.close();
+    if (projectRoot) fs.rmSync(projectRoot, { recursive: true, force: true });
+  });
+
+  it('ark_place JSON includes layers[].description when present', async () => {
+    const res = await client.request('tools/call', {
+      name: 'ark_place',
+      arguments: { filePath: 'src/domain/order.ts', description: 'orders repository' },
+    });
+    const payload = JSON.parse(res.result.content[0].text);
+    expect(res.result.isError).toBe(false);
+    expect(payload.layer).toBe('DomainModel');
+    expect(payload.description).toBe(CAPTION);
+    expect(JSON.stringify(payload)).not.toContain('orders repository');
+  });
+
+  it('ark_place JSON omits description when the matched layer has no caption', async () => {
+    const res = await client.request('tools/call', {
+      name: 'ark_place',
+      arguments: { filePath: 'src/kernel/gate.ts', description: 'kernel helper' },
+    });
+    const payload = JSON.parse(res.result.content[0].text);
+    expect(payload.layer).toBe('Kernel');
+    expect(payload).not.toHaveProperty('description');
+    expect(JSON.stringify(payload)).not.toContain('kernel helper');
+  });
+
+  it('ark_prepare_write JSON includes description when present and omits it when absent', async () => {
+    const present = await client.request('tools/call', {
+      name: 'ark_prepare_write',
+      arguments: {
+        source: 'export type Id = string;\n',
+        filePath: 'src/domain/id.ts',
+        description: 'orders repository',
+      },
+    });
+    const presentPayload = JSON.parse(present.result.content[0].text);
+    expect(presentPayload.layer).toBe('DomainModel');
+    expect(presentPayload.description).toBe(CAPTION);
+    expect(JSON.stringify(presentPayload)).not.toContain('orders repository');
+
+    const absent = await client.request('tools/call', {
+      name: 'ark_prepare_write',
+      arguments: {
+        source: 'export type Gate = string;\n',
+        filePath: 'src/kernel/id.ts',
+        description: 'kernel helper',
+      },
+    });
+    const absentPayload = JSON.parse(absent.result.content[0].text);
+    expect(absentPayload.layer).toBe('Kernel');
+    expect(absentPayload).not.toHaveProperty('description');
+    expect(JSON.stringify(absentPayload)).not.toContain('kernel helper');
   });
 });
 

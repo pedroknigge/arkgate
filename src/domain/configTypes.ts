@@ -20,6 +20,10 @@ export type ArkConfigLayer = {
   patterns: string[];
   exclude?: string[];
   intentPrefixes?: string[];
+  /**
+   * App-context caption for this layer.
+   * Metadata — excluded from policy hash. Absence is silent.
+   */
   description?: string;
   forbiddenGlobals?: string[];
   /** ADR 0009 D2 — opt-in effect-capability walls; absence changes no verdict. */

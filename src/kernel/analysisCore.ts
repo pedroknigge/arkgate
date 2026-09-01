@@ -22,6 +22,7 @@ import {
 } from '../domain/arkRulesContract';
 import {
   effectiveContractPolicyPayload,
+  omitLayerDescriptions,
   type EffectiveContract,
 } from '../domain/effectiveContract';
 import { layerForRelativePath } from '../domain/layerMatch';
@@ -64,7 +65,7 @@ function hasActiveArkRules(
 function policyHashFor(config: AnalysisContract['config'], arkRules: EffectiveArkRules): string {
   // Preserve historical hashes for projects that never opt into ArkRules.
   if (!hasActiveArkRules(config, arkRules)) {
-    return deterministicHash(stableSerialize(config));
+    return deterministicHash(stableSerialize(omitLayerDescriptions(config)));
   }
   const effective: EffectiveContract = {
     config,

@@ -25,6 +25,7 @@ import { capabilityBadgesFor, renderAdvisorySections } from './html-report-advis
 import { renderEvolutionSection } from './html-report-evolution.mjs';
 import { arkGitignoreAppendDecision } from './ark-gitignore.mjs';
 import { captureGitSnapshot } from './report-snapshot-context.mjs';
+import { layerDescriptionCaption } from './layer-description.mjs';
 
 export { arkGitignoreAppendDecision, gitignoreCoversArkState, gitignoreHasArkNegationException } from './ark-gitignore.mjs';
 
@@ -405,7 +406,7 @@ export function renderBeginnerHtmlReport({ root, config, violations, ok, version
 
   const placementRows = layers
     .map((layer) => {
-      const purpose = layer.description || 'See ark.config.json';
+      const purpose = layerDescriptionCaption(layer) || 'See ark.config.json';
       const folders = (layer.patterns || []).join(', ') || '—';
       return `<tr><td><strong>${esc(layer.name)}</strong></td><td>${esc(purpose)}</td><td><code>${esc(folders)}</code></td></tr>`;
     })
@@ -762,9 +763,10 @@ export function renderHtmlReport({
       ].join(' ');
       const example = exampleByLayer?.get?.(layer.name);
       const files = counts.get(layer.name) || 0;
+      const caption = layerDescriptionCaption(layer);
       return `<tr>
         <td class="ln">${esc(layer.name)}<div class="tags">${tags}</div></td>
-        <td>${layer.description ? esc(layer.description) : '<span class="dim">—</span>'}</td>
+        <td>${caption ? esc(caption) : '<span class="dim">—</span>'}</td>
         <td class="num">${files}</td>
         <td><code class="pat">${(layer.patterns || []).map(esc).join('<br>') || '—'}</code></td>
         <td>${example ? `<code>${esc(example)}</code>` : '<span class="dim">no files yet</span>'}</td>

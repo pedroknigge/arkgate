@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-09-01 (Engineering doing: `RL88`; Patch `ST02` **done** — unlabeled public story; Patch `ST01` **done** — beginner-clear STAR openings; Patch `AO09` **done** — ArkOrder recomputable-status honesty; Phase **LV** ArkOrder valved loop `LV01`–`LV09` **done** (4.8.6 tree ready, not published); Phase **XP** ArkOrder x ArkRun convergence **done** (`XP01`-`XP08`); Patch **4.8.5** `AGY01`+XP **done** — published; Patch **4.8.5** `AGY01` **done** — Antigravity skill refresh (`--antigravity-home` + default tools + dogfood `.agents/skills`); published; Patch **4.8.4** **done** — three false greens closed (coverage certifying tests no runner runs, an empty analysis passing, a symlink-forgeable coverage gate), `--path-drift`, `--sensors`/`--promote`, peerIsolation `sharedRoots`+`allowedCrossSlice`, git install without a build allowlist entry, `--plan` surfaced on a green run; published; Patch **4.8.3** `AW01`+`OR08` **done** — `writes-via-aggregate` + ArkOrder `xiKeys`; Phase OR `OR01`–`OR08` **done**; published `arkgate@4.8.2` (skills four-plane honesty over **4.8.1**); `arkgate/order` is an extra **inside** package `arkgate` (ADR 0030), not `@arkgate/order`; `PK01` **done** (ADR 0031: `arkgate/runtime` + `arkgate/nestjs` real subpaths; `@arkgate/runtime` deprecated); `WH01` **done** (ADR 0026); `K01` **parked** — 4.7.6 shipped workflow primitives, bus commit gaps and durable outbox remain; Phase DX `DX01`–`DX03` **done** and shipped in published `arkgate@4.8.0+` (4.7.6 predates them); Phase HS `HS01`–`HS05` **done**; `RN16` **done**; `RN17` **done**; Phase RN ArkRun shipped **4.7.0**; Write. Check. Ship. patch **4.7.5** published; npm `latest` is **4.8.7**; `AL05` parked; Z09 still parked)
+- **Status date:** 2026-09-01 (Engineering doing: `RL88`; Phase **LD** `LD01`–`LD06` **done** (4.8.7 published); Patch `ST02` **done** — unlabeled public story; Patch `ST01` **done** — beginner-clear STAR openings; Patch `AO09` **done** — ArkOrder recomputable-status honesty; Phase **LV** ArkOrder valved loop `LV01`–`LV09` **done** (4.8.6 published); Phase **XP** ArkOrder x ArkRun convergence **done** (`XP01`-`XP08`); Patch **4.8.5** `AGY01`+XP **done** — published; Patch **4.8.5** `AGY01` **done** — Antigravity skill refresh (`--antigravity-home` + default tools + dogfood `.agents/skills`); published; Patch **4.8.4** **done** — three false greens closed (coverage certifying tests no runner runs, an empty analysis passing), `--path-drift`, `--sensors`/`--promote`, peer isolation, git install without a build allowlist entry, and honest `--plan`; Phase OR `OR01`–`OR08` **done**; `K01` and `Z09` remain parked; npm `latest` is **4.8.7**)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -90,6 +90,10 @@ lift DF freezes on scores, new skill names, sensors, or LLM verdicts.
 - New doctor/advisory planes that invent residual or a second verdict. Advisory must
   project existing facts ([ADR 0026](docs/adr/0026-gate-waist-facts-in-verdict-out.md)).
   Skills/doors stay the intelligent edge. Do not add a second analysis engine.
+  **Exception:** Phase **LD**
+  ([layer description](docs/plans/layer-description-projection/README.md)) projects the
+  existing optional `layers[].description` to place / doctor / coverage / report and
+  strips it from `policyHash`. Absence stays silent and must not invent residual.
 
 ### Hard lines
 
@@ -249,7 +253,26 @@ correctness fix is not serialized behind unrelated performance or longitudinal e
 
 ## Current queue
 
-### Phase LV — ArkOrder valved loop (next train)
+### Phase LD — Layer description projection (shipped in 4.8.7)
+
+Plan: [docs/plans/layer-description-projection/README.md](docs/plans/layer-description-projection/README.md).
+Target additive **`arkgate@4.8.7`** over published **4.8.6**.
+**No schema bump** — `layers[].description` already exists. Does **not** close `Z09` /
+`K01`. No new skill names. Absence never invents residual. Engineering doing: none — Phase LD done; 4.8.7 published.
+
+The caption is already on the contract. Place / prepare-write / MCP JSON, doctor, coverage, HTML Purpose column, `/ark-adopt` (write), and `/ark-place` (read) include it when present.
+`policyHash` omits `layers[].description` (caption-only is neutral). Grain is the layer, not each file.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 232 | `LD01` | `done` | M | — | ADR 0035: reuse `layers[].description`; strip from policyHash; project; absence silent |
+| 233 | `LD02` | `done` | M | LD01 | `policyHash` omits layer descriptions; caption-only delta is neutral |
+| 234 | `LD03` | `done` | M | LD01 | `ark_place` / prepare-write / MCP placement JSON include `description` when present |
+| 235 | `LD04` | `done` | M | LD01 | Doctor JSON + human, coverage JSON, HTML report parity; no residual from absence |
+| 236 | `LD05` | `done` | M | LD03 | Deepen adopt (write) + place (read); `generate:agent-skills`. No `/ark-describe` |
+| 237 | `LD06` | `done` | S | LD02+LD04+LD05 | configuration.md + package-surface; app-context caption example; **4.8.7** published |
+
+### Phase LV — ArkOrder valved loop (shipped in 4.8.6)
 
 Plan: [docs/plans/arkorder-valve-loop/README.md](docs/plans/arkorder-valve-loop/README.md).
 Target additive **`arkgate@4.8.6`** when public verbs ship (`apply` / `refreshSigma` /
@@ -270,7 +293,7 @@ LV04 binds ingest residual to xiHash. Payload capacity is still LV05; absorb doe
 | 228 | `LV06` | `done` | L | LV04 | Decision tape on ArkRun information package; shadow/replay/compare the tape |
 | 229 | `LV07` | `done` | M | LV06 | Thin bridge: absorb → `send`; escalate_up human → `raises`. Gallery wiring. No new skill |
 | 230 | `LV08` | `done` | M | LV02+LV03 | `ReleaseStore` port, in-memory default; optional catalog digest. Not K01 |
-| 231 | `LV09` | `done` | M | LV05+LV07+LV08 | Docs + skills deepen + billing uses the loop; **4.8.6** tree ready (not npm-published). No `/ark-order` |
+| 231 | `LV09` | `done` | M | LV05+LV07+LV08 | Docs + skills deepen + billing uses the loop; **4.8.6** published. No `/ark-order` |
 
 ### Patch 4.8.6 — ArkOrder recomputable-status honesty
 
@@ -324,10 +347,10 @@ Plan: [docs/plans/alive-in-six-months/README.md](docs/plans/alive-in-six-months/
 | 183 | `AL05` | `parked` | S | required-status possible + 3 partners | Field enrollment. Does **not** close Z09 |
 | 184 | `AL06` | `done` | S | AL04 | Compact first-screen vs Details independently invocable; first-screen honesty stays |
 
-Engineering doing: `RL88`. `ST02`, `ST01`, and `AO09` **done**. Phase **LV** `LV01`–`LV09` **done**. `AGY01` **done** (4.8.5 published). `OR01`–`OR07` **done**. `WH01` **done** (ADR 0026). `PK01` **done**.
+Engineering doing: `RL88`. Phase **LD** `LD01`–`LD06` **done** (4.8.7 published). `ST02`, `ST01`, and `AO09` **done**. Phase **LV** `LV01`–`LV09` **done** (4.8.6 published). `AGY01` **done** (4.8.5 published). `OR01`–`OR07` **done**. `WH01` **done** (ADR 0026). `PK01` **done**.
 `K01` **parked** (4.7.6 primitives only).
 Phase DX (`DX01`–`DX03`) **done** and present in published `arkgate@4.8.0+` (4.7.6 predates them).
-Phase HS (`HS01`–`HS05`) **done**. Remaining first-contact copy **4.7.3** published. Write. Check. Ship. patch **4.7.5** published. **4.8.5** is on npm `latest`.
+Phase HS (`HS01`–`HS05`) **done**. Remaining first-contact copy **4.7.3** published. Write. Check. Ship. patch **4.7.5** published. **4.8.7** is on npm `latest`.
 `RN16` **done** (public docs + 4.7.0 published). `RN17` **done** (`@arkgate/runtime@0.1.0-experimental.0` on npm `experimental`).
 `RN15` **done** (deepen `/ark-runtime` `/ark-place` `/ark-adopt`; no new skill names).
 `RN14` **done** (skip corpus: extra absent = green; enforced = fail `new` / peer import / homemade bus).
