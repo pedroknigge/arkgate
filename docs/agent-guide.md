@@ -1418,8 +1418,8 @@ doctor → compact router (and `/ark-autopilot` only after the skill pack).
 ### Dev inspector queue endpoints and dashboard bins
 
 `startInspector()` / `startArkRunInspector()` bind loopback only, refuse
-`NODE_ENV=production`, and lazy-load HTTP. The kernel exposes JSON durability and
-monitor facts — not a TUI.
+`NODE_ENV=production`, and lazy-load HTTP. The kernel exposes JSON monitor facts
+(snapshot / graph / queue endpoints) — not a TUI.
 
 | Method + path | Role |
 |---------------|------|
