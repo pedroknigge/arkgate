@@ -50,6 +50,23 @@ describe('RN12 ArkRun inspector bind + snapshot (pure)', () => {
     expect(() => resolveArkRunInspectorBind({ port: 70000 })).toThrow(ArkRunInspectorBindError);
   });
 
+  it('normalizes mapped loopback hosts and fail-closes malformed bind values', () => {
+    expect(isArkRunInspectorLoopbackHost('[::ffff:127.0.0.1]')).toBe(true);
+    expect(isArkRunInspectorLoopbackHost('::ffff:127.0.0.2')).toBe(true);
+    expect(isArkRunInspectorLoopbackHost('127.bad.0.1')).toBe(false);
+    expect(isArkRunInspectorLoopbackHost('127.0.0.256')).toBe(false);
+    expect(isArkRunInspectorLoopbackHost(null)).toBe(false);
+    expect(resolveArkRunInspectorBind({ host: '[::1]' })).toEqual({ host: '::1', port: 0 });
+    expect(resolveArkRunInspectorBind({ host: '::ffff:127.0.0.2' })).toEqual({
+      host: '127.0.0.2',
+      port: 0,
+    });
+    expect(() => resolveArkRunInspectorBind({ host: 127 as unknown as string })).toThrow(
+      ArkRunInspectorBindError
+    );
+    expect(() => resolveArkRunInspectorBind({ port: 1.5 })).toThrow(ArkRunInspectorBindError);
+  });
+
   it('vetoes production from either env slot', () => {
     expect(isArkRunInspectorProductionEnv('production')).toBe(true);
     expect(isArkRunInspectorProductionEnv('test')).toBe(false);
@@ -204,6 +221,68 @@ describe('PROD-004 outbox/workflows monitors + hardening (pure)', () => {
     expect(floored.sampleLimit).toBe(ARK_RUN_INSPECTOR_MONITOR_SAMPLE_LIMIT);
     expect(floored.workflows).toHaveLength(ARK_RUN_INSPECTOR_MONITOR_SAMPLE_LIMIT);
     expect(floored.total).toBe(40);
+  });
+
+  it('sanitizes fallback monitor fields without promoting malformed rows', () => {
+    const outbox = buildArkRunInspectorOutboxMonitor(
+      [
+        { id: 'pending', status: 'pending', intent: 'Fallback.Intent', attempts: Number.NaN },
+        { id: 'failed', status: 'failed', attempts: 2, updatedAt: 'now' },
+        { id: 7, status: 'pending' },
+        null,
+      ],
+      { sampleLimit: -1 }
+    );
+    expect(outbox).toMatchObject({ pendingCount: 1, failedCount: 1, sampleLimit: 0 });
+    expect(outbox.pending).toEqual([]);
+    expect(outbox.failed).toEqual([]);
+
+    const workflows = buildArkRunInspectorWorkflowsMonitor([
+      { id: 'named', name: 'Fallback.Name' },
+      { id: 'compensating', workflowName: 'Compensate', status: 'compensating' },
+      { id: 'idle', workflowName: 'Idle', status: 'idle', error: 'waiting' },
+      { id: 'waiting', workflowName: 'Waiting', status: 'waiting' },
+      { id: 'missing-name', status: 'running' },
+      null,
+    ]);
+    expect(workflows).toMatchObject({
+      total: 4,
+      compensatingCount: 1,
+      pendingCount: 2,
+    });
+    expect(workflows.workflows[0]).toMatchObject({
+      id: 'named',
+      name: 'Fallback.Name',
+      status: 'unknown',
+    });
+    expect(workflows.workflows[2]?.error).toBe('waiting');
+  });
+
+  it('uses declared and inferred durability facts and drops unserializable observability', () => {
+    const hardening = buildArkRunInspectorHardening({
+      durability: {
+        stores: [
+          { role: 'outbox', name: 'InMemoryNamedStore' },
+          { role: 'audit', id: 'PostgresAudit', kind: 'durable' },
+          { role: 'other', id: 'Ignored' },
+          null,
+        ],
+      },
+    });
+    expect(hardening.durability.stores).toEqual([
+      { role: 'outbox', id: 'InMemoryNamedStore', kind: 'memory' },
+      { role: 'audit', id: 'PostgresAudit', kind: 'durable' },
+    ]);
+
+    const circular: { self?: unknown } = {};
+    circular.self = circular;
+    const snapshot = buildArkRunInspectorSnapshot({
+      observability: circular,
+      ephemeralDefault: false,
+      brokerBound: true,
+    });
+    expect(snapshot.observability).toEqual({});
+    expect(snapshot.transport).toMatchObject({ ephemeralDefault: false, brokerBound: true });
   });
 
   it('classifies InMemory* ports as memory and never green-OK for all-memory facts', () => {
