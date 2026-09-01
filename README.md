@@ -37,7 +37,7 @@ Works with Cursor, Claude, Codex, and Grok.
 
 </div>
 
-> **ArkGate 4.8.9** is prepared on this tree; npm `latest` remains **4.8.8**.
+> **ArkGate 4.8.9** is on npm `latest`.
 > Write. Check. Ship. Adopted = required GitHub
 > status running `arkgate-check --strict-merge`, or an explicit `advisory-only` stance.
 > Status is compact (`arkgate-check --doctor`; `--all` for Details). Optional **ArkRun**
@@ -45,7 +45,7 @@ Works with Cursor, Claude, Codex, and Grok.
 > (`arkgate/order`) stops the agent rewriting the few slow product decisions as CRUD;
 > later pattern change is `proposeRelease` then `apply`.
 > `@arkgate/runtime` is deprecated.
-> [4.8.9 prepared](docs/releases/4.8.9.md) · [4.8.8 published](docs/releases/4.8.8.md) · [4.8.7](docs/releases/4.8.7.md) · [4.8.6](docs/releases/4.8.6.md) · [4.8.5](docs/releases/4.8.5.md) · [4.8.4](docs/releases/4.8.4.md) · [4.8.3](docs/releases/4.8.3.md) · [4.8.2](docs/releases/4.8.2.md) · [4.8.1](docs/releases/4.8.1.md) · [4.8.0](docs/releases/4.8.0.md) · [Docs hub](docs/README.md) · [Voice](docs/product-voice.md)
+> [4.8.9 published](docs/releases/4.8.9.md) · [4.8.8](docs/releases/4.8.8.md) · [4.8.7](docs/releases/4.8.7.md) · [4.8.6](docs/releases/4.8.6.md) · [4.8.5](docs/releases/4.8.5.md) · [4.8.4](docs/releases/4.8.4.md) · [4.8.3](docs/releases/4.8.3.md) · [4.8.2](docs/releases/4.8.2.md) · [4.8.1](docs/releases/4.8.1.md) · [4.8.0](docs/releases/4.8.0.md) · [Docs hub](docs/README.md) · [Voice](docs/product-voice.md)
 
 ---
 
@@ -343,7 +343,7 @@ Rename the three keys. Compact starters leave it off. Details:
 | Brownfield | [docs/brownfield-adoption.md](docs/brownfield-adoption.md) |
 | Security | [SECURITY.md](SECURITY.md) |
 | Prepared (4.8.9; not published) | [docs/releases/4.8.9.md](docs/releases/4.8.9.md) · [CHANGELOG](CHANGELOG.md) |
-| Current published (4.8.8 on npm `latest`) | [docs/releases/4.8.8.md](docs/releases/4.8.8.md) · [CHANGELOG](CHANGELOG.md) |
+| Current published (4.8.9 on npm `latest`) | [docs/releases/4.8.9.md](docs/releases/4.8.9.md) · [CHANGELOG](CHANGELOG.md) |
 | Prior published (4.8.7) | [docs/releases/4.8.7.md](docs/releases/4.8.7.md) · [CHANGELOG](CHANGELOG.md) |
 | Prior published (4.8.6) | [docs/releases/4.8.6.md](docs/releases/4.8.6.md) |
 | Prior published (4.8.5) | [docs/releases/4.8.5.md](docs/releases/4.8.5.md) |
