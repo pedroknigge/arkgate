@@ -15,7 +15,12 @@ import {
   effectiveCapabilityDeny,
   forbiddenGlobalForModuleSpecifier,
 } from '../domain/capabilities';
-import { findDeniedEdgeRule, globToRegExp, layerForRelativePath } from '../domain/layerMatch';
+import {
+  findDeniedEdgeDecision,
+  globToRegExp,
+  layerForRelativePath,
+  peerIsolationDenyExplanation,
+} from '../domain/layerMatch';
 import {
   DEFAULT_INTENT_PREFIXES,
   classifyPublishFacts,
@@ -305,8 +310,34 @@ function contentViolations(
     if (!fromLayer) continue;
     const toLayer = intentLayer(reference.intent, input.contract);
     if (!toLayer) continue;
-    const rule = findDeniedEdgeRule(input.contract.config.rules, fromLayer, toLayer);
-    if (!rule) continue;
+    // Intent names are not files — pass fromPath only. Shared-root files use the
+    // same peerIsolation classifier as imports; do not invent a toPath.
+    const decision = findDeniedEdgeDecision(
+      input.contract.config.rules,
+      fromLayer,
+      toLayer,
+      {
+        fromPath: reference.file,
+        layers: input.contract.config.layers,
+      }
+    );
+    if (!decision) continue;
+    const peerReason = decision.rule.peerIsolation
+      ? peerIsolationDenyExplanation(decision.peerIsolationReason ?? 'cross-slice', {
+          fromPath: reference.file,
+          fromSlice: decision.fromSlice,
+          toSlice: decision.toSlice,
+        })
+      : undefined;
+    const defaultMessage = `${fromLayer} must not reference ${toLayer} intent ${reference.intent}.`;
+    const message =
+      peerReason && decision.peerIsolationReason !== 'cross-slice'
+        ? `${defaultMessage} ${peerReason}`
+        : decision.rule.message
+          ? peerReason
+            ? `${decision.rule.message} (${peerReason})`
+            : decision.rule.message
+          : defaultMessage;
     violations.push({
       ruleId: 'LAYER_INTENT_REFERENCE_VIOLATION',
       file: reference.file,
@@ -314,7 +345,8 @@ function contentViolations(
       fromLayer,
       toLayer,
       target: reference.intent,
-      message: rule.message ?? `${fromLayer} must not reference ${toLayer} intent ${reference.intent}.`,
+      ...(decision.rule.peerIsolation ? { peerIsolation: true } : {}),
+      message,
     });
   }
 

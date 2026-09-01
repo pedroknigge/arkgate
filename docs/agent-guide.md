@@ -358,7 +358,8 @@ into orchestration/persistence), `contract-lateral-adapter-allow` (adapter layer
 sibling adapter layer; X03 — an adapter into its OWN family's infra base, e.g.
 `PaymentsAdapters -> PaymentsInfra`, is the sanctioned direction and does not fire),
 `contract-dead-rule` (rule references an empty or unknown layer, or is a
-same-layer no-op; `optional: true` layers are exempt). Advisory only: it never changes the
+same-layer allow / classic same-layer deny; a same-layer `peerIsolation: true`
++ `allowed: false` wall is live, not this smell; `optional: true` layers are exempt). Advisory only: it never changes the
 verdict, `designFitness`, or `patternBets` — layer roles come from name heuristics, so treat a
 miss as a warning to read, not a defect to silence. A deliberate edge is acknowledged in
 `.ark/contract-smell-acks.json` (`{ acks: [{ id, edge, reason, reviewBy? }] }`); `acknowledged` counts

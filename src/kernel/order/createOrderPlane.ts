@@ -9,11 +9,17 @@ import {
   assertInformationBudget,
   assertSigmaFresh,
   assertUnvalvedRelease,
+  assertXiHasNoTtl,
+  assertXiKeyCap,
+  assertXiSchema,
   classifyIngest,
   createFrozenRelease,
   DEFAULT_MAX_XI_KEYS,
   fieldEventIdentity,
   freezeRecord,
+  hashReleasePayload,
+  hashSigmaIdentity,
+  hashXiIdentity,
   isForbiddenPlaneMethod,
   proposePatternChange,
   refreshSigmaRecord,
@@ -53,6 +59,8 @@ export type OrderPlane = {
   proposeRelease(delta: Record<string, unknown>): ProposeResult;
   apply(proposal: ProposeResult): Release;
   refreshSigma(sigma: Record<string, unknown>): Release;
+  /** Process-local install of a frozen Release. Hash is identity. Not durable; does not close K01. */
+  restore(release: Release): Release;
   current(): Release | null;
 };
 
@@ -67,7 +75,7 @@ export function createOrderPlane(options: CreateOrderPlaneOptions): OrderPlane {
   const packs = options.packs ?? [];
   const clock: InjectedClock = options.clocks ?? {
     now() {
-      return 0;
+      return Date.now();
     },
   };
   const store = options.store;
@@ -172,6 +180,9 @@ export function createOrderPlane(options: CreateOrderPlaneOptions): OrderPlane {
         })
       );
     },
+    restore(release) {
+      return persist(assertRestorableRelease(release, maxXiKeys, options.xiSchema, catalogDigest));
+    },
     current() {
       return current;
     },
@@ -191,4 +202,66 @@ export function createOrderPlane(options: CreateOrderPlaneOptions): OrderPlane {
   }
   void isForbiddenPlaneMethod;
   return Object.freeze(plane);
+}
+
+function assertRestorableRelease(
+  candidate: unknown,
+  maxXiKeys: number,
+  xiSchema: XiSchema | undefined,
+  catalogDigest: string | undefined
+): Release {
+  const closed = () =>
+    new ArkOrderError(
+      'ARKORDER_SCHEMA',
+      'restore() requires a frozen Release; hash is the identity (not durable, not K01)'
+    );
+  if (candidate === null || typeof candidate !== 'object' || Array.isArray(candidate)) {
+    throw closed();
+  }
+  const release = candidate as Release;
+  if (
+    !Object.isFrozen(release) ||
+    !release.xi ||
+    typeof release.xi !== 'object' ||
+    Array.isArray(release.xi) ||
+    !Object.isFrozen(release.xi) ||
+    !release.sigma ||
+    typeof release.sigma !== 'object' ||
+    Array.isArray(release.sigma) ||
+    !Object.isFrozen(release.sigma)
+  ) {
+    throw closed();
+  }
+  if (
+    typeof release.version !== 'number' ||
+    !Number.isInteger(release.version) ||
+    release.version < 1 ||
+    typeof release.hash !== 'string' ||
+    release.hash.length === 0 ||
+    typeof release.xiHash !== 'string' ||
+    typeof release.sigmaHash !== 'string' ||
+    typeof release.releasedAt !== 'number' ||
+    !Number.isFinite(release.releasedAt)
+  ) {
+    throw closed();
+  }
+  try {
+    assertXiKeyCap(release.xi, maxXiKeys);
+    assertXiHasNoTtl(release.xi);
+    assertXiSchema(release.xi, xiSchema);
+  } catch (error) {
+    if (error instanceof ArkOrderError) throw error;
+    throw closed();
+  }
+  const expectedHash = hashReleasePayload(release.xi, release.sigma, catalogDigest);
+  const expectedXi = hashXiIdentity(release.xi, catalogDigest);
+  const expectedSigma = hashSigmaIdentity(release.sigma);
+  if (
+    release.hash !== expectedHash ||
+    release.xiHash !== expectedXi ||
+    release.sigmaHash !== expectedSigma
+  ) {
+    throw closed();
+  }
+  return release;
 }

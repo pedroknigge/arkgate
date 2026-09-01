@@ -214,8 +214,10 @@ First freeze is `release()`. Later pattern change is `proposeRelease` then
 `absorb | escalate_up | hold` + `reasonCode`; capacity pack as data;
 `createMemoryReleaseStore`; `ingestTravelAction`; ArkRun `decisionTape`.
 
-Copy [examples/arkorder-billing/](../examples/arkorder-billing/) (`plan` / `cycle` /
-`tenancy`) and rename the keys. Posting an invoice is absorbed; changing plan is
+The billing gallery (`plan` / `cycle` / `tenancy`) lives on GitHub, not in the
+npm tarball:
+[examples/arkorder-billing](https://github.com/pedroknigge/arkgate/tree/main/examples/arkorder-billing).
+Rename the keys. Posting an invoice is absorbed; changing plan is
 `proposeRelease` then `apply`. See [configuration.md](configuration.md) and
 [package-surface.md](package-surface.md).
 

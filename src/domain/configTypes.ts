@@ -118,12 +118,24 @@ export type ArkConfigArkOrder = {
   mode: ArkConfigArkOrderMode;
   planeRoots: string[];
   managedLayers: string[];
+  /**
+   * Haken cap on one `release()` / `assertXiKeyCap` (default 7).
+   * Not a cap on the `xiKeys` watchlist length.
+   */
   maxXiKeys: number;
   /**
    * Slow product keys the team can already name (plan, cost code, protocol).
    * Optional. Empty → `ARKORDER_XI_FIELD_WRITE` stays silent.
+   * Repo-wide watchlist — not compared to `maxXiKeys`.
    */
   xiKeys: string[];
+  /**
+   * Optional globs that narrow ξ field-write observation inside `managedLayers`.
+   * Same glob engine as `layers[].patterns`. Absence or empty → every file in
+   * those layers. Non-empty → emit only when the layer is managed AND the file
+   * matches at least one glob.
+   */
+  appliesTo?: string[];
 };
 
 export type ArkConfig = {

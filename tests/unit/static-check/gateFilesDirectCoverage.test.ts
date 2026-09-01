@@ -17,6 +17,7 @@ import {
   packageScriptsHaveTypecheck,
   readJson,
   readPackageJson,
+  REQUIRED_GATE_WORKFLOW,
   treeHasTypecheckScript,
   writeTemplate,
 } from '../../../bin/lib/gate-files.mjs';
@@ -273,6 +274,7 @@ jobs:
     expect(hasArkWorkflow(root)).toBe(true);
     writeWorkflow(root, workflow('if: ${{ false }}'));
     expect(hasArkWorkflow(root)).toBe(false);
+    expect(missingGates(root)).not.toContain(REQUIRED_GATE_WORKFLOW);
     writeWorkflow(root, workflow('if: always()'));
     expect(hasArkWorkflow(root)).toBe(true);
     writeWorkflow(root, workflow('if: ${{ true }}'));

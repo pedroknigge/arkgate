@@ -7,10 +7,20 @@ import { skillGapsForActiveHost } from './agent-gates.mjs';
 import { agentHomeConcernIsActive, agentHomeRefreshCommand } from './agent-homes.mjs';
 import { mergePostGreenTopActions } from './post-green-path.mjs';
 import { ADOPTED_NOT, NOT_ADOPTED_NEXT_ACTION } from './adoption-stance.mjs';
+import { REQUIRED_GATE_WORKFLOW } from './gate-files.mjs';
+
+function missingGateFiles(ctx) {
+  const list = Array.isArray(ctx.gatesMissing) ? ctx.gatesMissing : [];
+  if (ctx.ciNotFailClosed) {
+    return list.filter((item) => item !== REQUIRED_GATE_WORKFLOW);
+  }
+  return list;
+}
 
 export function collectDoctorNextActions(ctx) {
   const actions = [];
-  const gatesInstalled = Array.isArray(ctx.gatesMissing) && ctx.gatesMissing.length === 0;
+  const missingFiles = missingGateFiles(ctx);
+  const gatesInstalled = missingFiles.length === 0;
   const planAEmpty = !ctx.activeCount;
   const notAdopted = ctx.adopted !== 'required-merge' && ctx.adopted !== 'advisory-only-acked';
   if (notAdopted || ctx.adopted === ADOPTED_NOT || ctx.adopted == null) {
@@ -55,8 +65,17 @@ export function collectDoctorNextActions(ctx) {
     );
   }
   if (ctx.writePath?.gap?.fix && !gatesInstalled) actions.push(ctx.writePath.gap.fix);
-  if (!gatesInstalled && ctx.gatesMissing.length > 0) {
+  if (!gatesInstalled && missingFiles.length > 0) {
     actions.push(`install gates (${arkCommand(ctx.root, 'ark-check', '--install-agent-gates')})`);
+  }
+  if (ctx.ciNotFailClosed) {
+    const file = ctx.ciNotFailClosed.workflowFile;
+    actions.push(
+      ctx.ciNotFailClosed.nextAction ||
+        (file
+          ? `Remove the skippable if: in ${file}, or write .ark/adoption-stance.json with stance: advisory-only`
+          : 'Remove the skippable if:, or write .ark/adoption-stance.json with stance: advisory-only')
+    );
   }
   const humanSkillGaps = skillGapsForActiveHost(ctx.skillGaps);
   const legacyCodex = humanSkillGaps.some((g) => g.tool === 'codex' && g.legacyPromptsOnly);

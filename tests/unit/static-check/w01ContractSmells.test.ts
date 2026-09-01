@@ -180,6 +180,35 @@ describe('W01 contract smells — detection', () => {
     expect(dead.evidence.some((e: string) => e.includes('EmptyLayer'))).toBe(true);
   });
 
+  it('does not flag a same-layer peerIsolation deny as contract-dead-rule', () => {
+    const root = mk();
+    const config = {
+      include: ['src'],
+      layers: [
+        { name: 'DomainModel', patterns: ['src/domain/**'] },
+        { name: 'ApplicationOrchestration', patterns: ['src/application/**'] },
+      ],
+      rules: [
+        {
+          from: 'ApplicationOrchestration',
+          to: 'ApplicationOrchestration',
+          allowed: false,
+          peerIsolation: true,
+        },
+        { from: 'DomainModel', to: 'ApplicationOrchestration', allowed: false },
+      ],
+    };
+    write(root, 'src/domain/rules.ts', 'export const x = 1;\n');
+    write(root, 'src/application/useCase.ts', 'export const y = 2;\n');
+    const coverage = coverageFor(root, config, [
+      'src/domain/rules.ts',
+      'src/application/useCase.ts',
+    ]);
+    const smells = detectContractSmells(config, coverage, loadContractSmellAcks(root));
+    expect(smells.find((s) => s.id === 'contract-dead-rule')).toBeUndefined();
+    expect(smells).toEqual([]);
+  });
+
   it('reports nothing on a clean minimal contract', () => {
     const root = mk();
     const config = {
@@ -343,6 +372,10 @@ describe('W01 contract smells — hostile and malformed inputs', () => {
     expect(lateral!.evidence).toEqual(['edge:PersistenceAdapters->IntegrationAdapters']);
     const dead = smells.find((s) => s.id === 'contract-dead-rule');
     expect(dead!.evidence).toContain('rule:PersistenceAdapters->PersistenceAdapters (self edge has no effect)');
+    // REQ-003: advice for a remaining dead rule must never tell an agent to
+    // delete a live peerIsolation wall (self-allow is dead; the wall is not).
+    expect(dead!.fix).toMatch(/never delete a live peerIsolation wall/i);
+    expect(dead!.fix).not.toMatch(/delete the stale\/self rule/i);
   });
 
   it('layer names embedding arrows cannot fake a bidirectional pair', () => {

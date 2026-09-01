@@ -33,7 +33,8 @@ const BUDGETS = [
   // TW team flags + preflight hook (law vs feature). Logic lives in team-parliament-io.
   // Green-run `--plan` pointer wiring — was 2060 (loc 2059). The scan itself
   // lives in bin/lib/design-smells.mjs; only the call site is here.
-  { path: 'bin/ark-check-runtime.mjs', max: 2078 },
+  // 4.8.9 ci-not-fail-closed require-gates branch — was 2078 (loc 2095).
+  { path: 'bin/ark-check-runtime.mjs', max: 2110 },
   // S3 start confidence gate on all apply paths — was 900 (loc ~920).
   // ACS03 unified status command wiring — was 940 (loc ~943).
   // ACS04 agents-md / agent-projection command wiring — was 960 (loc ~974).

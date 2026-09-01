@@ -168,7 +168,7 @@ ArkGate has **always-on Layers** plus opt-in extras. The user chooses extras; yo
 ### Explore + extras
 - Map extras when present; never write `arkRun` / `arkOrder`. Extra off → residual `n/a` / silent.
 - When `arkOrder` is on, name the valve: first freeze `release()`; later ξ is `proposeRelease` then `apply`; `refreshSigma`; ingest residual `absorb | escalate_up | hold` + `reasonCode`; capacity pack as data; in-memory `ReleaseStore` (`createMemoryReleaseStore`); thin travel `ingestTravelAction`. ArkRun residual may include information package `decisionTape` `{ xiHash, event, residual }`.
-- Field path may name `examples/arkorder-billing/` (ArkOrder fixture — map only). First extra write is `/ark-adopt`; grind is `/ark-autopilot`.
+- Field path may name the ArkOrder gallery on GitHub (`https://github.com/pedroknigge/arkgate/tree/main/examples/arkorder-billing`; not in the npm tarball — map only). First extra write is `/ark-adopt`; grind is `/ark-autopilot`.
 
 ## Output mode (pick one — do not invent a fourth)
 
@@ -297,7 +297,7 @@ When `examples/`, `templates/`, gallery starters, eval fixtures, or docs claim �
 3. Diff **rule strength** across archetypes (missing denies = soft false-green for consumers).
 4. Note import style vs package surface docs (`arkgate` root barrel vs preferred subpath).
 5. Flag **false promises**: demo fails under its own check, or green with a hollow contract.
-6. When extras are on, label residual `[ArkRun]` / `[ArkOrder]`. Field path may name `examples/arkorder-billing/`. Never write extras from this skill.
+6. When extras are on, label residual `[ArkRun]` / `[ArkOrder]`. Field path may name the ArkOrder gallery on GitHub (`https://github.com/pedroknigge/arkgate/tree/main/examples/arkorder-billing`; not in the npm tarball). Never write extras from this skill.
 
 If the repo is a **pure app** (no examples): state **Field path: internal** and do one of:
 - Name the **norm for new code** that the residual implies (e.g. “no new `platform/db` in routes”), or

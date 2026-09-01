@@ -494,8 +494,12 @@ export function planManagedUpgrade(root, options = {}) {
       action: canApply ? (currentScoped == null ? 'create' : 'update') : 'none',
       willApply: canApply,
       blocked,
+      // Raw scoped bytes. state/willApply use identity, not these hashes.
       beforeHash: hash(currentScoped == null ? null : Buffer.from(currentScoped)),
       afterHash: hash(Buffer.from(desiredScoped)),
+      beforeIdentity:
+        currentScoped == null ? null : managedContentIdentity(currentScoped, catalogAsset.kind),
+      afterIdentity: managedContentIdentity(desiredScoped, catalogAsset.kind),
       containerBeforeHash: hash(currentFile),
       [AFTER_CONTENT]: desiredFile,
     };
@@ -531,6 +535,8 @@ export function planManagedUpgrade(root, options = {}) {
       blocked: false,
       beforeHash: recorded.baseHash,
       afterHash: null,
+      beforeIdentity: recorded.contentIdentity ?? null,
+      afterIdentity: null,
       containerBeforeHash: null,
     });
   }
@@ -834,7 +840,9 @@ function assertAssetUnchanged(root, asset) {
 export function applyManagedUpgrade(root, plan, expectedPlanDigest) {
   const resolvedRoot = path.resolve(root);
   if (resolvedRoot !== plan.root) throw new Error('managed upgrade plan root mismatch');
-  if (plan.summary.blocked > 0) return publicPlan(plan, { blocked: true });
+  if (plan.summary.blocked > 0) {
+    return publicPlan(plan, { blocked: true, reasonCode: 'managed-consent-required' });
+  }
   const wouldWrite = plan.summary.wouldWrite ?? 0;
   // Content already matches: unbound --apply is a no-op (exit success), not a digest error.
   if (!expectedPlanDigest || expectedPlanDigest !== plan.planDigest) {

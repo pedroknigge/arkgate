@@ -27,7 +27,8 @@ const ENTRY_MAX_LOC = 100;
 // 4.0.0 ArkRules write-path / inventory + 4.1.0 field flags (migrate-contract, walk-up,
 // productHonesty wiring) grow the one-shot runtime orchestration surface.
 // 4.6.1 team parliament flags keep this aligned with check-module-budgets (2060).
-const RUNTIME_MAX_LOC = 2078;
+// 4.8.9 ci-not-fail-closed require-gates branch — was 2078 (loc 2095).
+const RUNTIME_MAX_LOC = 2110;
 
 function lineCount(rel: string): number {
   const text = fs.readFileSync(path.join(root, rel), 'utf8');

@@ -41,7 +41,7 @@ export const CONTRACT_SMELL_OUTCOMES = Object.freeze({
   'contract-lateral-adapter-allow':
     'One adapter layer may import another adapter family directly — shared mappers/aliases will pile up in the wrong place. Move shared shapes into Domain (or a shared kernel) instead of adapter-to-adapter reach.',
   'contract-dead-rule':
-    'A rule enforces nothing: it points at a layer that matches no files or does not exist, or both sides are the same layer. Fix the layer patterns or delete the rule.',
+    'A rule enforces nothing: it points at a layer that matches no files or does not exist, or is a same-layer allow (classic same-layer deny is also a no-op). A same-layer peerIsolation deny is a live wall, not a dead rule.',
 });
 
 export const CONTRACT_SMELL_ACKS_PATH = '.ark/contract-smell-acks.json';
@@ -277,14 +277,20 @@ export function analyzeContractSmells(
     }
   }
 
-  // 4) Dead rules: self edges (the gate ignores same-layer rules), unknown layers,
-  //    or — when coverage is known — layers matching zero files (optional layers exempt).
+  // 4) Dead rules: self-allow and classic same-layer deny (the gate ignores
+  //    those), unknown layers, or — when coverage is known — layers matching
+  //    zero files (optional layers exempt). `peerIsolation: true` + `allowed:
+  //    false` is a live self-edge wall, not a dead rule.
   for (const r of rules) {
     const edge = `${r.from}->${r.to}`;
     const ackEdge = ackMatchable(r.from, r.to) ? edge : null;
     if (r.from === r.to) {
-      add('contract-dead-rule', ackEdge, `rule:${edge} (self edge has no effect)`);
-      continue;
+      const livePeerIsolationWall = r.peerIsolation === true && r.allowed === false;
+      if (!livePeerIsolationWall) {
+        add('contract-dead-rule', ackEdge, `rule:${edge} (self edge has no effect)`);
+        continue;
+      }
+      // Live slice wall on a self-edge — still check unknown/empty layers.
     }
     for (const side of [r.from, r.to]) {
       if (side.length === 0) continue;
@@ -409,7 +415,7 @@ function fixFor(id) {
     case 'contract-lateral-adapter-allow':
       return `Move shared shapes into Domain/shared kernel and drop the lateral allow (/ark-adopt), or acknowledge with a reason in ${CONTRACT_SMELL_ACKS_PATH}.`;
     case 'contract-dead-rule':
-      return 'Fix the layer patterns so the layer matches real files, or delete the stale/self rule via /ark-adopt.';
+      return 'Fix the layer patterns so the layer matches real files, or delete a stale self-allow / classic self-deny via /ark-adopt. Never delete a live peerIsolation wall (`peerIsolation: true` with `allowed: false`).';
     default:
       return 'Review the contract edge via /ark-adopt; never weaken the gate to silence a smell.';
   }

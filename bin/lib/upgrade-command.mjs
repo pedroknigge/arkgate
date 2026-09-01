@@ -603,10 +603,23 @@ export function runUpgradeCommand(args, dependencies) {
     return 2;
   }
   if (applied.blocked) {
-    if (args.json) console.log(JSON.stringify(applied, null, 2));
-    else renderManagedUpgrade(applied, {
-      next: 'Preview again with --accept-conflicts, then use that preview\'s exact next command.',
-    });
+    const command = buildUpgradeNextCommand(
+      { ...args, acceptConflicts: true },
+      applied.planDigest
+    );
+    if (args.json) {
+      console.log(
+        managedUpgradeJson(applied, {
+          blocked: true,
+          reasonCode: applied.reasonCode ?? 'managed-consent-required',
+          nextCommand: command,
+        })
+      );
+    } else {
+      renderManagedUpgrade(applied, {
+        next: 'Preview again with --accept-conflicts, then use that preview\'s exact next command.',
+      });
+    }
     return 1;
   }
   if (applied.nothingToApply && !applied.applied) {

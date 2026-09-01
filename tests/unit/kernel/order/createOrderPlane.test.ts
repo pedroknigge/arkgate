@@ -1,9 +1,13 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { ArkOrderError } from '../../../../src/domain/arkOrderError';
 import {
   createOrderPlane,
+  hashOf,
+  hashReleasePayload,
   type Projector,
-} from '../../../../src/kernel/order/createOrderPlane';
+} from '../../../../src/kernel/order';
 import { createMemoryReleaseStore } from '../../../../src/kernel/order/releaseStore';
 import type { Release } from '../../../../src/domain/arkOrderTypes';
 
@@ -341,5 +345,94 @@ describe('createOrderPlane (Haken slaving)', () => {
     expect(() => (mutable.update as () => void)()).toThrow(/not a Haken operation/);
     expect(() => (mutable.patch as () => void)()).toThrow(/not a Haken operation/);
     expect(() => (mutable.set as () => void)()).toThrow(/not a Haken operation/);
+  });
+
+  it('RESTORE-001: restore installs a frozen Release; next version increments from it', () => {
+    const source = plane();
+    const frozen = source.release(
+      { plan: 'pro', cycle: 'annual', tenancy: 'org' },
+      { seatCap: 9 }
+    );
+    expect(frozen.version).toBe(1);
+    const target = plane();
+    const installed = target.restore(frozen);
+    expect(installed.hash).toBe(frozen.hash);
+    expect(target.current()?.version).toBe(1);
+    expect(target.current()?.xi.plan).toBe('pro');
+    expect(target.current()?.sigma.seatCap).toBe(9);
+    const next = target.release(
+      { plan: 'pro', cycle: 'annual', tenancy: 'org' },
+      { seatCap: 10 }
+    );
+    expect(next.version).toBe(2);
+    expect(next.xiHash).toBe(frozen.xiHash);
+    expect(next.sigma.seatCap).toBe(10);
+  });
+
+  it('RESTORE-001: invalid and unfrozen objects fail closed; restore is not durability', () => {
+    const p = plane();
+    const frozen = plane().release({ plan: 'free', cycle: 'monthly', tenancy: 'single' });
+    const thawed = {
+      ...frozen,
+      xi: { ...frozen.xi },
+      sigma: { ...frozen.sigma },
+    };
+    expect(Object.isFrozen(thawed)).toBe(false);
+    expect(() => p.restore(thawed as Release)).toThrow(ArkOrderError);
+    expect(() => p.restore(null as never)).toThrow(ArkOrderError);
+    const wrongHash = Object.freeze({
+      ...frozen,
+      hash: 'tampered',
+      xi: frozen.xi,
+      sigma: frozen.sigma,
+    });
+    expect(Object.isFrozen(wrongHash)).toBe(true);
+    expect(() => p.restore(wrongHash as Release)).toThrow(ArkOrderError);
+    expect(p.current()).toBeNull();
+  });
+
+  it('CLOCK-001: omitted clocks yields releasedAt > 0; injected clocks still win', () => {
+    const omitted = createOrderPlane({ projector: billingProjector });
+    const before = Date.now();
+    const released = omitted.release({ plan: 'free', cycle: 'monthly', tenancy: 'single' });
+    const after = Date.now();
+    expect(released.releasedAt).toBeGreaterThan(0);
+    expect(released.releasedAt).toBeGreaterThanOrEqual(before);
+    expect(released.releasedAt).toBeLessThanOrEqual(after);
+
+    const injected = createOrderPlane({
+      projector: billingProjector,
+      clocks: { now: () => 42 },
+    });
+    expect(
+      injected.release({ plan: 'free', cycle: 'monthly', tenancy: 'single' }).releasedAt
+    ).toBe(42);
+  });
+
+  it('HASH-001: hashOf from arkgate/order equals Release.hash without a second freeze', () => {
+    const p = plane();
+    const xi = { plan: 'free' as const, cycle: 'monthly' as const, tenancy: 'single' as const };
+    const sigma = { graceDays: 0 };
+    const expected = hashOf(xi, sigma);
+    expect(expected).toBe(hashReleasePayload(xi, sigma));
+    const release = p.release(xi, sigma);
+    expect(hashOf(release.xi, release.sigma)).toBe(release.hash);
+    expect(hashReleasePayload(release.xi, release.sigma)).toBe(release.hash);
+    expect(expected).toBe(release.hash);
+    expect(p.current()?.version).toBe(1);
+  });
+
+  it('DTS-001: vocabulary header must not tell published .d.ts there is no runtime', () => {
+    const typesPath = path.join(process.cwd(), 'src/domain/arkOrderTypes.ts');
+    const header = readFileSync(typesPath, 'utf8').slice(0, 400);
+    expect(header).not.toMatch(/Declarations only — no runtime/);
+  });
+
+  it('INGEST-001: payload-dependent escalation is documented as projector, not a pack predicate', () => {
+    const docs = readFileSync(path.join(process.cwd(), 'docs/arkorder.md'), 'utf8');
+    expect(docs).toMatch(/second week failing a goal/);
+    expect(docs).toMatch(/not a pack predicate/);
+    expect(docs).toMatch(/https:\/\/github\.com\/pedroknigge\/arkgate\/tree\/main\/examples\/arkorder-billing/);
+    expect(docs).not.toMatch(/^# copy examples\/arkorder-billing\//m);
   });
 });

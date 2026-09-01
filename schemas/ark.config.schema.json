@@ -954,6 +954,15 @@
           },
           "uniqueItems": true,
           "default": []
+        },
+        "appliesTo": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "default": []
         }
       }
     }

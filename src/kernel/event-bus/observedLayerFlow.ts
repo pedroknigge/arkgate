@@ -40,8 +40,9 @@ export async function assertObservedLayerFlowAllowed(
   const toLayer = profile.resolveLayer(event.intent);
   if (!fromLayer || !toLayer) return;
 
-  // Same deny SoT as CI / write-gate. Intent names are not files: peerIsolation
-  // rules fail closed without path evidence (cannot prove same-slice).
+  // Same deny SoT as CI / write-gate. This path has producer/intent names, not
+  // a referencing file: do not invent a fromPath. File-based intent checks pass
+  // fromPath so sharedRoots classify; without a file, peerIsolation fail-closes.
   const blocked = findDeniedEdgeRule(profile.rules, fromLayer, toLayer);
   if (!blocked) return;
 

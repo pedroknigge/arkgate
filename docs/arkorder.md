@@ -25,7 +25,7 @@ Config: [configuration.md](configuration.md). Surface:
 | Is | Is not |
 |----|--------|
 | A **library** (`createOrderPlane`) plus **static sensors** | A running service, daemon, or hosted plane |
-| Valved verbs: `release` / `project` / `ingest` / `proposeRelease` / `apply` / `refreshSigma` | A generic `update` / `patch` / `set` |
+| Valved verbs: `release` / `project` / `ingest` / `proposeRelease` / `apply` / `refreshSigma` / `restore` | A generic `update` / `patch` / `set` |
 | Opt-in extra on `ark.config.json` | Always-on; compact starters leave it off |
 | Consumer-named slow keys (`xiKeys`) | A construction OS, BIM, or FirmPack |
 | Same npm tarball | not `@arkgate/order` |
@@ -66,6 +66,9 @@ They already exist:
 | Capacity as data | `ConstraintPack.capacity` (`kind` / `sigmaKey` / `payloadKey` / `op`) | 4.8.6 |
 | Store port | `ReleaseStore` / `createMemoryReleaseStore` in-memory default — not durable, not K01 | 4.8.6 |
 | Thin travel helper | `ingestTravelAction` absorb→`send` / escalate_up human→`raises` | 4.8.6 |
+| Verify a stored `Release.hash` | `hashOf(ξ, σ)` alias of `hashReleasePayload` — no `release()` side effect | 4.8.9 |
+| Reinstall a frozen Release | `restore(release)` — process-local; hash is identity; not durable; does not close K01 | 4.8.9 |
+| Default clock | omitted `clocks` is Kernel `Date.now()`; Domain must not call `Date.now` | 4.8.9 |
 
 Nothing here is a hosted runtime. Nothing here can be “down”. A degraded-mode
 contract would defend against an outage that cannot happen.
@@ -77,13 +80,13 @@ contract would defend against an outage that cannot happen.
 **ArkOrder freezes the pattern through a valve. ArkRun is how the residual travels.**
 
 ```ts
-import { createOrderPlane } from 'arkgate/order';
+import { createOrderPlane, hashOf, hashReleasePayload } from 'arkgate/order';
 
 const plane = createOrderPlane({
   projector,          // consumer: (release, sigma) => { allowedKinds, invalidated }
   xiSchema,           // JSON Schema object; additionalProperties false
   maxXiKeys,          // default 7
-  clocks,             // injected; Domain must not call Date.now
+  clocks,             // optional; default Kernel Date.now(); Domain must not call Date.now
   packs,              // data, not user predicates (capacity is kind/sigmaKey/payloadKey/op)
   informationBudget,  // optional { cannotObserve: ['ledger'] } — not a config key
   sigmaMaxAgeMs,      // optional σ freshness; never on ξ — not a config key
@@ -97,6 +100,8 @@ plane.ingest(event);           // residual absorb | escalate_up | hold. Never a 
 plane.proposeRelease(delta);   // blast radius. Empty blast = domain error
 plane.apply(proposal);         // valve: later ξ change
 plane.refreshSigma(sigma);     // saldo / clocks; xiHash unchanged
+plane.restore(release);        // process-local install; hash is identity; not durable; not K01
+hashOf(xi, sigma);             // same bytes as hashReleasePayload; no freeze side effect
 ```
 
 There is no `update()`. Calling `update` / `patch` / `set` on the plane throws
@@ -112,9 +117,24 @@ There is no `update()`. Calling `update` / `patch` / `set` on the plane throws
 | Change plan / protocol / cost-code bound | `proposeRelease` then `apply` |
 | PATCH the slow key through Prisma/Drizzle | `ARKORDER_XI_FIELD_WRITE` |
 
-Copy [examples/arkorder-billing/](../examples/arkorder-billing/) and rename the
-three keys. Membership ids (`projectId`) are not keys: a `proposeRelease` that
-does not change `h(ξ)` fails closed (`ARKORDER_EMPTY_BLAST`).
+Gallery (not in the npm tarball):
+[examples/arkorder-billing](https://github.com/pedroknigge/arkgate/tree/main/examples/arkorder-billing).
+Rename the three keys. Membership ids (`projectId`) are not keys: a
+`proposeRelease` that does not change `h(ξ)` fails closed (`ARKORDER_EMPTY_BLAST`).
+
+---
+
+## Ingest kinds vs payload (deliberate)
+
+`classifyIngest` uses `event.kind` for `escalateKinds` and `allowedKinds`.
+`ConstraintPack` is data-only: a function in the pack is `hold` with
+`reasonCode: pack` ([ADR 0016](adr/0016-arkrules-no-executable-core.md) /
+[ADR 0034](adr/0034-arkorder-valved-loop.md) D5). Capacity already compares
+numeric `payload[payloadKey]` against `sigma[sigmaKey]`.
+
+A payload-dependent story such as "second week failing a goal" is domain /
+projector work (a new kind, or that kind in `allowedKinds` when ξ says so).
+It is not a pack predicate. Do not add user functions to `ConstraintPack`.
 
 ---
 
@@ -204,6 +224,8 @@ package, inspector, in-memory compare). ArkOrder does not grow a bus, outbox,
 or hosted replay. [ADR 0033](adr/0033-arkorder-runtime-half-is-arkrun.md).
 
 Durability (`K01`) stays parked. In-memory is the honesty line.
+`restore(release)` reinstalls a frozen Release in this process. It is not a
+store. It does not close `K01`.
 
 ---
 
@@ -233,6 +255,7 @@ In-memory `ReleaseStore` is **not** durable. Doctor / status `arkOrder` stays
 
 ```bash
 npx arkgate-check --doctor
-# copy examples/arkorder-billing/ and rename the three keys
+# gallery (not in the npm tarball):
+# https://github.com/pedroknigge/arkgate/tree/main/examples/arkorder-billing
 # /ark-adopt to turn arkOrder on advisory
 ```
