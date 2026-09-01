@@ -4,6 +4,7 @@
   "include": ["src", "bin", "scripts"],
   "dynamicImportAllowlist": [
     "bin/ark-mcp.mjs",
+    "bin/ark-dashboard.mjs",
     "scripts/generate-cli-pure.mjs",
     "scripts/smoke-package-isolation.mjs"
   ],

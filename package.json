@@ -55,9 +55,11 @@
   "bin": {
     "arkgate": "bin/ark.mjs",
     "arkgate-check": "bin/ark-check.mjs",
+    "arkgate-dashboard": "bin/ark-dashboard.mjs",
     "arkgate-mcp": "bin/ark-mcp.mjs",
     "ark": "bin/ark.mjs",
     "ark-check": "bin/ark-check.mjs",
+    "ark-dashboard": "bin/ark-dashboard.mjs",
     "ark-mcp": "bin/ark-mcp.mjs"
   },
   "mcpName": "io.github.pedroknigge/arkgate",

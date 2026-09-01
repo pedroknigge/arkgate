@@ -487,3 +487,15 @@ gate is not a superset of the required CI job.
 |---:|---|---|---:|---|---|
 | 220 | `AW01` | `done` | M | — | Closed sensor `writes-via-aggregate`; Application + vertical-slice Features templates advisory; deepen place/adopt/contract |
 | 221 | `OR08` | `done` | M | OR06 | `arkOrder.xiKeys`; `ARKORDER_XI_FIELD_WRITE`; `too-many-params` / `ingest-writes-xi` emit; billing rename recipe |
+
+### Phase OD — Observability Dashboard (TUI)
+
+Plan: [docs/plans/observability-tui/README.md](docs/plans/observability-tui/README.md).
+Interactive terminal dashboard consuming kernel ports to enforce production readiness and visualize architectural drift.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 222 | `OD01` | `todo` | M | — | TUI Foundation & CLI Entrypoint (`ark dashboard` or `ark dev`) |
+| 223 | `OD02` | `todo` | M | OD01 | Hardening Status Panel (Memory defaults vs real stores) |
+| 224 | `OD03` | `todo` | L | OD01 | Drift Radar (Live `ObservabilityDriftReport` visualization) |
+| 225 | `OD04` | `todo` | M | OD01 | Sagas & Outbox Queue monitor |
