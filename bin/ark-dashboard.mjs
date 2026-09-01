@@ -32,6 +32,24 @@ const args = parseArgs({
 const interval = parseInt(args.values.interval, 10) || 2000;
 const targetUrl = args.values.url || 'http://127.0.0.1:3000/snapshot';
 
+const RESET = '\x1b[0m';
+const RED = '\x1b[31m';
+const GREEN = '\x1b[32m';
+const YELLOW = '\x1b[33m';
+const MUTED = '\x1b[2m';
+const SAMPLE_LIMIT = 8;
+
+const DRIFT_FLOW_KEYS = [
+  'declaredButUnobserved',
+  'observedButUndeclared',
+  'unknownSources',
+];
+const DRIFT_ID_KEYS = [
+  'unregisteredObservedSources',
+  'unregisteredObservedIntents',
+  'registeredButNeverObserved',
+];
+
 async function fetchSnapshot() {
   try {
     const res = await fetch(targetUrl);
@@ -42,35 +60,124 @@ async function fetchSnapshot() {
   }
 }
 
+function isObservabilityReady(obs) {
+  if (!obs || typeof obs !== 'object' || Array.isArray(obs)) return false;
+  if (Object.keys(obs).length === 0) return false;
+  return [...DRIFT_FLOW_KEYS, ...DRIFT_ID_KEYS].some((k) => Array.isArray(obs[k]));
+}
+
+function formatFlow(flow) {
+  if (!flow || typeof flow !== 'object') return String(flow);
+  const from = flow.from ?? '?';
+  const to = flow.to ?? '?';
+  return `${from}→${to}`;
+}
+
+function listSamples(items, formatter) {
+  const sample = items.slice(0, SAMPLE_LIMIT);
+  for (const item of sample) {
+    console.log(`    • ${formatter(item)}`);
+  }
+  if (items.length > SAMPLE_LIMIT) {
+    console.log(`    … +${items.length - SAMPLE_LIMIT} more`);
+  }
+}
+
+function renderDriftRadar(observability) {
+  console.log(`\n--- Drift Radar ---`);
+  if (!isObservabilityReady(observability)) {
+    console.log(`${MUTED}Waiting for observability…${RESET}`);
+    return;
+  }
+
+  const flows = Object.fromEntries(
+    DRIFT_FLOW_KEYS.map((k) => [k, Array.isArray(observability[k]) ? observability[k] : []]),
+  );
+  const ids = Object.fromEntries(
+    DRIFT_ID_KEYS.map((k) => [k, Array.isArray(observability[k]) ? observability[k] : []]),
+  );
+
+  const counts = {
+    declaredButUnobserved: flows.declaredButUnobserved.length,
+    observedButUndeclared: flows.observedButUndeclared.length,
+    unknownSources: flows.unknownSources.length,
+    unregisteredObservedSources: ids.unregisteredObservedSources.length,
+    unregisteredObservedIntents: ids.unregisteredObservedIntents.length,
+    registeredButNeverObserved: ids.registeredButNeverObserved.length,
+  };
+  const totalDrift = Object.values(counts).reduce((a, b) => a + b, 0);
+
+  if (observability.generatedAt) {
+    console.log(`Generated: ${observability.generatedAt}`);
+  }
+
+  console.log(
+    `Counts: declaredButUnobserved=${counts.declaredButUnobserved} ` +
+      `observedButUndeclared=${counts.observedButUndeclared} ` +
+      `unknownSources=${counts.unknownSources} ` +
+      `unregisteredSources=${counts.unregisteredObservedSources} ` +
+      `unregisteredIntents=${counts.unregisteredObservedIntents} ` +
+      `neverObserved=${counts.registeredButNeverObserved}`,
+  );
+
+  if (totalDrift === 0) {
+    console.log(`${GREEN}No drift${RESET}`);
+    return;
+  }
+
+  const critical =
+    counts.observedButUndeclared > 0 ||
+    counts.unknownSources > 0 ||
+    counts.unregisteredObservedSources > 0 ||
+    counts.unregisteredObservedIntents > 0;
+  const color = critical ? RED : YELLOW;
+  console.log(`${color}[DRIFT] ${totalDrift} issue(s) detected${RESET}`);
+
+  for (const key of DRIFT_FLOW_KEYS) {
+    const items = flows[key];
+    if (items.length === 0) continue;
+    console.log(`  ${YELLOW}${key}${RESET} (${items.length}):`);
+    listSamples(items, formatFlow);
+  }
+  for (const key of DRIFT_ID_KEYS) {
+    const items = ids[key];
+    if (items.length === 0) continue;
+    console.log(`  ${YELLOW}${key}${RESET} (${items.length}):`);
+    listSamples(items, (id) => String(id));
+  }
+}
+
 async function render() {
   process.stdout.write('\x1b[2J\x1b[H');
   console.log(`ArkGate Observability Dashboard`);
   console.log(`Time: ${new Date().toISOString()}`);
   console.log(`Endpoint: ${targetUrl}\n`);
-  
+
   const snapshot = await fetchSnapshot();
-  
+
   console.log(`--- Hardening Status ---`);
   if (!snapshot) {
-    console.log(`\x1b[33mWaiting for kernel...\x1b[0m`);
+    console.log(`${YELLOW}Waiting for kernel...${RESET}`);
   } else {
     const components = snapshot.package?.components || [];
-    const memoryStores = components.filter(c => 
+    const memoryStores = components.filter(c =>
       c.id && (c.id.includes('InMemoryEventBuffer') || c.id.includes('InMemoryAuditStore') || c.id.includes('InMemoryWorkflowStore'))
     );
-    
+
     if (memoryStores.length > 0) {
-      console.log(`\x1b[31m[WARNING] Memory defaults in use!\x1b[0m`);
-      memoryStores.forEach(c => console.log(`  - \x1b[33m${c.id}\x1b[0m`));
+      console.log(`${RED}[WARNING] Memory defaults in use!${RESET}`);
+      memoryStores.forEach(c => console.log(`  - ${YELLOW}${c.id}${RESET}`));
     } else {
-      console.log(`\x1b[32m[OK] Durable Stores Configured\x1b[0m`);
+      console.log(`${GREEN}[OK] Durable Stores Configured${RESET}`);
     }
   }
+
+  renderDriftRadar(snapshot?.observability);
 }
 
 async function startDashboard() {
   console.log(`Starting ArkGate Observability Dashboard (polling every ${interval}ms)`);
-  
+
   while (true) {
     await render();
     await new Promise(resolve => setTimeout(resolve, interval));
