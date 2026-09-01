@@ -1,6 +1,6 @@
 # Observability TUI Dashboard
 
-**Status:** `OD01`–`OD04` done on the 4.8.8 prepared tree; not npm-published
+**Status:** `OD01`–`OD04` shipped in 4.8.8; published on npm `latest`
 **Phase:** `OD` (Observability Dashboard)
 
 ## Purpose
@@ -32,4 +32,4 @@ gate verdict and not a production-durability claim.
 - We will not couple `src/kernel/` to the terminal UI. The TUI lives exclusively in `bin/` or `src/cli/`.
 - We will not build a web dashboard (HTML/React). This is strictly a developer CLI experience.
 - We will not implement real DB stores to "fix" the warnings. The user must still write those adapters themselves.
-- We do not call the 4.8.8 tree published until npm `latest` is directly verified.
+- Publication was verified directly against npm `latest`; the package reports `arkgate@4.8.8`.
