@@ -45,12 +45,15 @@ human copy says **status**.
 
 ## Locked first-contact
 
-On README, use, develop, the docs hub, and the product site:
+On the eight canonical public openings — `README.md`, `docs/use.md`,
+`docs/develop.md`, `docs/README.md`, `docs/enthusiast/README.md`,
+`docs/agent-guide.md`, `docs/ai-gates.md`, and `docs/package-surface.md` — use:
 
 1. **Verbs:** `Write. Check. Ship.`
 2. **Deny:** `When the agent writes a bad import, the write doesn’t land. The same check fails the pull request.`
 3. **Not-that (below the fold, one line):** `Not an API Gateway. Not a folder linter. If the check is not required on the PR, the config is just documentation.`
-4. **Nouns (once, below the deny):** ArkGate is import rules. ArkRules is optional policies. ArkRun is an optional experimental runtime. ArkOrder is the extra that stops the agent from rewriting the few slow product decisions (plan, protocol) as CRUD — named when the consumer opts in, never as the first noun.
+4. **Story:** the exact four-paragraph introduction below, with no visible heading or labels.
+5. **Technical nouns (below the introduction):** ArkGate is import rules. ArkRules is optional policies. ArkRun is an optional experimental runtime. ArkOrder is the extra that stops the agent from rewriting the few slow product decisions (plan, protocol) as CRUD — named when the consumer opts in, never as the first noun.
 
 Do not lead with folders, `ark.config.json`, “contract”, “gate”, “house”, or “doctor”
 as the first noun. Historical: `If the AI writes an illegal import, the write is rejected`
@@ -58,6 +61,26 @@ and `One architecture config. One check. One coach.` — never first.
 
 H1 may be **ArkGate — Write. Check. Ship.** npm description stays the deny.
 ADR 0001 keeps the public name **ArkGate**.
+
+---
+
+## Unlabeled four-paragraph introduction
+
+STAR is an internal writing method only. Public openings never print the formula's
+name, a heading for this block, bullets, or Situation/Task/Action/Result labels.
+Use these exact four paragraphs and put technical precision below them.
+
+AI can build fast—and make a mess just as fast.
+
+Keep the product easy to understand, change, and trust.
+
+ArkGate stops bad shortcuts. ArkRules protects how each part should behave. ArkRun keeps work moving. ArkOrder protects the few big choices that should not change by accident.
+
+Safer changes, fewer surprises, and extra protection only when you choose it.
+
+Do not add technical terms to these four paragraphs. In the next section, explain that
+ArkGate checks imports, ArkRules is optional, ArkRun is experimental and in-memory,
+and ArkOrder is optional and for a few slow product decisions.
 
 ---
 

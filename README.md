@@ -7,6 +7,14 @@
 Not an API Gateway. Not a folder linter. If the check is not required on the PR, the config
 is just documentation.
 
+AI can build fast—and make a mess just as fast.
+
+Keep the product easy to understand, change, and trust.
+
+ArkGate stops bad shortcuts. ArkRules protects how each part should behave. ArkRun keeps work moving. ArkOrder protects the few big choices that should not change by accident.
+
+Safer changes, fewer surprises, and extra protection only when you choose it.
+
 Works with Cursor, Claude, Codex, and Grok.
 
 [![Website](https://img.shields.io/badge/website-arkgate.online-0a0a0a)](https://www.arkgate.online/)
@@ -304,6 +312,7 @@ because “what may be the plan” was never a rule.
 
 **ArkOrder** (`arkgate/order`) is that rule. Off unless you add `arkOrder`.
 Name the slow keys (`xiKeys`: plan, protocol, cost-code bound — not `projectId`).
+A status you can recompute from data you already have is not a slow decision. Derive it. Do not freeze it.
 Posting an invoice is absorbed. Changing plan is `proposeRelease` then `apply`.
 `refreshSigma`; ingest residual `absorb | escalate_up | hold` + `reasonCode`;
 capacity pack as data; in-memory `ReleaseStore`; `ingestTravelAction`; ArkRun

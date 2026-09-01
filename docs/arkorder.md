@@ -139,11 +139,17 @@ does not change `h(ξ)` fails closed (`ARKORDER_EMPTY_BLAST`).
 | `managedLayers` | Layers whose persistence writes of `xiKeys` are the skip |
 | `planeRoots` | Files allowed to call `createOrderPlane` |
 | `maxXiKeys` | Cap on ξ (default 7). Haken: few slow modes |
-| `xiKeys` | Optional 3–5 slow names. Empty → `ARKORDER_XI_FIELD_WRITE` silent |
+| `xiKeys` | Optional 3–5 slow names chosen by the modeller. Empty → `ARKORDER_XI_FIELD_WRITE` silent |
 
 Unknown keys fail closed. Empty `planeRoots` in `enforced` fails
 `ARKORDER_MISSING_PLANE`. Demotion or deletion is a policy-delta **weakening**.
 This library’s 4-layer authoring contract does **not** turn the extra on.
+
+The modeller names the keys. Empty blast is a mechanical rejection, but a large
+blast does not make `paid` independent of current state. Whether a candidate is
+entailed by current state remains a modeller and skill obligation. Invoices stay
+on ingest. A `paid` flag is not a fourth slow key: derive it from cash received
+against the invoice amount.
 
 ---
 
@@ -212,6 +218,10 @@ Durability (`K01`) stays parked. In-memory is the honesty line.
 - a degraded-mode contract (nothing can be down)
 
 If a “slow parameter” changes with every click, it is not an order parameter.
+A status you can recompute from data you already have is not a slow decision. Derive it. Do not freeze it. The check remains silent on semantic entailment.
+For example, cash arrives through ingest; `paid` is a conclusion derived from
+cash received against amount due, not a key to freeze or change with
+`proposeRelease`.
 
 The valved loop ships in **4.8.6** ([ADR 0034](adr/0034-arkorder-valved-loop.md)).
 In-memory `ReleaseStore` is **not** durable. Doctor / status `arkOrder` stays

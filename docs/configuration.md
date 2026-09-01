@@ -130,7 +130,8 @@ Top-level fields:
   Import `createOrderPlane` from `arkgate/order` (same package). Empty `planeRoots` in
   `enforced` mode fails closed (`ARKORDER_MISSING_PLANE`). `xiKeys` are the 3–5 slow
   names the product already knows (plan, protocol, cost-code bound). Empty `xiKeys`
-  leaves `ARKORDER_XI_FIELD_WRITE` silent. Membership ids are not keys. Factory options
+  leaves `ARKORDER_XI_FIELD_WRITE` silent. Membership ids and recomputable statuses
+  such as `paid` / `overdue` are not keys. Factory options
   `informationBudget`, `sigmaMaxAgeMs`, `store` (`ReleaseStore`), and capacity packs
   belong on `createOrderPlane`, not this extra object. Later ξ is `proposeRelease`
   then `apply`; `refreshSigma`; ingest residual `absorb | escalate_up | hold`.

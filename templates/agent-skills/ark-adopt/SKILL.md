@@ -174,6 +174,7 @@ ArkGate has **always-on Layers** plus opt-in extras. The user chooses extras; yo
 ```
 
 - `xiKeys` are meaning, not membership. `projectId` / `orgId` do not belong. If `proposeRelease` throws empty blast, that key does not order anything. After the first `release()`, change ξ with `proposeRelease` then `apply` — not a second `release()` (`ARKORDER_UNVALVED_RELEASE`). `refreshSigma`; ingest residual `absorb | escalate_up | hold` + `reasonCode`; capacity pack as data; `createMemoryReleaseStore`; `ingestTravelAction`; ArkRun `decisionTape`.
+- Before writing a name, drop the candidate and ask: can current σ and s reconstruct it uniquely? Then ask direction: does the key slave ingest, or does ingest determine the status? If it is recomputable or ingest determines it (`paid`, `overdue`, `atCapacity`, or `approved` folded from signatures), derive it as a projection or ingest fold; invoices and seats stay on ingest. The check remains silent on semantic entailment.
 - A use-case that `prisma.*.update({ plan })` while `plan` is in `xiKeys` is **[ArkOrder]** `ARKORDER_XI_FIELD_WRITE`. Invoices and seats still flow through `ingest`.
 
 - Do **not** put `arkOrder` on the compact starter / `ark start` scaffold. Domain stays plane-free. Import `createOrderPlane` from `arkgate/order` (same npm package).

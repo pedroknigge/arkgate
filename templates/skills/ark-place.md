@@ -148,6 +148,7 @@ When `arkOrder` is present on the architecture config:
 - First freeze ξ with `release()`; later ξ change is `proposeRelease` then `apply` (`ARKORDER_UNVALVED_RELEASE`). `refreshSigma` for saldo. Field `ingest()` returns `absorb | escalate_up | hold` bound to `xiHash` + `reasonCode`; never a Release. Capacity pack as data; `createMemoryReleaseStore`; `ingestTravelAction`; ArkRun `decisionTape`. No `update`/`patch`/`set`.
 - Call the factory only inside `arkOrder.planeRoots`. Empty roots in `enforced` mode is `ARKORDER_MISSING_PLANE`.
 - Named slow keys live in `arkOrder.xiKeys`. A managed-layer Prisma/pg write of those keys is `ARKORDER_XI_FIELD_WRITE` — absorb with `ingest` or change the pattern with `proposeRelease` then `apply`.
+- A recomputable status is not a new `xiKeys` entry or a `proposeRelease`: place it as a read projection or an ingest fold. If slow-key naming remains unresolved, return to `/ark-adopt` and run the elimination test before writing the config.
 - Skip clusters (`ARKORDER_MISSING_PLANE` / `ARKORDER_KERNEL_IN_DOMAIN` / `ARKORDER_GENERIC_UPDATE` / `ARKORDER_TOO_MANY_PARAMS` / `ARKORDER_INGEST_WRITES_XI` / `ARKORDER_XI_FIELD_WRITE`): place this artifact, then grind via `/ark-autopilot`. Extra not on → `/ark-adopt`. Do not invent `/ark-order`.
 - Absence of the extra is valid. Do not invent `/ark-order`. Skills never enforce.
 

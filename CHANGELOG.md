@@ -30,9 +30,17 @@ the maintainer tag.
 - Thin gallery bridge: absorb may `send`; `escalate_up` human may `raises`.
 
 ### Changed
+- Eight canonical public openings now share the same four plain-English story
+  paragraphs. STAR remains the writing method, not a visible heading or set of labels.
+  This is copy and a static parity check only; no code, config, schema, runtime, or
+  publication change.
 - Public sentence: **ArkOrder freezes the pattern through a valve. ArkRun is how
   the residual travels.** Skills `/ark-adopt` `/ark-place` `/ark-autopilot` deepen.
   Doctor / status remain `notAScore`.
+- Existing skills and docs now teach the elimination question before a modeller
+  names `xiKeys`: recomputable statuses such as `paid` are derived, not frozen.
+  This is guidance, not a runtime invariant or new sensor; the check remains
+  silent on semantic entailment.
 
 ## 4.8.5 — 2026-08-31
 

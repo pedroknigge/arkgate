@@ -1,8 +1,19 @@
 # ArkGate — enthusiast track
 
 **Write. Check. Ship.**
-When the agent writes a bad import, the write doesn’t land. The same check fails the pull
-request. Not an API Gateway. Not a folder linter.
+
+**When the agent writes a bad import, the write doesn’t land. The same check fails the pull request.**
+
+Not an API Gateway. Not a folder linter. If the check is not required on the PR, the config
+is just documentation.
+
+AI can build fast—and make a mess just as fast.
+
+Keep the product easy to understand, change, and trust.
+
+ArkGate stops bad shortcuts. ArkRules protects how each part should behave. ArkRun keeps work moving. ArkOrder protects the few big choices that should not change by accident.
+
+Safer changes, fewer surprises, and extra protection only when you choose it.
 
 Plain-language onboarding for builders who use AI agents but are not professional
 developers. This track follows [Diátaxis](https://diataxis.fr/): tutorial, how-to,

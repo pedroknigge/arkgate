@@ -974,10 +974,20 @@ describe('CHANGELOG + release note cover 3.9.1 patch hygiene', () => {
     expect(readme).toMatch(/just documentation/);
   });
 
-  it('current public openings use the locked deny and skip first-contact dialect', () => {
+  it('current public openings use the locked deny and the same unlabeled four-paragraph story', () => {
     const deny = /When the agent writes a bad import/;
     const verbs = /Write\. Check\. Ship\./;
+    const notThat = 'Not an API Gateway. Not a folder linter.';
     const forbiddenLead = /write checkpoint|write firewall|control plane|co-pilot|One architecture config\. One check\. One coach\.|the house stays up/i;
+    const storyParagraphs = [
+      'AI can build fast—and make a mess just as fast.',
+      'Keep the product easy to understand, change, and trust.',
+      'ArkGate stops bad shortcuts. ArkRules protects how each part should behave. ArkRun keeps work moving. ArkOrder protects the few big choices that should not change by accident.',
+      'Safer changes, fewer surprises, and extra protection only when you choose it.',
+    ];
+    const story = storyParagraphs.join('\n\n');
+    const forbiddenStoryJargon = /\blayers?\b|within-layer|\bruntime\b|in-memory|CI status|slow parameters|\bxi\b|\bvalve\b|architecture boundaries/i;
+    const visibleStarScaffolding = /^#{1,6}.*(?:\bSTAR\b|situation.*task.*action.*result)|\*\*(?:Situation|Task|Action|Result):\*\*/im;
     const openings = [
       'README.md',
       'docs/use.md',
@@ -989,11 +999,21 @@ describe('CHANGELOG + release note cover 3.9.1 patch hygiene', () => {
       'docs/package-surface.md',
     ];
     for (const rel of openings) {
-      const head = read(rel).split(/\n/).slice(0, 24).join('\n');
+      const head = read(rel).split(/\n/).slice(0, 40).join('\n');
+      const verbsAt = head.search(verbs);
+      const denyAt = head.search(deny);
+      const notThatAt = head.indexOf(notThat);
+      const storyAt = head.indexOf(story);
       expect(head, rel).toMatch(deny);
       expect(head, rel).toMatch(verbs);
+      expect(notThatAt, rel).toBeGreaterThan(denyAt);
+      expect(storyAt, rel).toBeGreaterThan(notThatAt);
+      expect(denyAt, rel).toBeGreaterThan(verbsAt);
+      expect(head.split('\n').filter((line) => storyParagraphs.includes(line)), rel).toEqual(storyParagraphs);
       expect(head, rel).not.toMatch(forbiddenLead);
+      expect(head, rel).not.toMatch(visibleStarScaffolding);
     }
+    expect(story).not.toMatch(forbiddenStoryJargon);
     const readmeH1 = read('README.md').split(/\n/).find((line) => line.startsWith('# '));
     expect(readmeH1).toMatch(/Write\. Check\. Ship\./);
     expect(readmeH1).not.toMatch(/co-pilot/i);
@@ -1004,6 +1024,8 @@ describe('CHANGELOG + release note cover 3.9.1 patch hygiene', () => {
     expect(read('README.md')).toMatch(/Why required CI is the hard line/);
     expect(read('docs/product-voice.md')).toMatch(/\*\*Write\. Check\. Ship\.\*\*/);
     expect(read('docs/product-voice.md')).toMatch(/\*\*rules file\*\*/);
+    expect(read('docs/product-voice.md')).toContain(story);
+    expect(read('docs/product-voice.md')).toMatch(/STAR is an internal writing method only/);
     expect(JSON.parse(read('package.json')).description).toMatch(deny);
     expect(JSON.parse(read('package.json')).keywords).not.toContain('co-pilot');
     expect(JSON.parse(read('server.json')).description).toMatch(deny);

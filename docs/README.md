@@ -6,6 +6,14 @@
 Not an API Gateway. Not a folder linter. If the check is not required on the PR, the config
 is just documentation.
 
+AI can build fast—and make a mess just as fast.
+
+Keep the product easy to understand, change, and trust.
+
+ArkGate stops bad shortcuts. ArkRules protects how each part should behave. ArkRun keeps work moving. ArkOrder protects the few big choices that should not change by accident.
+
+Safer changes, fewer surprises, and extra protection only when you choose it.
+
 Pick your path. Skip everything else.
 
 | You are… | Start here |

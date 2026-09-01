@@ -34,6 +34,13 @@ describe('docs/arkorder.md (XP01)', () => {
     expect(body).toMatch(/static sensors/i);
     expect(body).toMatch(/not a service/i);
     expect(body).toMatch(/not `@arkgate\/order`/);
+    expect(body).toContain(
+      'A status you can recompute from data you already have is not a slow decision. Derive it. Do not freeze it.',
+    );
+    expect(body).toMatch(/check remains silent on semantic entailment/i);
+    expect(read('templates/skills/ark-adopt.md')).toMatch(
+      /can current σ and s reconstruct it uniquely\?/,
+    );
   });
 
   it('is linked from the docs hub and README', () => {
