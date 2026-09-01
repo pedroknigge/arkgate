@@ -108,7 +108,7 @@ function usesDefaultHome(spec, env, homeDir) {
 
 function skillsDirFor(host, env = process.env) {
   const spec = HOSTS[host];
-  return path.join(resolveHomeDir(spec, env), 'skills');
+  return path.join(resolveHomeDir(spec, env, os.homedir()), 'skills');
 }
 
 function readHomeCatalogFloor(skillsDir) {

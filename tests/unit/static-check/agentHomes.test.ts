@@ -36,6 +36,18 @@ describe('agent home catalogs (Claude / Grok)', () => {
     expect(plan.downgradeBlocked).toBe(true);
   });
 
+  it('detectAgentHomeGaps does not throw when CLAUDE_HOME/GROK_HOME/ANTIGRAVITY_HOME are unset', () => {
+    const root = tempRoot('ark-unset-home-env-');
+    fs.writeFileSync(path.join(root, 'AGENTS.md'), '# x\n');
+    const env = { ...process.env };
+    delete env.CLAUDE_HOME;
+    delete env.GROK_HOME;
+    delete env.ANTIGRAVITY_HOME;
+    expect(() => detectAgentHomeGaps(root, env)).not.toThrow();
+    expect(Array.isArray(detectAgentHomeGaps(root, env))).toBe(true);
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+
   it('detectAgentHomeGaps is quiet when the home tree has no ark-* skills', () => {
     const root = tempRoot('ark-no-home-');
     fs.writeFileSync(path.join(root, 'AGENTS.md'), '# x\n');
