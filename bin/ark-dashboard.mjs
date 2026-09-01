@@ -50,14 +50,35 @@ const DRIFT_ID_KEYS = [
   'registeredButNeverObserved',
 ];
 
-async function fetchSnapshot() {
+function siblingUrl(snapshotUrl, suffix) {
   try {
-    const res = await fetch(targetUrl);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return await res.json();
-  } catch (err) {
+    const u = new URL(snapshotUrl);
+    let basePath = u.pathname;
+    if (basePath.endsWith('/snapshot')) {
+      basePath = basePath.slice(0, -'/snapshot'.length);
+    } else if (basePath.endsWith('/snapshot/')) {
+      basePath = basePath.slice(0, -'/snapshot/'.length);
+    }
+    u.pathname = `${basePath}${suffix}`;
+    return u.toString();
+  } catch {
     return null;
   }
+}
+
+async function fetchJson(url) {
+  if (!url) return null;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+async function fetchSnapshot() {
+  return fetchJson(targetUrl);
 }
 
 function isObservabilityReady(obs) {
@@ -147,13 +168,112 @@ function renderDriftRadar(observability) {
   }
 }
 
+function formatOutboxRow(row) {
+  const intent = row.intent ? ` ${row.intent}` : '';
+  const err = row.error ? ` err=${row.error}` : '';
+  return `${row.status} ${row.id}${intent} attempts=${row.attempts ?? 0}${err}`;
+}
+
+function formatWorkflowRow(row) {
+  const step = row.currentStep ? ` @${row.currentStep}` : '';
+  const err = row.error ? ` err=${row.error}` : '';
+  return `${row.status} ${row.name} (${row.id})${step}${err}`;
+}
+
+function isOutboxReady(outbox) {
+  return Boolean(outbox && typeof outbox === 'object' && outbox.available === true);
+}
+
+function isWorkflowsReady(workflows) {
+  return Boolean(workflows && typeof workflows === 'object' && workflows.available === true);
+}
+
+function renderQueuesAndWorkflows(outbox, workflows) {
+  console.log(`\n--- Queues & Workflows ---`);
+
+  if (!isOutboxReady(outbox) && !isWorkflowsReady(workflows)) {
+    console.log(`${MUTED}Waiting for queues & workflows…${RESET}`);
+    return;
+  }
+
+  if (!isOutboxReady(outbox)) {
+    console.log(`${MUTED}Outbox: Waiting…${RESET}`);
+  } else {
+    const pending = Array.isArray(outbox.pending) ? outbox.pending : [];
+    const failed = Array.isArray(outbox.failed) ? outbox.failed : [];
+    const pendingCount = outbox.pendingCount ?? pending.length;
+    const failedCount = outbox.failedCount ?? failed.length;
+    console.log(`Outbox: pending=${pendingCount} failed=${failedCount}`);
+
+    if (pendingCount === 0 && failedCount === 0) {
+      console.log(`${GREEN}Outbox empty${RESET}`);
+    } else {
+      if (failedCount > 0) {
+        console.log(`${RED}[OUTBOX] ${failedCount} failed${RESET}`);
+        listSamples(failed, (row) => `${RED}${formatOutboxRow(row)}${RESET}`);
+      }
+      if (pendingCount > 0) {
+        console.log(`${YELLOW}[OUTBOX] ${pendingCount} pending${RESET}`);
+        listSamples(pending, (row) => `${YELLOW}${formatOutboxRow(row)}${RESET}`);
+      }
+    }
+  }
+
+  if (!isWorkflowsReady(workflows)) {
+    console.log(`${MUTED}Workflows: Waiting…${RESET}`);
+    return;
+  }
+
+  const rows = Array.isArray(workflows.workflows) ? workflows.workflows : [];
+  const running = workflows.runningCount ?? rows.filter((w) => w.status === 'running').length;
+  const compensating =
+    workflows.compensatingCount ?? rows.filter((w) => w.status === 'compensating').length;
+  const failedWf = workflows.failedCount ?? rows.filter((w) => w.status === 'failed').length;
+  const pendingWf =
+    workflows.pendingCount ??
+    rows.filter((w) => w.status === 'idle' || w.status === 'waiting').length;
+  console.log(
+    `Workflows: total=${workflows.total ?? rows.length} running=${running} ` +
+      `compensating=${compensating} failed=${failedWf} pending=${pendingWf}`,
+  );
+
+  if (failedWf === 0 && running === 0 && compensating === 0 && pendingWf === 0) {
+    console.log(`${GREEN}No active workflows${RESET}`);
+    return;
+  }
+
+  if (failedWf > 0) {
+    console.log(`${RED}[WORKFLOWS] ${failedWf} failed${RESET}`);
+    listSamples(
+      rows.filter((w) => w.status === 'failed'),
+      (row) => `${RED}${formatWorkflowRow(row)}${RESET}`,
+    );
+  }
+  const yellowRows = rows.filter((w) =>
+    w.status === 'running' ||
+    w.status === 'compensating' ||
+    w.status === 'idle' ||
+    w.status === 'waiting',
+  );
+  if (yellowRows.length > 0) {
+    console.log(`${YELLOW}[WORKFLOWS] ${yellowRows.length} pending/running/compensating${RESET}`);
+    listSamples(yellowRows, (row) => `${YELLOW}${formatWorkflowRow(row)}${RESET}`);
+  }
+}
+
 async function render() {
   process.stdout.write('\x1b[2J\x1b[H');
   console.log(`ArkGate Observability Dashboard`);
   console.log(`Time: ${new Date().toISOString()}`);
   console.log(`Endpoint: ${targetUrl}\n`);
 
-  const snapshot = await fetchSnapshot();
+  const outboxUrl = siblingUrl(targetUrl, '/outbox');
+  const workflowsUrl = siblingUrl(targetUrl, '/workflows');
+  const [snapshot, outbox, workflows] = await Promise.all([
+    fetchSnapshot(),
+    fetchJson(outboxUrl),
+    fetchJson(workflowsUrl),
+  ]);
 
   console.log(`--- Hardening Status ---`);
   if (!snapshot) {
@@ -173,6 +293,18 @@ async function render() {
   }
 
   renderDriftRadar(snapshot?.observability);
+
+  const outboxData = isOutboxReady(outbox)
+    ? outbox
+    : isOutboxReady(snapshot?.outbox)
+      ? snapshot.outbox
+      : outbox;
+  const workflowsData = isWorkflowsReady(workflows)
+    ? workflows
+    : isWorkflowsReady(snapshot?.workflows)
+      ? snapshot.workflows
+      : workflows;
+  renderQueuesAndWorkflows(outboxData, workflowsData);
 }
 
 async function startDashboard() {

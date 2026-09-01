@@ -19,8 +19,50 @@ export const ARK_RUN_INSPECTOR_DEFAULT_PORT = 0;
 export const ARK_RUN_INSPECTOR_SNAPSHOT_PATH = '/snapshot';
 export const ARK_RUN_INSPECTOR_EVENTS_PATH = '/events';
 export const ARK_RUN_INSPECTOR_GRAPH_PATH = '/graph';
+export const ARK_RUN_INSPECTOR_OUTBOX_PATH = '/outbox';
+export const ARK_RUN_INSPECTOR_WORKFLOWS_PATH = '/workflows';
 export const ARK_RUN_INSPECTOR_SSE_EVENT = 'snapshot';
 export const ARK_RUN_INSPECTOR_TRANSPORT_FALLBACK = 'in-process-local' as const;
+
+/** Outbox statuses the Queues monitor surfaces (dispatched is omitted). */
+export const ARK_RUN_INSPECTOR_OUTBOX_MONITOR_STATUSES = ['pending', 'failed'] as const;
+export type ArkRunInspectorOutboxMonitorStatus =
+  (typeof ARK_RUN_INSPECTOR_OUTBOX_MONITOR_STATUSES)[number];
+
+export type ArkRunInspectorOutboxRecordSummary = {
+  id: string;
+  status: ArkRunInspectorOutboxMonitorStatus;
+  attempts: number;
+  intent?: string;
+  error?: string;
+  updatedAt?: string;
+};
+
+export type ArkRunInspectorOutboxMonitor = {
+  available: boolean;
+  pendingCount: number;
+  failedCount: number;
+  pending: ArkRunInspectorOutboxRecordSummary[];
+  failed: ArkRunInspectorOutboxRecordSummary[];
+};
+
+export type ArkRunInspectorWorkflowSummary = {
+  id: string;
+  name: string;
+  status: string;
+  currentStep?: string;
+  error?: string;
+};
+
+export type ArkRunInspectorWorkflowsMonitor = {
+  available: boolean;
+  total: number;
+  runningCount: number;
+  compensatingCount: number;
+  failedCount: number;
+  pendingCount: number;
+  workflows: ArkRunInspectorWorkflowSummary[];
+};
 
 export class ArkRunInspectorProductionError extends Error {
   constructor() {
@@ -58,6 +100,10 @@ export type ArkRunInspectorSnapshot = {
   package: DependencyInformationPackage;
   transport: ArkRunInspectorTransportFacts;
   observability: unknown;
+  /** Optional OD04 queue facts when the caller supplies them (endpoints preferred). */
+  outbox?: ArkRunInspectorOutboxMonitor;
+  /** Optional OD04 workflow facts when the caller supplies them (endpoints preferred). */
+  workflows?: ArkRunInspectorWorkflowsMonitor;
 };
 
 export type ArkRunInspectorBindInput = {
@@ -75,6 +121,8 @@ export type ArkRunInspectorSnapshotInput = {
   observability?: unknown;
   ephemeralDefault?: unknown;
   brokerBound?: unknown;
+  outbox?: unknown;
+  workflows?: unknown;
 };
 
 const PUBLIC_HOSTS = new Set([
@@ -194,6 +242,163 @@ function closedTransportFacts(input: {
   };
 }
 
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  return value as Record<string, unknown>;
+}
+
+function closedOutboxSummary(value: unknown): ArkRunInspectorOutboxRecordSummary | undefined {
+  const row = asRecord(value);
+  if (!row || typeof row.id !== 'string') return undefined;
+  const status = row.status;
+  if (status !== 'pending' && status !== 'failed') return undefined;
+  const event = asRecord(row.event);
+  const intent =
+    event && typeof event.intent === 'string'
+      ? event.intent
+      : typeof row.intent === 'string'
+        ? row.intent
+        : undefined;
+  const summary: ArkRunInspectorOutboxRecordSummary = {
+    id: row.id,
+    status,
+    attempts: typeof row.attempts === 'number' && Number.isFinite(row.attempts) ? row.attempts : 0,
+  };
+  if (intent) summary.intent = intent;
+  if (typeof row.error === 'string' && row.error.length > 0) summary.error = row.error;
+  if (typeof row.updatedAt === 'string') summary.updatedAt = row.updatedAt;
+  return summary;
+}
+
+/**
+ * Sanitize EventBufferStore.list rows into pending/failed monitor facts (no payloads).
+ */
+export function buildArkRunInspectorOutboxMonitor(
+  records: unknown = []
+): ArkRunInspectorOutboxMonitor {
+  const list = Array.isArray(records) ? records : [];
+  const pending: ArkRunInspectorOutboxRecordSummary[] = [];
+  const failed: ArkRunInspectorOutboxRecordSummary[] = [];
+  for (const row of list) {
+    const summary = closedOutboxSummary(row);
+    if (!summary) continue;
+    if (summary.status === 'pending') pending.push(summary);
+    else failed.push(summary);
+  }
+  return {
+    available: true,
+    pendingCount: pending.length,
+    failedCount: failed.length,
+    pending,
+    failed,
+  };
+}
+
+export function unavailableArkRunInspectorOutboxMonitor(): ArkRunInspectorOutboxMonitor {
+  return {
+    available: false,
+    pendingCount: 0,
+    failedCount: 0,
+    pending: [],
+    failed: [],
+  };
+}
+
+function closedWorkflowSummary(value: unknown): ArkRunInspectorWorkflowSummary | undefined {
+  const row = asRecord(value);
+  if (!row || typeof row.id !== 'string') return undefined;
+  const name =
+    typeof row.workflowName === 'string'
+      ? row.workflowName
+      : typeof row.name === 'string'
+        ? row.name
+        : undefined;
+  if (!name) return undefined;
+  const summary: ArkRunInspectorWorkflowSummary = {
+    id: row.id,
+    name,
+    status: typeof row.status === 'string' ? row.status : 'unknown',
+  };
+  if (typeof row.currentStep === 'string') summary.currentStep = row.currentStep;
+  if (typeof row.error === 'string' && row.error.length > 0) summary.error = row.error;
+  return summary;
+}
+
+function isPendingWorkflowStatus(status: string): boolean {
+  return status === 'idle' || status === 'waiting';
+}
+
+/**
+ * Sanitize WorkflowEngine.list rows into monitor facts (id/name/status/step/error only).
+ */
+export function buildArkRunInspectorWorkflowsMonitor(
+  snapshots: unknown = []
+): ArkRunInspectorWorkflowsMonitor {
+  const list = Array.isArray(snapshots) ? snapshots : [];
+  const workflows: ArkRunInspectorWorkflowSummary[] = [];
+  let runningCount = 0;
+  let compensatingCount = 0;
+  let failedCount = 0;
+  let pendingCount = 0;
+  for (const row of list) {
+    const summary = closedWorkflowSummary(row);
+    if (!summary) continue;
+    workflows.push(summary);
+    if (summary.status === 'running') runningCount += 1;
+    else if (summary.status === 'compensating') compensatingCount += 1;
+    else if (summary.status === 'failed') failedCount += 1;
+    else if (isPendingWorkflowStatus(summary.status)) pendingCount += 1;
+  }
+  return {
+    available: true,
+    total: workflows.length,
+    runningCount,
+    compensatingCount,
+    failedCount,
+    pendingCount,
+    workflows,
+  };
+}
+
+export function unavailableArkRunInspectorWorkflowsMonitor(): ArkRunInspectorWorkflowsMonitor {
+  return {
+    available: false,
+    total: 0,
+    runningCount: 0,
+    compensatingCount: 0,
+    failedCount: 0,
+    pendingCount: 0,
+    workflows: [],
+  };
+}
+
+function closedOutboxMonitor(value: unknown): ArkRunInspectorOutboxMonitor | undefined {
+  if (value === undefined) return undefined;
+  const row = asRecord(value);
+  if (!row) return unavailableArkRunInspectorOutboxMonitor();
+  if (row.available === false) return unavailableArkRunInspectorOutboxMonitor();
+  if (Array.isArray(row.pending) || Array.isArray(row.failed) || Array.isArray(row.records)) {
+    const records = [
+      ...(Array.isArray(row.pending) ? row.pending : []),
+      ...(Array.isArray(row.failed) ? row.failed : []),
+      ...(Array.isArray(row.records) ? row.records : []),
+    ];
+    return buildArkRunInspectorOutboxMonitor(records);
+  }
+  return unavailableArkRunInspectorOutboxMonitor();
+}
+
+function closedWorkflowsMonitor(value: unknown): ArkRunInspectorWorkflowsMonitor | undefined {
+  if (value === undefined) return undefined;
+  const row = asRecord(value);
+  if (!row) return unavailableArkRunInspectorWorkflowsMonitor();
+  if (row.available === false) return unavailableArkRunInspectorWorkflowsMonitor();
+  if (Array.isArray(row.workflows)) {
+    return buildArkRunInspectorWorkflowsMonitor(row.workflows);
+  }
+  return unavailableArkRunInspectorWorkflowsMonitor();
+}
+
 export function buildArkRunInspectorSnapshot(
   input: ArkRunInspectorSnapshotInput = {}
 ): ArkRunInspectorSnapshot {
@@ -211,7 +416,9 @@ export function buildArkRunInspectorSnapshot(
         ? (input.package as { components: unknown[] }).components
         : [],
   });
-  return {
+  const outbox = closedOutboxMonitor(input.outbox);
+  const workflows = closedWorkflowsMonitor(input.workflows);
+  const snapshot: ArkRunInspectorSnapshot = {
     schemaVersion: ARK_RUN_INSPECTOR_SCHEMA_VERSION,
     kernelInstanceId:
       typeof input.kernelInstanceId === 'string'
@@ -225,6 +432,9 @@ export function buildArkRunInspectorSnapshot(
     transport: closedTransportFacts(input),
     observability: jsonClone(input.observability) ?? {},
   };
+  if (outbox) snapshot.outbox = outbox;
+  if (workflows) snapshot.workflows = workflows;
+  return snapshot;
 }
 
 export function formatArkRunInspectorSseEvent(snapshot: unknown): string {

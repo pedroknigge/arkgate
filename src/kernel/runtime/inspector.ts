@@ -8,7 +8,9 @@ import {
   ArkRunInspectorProductionError,
   resolveArkRunInspectorBind,
   type ArkRunInspectorBind,
+  type ArkRunInspectorOutboxMonitor,
   type ArkRunInspectorSnapshot,
+  type ArkRunInspectorWorkflowsMonitor,
 } from '../../domain/arkRunInspector';
 import type { ArkRunInspectorHandle } from './inspectorListen';
 
@@ -25,6 +27,14 @@ export type StartArkRunInspectorOptions = {
 export type ArkRunInspectorSource = {
   getInspectorSnapshot(bind: ArkRunInspectorBind): ArkRunInspectorSnapshot;
   requestGraph(query?: ArkRunGraphQuery): ArkRunGraph;
+  /** OD04: pending/failed outbox summaries (EventBufferStore.list). */
+  listInspectorOutbox?(): Promise<ArkRunInspectorOutboxMonitor>;
+  /** OD04: workflow/saga summaries (WorkflowEngine.list). */
+  listInspectorWorkflows?(): Promise<ArkRunInspectorWorkflowsMonitor>;
+  /** Duck-typed kernel ports when explicit list* helpers are absent. */
+  outbox?: { list(status?: 'pending' | 'dispatched' | 'failed'): Promise<unknown[]> };
+  eventBuffer?: { list(status?: 'pending' | 'dispatched' | 'failed'): Promise<unknown[]> };
+  workflowEngine?: { list(workflowName?: string): Promise<unknown[]> };
 };
 
 export async function startArkRunInspector(

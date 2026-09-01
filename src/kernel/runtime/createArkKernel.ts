@@ -1,5 +1,9 @@
 import { requestArkRunGraph } from '../../domain/arkRunGraph';
-import { buildArkRunInspectorSnapshot } from '../../domain/arkRunInspector';
+import {
+  buildArkRunInspectorOutboxMonitor,
+  buildArkRunInspectorSnapshot,
+  buildArkRunInspectorWorkflowsMonitor,
+} from '../../domain/arkRunInspector';
 import { buildDependencyInformationPackage } from '../../domain/arkRunInformationPackage';
 import { ARK_RUN_EPHEMERAL_DEFAULT } from '../../domain/arkRunTransport';
 import { createAuditTrail } from '../audit';
@@ -22,7 +26,7 @@ import {
 import { createProjectionRegistry } from '../projections';
 import { createWorkflowEngine } from '../workflow';
 import { createComponentRegistry } from './componentRegistry';
-import { startArkRunInspector } from './inspector';
+import { startArkRunInspector, type ArkRunInspectorSource } from './inspector';
 import { sendOnArkRunTransport } from './transport';
 import type {
   ArkKernel,
@@ -178,7 +182,24 @@ export function createArkKernel(options: CreateArkKernelOptions = {}): ArkKernel
       });
     },
     startInspector(options) {
-      return startArkRunInspector(kernel, options);
+      const inspectorSource: ArkRunInspectorSource = {
+        getInspectorSnapshot: (bind) => kernel.getInspectorSnapshot(bind),
+        requestGraph: (query) => kernel.requestGraph(query),
+        async listInspectorOutbox() {
+          const [pending, failed] = await Promise.all([
+            eventBuffer.list('pending'),
+            eventBuffer.list('failed'),
+          ]);
+          return buildArkRunInspectorOutboxMonitor([...pending, ...failed]);
+        },
+        async listInspectorWorkflows() {
+          return buildArkRunInspectorWorkflowsMonitor(await workflowEngine.list());
+        },
+        outbox: eventBuffer,
+        eventBuffer,
+        workflowEngine,
+      };
+      return startArkRunInspector(inspectorSource, options);
     },
     syncGraph,
     manifest() {

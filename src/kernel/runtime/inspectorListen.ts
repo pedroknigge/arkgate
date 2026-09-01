@@ -12,18 +12,31 @@ import {
 import {
   ARK_RUN_INSPECTOR_EVENTS_PATH,
   ARK_RUN_INSPECTOR_GRAPH_PATH,
+  ARK_RUN_INSPECTOR_OUTBOX_PATH,
   ARK_RUN_INSPECTOR_SNAPSHOT_PATH,
+  ARK_RUN_INSPECTOR_WORKFLOWS_PATH,
   ArkRunInspectorBindError,
   arkRunInspectorUrl,
+  buildArkRunInspectorOutboxMonitor,
+  buildArkRunInspectorWorkflowsMonitor,
   formatArkRunInspectorSseEvent,
   isArkRunInspectorLoopbackHost,
+  unavailableArkRunInspectorOutboxMonitor,
+  unavailableArkRunInspectorWorkflowsMonitor,
   type ArkRunInspectorBind,
+  type ArkRunInspectorOutboxMonitor,
   type ArkRunInspectorSnapshot,
+  type ArkRunInspectorWorkflowsMonitor,
 } from '../../domain/arkRunInspector';
 
 export type ArkRunInspectorListenSource = {
   getInspectorSnapshot(bind: ArkRunInspectorBind): ArkRunInspectorSnapshot;
   requestGraph(query?: ArkRunGraphQuery): ArkRunGraph;
+  listInspectorOutbox?(): Promise<ArkRunInspectorOutboxMonitor>;
+  listInspectorWorkflows?(): Promise<ArkRunInspectorWorkflowsMonitor>;
+  outbox?: { list(status?: 'pending' | 'dispatched' | 'failed'): Promise<unknown[]> };
+  eventBuffer?: { list(status?: 'pending' | 'dispatched' | 'failed'): Promise<unknown[]> };
+  workflowEngine?: { list(workflowName?: string): Promise<unknown[]> };
 };
 
 export type ArkRunInspectorHandle = {
@@ -33,6 +46,8 @@ export type ArkRunInspectorHandle = {
   snapshotUrl: string;
   eventsUrl: string;
   graphUrl: string;
+  outboxUrl: string;
+  workflowsUrl: string;
   close(): Promise<void>;
 };
 
@@ -76,6 +91,32 @@ function boundAddress(server: Server, requested: ArkRunInspectorBind): ArkRunIns
     throw new ArkRunInspectorBindError(addr.address);
   }
   return { host: requested.host, port: addr.port };
+}
+
+async function resolveOutboxMonitor(
+  source: ArkRunInspectorListenSource
+): Promise<ArkRunInspectorOutboxMonitor> {
+  if (typeof source.listInspectorOutbox === 'function') {
+    return source.listInspectorOutbox();
+  }
+  const store = source.outbox ?? source.eventBuffer;
+  if (!store || typeof store.list !== 'function') {
+    return unavailableArkRunInspectorOutboxMonitor();
+  }
+  const [pending, failed] = await Promise.all([store.list('pending'), store.list('failed')]);
+  return buildArkRunInspectorOutboxMonitor([...(pending ?? []), ...(failed ?? [])]);
+}
+
+async function resolveWorkflowsMonitor(
+  source: ArkRunInspectorListenSource
+): Promise<ArkRunInspectorWorkflowsMonitor> {
+  if (typeof source.listInspectorWorkflows === 'function') {
+    return source.listInspectorWorkflows();
+  }
+  if (!source.workflowEngine || typeof source.workflowEngine.list !== 'function') {
+    return unavailableArkRunInspectorWorkflowsMonitor();
+  }
+  return buildArkRunInspectorWorkflowsMonitor(await source.workflowEngine.list());
 }
 
 export async function listenArkRunInspector(
@@ -122,6 +163,26 @@ export async function listenArkRunInspector(
         }
         throw error;
       }
+      return;
+    }
+    if (req.method === 'GET' && path === ARK_RUN_INSPECTOR_OUTBOX_PATH) {
+      void resolveOutboxMonitor(source)
+        .then((body) => writeJson(res, 200, body))
+        .catch((error: unknown) => {
+          writeJson(res, 500, {
+            error: error instanceof Error ? error.message : 'outbox monitor failed',
+          });
+        });
+      return;
+    }
+    if (req.method === 'GET' && path === ARK_RUN_INSPECTOR_WORKFLOWS_PATH) {
+      void resolveWorkflowsMonitor(source)
+        .then((body) => writeJson(res, 200, body))
+        .catch((error: unknown) => {
+          writeJson(res, 500, {
+            error: error instanceof Error ? error.message : 'workflows monitor failed',
+          });
+        });
       return;
     }
     if (req.method === 'GET' && path === ARK_RUN_INSPECTOR_EVENTS_PATH) {
@@ -178,6 +239,8 @@ export async function listenArkRunInspector(
     snapshotUrl: arkRunInspectorUrl(bound.host, bound.port, ARK_RUN_INSPECTOR_SNAPSHOT_PATH),
     eventsUrl: arkRunInspectorUrl(bound.host, bound.port, ARK_RUN_INSPECTOR_EVENTS_PATH),
     graphUrl: arkRunInspectorUrl(bound.host, bound.port, ARK_RUN_INSPECTOR_GRAPH_PATH),
+    outboxUrl: arkRunInspectorUrl(bound.host, bound.port, ARK_RUN_INSPECTOR_OUTBOX_PATH),
+    workflowsUrl: arkRunInspectorUrl(bound.host, bound.port, ARK_RUN_INSPECTOR_WORKFLOWS_PATH),
     close() {
       for (const timer of timers) clearInterval(timer);
       timers.clear();
