@@ -3,6 +3,34 @@
 All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are documented here or
 in the immutable pre-2.0 archive linked below.
 
+## 4.8.8 — 2026-09-01
+
+**Patch** over **4.8.7**. ArkRun gains an opt-in terminal dashboard and bounded,
+payload-free inspector monitors. ArkOrder and first-contact docs gain honesty copy.
+**No required config migration.** No `ark.config.json` schema bump. Does not close
+`K01` / `Z09`.
+
+**Status: prepared** (tree candidate; npm `latest` remains **4.8.7** until the
+signed-tag provenance workflow succeeds).
+
+### Added
+- Dual **`ark-dashboard` / `arkgate-dashboard`** bins render the loopback ArkRun
+  inspector with ANSI and polling. `ark dashboard` / `arkgate dashboard` dispatch
+  to the same executable; this is a view, never a gate verdict.
+- ArkRun inspector snapshots report explicit store durability facts. Default
+  `InMemory*` stores remain visibly memory-only and never earn a durable green.
+- Loopback-only **`GET /outbox`** and **`GET /workflows`** return sanitized queue
+  summaries and full counts. Samples are capped at 32, payloads are omitted, the
+  inspector still refuses production, and nothing here supplies durable storage.
+
+### Changed
+- Existing skills and docs now teach the elimination question before a modeller
+  names `xiKeys`: recomputable statuses such as `paid` are derived, not frozen.
+  This is guidance, not a runtime invariant or new sensor; the check remains
+  silent on semantic entailment.
+- Eight canonical public openings now share the same four plain-English story
+  paragraphs. STAR remains the writing method, not a visible heading or labels.
+
 ## 4.8.7 — 2026-08-31
 
 **Patch** over **4.8.6**. Phase **LD** — layer description projection. Optional
@@ -53,17 +81,9 @@ carries the decision tape. **No required config migration.** Does not close
 - Thin gallery bridge: absorb may `send`; `escalate_up` human may `raises`.
 
 ### Changed
-- Eight canonical public openings now share the same four plain-English story
-  paragraphs. STAR remains the writing method, not a visible heading or set of labels.
-  This is copy and a static parity check only; no code, config, schema, runtime, or
-  publication change.
 - Public sentence: **ArkOrder freezes the pattern through a valve. ArkRun is how
   the residual travels.** Skills `/ark-adopt` `/ark-place` `/ark-autopilot` deepen.
   Doctor / status remain `notAScore`.
-- Existing skills and docs now teach the elimination question before a modeller
-  names `xiKeys`: recomputable statuses such as `paid` are derived, not frozen.
-  This is guidance, not a runtime invariant or new sensor; the check remains
-  silent on semantic entailment.
 
 ## 4.8.5 — 2026-08-31
 

@@ -295,29 +295,29 @@ LV04 binds ingest residual to xiHash. Payload capacity is still LV05; absorb doe
 | 230 | `LV08` | `done` | M | LV02+LV03 | `ReleaseStore` port, in-memory default; optional catalog digest. Not K01 |
 | 231 | `LV09` | `done` | M | LV05+LV07+LV08 | Docs + skills deepen + billing uses the loop; **4.8.6** published. No `/ark-order` |
 
-### Patch 4.8.6 — ArkOrder recomputable-status honesty
+### Patch 4.8.8 — ArkOrder recomputable-status honesty
 
 | Order | ID | Status | Size | Depends on | Outcome |
 |---:|---|---|---:|---|---|
-| 232 | `AO09` | `done` | S | LV09 | Deepen existing skills and ArkOrder docs with the elimination test; billing names `paid` as derived, not a slow key. No sensor, schema, config key, runtime tooth, or new skill. Does not close `Z09` / `K01` |
+| 238 | `AO09` | `done` | S | LV09 | Deepen existing skills and ArkOrder docs with the elimination test; billing names `paid` as derived, not a slow key. No sensor, schema, config key, runtime tooth, or new skill. Does not close `Z09` / `K01` |
 
-### Patch 4.8.6 — beginner-clear STAR openings
-
-| Order | ID | Status | Size | Depends on | Outcome |
-|---:|---|---|---:|---|---|
-| 233 | `ST01` | `done` | S | AO09 | Explain ArkGate, ArkRules, ArkRun, and ArkOrder in the same four plain-English STAR lines across all eight canonical public openings. Documentation and static parity only; no code, config, schema, runtime, or publish change |
-
-### Patch 4.8.6 — unlabeled public story
+### Patch 4.8.8 — beginner-clear STAR openings
 
 | Order | ID | Status | Size | Depends on | Outcome |
 |---:|---|---|---:|---|---|
-| 234 | `ST02` | `done` | S | ST01 | Keep STAR as invisible writing structure: the same four natural English paragraphs across all eight public openings, with no formula heading or visible labels. Docs and static parity only |
+| 239 | `ST01` | `done` | S | AO09 | Explain ArkGate, ArkRules, ArkRun, and ArkOrder in the same four plain-English STAR lines across all eight canonical public openings. Documentation and static parity only; no code, config, schema, runtime, or publish change |
+
+### Patch 4.8.8 — unlabeled public story
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 240 | `ST02` | `done` | S | ST01 | Keep STAR as invisible writing structure: the same four natural English paragraphs across all eight public openings, with no formula heading or visible labels. Docs and static parity only |
 
 ### Release 4.8.8 — complete publish
 
 | Order | ID | Status | Size | Depends on | Outcome |
 |---:|---|---|---:|---|---|
-| 235 | `RL88` | `doing` | M | ST02 | Reconcile 4.8.7 with the dashboard train and honesty copy; verify, sign, publish npm + MCP Registry, update the website, then verify every public pointer. Does not close `Z09` / `K01` |
+| 241 | `RL88` | `doing` | M | ST02 | Reconcile 4.8.7 with the dashboard train and honesty copy; verify, sign, publish npm + MCP Registry, update the website, then verify every public pointer. Does not close `Z09` / `K01` |
 
 ### Patch 4.8.5 — Antigravity skills refresh
 
