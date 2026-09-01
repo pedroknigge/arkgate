@@ -47,6 +47,7 @@ import {
   REQUIRED_GATE_FILES,
   detectWritePathCapabilities,
 } from './lib/agent-gates.mjs';
+import { ciNotFailClosed } from './lib/gate-files.mjs';
 import { syncBaselineIntoCheckSurfaces } from './lib/field-install.mjs';
 import {
   detectEnforcement,
@@ -1306,6 +1307,27 @@ async function main() {
       }
       process.exitCode = 1;
       return;
+    }
+    if (args.requireGates) {
+      const ci = ciNotFailClosed(args.root);
+      if (ci) {
+        const payload = {
+          ok: false,
+          error: ci.error,
+          message: ci.message,
+          workflowFile: ci.workflowFile,
+          nextAction: ci.nextAction,
+          ...(writeRequest?.host ? { writeHost: writeRequest.host } : {}),
+        };
+        if (args.json) {
+          console.log(JSON.stringify(payload, null, 2));
+        } else {
+          console.error(`${color.red('\u2716')} ${ci.error} ${ci.message}`);
+          console.error(`Next: ${ci.nextAction}`);
+        }
+        process.exitCode = 1;
+        return;
+      }
     }
     // Gates present. This is a precondition, not a standalone report: stay quiet
     // in --json mode so the architecture check below owns the single JSON output.

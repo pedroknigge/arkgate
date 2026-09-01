@@ -21,7 +21,11 @@ import {
   ambientCoveredByForbiddenGlobals,
   forbiddenGlobalForModuleSpecifier,
 } from '../../domain/capabilities';
-import { findDeniedEdgeRule } from '../../domain/layerMatch';
+import {
+  findDeniedEdgeDecision,
+  findDeniedEdgeRule,
+  peerIsolationDenyExplanation,
+} from '../../domain/layerMatch';
 import { collectCapabilityUses } from '../capabilityAnalysis';
 import { classifyPublishFacts, looksLikeArkIntent } from '../../domain/sourcePolicy';
 import {
@@ -647,30 +651,45 @@ export function createAICodeGate<Context = AICodeGateContext>(
           const targetLayer = options.architectureProfile.resolveLayer(literal.value);
           if (!targetLayer) continue;
 
-          // Intent names are not files — peerIsolation cannot prove same-slice
-          // without paths, so isolation rules fail closed (same SoT as observedLayerFlow).
-          const blocked = findDeniedEdgeRule(
+          // Intent names are not files — pass fromPath only. Shared-root files
+          // use the same peerIsolation classifier as imports; do not invent a toPath.
+          const blocked = findDeniedEdgeDecision(
             options.architectureProfile.rules,
             contextLayer,
-            targetLayer
+            targetLayer,
+            {
+              fromPath: typeof filePath === 'string' ? filePath : undefined,
+              layers: options.architectureLayers,
+            }
           );
 
           if (blocked) {
+            const peerReason = blocked.rule.peerIsolation
+              ? peerIsolationDenyExplanation(blocked.peerIsolationReason ?? 'cross-slice', {
+                  fromPath: typeof filePath === 'string' ? filePath : undefined,
+                  fromSlice: blocked.fromSlice,
+                  toSlice: blocked.toSlice,
+                })
+              : undefined;
+            const defaultMessage = `Layer "${contextLayer}" must not reference "${targetLayer}" through "${literal.value}".`;
+            const message =
+              peerReason && blocked.peerIsolationReason !== 'cross-slice'
+                ? `${defaultMessage} ${peerReason}`
+                : blocked.rule.message
+                  ? peerReason
+                    ? `${blocked.rule.message} (${peerReason})`
+                    : blocked.rule.message
+                  : defaultMessage;
             violations.push(
-              violation(
-                'LAYER_REFERENCE_VIOLATION',
-                blocked.message ??
-                  `Layer "${contextLayer}" must not reference "${targetLayer}" through "${literal.value}".`,
-                {
-                  line: lineOf(source, literal.index),
-                  filePath,
-                  target: literal.value,
-                  fromLayer: contextLayer,
-                  toLayer: targetLayer,
-                  suggestion: 'Route the dependency through an allowed intent, port, or event.',
-                  details: { rule: blocked },
-                }
-              )
+              violation('LAYER_REFERENCE_VIOLATION', message, {
+                line: lineOf(source, literal.index),
+                filePath,
+                target: literal.value,
+                fromLayer: contextLayer,
+                toLayer: targetLayer,
+                suggestion: 'Route the dependency through an allowed intent, port, or event.',
+                details: { rule: blocked.rule, peerIsolationReason: blocked.peerIsolationReason },
+              })
             );
           }
         }

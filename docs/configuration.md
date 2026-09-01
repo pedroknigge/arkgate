@@ -191,8 +191,36 @@ Rule fields:
 - `from`, `to`, `allowed`, `message`, `peerIsolation`, `sliceFolders`, `sharedRoots`,
   `allowedCrossSlice`
 - `peerIsolation: true` + `allowed: false`: deny only when slice ids differ; same-slice allows
-  when both paths classify. Missing paths, empty slice folders, or unclassifiable slices
-  **fail closed** (deny — cannot prove same-slice).
+  when both paths classify. Applies to **any** declared `from`→`to` pair, not only self-edges.
+  Missing paths, empty slice folders, or unclassifiable slices **fail closed** (deny — cannot
+  prove same-slice).
+
+#### Cross-layer slice walls (already in the engine)
+
+A slice wall on a cross-layer edge is a `peerIsolation` rule on that `from`/`to` pair
+(`allowed: false`). There is no slice-wide engine mode, no new config key, and no new skill
+name. `findDeniedEdgeDecision` already applies `peerIsolation` to any declared pair
+(same-layer or cross-layer) — locked on `EdgeRule` and `findDeniedEdgeDecision` in
+[`src/domain/layerMatch.ts`](../src/domain/layerMatch.ts). There is no dedicated ADR to add.
+
+A feature slice is often cross-layer. Classic Application→Domain is allowed by omission, so
+`ApplicationOrchestration/management` importing `DomainModel/projects` is invisible to an
+Application→Application wall. Declare the cross-layer pair with the same `sliceFolders` /
+`sharedRoots` as the same-layer wall:
+
+```jsonc
+{
+  "from": "ApplicationOrchestration",
+  "to": "DomainModel",
+  "allowed": false,
+  "peerIsolation": true,
+  "sliceFolders": ["features"],
+  "sharedRoots": ["ui", "hooks"]
+}
+```
+
+Domain files that do not resolve to a slice **fail closed** unless they sit under a declared
+`sharedRoots` entry. Do not invent a sixth rule shape for this.
 
 #### Declared peerIsolation exceptions (4.8.4)
 

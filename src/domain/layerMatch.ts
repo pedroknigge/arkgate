@@ -20,8 +20,10 @@ export type LayerConfig = {
  * - Classic: `{ from, to, allowed: false }` denies **cross-layer** edges only.
  *   Same-layer is always allowed without peerIsolation (historical short-circuit).
  * - `peerIsolation: true` + `allowed: false`: deny only when slice ids differ
- *   (same **or** cross layer). Same-slice → allow. Needs fromPath/toPath; missing
- *   paths/slices → fail-closed (cannot prove same-slice).
+ *   (same **or** cross layer). Same-slice → allow. File imports pass fromPath
+ *   and toPath. Intent references pass fromPath only (intents are not files);
+ *   a declared shared root is classified and does not deny. Missing fromPath,
+ *   no slice folders, or unclassifiable slices → fail-closed.
  */
 export type EdgeRule = {
   from: string;
@@ -81,7 +83,7 @@ export type CrossSliceEdge = {
 export type EdgeCheckOptions = {
   /** Repo-relative path of the importing file. */
   fromPath?: string;
-  /** Repo-relative path of the imported module. */
+  /** Repo-relative path of the imported module. Omit for intent names (not files). */
   toPath?: string;
   /** Layer configs — used to infer sliceFolders when the rule omits them. */
   layers?: LayerConfig[];
@@ -504,13 +506,23 @@ export type PeerIsolationInput = {
  * Fail-closed stays fail-closed: absent evidence denies. What changed in 4.8.4
  * is what counts as evidence — a declared shared root, or a declared directed
  * cross-slice edge, is the repo telling us its design, so it is no longer
- * "unclassifiable". Order: no paths → no slice folders → a side that is neither
- * in a slice nor declared shared → same slice → declared cross edge → deny.
+ * "unclassifiable". Order: no fromPath → no slice folders → intent (no toPath):
+ * shared-root allow / slice fail-closed → a side that is neither in a slice nor
+ * declared shared → same slice → declared cross edge → deny.
+ *
+ * Intent/event names are not files. Callers pass fromPath only and must not
+ * invent a toPath (that would mis-slice). A declared shared root is classified
+ * the same way as on import edges.
  */
 export function peerIsolationDecision(input: PeerIsolationInput): PeerIsolationDecision {
-  if (!input.fromPath || !input.toPath) return { denied: true, reason: 'missing-path' };
+  if (!input.fromPath) return { denied: true, reason: 'missing-path' };
   if (input.folderCount <= 0) return { denied: true, reason: 'no-slice-folders' };
   const fromClassified = Boolean(input.fromSlice) || input.fromShared === true;
+  if (!input.toPath) {
+    if (!fromClassified) return { denied: true, reason: 'unclassifiable-path' };
+    if (!input.fromSlice) return { denied: false };
+    return { denied: true, reason: 'missing-path' };
+  }
   const toClassified = Boolean(input.toSlice) || input.toShared === true;
   if (!fromClassified || !toClassified) return { denied: true, reason: 'unclassifiable-path' };
   // At least one side is declared shared (and carries no slice id): the repo
@@ -524,8 +536,9 @@ export function peerIsolationDecision(input: PeerIsolationInput): PeerIsolationD
 /**
  * Boolean face of {@link peerIsolationDecision}, kept for parity consumers.
  *
- * Fail-closed: missing path, no classifiable folders, or unclassifiable either
- * side → deny. Same-slice → allow (return false). Cross-slice → deny unless the
+ * Fail-closed: missing fromPath, no classifiable folders, or unclassifiable
+ * either side → deny. Intent refs (no toPath) allow only a declared shared
+ * root. Same-slice → allow (return false). Cross-slice → deny unless the
  * rule declared that directed edge.
  */
 export function peerIsolationMustDeny(input: PeerIsolationInput): boolean {
@@ -573,9 +586,11 @@ export function peerIsolationDenyExplanation(
  *   Same-layer is always allowed (historical short-circuit).
  * - `peerIsolation: true` + `allowed: false`: deny only when importer and importee
  *   resolve to **different** slice ids (same or cross layer). Same-slice → allow.
- *   Missing paths, no slice folders, or unclassifiable slices → **fail-closed**
- *   (deny): isolation is configured, so insufficient evidence must not silently
- *   allow a possible cross-slice edge.
+ *   File imports pass fromPath + toPath. Intent references pass fromPath only.
+ *   A declared shared root is classified (no denial). Missing fromPath, no slice
+ *   folders, or unclassifiable slices → **fail-closed** (deny): isolation is
+ *   configured, so insufficient evidence must not silently allow a possible
+ *   cross-slice edge.
  */
 export function findDeniedEdgeRule(
   rules: EdgeRule[] | undefined,
@@ -616,10 +631,8 @@ export function findDeniedEdgeDecision(
       const fromPath = options?.fromPath;
       const toPath = options?.toPath;
       const folders = resolveSliceFolders(rule, from, options?.layers);
-      const fromSlice =
-        fromPath && toPath ? sliceIdForPath(fromPath, folders) : undefined;
-      const toSlice =
-        fromPath && toPath ? sliceIdForPath(toPath, folders) : undefined;
+      const fromSlice = fromPath ? sliceIdForPath(fromPath, folders) : undefined;
+      const toSlice = toPath ? sliceIdForPath(toPath, folders) : undefined;
       const decision = peerIsolationDecision({
         fromPath,
         toPath,

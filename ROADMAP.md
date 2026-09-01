@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-09-01 (Engineering doing: none; Patch `AH01` **done** — doctor default agent home, lands in 4.8.9; Release `RL88` **done** — 4.8.8 published on npm `latest`, MCP Registry, and website; Phase **LD** `LD01`–`LD06` **done** (4.8.7 published); Patch `ST02` **done** — unlabeled public story; Patch `ST01` **done** — beginner-clear STAR openings; Patch `AO09` **done** — ArkOrder recomputable-status honesty; Phase **LV** ArkOrder valved loop `LV01`–`LV09` **done** (4.8.6 published); Phase **XP** ArkOrder x ArkRun convergence **done** (`XP01`-`XP08`); Patch **4.8.5** `AGY01`+XP **done** — published; Patch **4.8.5** `AGY01` **done** — Antigravity skill refresh (`--antigravity-home` + default tools + dogfood `.agents/skills`); published; Patch **4.8.4** **done** — three false greens closed (coverage certifying tests no runner runs, an empty analysis passing), `--path-drift`, `--sensors`/`--promote`, peer isolation, git install without a build allowlist entry, and honest `--plan`; Phase OR `OR01`–`OR08` **done**; `K01` remains parked; Z09 still parked; npm `latest` is **4.8.8**)
+- **Status date:** 2026-09-01 (Engineering doing: `RL89`; Patch `AH01`/`CS01`/`CI01`/`UP01`/`PX01`/`INT01` **done** on the 4.8.9 prepared tree; Release `RL88` **done** — 4.8.8 published on npm `latest`, MCP Registry, and website; Phase **LD** `LD01`–`LD06` **done** (4.8.7 published); Patch `ST02` **done** — unlabeled public story; Patch `ST01` **done** — beginner-clear STAR openings; Patch `AO09` **done** — ArkOrder recomputable-status honesty; Phase **LV** ArkOrder valved loop `LV01`–`LV09` **done** (4.8.6 published); Phase **XP** ArkOrder x ArkRun convergence **done** (`XP01`-`XP08`); Patch **4.8.5** `AGY01`+XP **done** — published; Patch **4.8.5** `AGY01` **done** — Antigravity skill refresh (`--antigravity-home` + default tools + dogfood `.agents/skills`); published; Patch **4.8.4** **done** — three false greens closed (coverage certifying tests no runner runs, an empty analysis passing), `--path-drift`, `--sensors`/`--promote`, peer isolation, git install without a build allowlist entry, and honest `--plan`; Phase OR `OR01`–`OR08` **done**; `K01` remains parked; Z09 still parked; npm `latest` is **4.8.8**)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -327,6 +327,25 @@ LV04 binds ingest residual to xiHash. Payload capacity is still LV05; absorb doe
 |---:|---|---|---:|---|---|
 | 242 | `AH01` | `done` | S | RL88 | `skillsDirFor` defaults `os.homedir()`; test without env homes; consumer `--doctor` no longer throws. Lands in **4.8.9**. Does not close `Z09` / `K01` |
 
+### Patch 4.8.9 — Amarilla diagnostic adjustments
+
+Five field diagnostics. No `schemaVersion` bump, no new skill names, no package version bump.
+Does not close `Z09` / `K01`. One `doing` at a time.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 243 | `CS01` | `done` | S | AH01 | `contract-dead-rule` must not fire on a live `peerIsolation` self-wall (`allowed: false`); self-allow stays dead; fix text never tells an agent to delete a live wall |
+| 244 | `CI01` | `done` | S | AH01 | `--strict-merge` / `--require-gates` still fails skippable CI, but as `ci-not-fail-closed` (not `missing-gates`); doctor names the workflow file |
+| 245 | `UP01` | `done` | S | AH01 | Blocked `--apply --json` includes `reasonCode` + digest-bound `nextCommand` with `--accept-conflicts`; public asset JSON exposes content identity vs raw `afterHash`; keep atomic apply |
+| 246 | `PX01` | `done` | S | AH01 | Docs: a slice wall on a cross-layer edge is a `peerIsolation` rule on that `from`/`to` pair (`allowed: false`); unslice Domain fail-closed unless `sharedRoots`. No new engine mode, key, or skill. Does not close `Z09` / `K01` |
+| 247 | `INT01` | `done` | S | PX01 | Intent-reference checks share the import `peerIsolation` classifier (`fromPath` + `sharedRoots`); shared-root files do not inherit the slice-wall message; cross-slice file imports still deny |
+
+### Release 4.8.9 — complete publish
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 248 | `RL89` | `doing` | M | INT01 | Prepare, tag, and publish **4.8.9** (AH01+CS01+CI01+UP01+PX01+INT01). Does not close `Z09` / `K01` |
+
 ### Patch 4.8.5 — Antigravity skills refresh
 
 Antigravity reads workspace `.agents/skills` and the official global catalog
@@ -355,7 +374,7 @@ Plan: [docs/plans/alive-in-six-months/README.md](docs/plans/alive-in-six-months/
 | 183 | `AL05` | `parked` | S | required-status possible + 3 partners | Field enrollment. Does **not** close Z09 |
 | 184 | `AL06` | `done` | S | AL04 | Compact first-screen vs Details independently invocable; first-screen honesty stays |
 
-Engineering doing: none. `AH01` **done** (doctor default agent home; lands in 4.8.9). `RL88` **done** (4.8.8 published). Phase **LD** `LD01`–`LD06` **done** (4.8.7 published). `ST02`, `ST01`, and `AO09` **done**. Phase **LV** `LV01`–`LV09` **done** (4.8.6 published). `AGY01` **done** (4.8.5 published). `OR01`–`OR07` **done**. `WH01` **done** (ADR 0026). `PK01` **done**.
+Engineering doing: `RL89`. `AH01`/`CS01`/`CI01`/`UP01`/`PX01`/`INT01` **done** (4.8.9 prepared tree). `RL88` **done** (4.8.8 published). Phase **LD** `LD01`–`LD06` **done** (4.8.7 published). `ST02`, `ST01`, and `AO09` **done**. Phase **LV** `LV01`–`LV09` **done** (4.8.6 published). `AGY01` **done** (4.8.5 published). `OR01`–`OR07` **done**. `WH01` **done** (ADR 0026). `PK01` **done**.
 `K01` **parked** (4.7.6 primitives only).
 Phase DX (`DX01`–`DX03`) **done** and present in published `arkgate@4.8.0+` (4.7.6 predates them).
 Phase HS (`HS01`–`HS05`) **done**. Remaining first-contact copy **4.7.3** published. Write. Check. Ship. patch **4.7.5** published. **4.8.8** is on npm `latest`.

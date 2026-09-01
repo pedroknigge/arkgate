@@ -13,6 +13,23 @@ import { enforcementDoctorLines } from './enforcement-state.mjs';
 import { analysisIncompleteStatement } from './analysis-completeness.mjs';
 import { skillGapsForActiveHost, detectCodexHomeGap, codexConcernIsActive } from './agent-gates.mjs';
 import { agentHomeConcernIsActive } from './agent-homes.mjs';
+import { REQUIRED_GATE_WORKFLOW } from './gate-files.mjs';
+
+function displayedMissingGates(gatesMissing, view) {
+  const list = Array.isArray(gatesMissing) ? gatesMissing : [];
+  const hideGlob = Boolean(
+    view?.ciNotFailClosed?.workflowFile ||
+      view?.ciNotFailClosed?.error === 'ci-not-fail-closed' ||
+      view?.ciMergeBoundary?.ci?.workflowPresent
+  );
+  return hideGlob ? list.filter((item) => item !== REQUIRED_GATE_WORKFLOW) : list;
+}
+
+function ciNotFailClosedNotice(view) {
+  const file = view?.ciNotFailClosed?.workflowFile;
+  if (!file) return null;
+  return `CI not fail-closed: ${file} — remove the skippable if:, or write .ark/adoption-stance.json with stance: advisory-only`;
+}
 
 function lineWith(ok, warn, bad, color) {
   return (mark, text) => console.log(`  ${mark} ${text}`);
@@ -52,6 +69,8 @@ export function printDoctorCompactHuman(view) {
     gatesMissing,
     violations,
   } = view;
+  const listedMissing = displayedMissingGates(gatesMissing, view);
+  const skippableCi = ciNotFailClosedNotice(view);
 
   console.log(color.bold(`Ark doctor — ${path.basename(path.resolve(root)) || '.'}`));
   if (!analysisComplete) line(warn, analysisIncompleteStatement(completeness));
@@ -123,15 +142,17 @@ export function printDoctorCompactHuman(view) {
   }
 
   const hostRed =
-    gatesMissing.length > 0 ||
+    listedMissing.length > 0 ||
     Boolean(writePath.gap) ||
-    writePathHonesty?.softWriteHost === true;
+    writePathHonesty?.softWriteHost === true ||
+    Boolean(skippableCi);
   if (hostRed) {
     console.log('');
     console.log(color.bold('Host / CI'));
     if (writePath.activeHost) line(' ', `Active host: ${writePath.activeHost}`);
-    if (gatesMissing.length > 0) line(bad, `Missing gates: ${gatesMissing.join(', ')}`);
-    else if (writePath.gap || writePathHonesty?.softWriteHost) {
+    if (listedMissing.length > 0) line(bad, `Missing gates: ${listedMissing.join(', ')}`);
+    if (skippableCi) line(warn, skippableCi);
+    else if (listedMissing.length === 0 && (writePath.gap || writePathHonesty?.softWriteHost)) {
       line(warn, 'Local writes are advisory; required CI is the merge boundary.');
     }
   }
@@ -212,6 +233,8 @@ export function printDoctorDetailsHuman(view) {
     staleRunners,
     adoption,
   } = view;
+  const listedMissing = displayedMissingGates(gatesMissing, view);
+  const skippableCi = ciNotFailClosedNotice(view);
   const modeTitle = operatingModeTitle(operatingMode, designFitness.designWeak, stewardUnfinished);
 
   console.log('');
@@ -385,9 +408,11 @@ export function printDoctorDetailsHuman(view) {
 
   console.log('');
   console.log(color.bold('Gates & skills'));
-  if (gatesMissing.length === 0) line(ok, 'Shared gate artifacts found on disk (AGENTS.md, .mcp.json, CI); runtime activation is reported separately');
-  else {
-    line(bad, `Missing gates: ${gatesMissing.join(', ')}`);
+  if (listedMissing.length === 0 && !skippableCi) {
+    line(ok, 'Shared gate artifacts found on disk (AGENTS.md, .mcp.json, CI); runtime activation is reported separately');
+  } else {
+    if (listedMissing.length > 0) line(bad, `Missing gates: ${listedMissing.join(', ')}`);
+    if (skippableCi) line(warn, skippableCi);
   }
   const humanSkillGaps = skillGapsForActiveHost(skillGaps);
   const legacyCodex = humanSkillGaps.some((g) => g.tool === 'codex' && g.legacyPromptsOnly);

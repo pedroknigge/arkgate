@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { codexProjectMcpIsValid } from './codex-home.mjs';
-import { enforcingArkRunText } from './github-enforcement.mjs';
+import { enforcingArkRunText, runsArkCheck } from './github-enforcement.mjs';
 
 export const __packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 export const __arkCheckCli = path.join(__packageRoot, 'bin', 'ark-check.mjs');
@@ -120,7 +120,8 @@ export const REQUIRED_GATE_FILES = [
   'AGENTS.md',
   '.mcp.json',
 ];
-const REQUIRED_GATE_WORKFLOW = '.github/workflows/*.yml running ark-check';
+export const REQUIRED_GATE_WORKFLOW = '.github/workflows/*.yml running ark-check';
+export const CI_NOT_FAIL_CLOSED_ERROR = 'ci-not-fail-closed';
 const COMPACT_ROUTER = /<!--\s*arkgate:compact-router host=([a-z]+)\s*-->/;
 const FAIL_CLOSED_ARK_FLAG = /(?:^|\s)--(?:strict|strict-merge|require-gates)(?=\s|$)/;
 
@@ -584,27 +585,112 @@ function withVerifiedDependencyJobs(content) {
   return lines.join('\n');
 }
 
-export function hasArkWorkflow(root) {
+function isGuaranteedJobCondition(value) {
+  const text = unquoteYamlScalar(value);
+  return (
+    /^(?:\$\{\{\s*)?always\(\)(?:\s*\}\})?$/i.test(text) ||
+    /^(?:true|\$\{\{\s*true\s*\}\})$/i.test(text)
+  );
+}
+
+function neutralizeSkippableJobControls(content) {
+  const { lines, jobs } = workflowJobSections(content);
+  for (const job of jobs) {
+    const condition = jobProperty(lines, job, 'if');
+    if (condition && !isGuaranteedJobCondition(condition.value)) {
+      lines[condition.index] = lines[condition.index].replace(
+        /^(\s*(?:"if"|'if'|if):\s*).*$/i,
+        '$1true'
+      );
+    }
+    const continuation = jobProperty(lines, job, 'continue-on-error');
+    if (continuation && !/^['"]?false['"]?$/i.test(unquoteYamlScalar(continuation.value))) {
+      lines[continuation.index] = lines[continuation.index].replace(
+        /^(\s*(?:"continue-on-error"|'continue-on-error'|continue-on-error):\s*).*$/i,
+        '$1false'
+      );
+    }
+  }
+  return lines.join('\n');
+}
+
+function workflowMentionsArkAction(content) {
+  return /^\s*(?:-\s+)?uses:\s*['"]?pedroknigge\/arkgate@/im.test(String(content));
+}
+
+function listWorkflowYamlFiles(root) {
   const workflowsDir = path.join(root, '.github', 'workflows');
-  if (!fs.existsSync(workflowsDir)) return false;
+  if (!fs.existsSync(workflowsDir)) return [];
+  try {
+    return fs.readdirSync(workflowsDir).filter((file) => /\.ya?ml$/i.test(file));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Presence vs fail-closed. A skippable `if:` still means the YAML exists.
+ * `failClosed` matches `hasArkWorkflow` (merge line). `present` is any
+ * ark-check / arkgate action workflow, including draft-skip jobs.
+ */
+export function inspectArkCiGate(root) {
+  const failClosedFiles = [];
+  const presentFiles = [];
   const declaredScript = architectureScript(root);
-  const script = isFailClosedArchitectureScript(declaredScript) ? declaredScript : '';
-  return fs
-    .readdirSync(workflowsDir)
-    .filter((file) => /\.ya?ml$/i.test(file))
-    .some((file) => {
-      try {
-        const content = fs.readFileSync(path.join(workflowsDir, file), 'utf8');
-        return FAIL_CLOSED_ARK_FLAG.test(
-          enforcingArkRunText(
-            withVerifiedDependencyJobs(withFailClosedArkActions(content)),
-            script
-          )
-        );
-      } catch {
-        return false;
-      }
-    });
+  const failClosedScript = isFailClosedArchitectureScript(declaredScript)
+    ? declaredScript
+    : '';
+  const workflowsDir = path.join(root, '.github', 'workflows');
+  for (const file of listWorkflowYamlFiles(root)) {
+    let content = '';
+    try {
+      content = fs.readFileSync(path.join(workflowsDir, file), 'utf8');
+    } catch {
+      continue;
+    }
+    const prepared = withVerifiedDependencyJobs(withFailClosedArkActions(content));
+    const failClosed = FAIL_CLOSED_ARK_FLAG.test(
+      enforcingArkRunText(prepared, failClosedScript)
+    );
+    const visible = withVerifiedDependencyJobs(
+      neutralizeSkippableJobControls(withFailClosedArkActions(content))
+    );
+    const present =
+      failClosed ||
+      runsArkCheck(visible, declaredScript) ||
+      workflowMentionsArkAction(content);
+    const relativePath = `.github/workflows/${file}`;
+    if (failClosed) failClosedFiles.push(relativePath);
+    if (present) presentFiles.push(relativePath);
+  }
+  return {
+    failClosed: failClosedFiles.length > 0,
+    present: presentFiles.length > 0,
+    failClosedFiles,
+    presentFiles,
+    workflowFile:
+      presentFiles.find((file) => !failClosedFiles.includes(file)) ??
+      presentFiles[0] ??
+      null,
+  };
+}
+
+export function hasArkWorkflow(root) {
+  return inspectArkCiGate(root).failClosed;
+}
+
+export function ciNotFailClosed(root) {
+  const ci = inspectArkCiGate(root);
+  if (!ci.present || ci.failClosed) return null;
+  const workflowFile = ci.workflowFile;
+  const named = workflowFile || REQUIRED_GATE_WORKFLOW;
+  return {
+    error: CI_NOT_FAIL_CLOSED_ERROR,
+    workflowFile,
+    workflowFiles: ci.presentFiles,
+    nextAction: `Remove the skippable if: in ${named}, or write .ark/adoption-stance.json with stance: advisory-only`,
+    message: `CI is not fail-closed. Workflow ${named} runs ark-check but a skippable if: is not a merge line.`,
+  };
 }
 
 export function missingGates(root) {
@@ -615,7 +701,7 @@ export function missingGates(root) {
   if (compactHost && !hasCompactHostRegistration(root, compactHost)) {
     missing.push(`compact host registration (${compactHost})`);
   }
-  if (!hasArkWorkflow(root)) missing.push(REQUIRED_GATE_WORKFLOW);
+  if (!inspectArkCiGate(root).present) missing.push(REQUIRED_GATE_WORKFLOW);
   return missing;
 }
 

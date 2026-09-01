@@ -3,6 +3,43 @@
 All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are documented here or
 in the immutable pre-2.0 archive linked below.
 
+## 4.8.9 — 2026-09-01
+
+**Patch** over **4.8.8**. Field diagnostic honesty: doctor default homedir, live
+`peerIsolation` walls are not dead rules, skippable CI is `ci-not-fail-closed`
+not `missing-gates`, blocked upgrade JSON carries `reasonCode` + `nextCommand`,
+content identity vs raw `afterHash`, cross-layer `peerIsolation` docs, and
+intent-reference checks share the import classifier.
+**No required config migration.** No `ark.config.json` schema bump. Does not close
+`K01` / `Z09`. No new skill names.
+
+**Status: prepared** (tree candidate; npm `latest` remains **4.8.8** until the
+signed-tag provenance workflow succeeds).
+
+### Fixed
+- `--doctor` no longer throws when `CLAUDE_HOME` / `GROK_HOME` / `ANTIGRAVITY_HOME`
+  are unset (`skillsDirFor` now defaults `os.homedir()`).
+- `contract-dead-rule` skips a live `peerIsolation` wall (`allowed: false` on a
+  same-layer or cross-layer pair). A self-allow stays dead. The fix text never
+  tells an agent to delete that wall.
+- `--strict-merge` / `--require-gates` still fail skippable CI (`if:` other than
+  `true` / `always()`), but as `ci-not-fail-closed` (names the workflow file).
+  `missing-gates` remains only for files that are actually absent.
+- Blocked `ark upgrade --apply --json` includes `reasonCode: managed-consent-required`
+  and a digest-bound `nextCommand` already carrying `--accept-conflicts`. Apply stays
+  atomic.
+- `LAYER_INTENT_REFERENCE_VIOLATION` uses the same `peerIsolation` classifier as
+  imports (`fromPath` + `sharedRoots`). Shared-root files do not inherit the
+  slice-wall message. Cross-slice file imports still deny.
+
+### Changed
+- Public managed-upgrade assets expose `beforeIdentity` / `afterIdentity`.
+  `afterHash` is the SHA-256 of the raw desired bytes; `state: current` is content
+  identity, so stamp-only `arkVersion` drift can be current with unequal raw hashes.
+- Docs: a slice wall on a cross-layer edge is a `peerIsolation` rule on that
+  `from`/`to` pair (`allowed: false`). Domain files without a slice fail-closed
+  unless listed in `sharedRoots`. No new engine mode, key, or skill.
+
 ## 4.8.8 — 2026-09-01
 
 **Patch** over **4.8.7**. ArkRun gains an opt-in terminal dashboard and bounded,
