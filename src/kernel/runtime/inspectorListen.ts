@@ -12,6 +12,7 @@ import {
 import {
   ARK_RUN_INSPECTOR_EVENTS_PATH,
   ARK_RUN_INSPECTOR_GRAPH_PATH,
+  ARK_RUN_INSPECTOR_MONITOR_SAMPLE_LIMIT,
   ARK_RUN_INSPECTOR_OUTBOX_PATH,
   ARK_RUN_INSPECTOR_SNAPSHOT_PATH,
   ARK_RUN_INSPECTOR_WORKFLOWS_PATH,
@@ -78,8 +79,13 @@ function requestUrl(url: string | undefined): URL {
 }
 
 function writeJson(res: ServerResponse, status: number, body: unknown): void {
-  res.writeHead(status, jsonHeaders());
-  res.end(JSON.stringify(body));
+  if (res.writableEnded || res.destroyed) return;
+  try {
+    res.writeHead(status, jsonHeaders());
+    res.end(JSON.stringify(body));
+  } catch {
+    // Client gone mid-write — never throw into a void async chain.
+  }
 }
 
 function boundAddress(server: Server, requested: ArkRunInspectorBind): ArkRunInspectorBind {
@@ -104,7 +110,9 @@ async function resolveOutboxMonitor(
     return unavailableArkRunInspectorOutboxMonitor();
   }
   const [pending, failed] = await Promise.all([store.list('pending'), store.list('failed')]);
-  return buildArkRunInspectorOutboxMonitor([...(pending ?? []), ...(failed ?? [])]);
+  return buildArkRunInspectorOutboxMonitor([...(pending ?? []), ...(failed ?? [])], {
+    sampleLimit: ARK_RUN_INSPECTOR_MONITOR_SAMPLE_LIMIT,
+  });
 }
 
 async function resolveWorkflowsMonitor(
@@ -116,7 +124,9 @@ async function resolveWorkflowsMonitor(
   if (!source.workflowEngine || typeof source.workflowEngine.list !== 'function') {
     return unavailableArkRunInspectorWorkflowsMonitor();
   }
-  return buildArkRunInspectorWorkflowsMonitor(await source.workflowEngine.list());
+  return buildArkRunInspectorWorkflowsMonitor(await source.workflowEngine.list(), {
+    sampleLimit: ARK_RUN_INSPECTOR_MONITOR_SAMPLE_LIMIT,
+  });
 }
 
 export async function listenArkRunInspector(

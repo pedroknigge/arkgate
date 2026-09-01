@@ -1,36 +1,43 @@
 #!/usr/bin/env node
 import { parseArgs } from 'node:util';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import fs from 'node:fs';
 
-const here = path.dirname(fileURLToPath(import.meta.url));
-const runtimePath = path.join(here, '..', 'dist', 'runtime', 'index.js');
-let ArkRun = null;
-if (fs.existsSync(runtimePath)) {
-  const runtime = await import(runtimePath);
-  ArkRun = runtime.ArkRun;
-}
-
+const DEFAULT_INTERVAL_MS = '2000';
+const DEFAULT_SNAPSHOT_URL = 'http://127.0.0.1:3000/snapshot';
+const DEFAULT_FETCH_TIMEOUT_MS = 5_000;
+const MAX_FIELD_LEN = 120;
 
 const args = parseArgs({
   options: {
     interval: {
       type: 'string',
       short: 'i',
-      default: '2000'
+      default: DEFAULT_INTERVAL_MS
     },
     url: {
       type: 'string',
       short: 'u',
-      default: 'http://127.0.0.1:3000/snapshot'
+      default: DEFAULT_SNAPSHOT_URL
+    },
+    timeout: {
+      type: 'string',
+      short: 't',
+      default: String(DEFAULT_FETCH_TIMEOUT_MS)
     }
   },
   allowPositionals: true
 });
 
-const interval = parseInt(args.values.interval, 10) || 2000;
-const targetUrl = args.values.url || 'http://127.0.0.1:3000/snapshot';
+const parsedInterval = parseInt(args.values.interval, 10);
+const interval =
+  Number.isFinite(parsedInterval) && parsedInterval >= 200 && parsedInterval <= 60_000
+    ? parsedInterval
+    : Number(DEFAULT_INTERVAL_MS);
+const targetUrl = args.values.url || DEFAULT_SNAPSHOT_URL;
+const parsedTimeout = parseInt(args.values.timeout, 10);
+const fetchTimeoutMs =
+  Number.isFinite(parsedTimeout) && parsedTimeout >= 200 && parsedTimeout <= 60_000
+    ? parsedTimeout
+    : DEFAULT_FETCH_TIMEOUT_MS;
 
 const RESET = '\x1b[0m';
 const RED = '\x1b[31m';
@@ -50,6 +57,22 @@ const DRIFT_ID_KEYS = [
   'registeredButNeverObserved',
 ];
 
+/** Strip ANSI CSI / OSC / other C0+C1 terminal control sequences; bound length. */
+function sanitizeField(value, maxLen = MAX_FIELD_LEN) {
+  let text = value === undefined || value === null ? '' : String(value);
+  // OSC: ESC ] … BEL or ESC ]
+  text = text.replace(/\u001b\][^\u0007\u001b]*(?:\u0007|\u001b\\)?/g, '');
+  // CSI / Fe sequences
+  text = text.replace(/\u001b\[[0-?]*[ -/]*[@-~]/g, '');
+  // Remaining ESC + final byte / 8-bit C1
+  text = text.replace(/\u001b[@-Z\\-_]/g, '');
+  text = text.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f]/g, '');
+  if (text.length > maxLen) {
+    return `${text.slice(0, Math.max(0, maxLen - 1))}…`;
+  }
+  return text;
+}
+
 function siblingUrl(snapshotUrl, suffix) {
   try {
     const u = new URL(snapshotUrl);
@@ -66,19 +89,33 @@ function siblingUrl(snapshotUrl, suffix) {
   }
 }
 
-async function fetchJson(url) {
-  if (!url) return null;
+/**
+ * @returns {{ ok: true, data: unknown } | { ok: false, kind: 'waiting' | 'failure', error?: string }}
+ */
+async function fetchJsonResult(url) {
+  if (!url) return { ok: false, kind: 'waiting' };
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), fetchTimeoutMs);
   try {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return await res.json();
-  } catch {
-    return null;
+    const res = await fetch(url, { signal: controller.signal });
+    if (!res.ok) {
+      return { ok: false, kind: 'failure', error: `HTTP ${res.status}` };
+    }
+    const data = await res.json();
+    return { ok: true, data };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const aborted =
+      (error && typeof error === 'object' && error.name === 'AbortError') ||
+      /aborted|timeout/i.test(message);
+    return {
+      ok: false,
+      kind: 'failure',
+      error: sanitizeField(aborted ? `timeout after ${fetchTimeoutMs}ms` : message),
+    };
+  } finally {
+    clearTimeout(timer);
   }
-}
-
-async function fetchSnapshot() {
-  return fetchJson(targetUrl);
 }
 
 function isObservabilityReady(obs) {
@@ -88,9 +125,9 @@ function isObservabilityReady(obs) {
 }
 
 function formatFlow(flow) {
-  if (!flow || typeof flow !== 'object') return String(flow);
-  const from = flow.from ?? '?';
-  const to = flow.to ?? '?';
+  if (!flow || typeof flow !== 'object') return sanitizeField(flow);
+  const from = sanitizeField(flow.from ?? '?');
+  const to = sanitizeField(flow.to ?? '?');
   return `${from}→${to}`;
 }
 
@@ -129,7 +166,7 @@ function renderDriftRadar(observability) {
   const totalDrift = Object.values(counts).reduce((a, b) => a + b, 0);
 
   if (observability.generatedAt) {
-    console.log(`Generated: ${observability.generatedAt}`);
+    console.log(`Generated: ${sanitizeField(observability.generatedAt)}`);
   }
 
   console.log(
@@ -164,20 +201,20 @@ function renderDriftRadar(observability) {
     const items = ids[key];
     if (items.length === 0) continue;
     console.log(`  ${YELLOW}${key}${RESET} (${items.length}):`);
-    listSamples(items, (id) => String(id));
+    listSamples(items, (id) => sanitizeField(id));
   }
 }
 
 function formatOutboxRow(row) {
-  const intent = row.intent ? ` ${row.intent}` : '';
-  const err = row.error ? ` err=${row.error}` : '';
-  return `${row.status} ${row.id}${intent} attempts=${row.attempts ?? 0}${err}`;
+  const intent = row.intent ? ` ${sanitizeField(row.intent)}` : '';
+  const err = row.error ? ` err=${sanitizeField(row.error)}` : '';
+  return `${sanitizeField(row.status)} ${sanitizeField(row.id)}${intent} attempts=${row.attempts ?? 0}${err}`;
 }
 
 function formatWorkflowRow(row) {
-  const step = row.currentStep ? ` @${row.currentStep}` : '';
-  const err = row.error ? ` err=${row.error}` : '';
-  return `${row.status} ${row.name} (${row.id})${step}${err}`;
+  const step = row.currentStep ? ` @${sanitizeField(row.currentStep)}` : '';
+  const err = row.error ? ` err=${sanitizeField(row.error)}` : '';
+  return `${sanitizeField(row.status)} ${sanitizeField(row.name)} (${sanitizeField(row.id)})${step}${err}`;
 }
 
 function isOutboxReady(outbox) {
@@ -188,16 +225,42 @@ function isWorkflowsReady(workflows) {
   return Boolean(workflows && typeof workflows === 'object' && workflows.available === true);
 }
 
-function renderQueuesAndWorkflows(outbox, workflows) {
+function renderFetchStatus(label, result) {
+  if (result.ok) return;
+  if (result.kind === 'waiting') {
+    console.log(`${MUTED}${label}: Waiting…${RESET}`);
+    return;
+  }
+  const detail = result.error ? ` (${result.error})` : '';
+  console.log(`${RED}${label}: Failure${detail}${RESET}`);
+}
+
+function renderQueuesAndWorkflows(outboxResult, workflowsResult, snapshotOutbox, snapshotWorkflows) {
   console.log(`\n--- Queues & Workflows ---`);
 
-  if (!isOutboxReady(outbox) && !isWorkflowsReady(workflows)) {
+  const outbox = isOutboxReady(outboxResult.ok ? outboxResult.data : null)
+    ? outboxResult.data
+    : isOutboxReady(snapshotOutbox)
+      ? snapshotOutbox
+      : null;
+  const workflows = isWorkflowsReady(workflowsResult.ok ? workflowsResult.data : null)
+    ? workflowsResult.data
+    : isWorkflowsReady(snapshotWorkflows)
+      ? snapshotWorkflows
+      : null;
+
+  if (!outbox && !workflows) {
+    if (!outboxResult.ok && !workflowsResult.ok) {
+      renderFetchStatus('Outbox', outboxResult);
+      renderFetchStatus('Workflows', workflowsResult);
+      return;
+    }
     console.log(`${MUTED}Waiting for queues & workflows…${RESET}`);
     return;
   }
 
-  if (!isOutboxReady(outbox)) {
-    console.log(`${MUTED}Outbox: Waiting…${RESET}`);
+  if (!outbox) {
+    renderFetchStatus('Outbox', outboxResult.ok ? { ok: false, kind: 'waiting' } : outboxResult);
   } else {
     const pending = Array.isArray(outbox.pending) ? outbox.pending : [];
     const failed = Array.isArray(outbox.failed) ? outbox.failed : [];
@@ -219,8 +282,11 @@ function renderQueuesAndWorkflows(outbox, workflows) {
     }
   }
 
-  if (!isWorkflowsReady(workflows)) {
-    console.log(`${MUTED}Workflows: Waiting…${RESET}`);
+  if (!workflows) {
+    renderFetchStatus(
+      'Workflows',
+      workflowsResult.ok ? { ok: false, kind: 'waiting' } : workflowsResult,
+    );
     return;
   }
 
@@ -261,62 +327,97 @@ function renderQueuesAndWorkflows(outbox, workflows) {
   }
 }
 
+function durabilityStores(snapshot) {
+  const stores = snapshot?.hardening?.durability?.stores;
+  return Array.isArray(stores) ? stores : [];
+}
+
+function renderHardening(snapshotResult) {
+  console.log(`--- Hardening Status ---`);
+  if (!snapshotResult.ok) {
+    if (snapshotResult.kind === 'waiting') {
+      console.log(`${YELLOW}Waiting for kernel...${RESET}`);
+    } else {
+      const detail = snapshotResult.error ? ` (${snapshotResult.error})` : '';
+      console.log(`${RED}Failure contacting kernel${detail}${RESET}`);
+    }
+    return;
+  }
+
+  const snapshot = snapshotResult.data;
+  const stores = durabilityStores(snapshot);
+  const memoryStores = stores.filter((s) => s && s.kind === 'memory');
+  const durableStores = stores.filter((s) => s && s.kind === 'durable');
+
+  if (stores.length === 0) {
+    // Missing durability facts must never read as green OK.
+    console.log(`${YELLOW}[WARNING] Store durability facts unavailable${RESET}`);
+    return;
+  }
+
+  if (memoryStores.length > 0) {
+    console.log(`${RED}[WARNING] Memory defaults in use!${RESET}`);
+    for (const store of memoryStores) {
+      const role = sanitizeField(store.role ?? 'store');
+      const id = sanitizeField(store.id ?? store.name ?? 'unknown');
+      console.log(`  - ${YELLOW}${role}: ${id}${RESET}`);
+    }
+    if (durableStores.length > 0) {
+      for (const store of durableStores) {
+        const role = sanitizeField(store.role ?? 'store');
+        const id = sanitizeField(store.id ?? store.name ?? 'unknown');
+        console.log(`  - ${MUTED}${role}: ${id} (durable)${RESET}`);
+      }
+    }
+    return;
+  }
+
+  console.log(`${GREEN}[OK] Durable Stores Configured${RESET}`);
+  for (const store of durableStores) {
+    const role = sanitizeField(store.role ?? 'store');
+    const id = sanitizeField(store.id ?? store.name ?? 'unknown');
+    console.log(`  - ${MUTED}${role}: ${id}${RESET}`);
+  }
+}
+
 async function render() {
   process.stdout.write('\x1b[2J\x1b[H');
   console.log(`ArkGate Observability Dashboard`);
-  console.log(`Time: ${new Date().toISOString()}`);
-  console.log(`Endpoint: ${targetUrl}\n`);
+  console.log(`Time: ${sanitizeField(new Date().toISOString())}`);
+  console.log(`Endpoint: ${sanitizeField(targetUrl)}\n`);
 
   const outboxUrl = siblingUrl(targetUrl, '/outbox');
   const workflowsUrl = siblingUrl(targetUrl, '/workflows');
-  const [snapshot, outbox, workflows] = await Promise.all([
-    fetchSnapshot(),
-    fetchJson(outboxUrl),
-    fetchJson(workflowsUrl),
+  const [snapshotResult, outboxResult, workflowsResult] = await Promise.all([
+    fetchJsonResult(targetUrl),
+    fetchJsonResult(outboxUrl),
+    fetchJsonResult(workflowsUrl),
   ]);
 
-  console.log(`--- Hardening Status ---`);
-  if (!snapshot) {
-    console.log(`${YELLOW}Waiting for kernel...${RESET}`);
-  } else {
-    const components = snapshot.package?.components || [];
-    const memoryStores = components.filter(c =>
-      c.id && (c.id.includes('InMemoryEventBuffer') || c.id.includes('InMemoryAuditStore') || c.id.includes('InMemoryWorkflowStore'))
-    );
+  renderHardening(snapshotResult);
 
-    if (memoryStores.length > 0) {
-      console.log(`${RED}[WARNING] Memory defaults in use!${RESET}`);
-      memoryStores.forEach(c => console.log(`  - ${YELLOW}${c.id}${RESET}`));
-    } else {
-      console.log(`${GREEN}[OK] Durable Stores Configured${RESET}`);
-    }
-  }
-
+  const snapshot = snapshotResult.ok ? snapshotResult.data : null;
   renderDriftRadar(snapshot?.observability);
-
-  const outboxData = isOutboxReady(outbox)
-    ? outbox
-    : isOutboxReady(snapshot?.outbox)
-      ? snapshot.outbox
-      : outbox;
-  const workflowsData = isWorkflowsReady(workflows)
-    ? workflows
-    : isWorkflowsReady(snapshot?.workflows)
-      ? snapshot.workflows
-      : workflows;
-  renderQueuesAndWorkflows(outboxData, workflowsData);
+  renderQueuesAndWorkflows(
+    outboxResult,
+    workflowsResult,
+    snapshot?.outbox,
+    snapshot?.workflows,
+  );
 }
 
 async function startDashboard() {
-  console.log(`Starting ArkGate Observability Dashboard (polling every ${interval}ms)`);
+  console.log(
+    `Starting ArkGate Observability Dashboard (polling every ${interval}ms, fetch timeout ${fetchTimeoutMs}ms)`,
+  );
 
   while (true) {
     await render();
-    await new Promise(resolve => setTimeout(resolve, interval));
+    await new Promise((resolve) => setTimeout(resolve, interval));
   }
 }
 
-startDashboard().catch(err => {
+startDashboard().catch((err) => {
   console.error(err);
   process.exit(1);
 });
