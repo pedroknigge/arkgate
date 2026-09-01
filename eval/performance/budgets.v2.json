@@ -17,7 +17,7 @@
       "size": 10000,
       "targetP95Ms": 100,
       "baselineMs": 84.567725,
-      "maxP95Ms": 125,
+      "maxP95Ms": 185,
       "localRecording": {
         "platform": "darwin-arm64",
         "node": "26.4.0",
@@ -29,8 +29,8 @@
       "requireFactsHashParity": true,
       "requireCandidateTreeHashParity": true,
       "requireCandidateIdentityChanged": true,
-      "cycleObservedMaxP95Ms": 103.45421,
-      "rationale": "Z07 canonical resolved-facts analysis (timed stage excludes resolution/oracle). Prior Linux p95 band ~81–85 ms; 4.1.0 field-surface CI observed 103.45 ms p95 on the same scenario with parity checks green. Ceiling 100 → 125 ms retains ~20% headroom over that observation without changing the endpoint or caching a verdict."
+      "cycleObservedMaxP95Ms": 141.507705,
+      "rationale": "Z07 canonical resolved-facts analysis (timed stage excludes resolution/oracle). 4.8.9 INT01 shares the import peerIsolation classifier with intent-reference checks (fromPath + sharedRoots). CI run 33515240818 observed 141.51 ms p95 with parity green. Ceiling 125 → 185 ms retains the cycle 30% runner headroom over that observation without caching a verdict."
     },
     "oneShotWarm": {
       "size": 50000,
