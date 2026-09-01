@@ -280,7 +280,7 @@ Poll those facts from the dual bins **`ark-dashboard`** / **`arkgate-dashboard`*
 `--url` / `-u` at the inspector snapshot (default
 `http://127.0.0.1:3000/snapshot`); the dashboard also fetches sibling `/outbox`
 and `/workflows`. `--interval` / `-i` is clamped to 200–60000 ms (default 2000).
-There is no `ark dashboard` subcommand — use the dashboard bins. Kernel stays
+Also available as `ark dashboard` / `arkgate dashboard` (passthrough to the same bin). Kernel stays
 JSON-only; presentation stays in `bin/`.
 
 ### Durability stance

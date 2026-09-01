@@ -1433,5 +1433,5 @@ Dual package bins **`ark-dashboard`** and **`arkgate-dashboard`**
 (`bin/ark-dashboard.mjs`) poll `--url` (default `http://127.0.0.1:3000/snapshot`)
 and sibling `/outbox` + `/workflows` on an interval (`--interval`, 200–60000 ms).
 ANSI escape sequences + polling only — no React, Ink, or Blessed. There is no
-`ark dashboard` dispatcher subcommand; invoke the dashboard bins directly.
+`ark dashboard` / `arkgate dashboard` dispatcher (passthrough to `bin/ark-dashboard.mjs`); dual bins `ark-dashboard` / `arkgate-dashboard` also work.
 Presentation stays in Tooling (`bin/`); do not couple a TUI into `src/kernel`.

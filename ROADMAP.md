@@ -495,7 +495,7 @@ Interactive terminal dashboard consuming kernel ports to enforce production read
 
 | Order | ID | Status | Size | Depends on | Outcome |
 |---:|---|---|---:|---|---|
-| 222 | `OD01` | `todo` | M | — | TUI Foundation & CLI Entrypoint (`ark dashboard` or `ark dev`) |
-| 223 | `OD02` | `todo` | M | OD01 | Hardening Status Panel (Memory defaults vs real stores) |
-| 224 | `OD03` | `todo` | L | OD01 | Drift Radar (Live `ObservabilityDriftReport` visualization) |
-| 225 | `OD04` | `todo` | M | OD01 | Sagas & Outbox Queue monitor |
+| 222 | `OD01` | `done` | M | — | TUI Foundation & CLI Entrypoint (`ark dashboard` / `ark-dashboard`) |
+| 223 | `OD02` | `done` | M | OD01 | Hardening Status Panel (Memory defaults vs real stores) |
+| 224 | `OD03` | `done` | L | OD01 | Drift Radar (Live `ObservabilityDriftReport` visualization) |
+| 225 | `OD04` | `done` | M | OD01 | Sagas & Outbox Queue monitor |
