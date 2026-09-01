@@ -10,8 +10,7 @@ payload-free inspector monitors. ArkOrder and first-contact docs gain honesty co
 **No required config migration.** No `ark.config.json` schema bump. Does not close
 `K01` / `Z09`.
 
-**Status: prepared** (tree candidate; npm `latest` remains **4.8.7** until the
-signed-tag provenance workflow succeeds).
+**Status: published** (on npm `latest`; see `docs/releases/4.8.8.md`).
 
 ### Added
 - Dual **`ark-dashboard` / `arkgate-dashboard`** bins render the loopback ArkRun
@@ -40,7 +39,7 @@ show it when present. Caption-only edits do not change `policyHash`.
 **No required config migration.** No `schemaVersion` bump. Does not close `K01` / `Z09`.
 No new skill names.
 
-**Status: published** (on npm `latest`; see `docs/releases/4.8.7.md`).
+**Status: published** (see `docs/releases/4.8.7.md`).
 
 ### Added
 - Public name for existing `layers[].description`. Example:
