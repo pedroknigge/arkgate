@@ -10,8 +10,7 @@ never looks green: an enforced sensor that cannot see its scope is not a pass.
 **Write. Check. Ship.** **No required config migration.** No `schemaVersion` bump.
 Does not close `K01` / `Z09`. No new skill names.
 
-**Status: prepared** (tree candidate; npm `latest` remains **4.8.9** until the
-signed-tag provenance workflow succeeds).
+**Status: published** (on npm `latest`; see `docs/releases/4.8.10.md`).
 
 ### Added
 - `arkgate report` / `ark report` on the existing dual bins: draft an upstream GitHub issue for
