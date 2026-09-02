@@ -88,10 +88,64 @@ export function resolveConfigPathWithinRoot(projectRoot, configPathOrName) {
   return { ok: true, configPath };
 }
 
+function isFile(absPath) {
+  try {
+    return Boolean(fs.statSync(absPath, { throwIfNoEntry: false })?.isFile());
+  } catch {
+    return false;
+  }
+}
+
+/** True when --config is a path (nested or absolute), not a basename to walk. */
+export function configNameIsPath(configName) {
+  return (
+    typeof configName === 'string' &&
+    (path.isAbsolute(configName) || /[\\/]/.test(configName))
+  );
+}
+
+function isInsideRoot(root, target) {
+  const rel = path.relative(root, target);
+  return rel === '' || (!rel.startsWith(`..${path.sep}`) && rel !== '..' && !path.isAbsolute(rel));
+}
+
+/**
+ * Resolve a nested/absolute --config path without walking parents.
+ * `--root examples/app --config examples/app/ark.config.json` must load the nested
+ * contract, not latch onto a parent basename walk.
+ *
+ * @param {string} startDir
+ * @param {string} configName
+ * @returns {string | null} absolute config file path
+ */
+export function resolveConfigPathCandidate(startDir, configName) {
+  if (typeof configName !== 'string' || configName.trim() === '') return null;
+  const start = path.resolve(startDir || process.cwd());
+  if (path.isAbsolute(configName)) return isFile(configName) ? path.resolve(configName) : null;
+
+  const fromStart = path.resolve(start, configName);
+  if (isFile(fromStart)) return fromStart;
+
+  const base = path.basename(configName);
+  const relDir = path.dirname(configName);
+  if (relDir && relDir !== '.') {
+    const namedLeaf = path.basename(relDir);
+    if (namedLeaf && namedLeaf === path.basename(start)) {
+      const stripped = path.join(start, base);
+      if (isFile(stripped)) return stripped;
+    }
+  }
+
+  const fromCwd = path.resolve(process.cwd(), configName);
+  if (fromCwd !== fromStart && isFile(fromCwd)) return fromCwd;
+  return null;
+}
+
 /**
  * Walk parents from startDir looking for configName (default ark.config.json).
  * Bounds: filesystem root, max depth, git root, workspaces package root.
  * Config found at a bound root is accepted; walking above a bound is refused.
+ * Nested relative --config (`examples/app/ark.config.json`) is a file path, never a walk-up name.
  *
  * @param {string} startDir
  * @param {string} [configName='ark.config.json']
@@ -104,17 +158,29 @@ export function findNearestArkConfig(startDir, configName = 'ark.config.json', o
   const boundAtWorkspaces = opts.boundAtWorkspacesRoot !== false;
 
   if (typeof configName === 'string' && path.isAbsolute(configName)) {
-    if (fs.existsSync(configName)) {
+    if (isFile(configName)) {
       const root = path.dirname(configName);
       const start = path.resolve(startDir || process.cwd());
-      return { root, configPath: configName, walkedUp: path.resolve(root) !== start };
+      return { root, configPath: path.resolve(configName), walkedUp: path.resolve(root) !== start };
     }
     return null;
   }
 
+  const name = configName || 'ark.config.json';
+  if (configNameIsPath(name)) {
+    const resolved = resolveConfigPathCandidate(startDir, name);
+    if (!resolved) return null;
+    const start = path.resolve(startDir || process.cwd());
+    const inside = isInsideRoot(start, resolved);
+    return {
+      root: inside ? start : path.dirname(resolved),
+      configPath: resolved,
+      walkedUp: !inside,
+    };
+  }
+
   let dir = path.resolve(startDir || process.cwd());
   const start = dir;
-  const name = configName || 'ark.config.json';
   let depth = 0;
   for (;;) {
     const candidate = path.join(dir, name);
@@ -231,7 +297,7 @@ export function resolveEffectiveProjectRoot(startRoot, opts = {}) {
       config: configName,
       configPath: found.configPath,
       configRoot: found.root,
-      walkedUp: true,
+      walkedUp: found.walkedUp,
       configFound: true,
       writeRootFollowedConfig: adoptWalkedRoot && found.walkedUp,
     };
