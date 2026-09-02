@@ -8,8 +8,10 @@
  *   src/domain/configContract.ts → bin/lib/config-contract.mjs
  *                                → schemas/ark.config.schema.json
  *   src/domain/configExtras.ts   → bin/lib/config-extras.mjs
+ *   src/domain/adapterContractTypes.ts → bin/lib/adapter-contract-types.mjs
+ *                                      → schemas/ark.analysis-result.schema.json
+ *   src/domain/adapterFindingRefs.ts → bin/lib/adapter-finding-refs.mjs
  *   src/domain/adapterContract.ts → bin/lib/adapter-contract.mjs
- *                                 → schemas/ark.analysis-result.schema.json
  *   src/domain/projectIdentity.ts → bin/lib/project-identity.mjs
  *                                 → schemas/ark.project-identity.schema.json
  *   src/domain/statusManifest.ts  → bin/lib/status-manifest.mjs
@@ -146,11 +148,21 @@ const MODULES = [
     label: 'ArkOrder type vocabulary (erased where type-only)',
   },
   {
-    canonical: 'src/domain/adapterContract.ts',
-    derived: 'bin/lib/adapter-contract.mjs',
+    canonical: 'src/domain/adapterContractTypes.ts',
+    derived: 'bin/lib/adapter-contract-types.mjs',
     schemaDerived: 'schemas/ark.analysis-result.schema.json',
     schemaExport: 'ARK_ANALYSIS_RESULT_SCHEMA',
-    label: 'versioned cross-adapter analysis result contract + schema',
+    label: 'adapter result types + JSON Schema (ACS06 envelope)',
+  },
+  {
+    canonical: 'src/domain/adapterFindingRefs.ts',
+    derived: 'bin/lib/adapter-finding-refs.mjs',
+    label: 'adapter finding targetKey / findingRef helpers',
+  },
+  {
+    canonical: 'src/domain/adapterContract.ts',
+    derived: 'bin/lib/adapter-contract.mjs',
+    label: 'versioned cross-adapter analysis result factories (facade)',
   },
   {
     canonical: 'src/domain/projectIdentity.ts',
