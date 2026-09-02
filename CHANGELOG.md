@@ -3,6 +3,38 @@
 All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are documented here or
 in the immutable pre-2.0 archive linked below.
 
+## 4.8.11 — 2026-09-02
+
+**Patch** over **4.8.10**. Nested `--config` with `--root` stays inside that
+tree. Library Shape splits `adapterContract` and `agentProjection` so the AI
+edits one concern at a time. **Write. Check. Ship.** **No required config migration.**
+No `schemaVersion` bump. Does not close `K01` / `Z09`. No new skill names.
+
+**Status: prepared** (tree candidate; npm `latest` remains **4.8.10** until the
+signed-tag provenance workflow succeeds).
+
+### Fixed
+- Nested `--config` is a file path: `ark-check --root examples/app --config
+  examples/app/ark.config.json` no longer treats the nested config as a
+  walk-up filename and no longer scans the invoker `cwd` (`include` is relative
+  to `--root`). Basename walk-up still applies when `--config` is
+  `ark.config.json`.
+- `doctorResidentWarm` CI budget ceiling is 680ms (~12% headroom after the
+  adapterContract split). Still far below one-shot doctor.
+
+### Changed
+- Domain Shape: `adapterContract` types/schema and finding-ref helpers are
+  their own modules; the public facade stays under the god-module floors.
+  Callers still import `src/domain/adapterContract.ts`. CLI pure helpers follow
+  the DF03 split.
+- Domain Shape: `agentProjection` types/markers, body/meta formatters, and
+  merge/stamp are their own modules; the public facade re-exports. Callers still
+  import `src/domain/agentProjection.ts`. Generated CLI children stay in
+  DomainModel so the facade does not import Tooling.
+- Dev-tree pins: `browserslist` 4.28.8 (GHSA-73wf-gq98-2v4g) and `fast-uri`
+  3.1.7 (GHSA-5jgf-p345-68v8 and siblings). These are lock/override pins, not a
+  consumer API change.
+
 ## 4.8.10 — 2026-09-02
 
 **Patch** over **4.8.9**. Amarilla first-aggregate sensors. Incomplete analysis
