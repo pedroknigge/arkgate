@@ -133,6 +133,9 @@ or `dist/` except `ark-mcp` loading the built library. Shared CLI logic lives in
 | `src/domain/remediation.ts` | `bin/lib/remediation.mjs` | `generate:cli-pure` / `check:cli-pure` |
 | `src/domain/diagnosticCatalog.ts` | `bin/lib/diagnostic-catalog.mjs` | (same `cli-pure` scripts) |
 | `src/domain/baselineKey.ts` | `bin/lib/baseline-key.mjs` | (same `cli-pure` scripts) |
+| `src/domain/adapterContractTypes.ts` | `bin/lib/adapter-contract-types.mjs` + `schemas/ark.analysis-result.schema.json` | (same `cli-pure` scripts); Shape split child |
+| `src/domain/adapterFindingRefs.ts` | `bin/lib/adapter-finding-refs.mjs` | (same `cli-pure` scripts); Shape split child |
+| `src/domain/adapterContract.ts` | `bin/lib/adapter-contract.mjs` | (same `cli-pure` scripts); facade factories + re-exports |
 | `src/domain/configContract.ts` | `bin/lib/config-contract.mjs` + `schemas/ark.config.schema.json` | (same `cli-pure` scripts) |
 | `src/domain/configExtras.ts` | `bin/lib/config-extras.mjs` | (same `cli-pure` scripts); arkRun / arkOrder extra defaults |
 | `src/domain/projectIdentity.ts` | `bin/lib/project-identity.mjs` + `schemas/ark.project-identity.schema.json` | (same `cli-pure` scripts) |

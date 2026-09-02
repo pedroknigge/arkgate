@@ -41,6 +41,19 @@ import {
 import { analyzeCanonicalResolvedProject } from '../../../src/kernel/resolvedAnalysis';
 
 describe('cross-adapter result contract v1.5', () => {
+  it('facade stays under god-module floors (Shape pilot)', () => {
+    const source = fs.readFileSync(path.resolve('src/domain/adapterContract.ts'), 'utf8');
+    const loc = source.split(/\r?\n/).length;
+    const exports =
+      source.match(
+        /\bexport\s+(?:async\s+)?(?:function|class|const|let|var|type|interface|enum|default)\b|\bexport\s*\{/g
+      ) ?? [];
+    expect(
+      loc < 400 || exports.length < 12,
+      `god-module floors: ${loc} LOC, ${exports.length} exports`
+    ).toBe(true);
+  });
+
   it('keeps 1.2 as a legacy value and emits resolved evidence + finding refs in 1.5', () => {
     const legacyFixture = JSON.parse(
       fs.readFileSync(
