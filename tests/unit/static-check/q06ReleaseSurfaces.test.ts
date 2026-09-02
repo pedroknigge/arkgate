@@ -93,6 +93,13 @@ describe(`version bump ${CURRENT}`, () => {
     expect(maj).toBeGreaterThanOrEqual(3);
     expect(min * 1000 + pat).toBeGreaterThanOrEqual(1 * 1000 + 5);
 
+    const browserslist = lock.packages['node_modules/browserslist']?.version as string;
+    expect(browserslist).toBeTruthy();
+    // 4.28.7+ closes GHSA-73wf-gq98-2v4g (CVE-2026-73088) and GHSA-c83g-rgw3-j3cx
+    const [bMaj, bMin, bPat] = browserslist.split('.').map(Number);
+    expect(bMaj).toBeGreaterThanOrEqual(4);
+    expect(bMin * 1000 + bPat).toBeGreaterThanOrEqual(28 * 1000 + 7);
+
     for (const rel of [
       'eval/cases/next-core-imports-db/package.json',
       'eval/cases/monorepo-frontend-core/frontend/package.json',
