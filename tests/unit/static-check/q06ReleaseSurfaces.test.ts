@@ -88,10 +88,10 @@ describe(`version bump ${CURRENT}`, () => {
     const lock = JSON.parse(read('package-lock.json'));
     const fastUri = lock.packages['node_modules/fast-uri']?.version as string;
     expect(fastUri).toBeTruthy();
-    // 3.1.5+ closes GHSA-7p8r-x3mc-p8w7 (and earlier 3.1.4 closed GHSA-v2hh-gcrm-f6hx)
+    // 3.1.6+ closes GHSA-5jgf-p345-68v8 / GHSA-f65p-4m7j-42xc / GHSA-fph4-wmhf-6fwf / GHSA-jqff-g426-hqxp
     const [maj, min, pat] = fastUri.split('.').map(Number);
     expect(maj).toBeGreaterThanOrEqual(3);
-    expect(min * 1000 + pat).toBeGreaterThanOrEqual(1 * 1000 + 5);
+    expect(min * 1000 + pat).toBeGreaterThanOrEqual(1 * 1000 + 6);
 
     const browserslist = lock.packages['node_modules/browserslist']?.version as string;
     expect(browserslist).toBeTruthy();
