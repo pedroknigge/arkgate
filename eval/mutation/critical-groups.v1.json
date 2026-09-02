@@ -137,11 +137,12 @@
     },
     {
       "id": "baselines",
+      "note": "STRUCTURE freeze target (sensor:symbol), non-freezable SCOPE_EMPTY, baselineKey join, occurrence skip. Type fields above line 40 are not executable.",
       "targets": [
         {
           "file": "src/domain/baselineKey.ts",
-          "startLine": 20,
-          "endLine": 48
+          "startLine": 40,
+          "endLine": 120
         }
       ]
     },

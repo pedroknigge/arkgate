@@ -323,6 +323,21 @@ describe('status-command tooling (ACS03)', () => {
     );
   });
 
+  it('counts v1 empty-target STRUCTURE keys and sensor-scoped keys as distinct frozen residual', () => {
+    const v1 = 'ARKRULE_STRUCTURE|src/app/foo.ts|ApplicationOrchestration||';
+    const orchestration =
+      'ARKRULE_STRUCTURE|src/app/foo.ts|ApplicationOrchestration||orchestration-only';
+    const thin = 'ARKRULE_STRUCTURE|src/app/foo.ts|ApplicationOrchestration||thin-adapter';
+    expect(v1).not.toBe(orchestration);
+    expect(orchestration).not.toBe(thin);
+    expect(
+      countArkruleFrozenKeys({
+        exists: true,
+        keys: new Set([v1, orchestration, thin]),
+      })
+    ).toBe(3);
+  });
+
   it('builds project status for this repo with matched identity (no expectation)', () => {
     const root = path.resolve('.');
     const status = buildProjectStatusManifest({

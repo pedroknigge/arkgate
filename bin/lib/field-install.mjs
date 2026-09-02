@@ -83,6 +83,27 @@ function addDevDependencyPreservingFormat(source, version) {
   return `${source.slice(0, contentEnd)}${addition}${eol}${rootClosingIndent}${source.slice(rootClose)}`;
 }
 
+const ARK_CHECK_BIN_RE = /\b(?:ark-check|arkgate-check)(?:\.mjs|\.js)?\b/;
+const ARK_CHECK_RUNNER_RE =
+  /(?:^|[\s"'`;|&])(?:npx|pnpm|yarn|npm|bunx?|node)(?:\s|$)/;
+const GITHUB_RUN_KEY_RE = /^\s*(?:-\s+)?run:\s+/;
+const YAML_CHECK_JOB_ID_RE =
+  /^\s*(?:-\s+)?['"]?(?:ark-check|arkgate-check)['"]?\s*:/;
+const YAML_CONCURRENCY_GROUP_RE = /^\s*group:\s+/;
+
+/**
+ * True when the line invokes ark-check / arkgate-check (npx/pnpm/yarn/npm/node/run).
+ * YAML concurrency.group and job-id keys that only contain the name are not invocations.
+ */
+export function isArkCheckInvocationLine(command) {
+  if (typeof command !== 'string' || !command.trim()) return false;
+  if (/^\s*#/.test(command)) return false;
+  if (YAML_CHECK_JOB_ID_RE.test(command)) return false;
+  if (YAML_CONCURRENCY_GROUP_RE.test(command)) return false;
+  if (!ARK_CHECK_BIN_RE.test(command)) return false;
+  return ARK_CHECK_RUNNER_RE.test(command) || GITHUB_RUN_KEY_RE.test(command);
+}
+
 /**
  * Ensure a check command string includes `--baseline <file>`.
  * Only touches strings that already invoke ark-check / arkgate-check.
@@ -97,7 +118,7 @@ export function ensureBaselineFlagInCheckCommand(
   if (/^\s*#/.test(command)) {
     return { command, changed: false };
   }
-  if (!/\b(ark-check|arkgate-check)\b/.test(command)) {
+  if (!isArkCheckInvocationLine(command)) {
     return { command, changed: false };
   }
   if (/(?:^|\s)--baseline(?:\s|=|$)/.test(command)) {
@@ -180,7 +201,7 @@ export function syncBaselineIntoCheckSurfaces(root, opts = {}) {
       let fileChanged = false;
       const nextLines = lines.map((line) => {
         if (/^\s*#/.test(line)) return line;
-        if (!/\b(ark-check|arkgate-check)\b/.test(line)) return line;
+        if (!isArkCheckInvocationLine(line)) return line;
         if (/(?:^|\s)--baseline(?:\s|=|$)/.test(line)) return line;
         const { command, changed: c } = ensureBaselineFlagInCheckCommand(line, flagRel);
         if (c) {

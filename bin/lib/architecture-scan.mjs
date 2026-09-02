@@ -18,6 +18,85 @@ import {
 } from './invariant-coverage-io.mjs';
 import { loadArkRuleFileHints } from './arkrule-file-hints.mjs';
 
+const HINT_CACHE_CAP = 16;
+/** Process-local hint map keyed by scoped path + content hash. Not a second engine. */
+const hintCache = new Map();
+
+function normalizeScanRelPath(root, filePath) {
+  if (typeof filePath !== 'string' || filePath.length === 0) return null;
+  const resolvedRoot = path.resolve(root);
+  const absolute = path.isAbsolute(filePath)
+    ? path.resolve(filePath)
+    : path.resolve(resolvedRoot, filePath);
+  const relative = path.relative(resolvedRoot, absolute).replace(/\\/g, '/');
+  if (
+    !relative ||
+    relative === '..' ||
+    relative.startsWith('../') ||
+    path.isAbsolute(relative)
+  ) {
+    return null;
+  }
+  return relative;
+}
+
+/** Empty / missing `files` stays unbounded (full governed set). */
+function fileLocalScope(root, files) {
+  if (!Array.isArray(files) || files.length === 0) return null;
+  const scoped = new Set();
+  for (const file of files) {
+    const rel = normalizeScanRelPath(root, file);
+    if (rel) scoped.add(rel);
+  }
+  return scoped.size > 0 ? scoped : null;
+}
+
+function filterHintPreload(fileContents, scoped) {
+  if (!scoped || !fileContents) return fileContents;
+  const out = {};
+  for (const [rel, content] of Object.entries(fileContents)) {
+    const key = String(rel || '')
+      .replace(/\\/g, '/')
+      .replace(/^\.\//, '');
+    if (scoped.has(key)) out[rel] = content;
+  }
+  return out;
+}
+
+function hintCacheKey(root, scopedFiles, arkRules) {
+  const filesPart = (scopedFiles ?? [])
+    .map((file) => `${file.path}\0${file.contentHash ?? ''}`)
+    .sort()
+    .join('\n');
+  const rulesPart = (arkRules?.structure ?? [])
+    .map(
+      (rule) =>
+        `${rule.sensor ?? ''}\0${rule.mode ?? ''}\0${(rule.appliesTo ?? []).join(',')}`
+    )
+    .join('\n');
+  return `${path.resolve(root)}\0${filesPart}\0${rulesPart}`;
+}
+
+function rememberHintCache(key, value) {
+  if (hintCache.has(key)) hintCache.delete(key);
+  hintCache.set(key, value);
+  while (hintCache.size > HINT_CACHE_CAP) {
+    const oldest = hintCache.keys().next().value;
+    hintCache.delete(oldest);
+  }
+}
+
+function loadHintsForScope(root, facts, arkRules, preloadedContents, scoped) {
+  const hintFacts = scoped
+    ? { files: (facts.files ?? []).filter((file) => scoped.has(file.path)) }
+    : facts;
+  const key = hintCacheKey(root, hintFacts.files, arkRules);
+  if (hintCache.has(key)) return hintCache.get(key);
+  const hints = loadArkRuleFileHints(root, hintFacts, arkRules, preloadedContents);
+  rememberHintCache(key, hints);
+  return hints;
+}
+
 /** Resolve canonical facts and optionally retain filesystem probes for resident invalidation. */
 export function resolveArchitectureSnapshot({
   root,
@@ -66,9 +145,16 @@ export function resolveArchitectureSnapshot({
     err.issues = arkRulesLoad.errors;
     throw err;
   }
+  const scoped = fileLocalScope(root, files);
   const loadedContract = loadContract(effectiveConfig, configPath, {
     arkRules: arkRulesLoad.arkRules,
   });
+  const analysisContract = scoped
+    ? {
+        ...loadedContract,
+        classShapes: (facts.classShapes ?? []).filter((shape) => scoped.has(shape.file)),
+      }
+    : loadedContract;
   const hasInvariants = (arkRulesLoad.arkRules?.invariants?.length ?? 0) > 0;
   const coverageInputs = hasInvariants
     ? loadInvariantCoverageInputs(root, facts, {
@@ -76,15 +162,16 @@ export function resolveArchitectureSnapshot({
         ...coverageOptionsFromConfig(effectiveConfig),
       })
     : undefined;
-  // AR07: Tooling fileHints for orchestration-only / thin-adapter (reuse coverage contents when present).
-  const fileHints = loadArkRuleFileHints(
+  // File-local structure sensors + hint load honor `files`; graph still uses full facts.
+  const fileHints = loadHintsForScope(
     root,
     facts,
     arkRulesLoad.arkRules,
-    coverageInputs?.fileContents
+    filterHintPreload(coverageInputs?.fileContents, scoped),
+    scoped
   );
   const analyzed = analyzeTrustedResolvedProject({
-    contract: loadedContract,
+    contract: analysisContract,
     facts,
     ...(coverageInputs ? { coverageInputs } : {}),
     ...(fileHints ? { fileHints } : {}),

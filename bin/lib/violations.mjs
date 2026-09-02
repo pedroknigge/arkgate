@@ -16,8 +16,12 @@ import { baselineKeysFromDocument, baselineRecordsDocument } from './team-parlia
 import { toAdapterDiagnostic } from './adapter-contract.mjs';
 export { baselineKey, baselineOccurrenceKeys };
 
-const BASELINE_NOTE =
-  'Frozen ark-check violations (one record per edge). Only NEW keys vs the merge-base fail --against / --baseline. Regenerate with: ark-check --update-baseline';
+/** Real regenerate flags: freeze-refuse needs --force; law PR needs --contract-session; stewards[] needs --author. */
+export const REGENERATE_BASELINE_COMMAND =
+  'ark-check --update-baseline --force --contract-session --author <steward>';
+
+export const BASELINE_NOTE =
+  `Frozen ark-check violations (one record per edge). Only NEW keys vs the merge-base fail --against / --baseline. Regenerate with: ${REGENERATE_BASELINE_COMMAND} (--author when stewards[] is set)`;
 
 export function readBaseline(root, baselinePath) {
   const fullPath = path.isAbsolute(baselinePath) ? baselinePath : path.join(root, baselinePath);
@@ -76,11 +80,32 @@ export function printViolation(violation) {
 export const CONCENTRATION_MIN_VIOLATIONS = 10;
 export const CONCENTRATION_SHARE = 0.9;
 
+/** Sensor id for STRUCTURE findings. Orchestration-only is code debt, not a missing toLayer. */
+export function violationSensorId(violation) {
+  if (typeof violation?.sensor === 'string' && violation.sensor.trim()) return violation.sensor.trim();
+  if (typeof violation?.arkruleId === 'string' && violation.arkruleId.trim()) return violation.arkruleId.trim();
+  return undefined;
+}
+
 export function violationEdge(violation) {
   if (violation.ruleId === 'CIRCULAR_DEPENDENCY') return 'circular dependency';
   if (violation.ruleId === 'FORBIDDEN_GLOBAL') return `${violation.fromLayer ?? '?'} → ambient global`;
   if (violation.fromLayer && violation.toLayer) return `${violation.fromLayer} → ${violation.toLayer}`;
+  const sensor = violationSensorId(violation);
+  if (sensor) return sensor;
   return violation.ruleId;
+}
+
+/** Layer-import arrows can mean a contract bug. Structural-sensor blobs are code debt. */
+export function isContractConcentrationEdge(edge) {
+  return typeof edge === 'string' && edge.includes(' → ');
+}
+
+export function isContractStyleViolation(violation) {
+  if (violationSensorId(violation)) return false;
+  if (violation.ruleId === 'CIRCULAR_DEPENDENCY') return true;
+  if (violation.ruleId === 'FORBIDDEN_GLOBAL') return true;
+  return Boolean(violation.fromLayer && violation.toLayer);
 }
 
 // The directory the offending import lands in — the signal for "where does this edge go?".
@@ -100,27 +125,35 @@ export function summarizeViolations(violations) {
   for (const violation of violations) {
     if (violation.typeOnly) typeOnly += 1;
     const key = violationEdge(violation);
-    const entry = byEdge.get(key) ?? { edge: key, count: 0, typeOnly: 0, targets: new Map() };
+    const entry = byEdge.get(key) ?? {
+      edge: key,
+      count: 0,
+      typeOnly: 0,
+      targets: new Map(),
+      contractStyle: true,
+    };
     entry.count += 1;
     if (violation.typeOnly) entry.typeOnly += 1;
+    if (!isContractStyleViolation(violation)) entry.contractStyle = false;
     const subtree = violationTargetSubtree(violation);
     if (subtree) entry.targets.set(subtree, (entry.targets.get(subtree) ?? 0) + 1);
     byEdge.set(key, entry);
   }
-  const edges = [...byEdge.values()]
-    .map((entry) => ({
-      edge: entry.edge,
-      count: entry.count,
-      typeOnly: entry.typeOnly,
-      topTargets: [...entry.targets.entries()]
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 4)
-        .map(([dir, count]) => ({ dir, count })),
-    }))
-    .sort((a, b) => b.count - a.count);
+  const ranked = [...byEdge.values()].sort((a, b) => b.count - a.count);
+  const edges = ranked.map((entry) => ({
+    edge: entry.edge,
+    count: entry.count,
+    typeOnly: entry.typeOnly,
+    topTargets: [...entry.targets.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 4)
+      .map(([dir, count]) => ({ dir, count })),
+  }));
   const total = violations.length;
   const dominant = edges[0];
   const dominantShare = total > 0 && dominant ? dominant.count / total : 0;
+  const contractConcentration =
+    Boolean(ranked[0]?.contractStyle) && isContractConcentrationEdge(ranked[0]?.edge);
   return {
     total,
     // Value edges are real runtime coupling; type-only edges (erased at compile time) are
@@ -130,7 +163,10 @@ export function summarizeViolations(violations) {
     edges,
     dominant: dominant ? dominant.edge : undefined,
     dominantShare,
-    concentrated: total >= CONCENTRATION_MIN_VIOLATIONS && dominantShare >= CONCENTRATION_SHARE,
+    concentrated:
+      total >= CONCENTRATION_MIN_VIOLATIONS &&
+      dominantShare >= CONCENTRATION_SHARE &&
+      contractConcentration,
   };
 }
 

@@ -43,6 +43,104 @@ function input(snapshot: ReturnType<typeof resolveArchitectureSnapshot>, inputPa
   return snapshot.inputs.find(({ path: observedPath }) => observedPath === inputPath);
 }
 
+/** A11: file-local structure + hints vs full-tree graph. */
+function boundedProject() {
+  const { root } = project();
+  fs.mkdirSync(path.join(root, 'src/infra'), { recursive: true });
+  fs.mkdirSync(path.join(root, 'src/application'), { recursive: true });
+  fs.mkdirSync(path.join(root, 'arkrules'), { recursive: true });
+  fs.writeFileSync(path.join(root, 'src/infra/db.ts'), 'export const db = {};\n');
+  fs.writeFileSync(
+    path.join(root, 'src/domain/clean.ts'),
+    "import { Order } from './order';\nexport const clean = 1;\nexport type T = typeof Order;\n"
+  );
+  fs.writeFileSync(
+    path.join(root, 'src/domain/order.ts'),
+    [
+      "import { db } from '../infra/db';",
+      "import { clean } from './clean';",
+      'export class Order { public total = 0; constructor() {} setTotal(n: number) { this.total = n; } }',
+      'export const uses = { db, clean };',
+      '',
+    ].join('\n')
+  );
+  fs.writeFileSync(
+    path.join(root, 'src/application/heavy.ts'),
+    [
+      'export function canPlaceOrder(order: { total: number }) { return order.total > 0; }',
+      'export function calculateDiscount(order: { total: number }) { return order.total * 0.1; }',
+      "export function shouldNotify(order: { status: string }) { return order.status === 'paid'; }",
+      '',
+    ].join('\n')
+  );
+  fs.writeFileSync(
+    path.join(root, 'arkrules/DomainModel.json'),
+    JSON.stringify({
+      schemaVersion: '1.0',
+      layer: 'DomainModel',
+      structure: [
+        { id: 'private-state', sensor: 'aggregate-private-state', mode: 'enforced' },
+      ],
+      invariants: [],
+    })
+  );
+  fs.writeFileSync(
+    path.join(root, 'arkrules/ApplicationOrchestration.json'),
+    JSON.stringify({
+      schemaVersion: '1.0',
+      layer: 'ApplicationOrchestration',
+      structure: [{ id: 'orch', sensor: 'orchestration-only', mode: 'advisory' }],
+      invariants: [],
+    })
+  );
+  const config = {
+    schemaVersion: '1.3',
+    include: ['src'],
+    layers: [
+      { name: 'DomainModel', patterns: ['src/domain/**'] },
+      { name: 'ApplicationOrchestration', patterns: ['src/application/**'] },
+      { name: 'PersistenceAdapters', patterns: ['src/infra/**'] },
+    ],
+    rules: [{ from: 'DomainModel', to: 'PersistenceAdapters', allowed: false }],
+    arkRules: {
+      DomainModel: 'arkrules/DomainModel.json',
+      ApplicationOrchestration: 'arkrules/ApplicationOrchestration.json',
+    },
+  };
+  fs.writeFileSync(path.join(root, 'ark.config.json'), JSON.stringify(config));
+  return {
+    root,
+    config,
+    files: {
+      clean: path.join(root, 'src/domain/clean.ts'),
+      order: path.join(root, 'src/domain/order.ts'),
+      heavy: path.join(root, 'src/application/heavy.ts'),
+      db: path.join(root, 'src/infra/db.ts'),
+    },
+  };
+}
+
+function findingOn(
+  rows: Array<{ ruleId?: string; file?: string; message?: string; arkruleId?: string }>,
+  file: string,
+  match: (row: { ruleId?: string; message?: string; arkruleId?: string }) => boolean
+) {
+  return rows.some((row) => row.file === file && match(row));
+}
+
+function isPrivateState(row: { ruleId?: string; message?: string; arkruleId?: string }) {
+  return (
+    row.ruleId === 'ARKRULE_STRUCTURE' &&
+    (row.arkruleId === 'private-state' || String(row.message ?? '').includes('aggregate-private-state'))
+  );
+}
+
+function isOrchestration(row: { ruleId?: string; message?: string; arkruleId?: string }) {
+  return (
+    row.arkruleId === 'orch' || String(row.message ?? '').includes('orchestration-only')
+  );
+}
+
 describe('Z07 canonical architecture snapshot seam', () => {
   afterEach(() => {
     for (const root of roots.splice(0)) fs.rmSync(root, { recursive: true, force: true });
@@ -144,5 +242,87 @@ describe('Z07 canonical architecture snapshot seam', () => {
     expect(input(after, path.join(root, 'src/domain/missing.ts'))?.kinds).toEqual(
       expect.arrayContaining(['module-file', 'realpath', 'source'])
     );
+  });
+
+  it('honors files for file-local structure sensors and hint load; graph still sees the full tree', async () => {
+    const { root, config, files } = boundedProject();
+    const loaded = await loadTypeScript(root);
+    expect(loaded.ts).toBeTruthy();
+    const base = {
+      root,
+      config,
+      manifest: null,
+      rules: config.rules,
+      ts: loaded.ts,
+      args: { config: 'ark.config.json' },
+    };
+
+    const full = resolveArchitectureSnapshot({ ...base, files: [] });
+    expect(findingOn(full.result.violations, 'src/domain/order.ts', isPrivateState)).toBe(true);
+    expect(
+      findingOn(
+        full.result.violations,
+        'src/domain/order.ts',
+        (row) => row.ruleId === 'LAYER_IMPORT_VIOLATION'
+      )
+    ).toBe(true);
+    expect(
+      findingOn(full.result.violations, 'src/domain/clean.ts', (row) => row.ruleId === 'CIRCULAR_DEPENDENCY') ||
+        findingOn(full.result.violations, 'src/domain/order.ts', (row) => row.ruleId === 'CIRCULAR_DEPENDENCY')
+    ).toBe(true);
+    expect(findingOn(full.result.warnings, 'src/application/heavy.ts', isOrchestration)).toBe(true);
+
+    const changedClean = resolveArchitectureSnapshot({ ...base, files: [files.clean] });
+    expect(changedClean.facts.factsHash).toBe(full.facts.factsHash);
+    expect(changedClean.facts.files.map((file: { path: string }) => file.path).sort()).toEqual(
+      full.facts.files.map((file: { path: string }) => file.path).sort()
+    );
+    expect(findingOn(changedClean.result.violations, 'src/domain/order.ts', isPrivateState)).toBe(
+      false
+    );
+    expect(findingOn(changedClean.result.warnings, 'src/application/heavy.ts', isOrchestration)).toBe(
+      false
+    );
+    expect(
+      findingOn(
+        changedClean.result.violations,
+        'src/domain/order.ts',
+        (row) => row.ruleId === 'LAYER_IMPORT_VIOLATION'
+      )
+    ).toBe(true);
+    expect(
+      findingOn(changedClean.result.violations, 'src/domain/clean.ts', (row) => row.ruleId === 'CIRCULAR_DEPENDENCY') ||
+        findingOn(changedClean.result.violations, 'src/domain/order.ts', (row) => row.ruleId === 'CIRCULAR_DEPENDENCY')
+    ).toBe(true);
+
+    const changedOrder = resolveArchitectureSnapshot({ ...base, files: [files.order] });
+    expect(findingOn(changedOrder.result.violations, 'src/domain/order.ts', isPrivateState)).toBe(
+      true
+    );
+    expect(findingOn(changedOrder.result.warnings, 'src/application/heavy.ts', isOrchestration)).toBe(
+      false
+    );
+    expect(
+      findingOn(
+        changedOrder.result.violations,
+        'src/domain/order.ts',
+        (row) => row.ruleId === 'LAYER_IMPORT_VIOLATION'
+      )
+    ).toBe(true);
+
+    const changedHeavy = resolveArchitectureSnapshot({ ...base, files: [files.heavy] });
+    expect(findingOn(changedHeavy.result.violations, 'src/domain/order.ts', isPrivateState)).toBe(
+      false
+    );
+    expect(findingOn(changedHeavy.result.warnings, 'src/application/heavy.ts', isOrchestration)).toBe(
+      true
+    );
+    expect(
+      findingOn(
+        changedHeavy.result.violations,
+        'src/domain/order.ts',
+        (row) => row.ruleId === 'LAYER_IMPORT_VIOLATION'
+      )
+    ).toBe(true);
   });
 });

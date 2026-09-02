@@ -148,7 +148,9 @@ export const ARK_CONFIG_SCHEMA = {
         allowDisabledPeerIsolation: false,
       },
     },
-    /** Invariant-coverage scan controls (test globs + file budget). Absence keeps defaults. */
+    /** Invariant-coverage scan controls (test globs + file budget). Absence keeps defaults.
+     *  maxFiles also bounds structural-hint preload (orchestration-only / thin-adapter /
+     *  writes-via-aggregate). There is no arkrules.hintBudget. */
     coverage: { $ref: '#/$defs/coverage' },
     /** ADR 0012 — layer name → relative path to arkrules/<Layer>.json */
     arkRules: {
@@ -247,10 +249,15 @@ export const ARK_CONFIG_SCHEMA = {
       type: 'object',
       additionalProperties: false,
       description:
-        'Invariant coverage scan controls. testGlobs replaces the built-in test-name heuristic; maxFiles raises or lowers the evidence file budget; coverageRoots declares where the project runs its tests, so a covering test found outside them is reported instead of silently certifying an invariant.',
+        'Invariant coverage scan controls. testGlobs replaces the built-in test-name heuristic; maxFiles raises or lowers the evidence file budget and also bounds structural-hint preload for orchestration-only, thin-adapter, and writes-via-aggregate (default 400; there is no arkrules.hintBudget); coverageRoots declares where the project runs its tests, so a covering test found outside them is reported instead of silently certifying an invariant.',
       properties: {
         testGlobs: { ...stringArraySchema, minItems: 1 },
-        maxFiles: { type: 'integer', minimum: 1 },
+        maxFiles: {
+          type: 'integer',
+          minimum: 1,
+          description:
+            'Evidence file budget (default 400) and structural-hint preload cap for orchestration-only, thin-adapter, and writes-via-aggregate. Raise this when hinted/governed counts show truncated sensors. There is no separate arkrules.hintBudget.',
+        },
         coverageRoots: { ...stringArraySchema, minItems: 1 },
       },
     },

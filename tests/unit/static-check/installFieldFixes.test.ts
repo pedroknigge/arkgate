@@ -112,6 +112,64 @@ describe('ensureBaselineFlagInCheckCommand + syncBaselineIntoCheckSurfaces', () 
     expect(custom.command).toContain('--baseline debt/baseline.json');
   });
 
+  it('rewrites only ark-check invocation lines, never concurrency.group or job ids', () => {
+    expect(
+      ensureBaselineFlagInCheckCommand('  group: ark-check-${{ github.ref }}').changed
+    ).toBe(false);
+    expect(ensureBaselineFlagInCheckCommand('  ark-check:').changed).toBe(false);
+    expect(ensureBaselineFlagInCheckCommand('  arkgate-check:').changed).toBe(false);
+    const runLine = ensureBaselineFlagInCheckCommand(
+      '      - run: npx ark-check --root . --config ark.config.json --strict-config'
+    );
+    expect(runLine.changed).toBe(true);
+    expect(runLine.command).toContain('--baseline .ark-baseline.json');
+    expect(
+      ensureBaselineFlagInCheckCommand('pnpm exec ark-check --strict-config').changed
+    ).toBe(true);
+    expect(
+      ensureBaselineFlagInCheckCommand('node bin/ark-check.mjs --strict-config').changed
+    ).toBe(true);
+
+    const root = tempRoot('ark-baseline-yaml-invoke-');
+    write(
+      root,
+      'package.json',
+      JSON.stringify({ name: 'yaml-invoke', scripts: { lint: 'echo no' } }, null, 2)
+    );
+    write(
+      root,
+      '.github/workflows/ark-check.yml',
+      [
+        'name: Ark',
+        'on: push',
+        'concurrency:',
+        '  group: ark-check-${{ github.ref }}',
+        '  cancel-in-progress: true',
+        'jobs:',
+        '  ark-check:',
+        '    runs-on: ubuntu-latest',
+        '    steps:',
+        '      - run: npx ark-check --root . --config ark.config.json --strict-config',
+        '',
+      ].join('\n')
+    );
+    write(
+      root,
+      '.ark-baseline.json',
+      JSON.stringify({ version: 1, violations: [] }, null, 2)
+    );
+    const after = syncBaselineIntoCheckSurfaces(root);
+    expect(after.changed.some((c) => c.file.includes('ark-check.yml'))).toBe(true);
+    const wf = fs.readFileSync(path.join(root, '.github/workflows/ark-check.yml'), 'utf8');
+    expect(wf).toContain('group: ark-check-${{ github.ref }}\n');
+    expect(wf).toContain('  ark-check:\n');
+    expect(wf).not.toMatch(/group: ark-check-\$\{\{ github\.ref \}\} --baseline/);
+    expect(wf).not.toMatch(/ark-check: --baseline/);
+    expect(wf).toMatch(
+      /run: npx ark-check --root \. --config ark\.config\.json --strict-config --baseline \.ark-baseline\.json/
+    );
+  });
+
   it('syncs package.json script and GH workflow after baseline file exists', () => {
     const root = tempRoot('ark-baseline-sync-');
     write(
@@ -201,7 +259,17 @@ describe('ensureBaselineFlagInCheckCommand + syncBaselineIntoCheckSurfaces', () 
     write(
       root,
       '.github/workflows/ark-check.yml',
-      `name: Ark\njobs:\n  a:\n    runs-on: ubuntu-latest\n    steps:\n      - run: npx ark-check --root . --config ark.config.json --strict-config\n`
+      [
+        'name: Ark',
+        'concurrency:',
+        '  group: ark-check-${{ github.ref }}',
+        'jobs:',
+        '  ark-check:',
+        '    runs-on: ubuntu-latest',
+        '    steps:',
+        '      - run: npx ark-check --root . --config ark.config.json --strict-config',
+        '',
+      ].join('\n')
     );
 
     const out = spawnSync(
@@ -223,8 +291,12 @@ describe('ensureBaselineFlagInCheckCommand + syncBaselineIntoCheckSurfaces', () 
     const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
     expect(pkg.scripts['check:architecture']).toMatch(/--baseline/);
     const wf = fs.readFileSync(path.join(root, '.github/workflows/ark-check.yml'), 'utf8');
-    expect(wf).toMatch(/--baseline/);
-    expect(`${out.stdout}${out.stderr}`).toMatch(/Synced --baseline|baseline/i);
+    expect(wf).toContain('group: ark-check-${{ github.ref }}\n');
+    expect(wf).toContain('  ark-check:\n');
+    expect(wf).not.toMatch(/group: ark-check-\$\{\{ github\.ref \}\} --baseline/);
+    expect(wf).not.toMatch(/ark-check: --baseline/);
+    expect(wf).toMatch(/run: npx ark-check .* --baseline/);
+    expect(`${out.stdout}${out.stderr}`).toMatch(/Synced --baseline/);
   });
 });
 

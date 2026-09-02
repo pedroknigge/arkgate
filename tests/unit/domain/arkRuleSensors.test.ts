@@ -4,12 +4,14 @@ import {
   loadArkRulesContract,
 } from '../../../src/domain/arkRulesContract';
 import {
+  DOMAIN_INVARIANT_WORDS,
   buildArkRuleFileHints,
   collectEmptyAppliesToFindings,
   deriveArkRuleFileHints,
   evaluateArkRuleSensors,
   extractClassShapesFromSource,
 } from '../../../src/domain/arkRuleSensors';
+import { extractArkOrderXiFieldWritesFromSource } from '../../../src/domain/arkOrderFacts';
 import {
   buildArkRuleFileHints as buildCliArkRuleFileHints,
   collectEmptyAppliesToFindings as collectCliEmptyAppliesToFindings,
@@ -244,6 +246,253 @@ export async function listOrders() {
     expect(findings.every((f) => f.failsStrict === false)).toBe(true);
   });
 
+  it('treats import { db } from "@/lib/db" + db.update() as a persistence write (WRITEAGG-001)', () => {
+    const aliasWrite = `
+import { db } from '@/lib/db';
+export async function saveOrder(cmd) {
+  await db.update(orders).set(cmd);
+}
+`;
+    expect(
+      deriveArkRuleFileHints('src/application/save-order.ts', aliasWrite)?.persistenceWrite
+    ).toBe(true);
+
+    const findings = evaluateArkRuleSensors({
+      arkRules: effective([
+        {
+          id: 'writes',
+          sensor: 'writes-via-aggregate',
+          mode: 'advisory',
+          appliesTo: ['src/application/**'],
+        },
+      ]),
+      classShapes: [],
+      files: ['src/application/save-order.ts'],
+      fileHints: buildArkRuleFileHints({ 'src/application/save-order.ts': aliasWrite }),
+    });
+    expect(findings.some((f) => f.arkruleId === 'writes' && f.file.includes('save-order'))).toBe(
+      true
+    );
+
+    const txInsert = `
+import { eq } from 'drizzle-orm';
+export async function saveOrder(tx, cmd) {
+  await tx.insert(orders).values(cmd);
+}
+`;
+    expect(
+      deriveArkRuleFileHints('src/application/save-order.ts', txInsert)?.persistenceWrite
+    ).toBe(true);
+  });
+
+  it('does not treat repo.update() with a drizzle eq import as a persistence write (WRITEAGG-001)', () => {
+    const repoUpdate = `
+import { eq } from 'drizzle-orm';
+export async function saveOrder(repo, cmd) {
+  await repo.update(eq(orders.id, cmd.id), { status: cmd.status });
+}
+`;
+    expect(
+      deriveArkRuleFileHints('src/application/save-order.ts', repoUpdate)?.persistenceWrite
+    ).toBeUndefined();
+
+    const findings = evaluateArkRuleSensors({
+      arkRules: effective([
+        {
+          id: 'writes',
+          sensor: 'writes-via-aggregate',
+          mode: 'advisory',
+          appliesTo: ['src/application/**'],
+        },
+      ]),
+      classShapes: [],
+      files: ['src/application/save-order.ts'],
+      fileHints: buildArkRuleFileHints({ 'src/application/save-order.ts': repoUpdate }),
+    });
+    expect(findings.some((f) => f.file.includes('save-order'))).toBe(false);
+  });
+
+  it('classifies PersistenceAdapters resolved imports as a driver (WRITEAGG-001)', () => {
+    const viaAdapter = `
+import { connection } from '@/server/infra';
+export async function saveOrder(cmd) {
+  await db.update(orders).set(cmd);
+}
+`;
+    expect(
+      deriveArkRuleFileHints('src/application/save-order.ts', viaAdapter)?.persistenceWrite
+    ).toBeUndefined();
+    expect(
+      deriveArkRuleFileHints('src/application/save-order.ts', viaAdapter, [
+        {
+          specifier: '@/server/infra',
+          resolvedFile: 'src/adapters/persistence/db.ts',
+          layer: 'PersistenceAdapters',
+        },
+      ])?.persistenceWrite
+    ).toBe(true);
+  });
+
+  it('keeps ArkOrder IO write regex in lockstep with writes-via-aggregate (WRITEAGG-001)', () => {
+    const aliasWrite = `
+import { db } from '@/lib/db';
+export async function saveOrder(cmd) {
+  await db.update(orders).set({ status: cmd.status });
+}
+`;
+    const repoUpdate = `
+import { eq } from 'drizzle-orm';
+export async function saveOrder(repo, cmd) {
+  await repo.update(eq(orders.id, cmd.id), { status: cmd.status });
+}
+`;
+    expect(
+      extractArkOrderXiFieldWritesFromSource('src/application/save-order.ts', aliasWrite, [
+        'status',
+      ]).some((f) => f.key === 'status')
+    ).toBe(true);
+    expect(
+      extractArkOrderXiFieldWritesFromSource('src/application/save-order.ts', repoUpdate, [
+        'status',
+      ])
+    ).toEqual([]);
+  });
+
+  it('matches postgres and drizzle-orm subpath driver imports (EOSF2-001)', () => {
+    const postgresWrite = `
+import postgres from 'postgres';
+export async function saveOrder(cmd) {
+  await db.insert(orders).values(cmd);
+}
+`;
+    const drizzleSubpathWrite = `
+import { drizzle } from 'drizzle-orm/postgres-js';
+export async function saveOrder(cmd) {
+  await db.insert(orders).values(cmd);
+}
+`;
+    const drizzleRootWrite = `
+import { eq } from 'drizzle-orm';
+export async function saveOrder(cmd) {
+  await db.insert(orders).values(cmd);
+}
+`;
+    const postgresRepo = `
+import postgres from 'postgres';
+export async function saveOrder(repo, cmd) {
+  await repo.update(cmd);
+}
+`;
+    expect(
+      deriveArkRuleFileHints('src/application/save-order.ts', postgresWrite)?.persistenceWrite
+    ).toBe(true);
+    expect(
+      deriveArkRuleFileHints('src/application/save-order.ts', drizzleSubpathWrite)?.persistenceWrite
+    ).toBe(true);
+    expect(
+      deriveArkRuleFileHints('src/application/save-order.ts', drizzleRootWrite)?.persistenceWrite
+    ).toBe(true);
+    expect(
+      deriveArkRuleFileHints('src/application/save-order.ts', postgresRepo)?.persistenceWrite
+    ).toBeUndefined();
+
+    const findings = evaluateArkRuleSensors({
+      arkRules: effective([
+        {
+          id: 'writes',
+          sensor: 'writes-via-aggregate',
+          mode: 'enforced',
+          appliesTo: ['src/application/**'],
+        },
+      ]),
+      classShapes: [],
+      files: ['src/application/postgres.ts', 'src/application/drizzle-subpath.ts'],
+      fileHints: buildArkRuleFileHints({
+        'src/application/postgres.ts': postgresWrite,
+        'src/application/drizzle-subpath.ts': drizzleSubpathWrite,
+      }),
+    });
+    expect(findings.some((f) => f.arkruleId === 'writes' && f.file.includes('postgres'))).toBe(
+      true
+    );
+    expect(
+      findings.some((f) => f.arkruleId === 'writes' && f.file.includes('drizzle-subpath'))
+    ).toBe(true);
+    expect(findings.every((f) => f.failsStrict === true)).toBe(true);
+  });
+
+  it('keeps ArkOrder IO regex in lockstep for postgres and drizzle-orm subpaths (EOSF2-001)', () => {
+    const postgresWrite = `
+import postgres from 'postgres';
+export async function saveOrder(cmd) {
+  await db.insert(orders).values({ status: cmd.status });
+}
+`;
+    const drizzleSubpathWrite = `
+import { drizzle } from 'drizzle-orm/postgres-js';
+export async function saveOrder(cmd) {
+  await db.insert(orders).values({ status: cmd.status });
+}
+`;
+    expect(
+      extractArkOrderXiFieldWritesFromSource('src/application/save-order.ts', postgresWrite, [
+        'status',
+      ]).some((f) => f.key === 'status')
+    ).toBe(true);
+    expect(
+      extractArkOrderXiFieldWritesFromSource('src/application/save-order.ts', drizzleSubpathWrite, [
+        'status',
+      ]).some((f) => f.key === 'status')
+    ).toBe(true);
+  });
+
+  it('fires writes-via-aggregate for drizzle-orm + db.insert when file content is present (EOSF1-001)', () => {
+    const probe = `
+import { eq } from "drizzle-orm";
+export async function saveProgress(cmd) {
+  await db.insert(activityProgress).values(cmd);
+}
+`;
+    expect(probe.length).toBeGreaterThan(0);
+    expect(deriveArkRuleFileHints('src/lib/features/save.ts', probe)?.persistenceWrite).toBe(true);
+
+    const fileContents = { 'src/lib/features/save.ts': probe };
+    const hints = buildArkRuleFileHints(fileContents);
+    expect(fileContents['src/lib/features/save.ts']).toMatch(/drizzle-orm/);
+    expect(fileContents['src/lib/features/save.ts']!.length).toBeGreaterThan(0);
+    expect(hints['src/lib/features/save.ts']?.persistenceWrite).toBe(true);
+
+    const findings = evaluateArkRuleSensors({
+      arkRules: effective([
+        {
+          id: 'writes',
+          sensor: 'writes-via-aggregate',
+          mode: 'enforced',
+          appliesTo: ['src/lib/**'],
+        },
+      ]),
+      classShapes: [],
+      files: ['src/lib/features/save.ts'],
+      fileHints: hints,
+    });
+    expect(findings.some((f) => f.arkruleId === 'writes' && f.failsStrict)).toBe(true);
+  });
+
+  it('does not treat empty fileHints content as a persistence write (EOSF1-001)', () => {
+    expect(deriveArkRuleFileHints('src/lib/features/save.ts', '')).toBeNull();
+    expect(buildArkRuleFileHints({ 'src/lib/features/save.ts': '' })['src/lib/features/save.ts']).toBe(
+      undefined
+    );
+  });
+
+  it('still derives persistenceWrite when inside-budget content is shorter than the orchestration floor (EOSF1-001)', () => {
+    const shortProbe = "from 'postgres'\ndb.insert(t).values(x)";
+    expect(shortProbe.length).toBeLessThan(40);
+    expect(deriveArkRuleFileHints('src/lib/save.ts', shortProbe)?.persistenceWrite).toBe(true);
+    const hints = buildArkRuleFileHints({ 'src/lib/save.ts': shortProbe });
+    expect(hints['src/lib/save.ts']?.persistenceWrite).toBe(true);
+  });
+
   it('warns on zero-match appliesTo (ADR 0012 empty scope)', () => {
     const arkRules = effective([
       {
@@ -366,6 +615,151 @@ export class Property {
       ['src/domain/order.ts']
     );
     expect(empty).toEqual([]);
+  });
+
+  it('sees a later mutator whose signature has nested parentheses (SHAPE-001 residual)', () => {
+    const shapes = extractClassShapesFromSource(
+      'src/domain/order.ts',
+      `
+export class Order {
+  private status = 'Open';
+  private constructor() {}
+  static create() { return new Order(); }
+  declare() { this.ensureInvariants(); }
+  close(
+    reason: string,
+    notify: (id: string) => void
+  ) { this.status = 'Closed'; }
+}
+`
+    );
+    expect(shapes[0]?.mutatingMethods.map((m) => m.name)).toEqual(['close']);
+    const findings = evaluateArkRuleSensors({
+      arkRules: effective([
+        { id: 'events', sensor: 'domain-event-on-mutation', mode: 'enforced' },
+      ]),
+      classShapes: shapes,
+      files: ['src/domain/order.ts'],
+    });
+    expect(findings.some((f) => f.message.includes('close'))).toBe(true);
+    expect(findings.some((f) => f.message.includes('declare'))).toBe(false);
+  });
+
+  it('does not treat object literals or multiline params as public fields (DSHAPE-001)', () => {
+    const shapes = extractClassShapesFromSource(
+      'src/domain/order.ts',
+      `
+export class Order {
+  private status = 'Open';
+  private constructor() {}
+  static create() { return new Order(); }
+  close(
+    reason: string,
+    at: Date
+  ) {
+    return { status: 'Closed', reason };
+  }
+}
+`
+    );
+    expect(shapes[0]?.hasPublicMutableFields).toBe(false);
+    const findings = evaluateArkRuleSensors({
+      arkRules: effective([
+        { id: 'private-state', sensor: 'aggregate-private-state', mode: 'enforced' },
+      ]),
+      classShapes: shapes,
+      files: ['src/domain/order.ts'],
+    });
+    expect(findings).toEqual([]);
+  });
+
+  it('does not treat this.x === y as assignment; pendingEvents = [] is not a mutator (DSHAPE-001)', () => {
+    const shapes = extractClassShapesFromSource(
+      'src/domain/order.ts',
+      `
+export class Order {
+  private status = 'Open';
+  private pendingEvents: unknown[] = [];
+  private constructor() {}
+  static create() { return new Order(); }
+  ensureInvariants() { if (this.status === 'Closed') throw new Error('closed'); }
+  pullEvents() { const out = this.pendingEvents; this.pendingEvents = []; return out; }
+}
+`
+    );
+    expect(shapes[0]?.mutatingMethods).toEqual([]);
+  });
+
+  it('counts events-array .push( as publish and names expected words (DSHAPE-001)', () => {
+    expect(DOMAIN_INVARIANT_WORDS).toEqual([
+      'ensureInvariants',
+      'assertInvariants',
+      'validate',
+      'publish',
+      'emit',
+      'raise',
+      'record',
+    ]);
+    const shapes = extractClassShapesFromSource(
+      'src/domain/order.ts',
+      `
+export class Order {
+  private status = 'Open';
+  private pendingEvents: unknown[] = [];
+  private constructor() {}
+  static create() { return new Order(); }
+  close() { this.status = 'Closed'; this.pendingEvents.push({ type: 'Closed' }); }
+}
+`
+    );
+    expect(shapes[0]?.mutatingMethods).toEqual([
+      { name: 'close', referencesGuardOrPublish: true },
+    ]);
+    const unguarded = extractClassShapesFromSource(
+      'src/domain/order.ts',
+      `
+export class Order {
+  private status = 'Open';
+  private constructor() {}
+  static create() { return new Order(); }
+  close() { this.status = 'Closed'; }
+}
+`
+    );
+    const findings = evaluateArkRuleSensors({
+      arkRules: effective([
+        { id: 'events', sensor: 'domain-event-on-mutation', mode: 'enforced' },
+      ]),
+      classShapes: unguarded,
+      files: ['src/domain/order.ts'],
+    });
+    const message = findings.find((f) => f.message.includes('close'))?.message ?? '';
+    expect(message).toContain('ensureInvariants');
+    expect(message).toContain('raise');
+    expect(message).toContain('record');
+    expect(message).toMatch(/\.push\(/);
+  });
+
+  it('names remaining shape truncation in the sensor message (SHAPE-001)', () => {
+    const shapes = extractClassShapesFromSource(
+      'src/domain/order.ts',
+      `
+export class Order {
+  private status = 'Open';
+  close() { this.status = 'Closed';
+`
+    );
+    expect(shapes).toHaveLength(1);
+    const findings = evaluateArkRuleSensors({
+      arkRules: effective([
+        { id: 'events', sensor: 'domain-event-on-mutation', mode: 'enforced' },
+      ]),
+      classShapes: shapes,
+      files: ['src/domain/order.ts'],
+    });
+    expect(findings.some((f) => /shape analysed until character \d+/.test(f.message))).toBe(
+      true
+    );
   });
 
   it('keeps the generated CLI sensor artifact behaviorally aligned', () => {

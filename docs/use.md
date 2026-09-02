@@ -163,12 +163,23 @@ Short loop so agents do not invent residual or re-run doctor every message:
    **`unavailable`** (or compass facts are missing), run `npx ark-check --doctor` (add `--json` for
    the full 15-lens map) before treating residual as complete. When mode is **`full`**, status
    residual ids are a safe subset of doctor residual for the same facts.
+5. **If ArkGate itself is wrong** — run `npx arkgate report` (alias `ark report`). Default prints
+   a draft GitHub issue for **upstream** `pedroknigge/arkgate` (`package.json` `bugs.url`) with
+   the arkgate version and last-check snippet. **Ask the human to confirm send.** Create only
+   with `--submit` and `--i-confirm-submit` (or TTY `Type submit to send`). `--yes` does not
+   submit. If `gh` is missing, the command prints the draft plus `gh issue create --repo
+   pedroknigge/arkgate …` and exits 2. Never auto-file. Never file ArkGate defects on the
+   consumer product repo. Not `arkgate-check --report` (HTML).
 
 ```bash
 npx ark status --json --expected-root /abs/project/root
 # when mode is not full:
 npx ark-check --doctor
 npx ark-check --doctor --json   # doctor.improvementCompass
+# draft an upstream issue (nothing created yet):
+npx ark report
+# after the human says yes — one finding, upstream only:
+npx ark report --submit --i-confirm-submit
 ```
 
 Details: [agent-guide — Session recipe](agent-guide.md#session-recipe-agent-turn) ·

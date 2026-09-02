@@ -10,8 +10,13 @@
 
 export const ARKORDER_PLANE_FACTORY = 'createOrderPlane';
 export const ARKORDER_FORBIDDEN_METHODS = ['update', 'patch', 'set', 'mutate'];
-const IO_IMPORT_HINT_RE = /\bfrom\s+['"](?:@?prisma\/client|@supabase\/|drizzle-orm|typeorm|knex|mongodb|pg|mysql2|mongoose|better-sqlite3|ioredis|redis|kysely|sequelize)['"]|require\(\s*['"](?:@?prisma\/client|pg|knex|typeorm|mongoose)/;
-const PERSISTENCE_WRITE_HINT_RE = /\.(?:insert(?:One|Many)?|update(?:One|Many)?|upsert|delete(?:One|Many)?|createMany|create|replaceOne|findOneAnd(?:Update|Delete|Replace))\s*\(|\bINSERT\s+INTO\b|\bUPDATE\s+[A-Za-z_][\w.]*\s+SET\b|\bDELETE\s+FROM\b/i;
+/** Keep in lockstep with arkRuleSensors (WRITEAGG-001 / EOSF2-001). */
+const IO_IMPORT_HINT_RE = /\bfrom\s+['"](?:@?prisma\/client|@supabase\/|drizzle-orm(?:\/[^'"]+)?|postgres(?:\/[^'"]+)?|typeorm|knex|mongodb|pg|mysql2|mongoose|better-sqlite3|ioredis|redis|kysely|sequelize)['"]|require\(\s*['"](?:@?prisma\/client|pg|postgres(?:\/[^'"]+)?|drizzle-orm(?:\/[^'"]+)?|knex|typeorm|mongoose)/;
+const IO_ALIAS_IMPORT_RE = /\bfrom\s+['"](?:@\/|~\/)?(?:[\w.-]+\/)*(?:db|database|prisma|drizzle)(?:\.[cm]?[jt]sx?)?['"]|require\(\s*['"](?:@\/|~\/)?(?:[\w.-]+\/)*(?:db|database|prisma|drizzle)/;
+const PERSISTENCE_WRITE_HINT_RE = /\b(?:db|tx|client|prisma(?:Client)?|drizzle)\b(?:\s*\.\s*[A-Za-z_]\w*)*\s*\.\s*(?:insert(?:One|Many)?|update(?:One|Many)?|upsert|delete(?:One|Many)?|createMany|create|replaceOne|findOneAnd(?:Update|Delete|Replace))\s*\(|\bINSERT\s+INTO\b|\bUPDATE\s+[A-Za-z_][\w.]*\s+SET\b|\bDELETE\s+FROM\b/i;
+function sourceImportsPersistenceDriver(content) {
+    return IO_IMPORT_HINT_RE.test(content) || IO_ALIAS_IMPORT_RE.test(content);
+}
 function escapeRegExp(value) {
     return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -49,7 +54,9 @@ export function extractArkOrderGenericUpdatesFromSource(file, content) {
     while ((match = re.exec(source)) !== null) {
         const method = match[1];
         const before = source.slice(Math.max(0, match.index - 80), match.index);
-        if (!/\b(?:plane|orderPlane|order)\s*$/.test(before) && !/\bcreateOrderPlane\b/.test(source)) {
+        // EOSF5-001: Map/URLSearchParams/React order.set is not ξ mutation.
+        const calleeIsOrderPlane = /\b(?:plane|orderPlane)\s*(?:\?|!)?$/.test(before);
+        if (!calleeIsOrderPlane && !/\bcreateOrderPlane\b/.test(source)) {
             continue;
         }
         facts.push({ file, line: lineAt(content, match.index), method });
@@ -64,7 +71,7 @@ export function extractArkOrderXiFieldWritesFromSource(file, content, xiKeys) {
     if (xiKeys.length === 0)
         return [];
     const source = stripCommentsPreservingLines(content);
-    if (!IO_IMPORT_HINT_RE.test(source) || !PERSISTENCE_WRITE_HINT_RE.test(source))
+    if (!sourceImportsPersistenceDriver(source) || !PERSISTENCE_WRITE_HINT_RE.test(source))
         return [];
     const facts = [];
     const seen = new Set();

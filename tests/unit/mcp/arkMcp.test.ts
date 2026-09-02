@@ -431,7 +431,7 @@ describe('ark-mcp server (write-path gate)', () => {
     const res = await client.request('tools/call', {
       name: 'validate_code',
       arguments: {
-        source: "export const ref = 'Application.PlaceOrder';\n",
+        source: "defineIntent('Application.PlaceOrder');\n",
         filePath: 'src/core/sub/order.ts',
       },
     });
@@ -506,7 +506,7 @@ describe('ark-mcp server (write-path gate)', () => {
       const res = await c.request('tools/call', {
         name: 'validate_code',
         arguments: {
-          source: "export const ref = 'Adapter.Persistence.Save';\n",
+          source: "defineIntent('Adapter.Persistence.Save');\n",
           filePath: 'src/domain/order.ts',
         },
       });
@@ -564,7 +564,7 @@ describe('ark-mcp server (write-path gate)', () => {
       const validation = await manifestClient.request('tools/call', {
         name: 'validate_code',
         arguments: {
-          source: "export const ref = 'Adapter.Persistence.Save';\n",
+          source: "defineIntent('Adapter.Persistence.Save');\n",
           layer: 'DomainModel',
         },
       });

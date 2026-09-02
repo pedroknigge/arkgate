@@ -230,6 +230,13 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
     { oftenAdvisory: true }
   ),
   entry(
+    'ARKRULE_HINT_BUDGET_EXHAUSTED',
+    'arkrules',
+    'Structural-hint budget exhausted',
+    'orchestration-only, thin-adapter, and writes-via-aggregate only evaluate files the hint loader preloaded. When eligible governed files exceed that budget (coverage.maxFiles, default 400 — there is no arkrules.hintBudget), those sensors never saw the rest of their scope. Enforced + unreviewed is not green. The finding names exact hinted/governed counts and per-sensor reviewed N/M of scope.',
+    'Raise coverage.maxFiles in ark.config.json (this cap also bounds structural-hint preload; --doctor names the coupling) so hinted/governed counts match, then re-run with --strict-config. An enforced hint sensor that cannot see its scope fails strict.'
+  ),
+  entry(
     'INVARIANT_UNCOVERED',
     'arkrules',
     'Invariant without coverage evidence',

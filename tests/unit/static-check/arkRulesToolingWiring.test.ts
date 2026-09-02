@@ -12,6 +12,10 @@ import {
   loadInvariantCoverageInputs,
 } from '../../../bin/lib/invariant-coverage-io.mjs';
 import {
+  DEFAULT_MAX_HINT_FILES,
+  HINT_BUDGET_DOCTOR_LINE,
+  formatHintBudgetDoctorLine,
+  getArkRuleHintBudget,
   loadArkRuleFileHints,
   needsArkRuleFileHints,
 } from '../../../bin/lib/arkrule-file-hints.mjs';
@@ -739,5 +743,119 @@ export async function save(order: Order) {
     expect(html).toContain('INV-U-0');
     expect(html).toMatch(/\(\+42 more structure rule/);
     expect(html).toMatch(/\(\+28 more uncovered\)/);
+  });
+
+  it('emits exact hinted/governed counts and fails strict when enforced hint sensors miss their scope', () => {
+    // HINT-001: incomplete analysis must not look green. Budget 3 of 5 eligible
+    // files — writes-via-aggregate applies only under src/lib/**, which the
+    // alphabetical cap never reaches.
+    const root = makeRoot();
+    fs.mkdirSync(path.join(root, 'src', 'app'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'src', 'lib'), { recursive: true });
+    const files: Array<{ path: string }> = [];
+    for (let i = 0; i < 3; i += 1) {
+      const rel = `src/app/a${i}.ts`;
+      fs.writeFileSync(path.join(root, rel), `export const a${i} = ${i};\n`);
+      files.push({ path: rel });
+    }
+    for (let i = 0; i < 2; i += 1) {
+      const rel = `src/lib/b${i}.ts`;
+      fs.writeFileSync(path.join(root, rel), `export const b${i} = ${i};\n`);
+      files.push({ path: rel });
+    }
+    const arkRules = {
+      structure: [
+        { sensor: 'orchestration-only', mode: 'enforced' },
+        { sensor: 'thin-adapter', mode: 'enforced' },
+        {
+          sensor: 'writes-via-aggregate',
+          mode: 'enforced',
+          appliesTo: ['src/lib/**'],
+        },
+      ],
+    };
+    const hints = loadArkRuleFileHints(root, { files }, arkRules, undefined, { maxFiles: 3 });
+    const budget = getArkRuleHintBudget(hints);
+    expect(budget?.hinted).toBe(3);
+    expect(budget?.governed).toBe(5);
+    expect(budget?.budget).toBe(3);
+    expect(budget?.truncated).toBe(true);
+    expect(budget?.finding?.ruleId).toBe('ARKRULE_HINT_BUDGET_EXHAUSTED');
+    expect(budget?.finding?.failsStrict).toBe(true);
+    expect(budget?.finding?.message).toMatch(/hinted 3 of 5/);
+    expect(budget?.sensors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          sensor: 'orchestration-only',
+          reviewed: 3,
+          scope: 5,
+        }),
+        expect.objectContaining({
+          sensor: 'writes-via-aggregate',
+          reviewed: 0,
+          scope: 2,
+        }),
+      ])
+    );
+    expect(budget?.completenessReason?.code).toBe('ARKRULE_HINT_BUDGET_EXHAUSTED');
+    expect(budget?.completenessReason?.message).toMatch(
+      /writes-via-aggregate reviewed 0\/2 files of its scope/
+    );
+    expect(formatHintBudgetDoctorLine(budget)).toMatch(/coverage\.maxFiles/);
+    expect(formatHintBudgetDoctorLine(budget)).toMatch(/structural-hint preload/);
+    // architecture-scan still consumes this as a path→flags map.
+    expect(hints && typeof hints === 'object').toBe(true);
+    expect(Object.keys(hints ?? {}).every((key) => key.includes('/'))).toBe(true);
+  });
+
+  it('warns with exact counts but does not fail strict when hint sensors are advisory', () => {
+    const root = makeRoot();
+    fs.mkdirSync(path.join(root, 'src'), { recursive: true });
+    const files: Array<{ path: string }> = [];
+    for (let i = 0; i < 4; i += 1) {
+      const rel = `src/f${i}.ts`;
+      fs.writeFileSync(path.join(root, rel), `export const f${i} = ${i};\n`);
+      files.push({ path: rel });
+    }
+    const hints = loadArkRuleFileHints(
+      root,
+      { files },
+      { structure: [{ sensor: 'orchestration-only', mode: 'advisory' }] },
+      undefined,
+      { maxFiles: 2 }
+    );
+    const budget = getArkRuleHintBudget(hints);
+    expect(budget?.hinted).toBe(2);
+    expect(budget?.governed).toBe(4);
+    expect(budget?.finding?.failsStrict).toBe(false);
+    expect(budget?.finding?.message).toMatch(/hinted 2 of 4/);
+  });
+
+  it('is complete when eligible governed files fit the hint budget', () => {
+    const root = makeRoot();
+    fs.mkdirSync(path.join(root, 'src'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src', 'ok.ts'), 'export const ok = 1;\n');
+    const hints = loadArkRuleFileHints(
+      root,
+      { files: [{ path: 'src/ok.ts' }] },
+      { structure: [{ sensor: 'orchestration-only', mode: 'enforced' }] }
+    );
+    const budget = getArkRuleHintBudget(hints);
+    expect(budget?.hinted).toBe(1);
+    expect(budget?.governed).toBe(1);
+    expect(budget?.budget).toBe(DEFAULT_MAX_HINT_FILES);
+    expect(budget?.truncated).toBe(false);
+    expect(budget?.finding).toBeNull();
+    expect(budget?.completenessReason).toBeNull();
+  });
+
+  it('doctor line names that coverage.maxFiles also bounds structural-hint preload', () => {
+    expect(HINT_BUDGET_DOCTOR_LINE).toMatch(/coverage\.maxFiles/);
+    expect(HINT_BUDGET_DOCTOR_LINE).toMatch(/structural-hint preload/);
+    expect(HINT_BUDGET_DOCTOR_LINE).toMatch(/orchestration-only/);
+    expect(HINT_BUDGET_DOCTOR_LINE).toMatch(/thin-adapter/);
+    expect(HINT_BUDGET_DOCTOR_LINE).toMatch(/writes-via-aggregate/);
+    expect(HINT_BUDGET_DOCTOR_LINE).toMatch(/no separate arkrules\.hintBudget/);
+    expect(HINT_BUDGET_DOCTOR_LINE).toMatch(/default 400/);
   });
 });

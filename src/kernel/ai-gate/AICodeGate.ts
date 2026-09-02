@@ -145,15 +145,55 @@ function lineOf(source: string, index: number): number {
   return source.slice(0, index).split('\n').length;
 }
 
-/** Extract quoted string literals from source (naive scan). */
+const INTENT_CALL_NAMES = new Set(['publish', 'subscribe', 'defineIntent', 'registerHandler']);
+
+function captureIndex(match: RegExpExecArray, value: string): number {
+  return match.index + match[0].indexOf(value);
+}
+
+/** Quoted strings at declared intent sites only (events, sagas, publish metadata). */
 function extractQuotedStrings(source: string): StringMatch[] {
   const matches: StringMatch[] = [];
-  const re = /['"`]([A-Za-z][A-Za-z0-9_.]*)['"`]/g;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(source)) !== null) {
-    matches.push({ value: m[1], index: m.index });
+  const seen = new Set<number>();
+  const push = (value: string, index: number) => {
+    if (!value || seen.has(index)) return;
+    seen.add(index);
+    matches.push({ value, index });
+  };
+  const pushFrom = (re: RegExp) => {
+    re.lastIndex = 0;
+    let match: RegExpExecArray | null;
+    while ((match = re.exec(source)) !== null) {
+      const value = match[1];
+      if (value) push(value, captureIndex(match, value));
+    }
+  };
+  // Bound whitespace and type-arg spans: `\s*` on library input (file source)
+  // is polynomial ReDoS (CodeQL js/polynomial-redos). Intent sites never need
+  // more than a handful of spaces.
+  pushFrom(
+    /\b(?:publish|subscribe|defineIntent|registerHandler)\s{0,8}(?:<[^>]{0,120}>)?\s{0,8}\(\s{0,8}['"`]([A-Za-z][A-Za-z0-9_.]*)['"`]/g
+  );
+  pushFrom(/\b(?:intent|onEvent)\s{0,8}:\s{0,8}['"`]([A-Za-z][A-Za-z0-9_.]*)['"`]/g);
+  const reactsRe = /\breactsTo\s{0,8}:\s{0,8}\[([^\]]{0,2000})\]/g;
+  let reacts: RegExpExecArray | null;
+  while ((reacts = reactsRe.exec(source)) !== null) {
+    const inner = reacts[1] ?? '';
+    const innerStart = reacts.index + reacts[0].indexOf(inner);
+    const strRe = /['"`]([A-Za-z][A-Za-z0-9_.]*)['"`]/g;
+    let nested: RegExpExecArray | null;
+    while ((nested = strRe.exec(inner)) !== null) {
+      const value = nested[1];
+      if (value) push(value, innerStart + nested.index + nested[0].indexOf(value));
+    }
   }
-  return matches;
+  pushFrom(
+    /\bmetadata\s{0,8}:\s{0,8}\{[^}]{0,400}\bsource\s{0,8}:\s{0,8}['"`]([A-Za-z][A-Za-z0-9_.]*)['"`]/g
+  );
+  pushFrom(
+    /\bpublish\s{0,8}(?:<[^>]{0,120}>)?\s{0,8}\([^;]{0,400}?\bsource\s{0,8}:\s{0,8}['"`]([A-Za-z][A-Za-z0-9_.]*)['"`]/g
+  );
+  return matches.sort((left, right) => left.index - right.index);
 }
 
 function extractModuleSpecifiers(source: string): ModuleSpecifierMatch[] {
@@ -192,11 +232,81 @@ function extractModuleSpecifiers(source: string): ModuleSpecifierMatch[] {
   return matches.sort((a, b) => a.index - b.index);
 }
 
+function isSyntaxWrapper(ts: any, node: any): boolean {
+  return Boolean(
+    node &&
+      (ts.isParenthesizedExpression(node) ||
+        ts.isAsExpression(node) ||
+        (typeof ts.isTypeAssertionExpression === 'function' &&
+          ts.isTypeAssertionExpression(node)) ||
+        (typeof ts.isSatisfiesExpression === 'function' && ts.isSatisfiesExpression(node)))
+  );
+}
+
+function unwrapWrappers(ts: any, node: any): any {
+  let current = node;
+  while (current?.parent && isSyntaxWrapper(ts, current.parent)) {
+    current = current.parent;
+  }
+  return current;
+}
+
+function callCalleeName(ts: any, node: any): string | undefined {
+  if (!node || !ts.isCallExpression(node)) return undefined;
+  const expression = node.expression;
+  if (ts.isIdentifier(expression)) return expression.text;
+  if (ts.isPropertyAccessExpression(expression)) return expression.name.text;
+  return undefined;
+}
+
+function isPublishMetadataSource(ts: any, sourceProp: any): boolean {
+  const object = sourceProp.parent;
+  if (!object || !ts.isObjectLiteralExpression(object)) return false;
+  const objectSite = unwrapWrappers(ts, object);
+  const objectParent = objectSite.parent;
+  if (!objectParent) return false;
+  if (ts.isCallExpression(objectParent) && callCalleeName(ts, objectParent) === 'publish') {
+    const args = objectParent.arguments;
+    return args[1] === objectSite || args[2] === objectSite;
+  }
+  if (ts.isPropertyAssignment(objectParent) && tsPropertyName(ts, objectParent.name) === 'metadata') {
+    const eventObject = objectParent.parent;
+    if (!eventObject) return false;
+    const eventSite = unwrapWrappers(ts, eventObject);
+    const call = eventSite.parent;
+    return Boolean(
+      call && ts.isCallExpression(call) && callCalleeName(ts, call) === 'publish'
+    );
+  }
+  return false;
+}
+
+function isDeclaredIntentSite(ts: any, node: any): boolean {
+  const siteNode = unwrapWrappers(ts, node);
+  const parent = siteNode.parent;
+  if (!parent) return false;
+  if (ts.isCallExpression(parent)) {
+    const name = callCalleeName(ts, parent);
+    if (name && INTENT_CALL_NAMES.has(name) && parent.arguments.some((arg: any) => arg === siteNode)) {
+      return true;
+    }
+  }
+  if (ts.isArrayLiteralExpression(parent)) {
+    return isDeclaredIntentSite(ts, parent);
+  }
+  if (ts.isPropertyAssignment(parent)) {
+    const name = tsPropertyName(ts, parent.name);
+    if (name === 'intent' || name === 'onEvent' || name === 'reactsTo') return true;
+    if (name === 'source' && isPublishMetadataSource(ts, parent)) return true;
+  }
+  return false;
+}
+
 function extractQuotedStringsAst(ts: any, source: string): StringMatch[] {
   const sourceFile = ts.createSourceFile('generated.ts', source, ts.ScriptTarget.Latest, true);
   const matches: StringMatch[] = [];
   const visit = (node: any) => {
-    if (ts.isStringLiteralLike(node)) {
+    if (ts.isStringLiteralLike(node) && isDeclaredIntentSite(ts, node)) {
       matches.push({ value: node.text, index: node.getStart(sourceFile) });
     }
     ts.forEachChild(node, visit);

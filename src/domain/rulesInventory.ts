@@ -6,6 +6,13 @@
  * Confidence is direct-evidence | heuristic — never a numeric score.
  */
 
+import {
+  DOMAIN_EVENTS_PUSH_RE,
+  DOMAIN_INVARIANT_WORD_RE,
+  expectedDomainInvariantWordsPhrase,
+  isIdiomaticEventsReset,
+} from './arkRuleSensors';
+
 export type RulesInventoryConfidence = 'direct-evidence' | 'heuristic';
 
 export type RulesInventoryCandidate = {
@@ -350,7 +357,7 @@ export function buildRulesInventory(input: BuildRulesInventoryInput): RulesInven
         /(?:^|\/)[^/]*(?:-access)?\.error\./i.test(posix) ||
         /(?:^|\/)errors?(?:\/|$)/i.test(posix);
       if (!isErrorBag) {
-        const mutRe = /this\.\w+\s*=/g;
+        const mutRe = /\bthis\.[A-Za-z_][A-Za-z0-9_]*\s*=(?!=)/g;
         let mut: RegExpExecArray | null;
         while ((mut = mutRe.exec(content)) !== null) {
           const classStart = content.lastIndexOf('class ', mut.index);
@@ -365,15 +372,19 @@ export function buildRulesInventory(input: BuildRulesInventoryInput): RulesInven
           if (/\bextends\s+(?:Error|[A-Za-z_$][A-Za-z0-9_$]*Error)\b/.test(classHeader)) {
             continue;
           }
+          if (isIdiomaticEventsReset(content, mut.index)) continue;
           const window = content.slice(Math.max(0, mut.index - 200), mut.index + 200);
-          if (!/\b(ensureInvariants|assertInvariants|validate|publish|emit)\b/.test(window)) {
+          if (
+            !DOMAIN_INVARIANT_WORD_RE.test(window) &&
+            !DOMAIN_EVENTS_PUSH_RE.test(window)
+          ) {
             seq += 1;
             candidates.push({
               id: `inv-mut-${seq}`,
               kind: 'mutation-without-guard',
               file,
               line: lineOf(content, mut.index),
-              message: 'Domain field mutation without nearby guard/publish call.',
+              message: `Domain field mutation without nearby ${expectedDomainInvariantWordsPhrase()}.`,
               confidence: 'heuristic',
               governedLayer,
               suggestedArkRule: {

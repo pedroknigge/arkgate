@@ -180,6 +180,13 @@ command = "echo"
       expect(ensureBaselineFlagInCheckCommand('npx ark-check --baseline .ark-baseline.json').changed).toBe(
         false
       );
+      expect(
+        ensureBaselineFlagInCheckCommand('  group: ark-check-${{ github.ref }}').changed
+      ).toBe(false);
+      expect(ensureBaselineFlagInCheckCommand('  ark-check:').changed).toBe(false);
+      expect(ensureBaselineFlagInCheckCommand('      - run: npx ark-check').changed).toBe(true);
+      expect(ensureBaselineFlagInCheckCommand('pnpm exec ark-check --strict').changed).toBe(true);
+      expect(ensureBaselineFlagInCheckCommand('node bin/ark-check.mjs --strict').changed).toBe(true);
 
       expect(pinArkgateDevDependency(root).reason).toBe('no-package-json');
       writeTree(root, {

@@ -43,6 +43,7 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 | [`ARKRULE_STRUCTURE`](#ARKRULE_STRUCTURE) | arkrules | ArkRule structure sensor failed |
 | [`ARKRULE_INVARIANT`](#ARKRULE_INVARIANT) | arkrules | ArkRule invariant failed |
 | [`ARKRULE_SCOPE_EMPTY`](#ARKRULE_SCOPE_EMPTY) | arkrules | ArkRule appliesTo matched zero files |
+| [`ARKRULE_HINT_BUDGET_EXHAUSTED`](#ARKRULE_HINT_BUDGET_EXHAUSTED) | arkrules | Structural-hint budget exhausted |
 | [`INVARIANT_UNCOVERED`](#INVARIANT_UNCOVERED) | arkrules | Invariant without coverage evidence |
 | [`INVARIANT_COVERAGE_OUTSIDE_ROOTS`](#INVARIANT_COVERAGE_OUTSIDE_ROOTS) | arkrules | Covering test outside the declared coverage roots |
 | [`ARKRUN_MISSING_ROOT`](#ARKRUN_MISSING_ROOT) | arkrun | No kernel factory in composition roots |
@@ -278,6 +279,15 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 
 - **Why:** An ArkRule’s appliesTo globs matched no governed files — the rule cannot observe what it claims to protect.
 - **Fix:** Fix appliesTo globs so they match governed files, or remove the rule. Enforced empty scope fails; advisory empty scope warns.
+
+<a id="ARKRULE_HINT_BUDGET_EXHAUSTED"></a>
+
+### `ARKRULE_HINT_BUDGET_EXHAUSTED`
+
+**Structural-hint budget exhausted**
+
+- **Why:** `orchestration-only`, `thin-adapter`, and `writes-via-aggregate` only evaluate files the hint loader preloaded. When eligible governed files exceed that budget (`coverage.maxFiles`, default `400` — there is no `arkrules.hintBudget`), those sensors never saw the rest of their scope. Enforced + unreviewed is not green. The finding names exact hinted/governed counts and per-sensor reviewed N/M of scope.
+- **Fix:** Raise `coverage.maxFiles` in ark.config.json (this cap also bounds structural-hint preload; `--doctor` names the coupling) so hinted/governed counts match, then re-run with `--strict-config`. An enforced hint sensor that cannot see its scope fails strict.
 
 <a id="INVARIANT_UNCOVERED"></a>
 

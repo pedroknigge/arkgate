@@ -71,6 +71,15 @@ describe('confidence gate wiring', () => {
     expect(stryker).toContain(`${ack.file}:${ack.startLine}-${ack.endLine}`);
     expect(stryker).toContain(`${facts.file}:${facts.startLine}-${facts.endLine}`);
     expect(stryker).toContain(`${promote.file}:${promote.startLine}-${promote.endLine}`);
+
+    const baselines = group('baselines');
+    expect(baselines.file).toBe('src/domain/baselineKey.ts');
+    const baselinesSlice = slice(baselines.file, baselines.startLine, baselines.endLine);
+    expect(baselinesSlice).toContain('export function structureFreezeTarget');
+    expect(baselinesSlice).toContain('export function isFreezableBaselineViolation');
+    expect(baselinesSlice).toContain('export function baselineKey');
+    expect(baselinesSlice).toContain('export function baselineOccurrenceKeys');
+    expect(stryker).toContain(`${baselines.file}:${baselines.startLine}-${baselines.endLine}`);
   });
 
   it('rejects NoCoverage even when every critical group remains above threshold', () => {

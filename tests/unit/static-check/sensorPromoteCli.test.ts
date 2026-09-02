@@ -10,6 +10,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { checkUsage, checkUsageAll } from '../../../bin/lib/first-run-help.mjs';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const CHECK_BIN = path.join(REPO_ROOT, 'bin/ark-check.mjs');
@@ -115,6 +116,72 @@ describe('ark-check --sensors', () => {
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
     }
+  });
+
+  it('success path names what it did not run so it is not a validity verdict (EOSF6-001)', () => {
+    const root = seed();
+    try {
+      const human = run(root, ['--sensors']);
+      expect(human.status).toBe(0);
+      expect(human.stdout).toContain('no TypeScript');
+      expect(human.stdout).toContain('no analysis');
+      expect(human.stdout).toMatch(/not a validity verdict/i);
+      expect(human.stdout).not.toMatch(/Ark check passed/);
+      const json = run(root, ['--sensors', '--json']);
+      expect(json.status).toBe(0);
+      const payload = JSON.parse(json.stdout).sensors;
+      expect(payload.notAVerdict).toBe(true);
+      expect(payload.didNotRun).toEqual(['TypeScript', 'analysis']);
+      expect(payload.partialMode).toBe('contract-only');
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('keeps --sensors --strict-config from looking like a full-check pass (EOSF6-001)', () => {
+    const root = seed();
+    try {
+      const result = run(root, ['--sensors', '--strict-config']);
+      expect(result.status).toBe(0);
+      expect(result.stdout).toContain('no TypeScript');
+      expect(result.stdout).toContain('no analysis');
+      expect(result.stdout).toMatch(/not a validity verdict/i);
+      expect(`${result.stdout}${result.stderr}`).not.toMatch(/Ark check passed/);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('does not treat 9 xiKeys vs maxXiKeys 7 as a --sensors failure (AO11)', () => {
+    const root = seed();
+    try {
+      const config = JSON.parse(fs.readFileSync(path.join(root, 'ark.config.json'), 'utf8'));
+      config.schemaVersion = '1.3';
+      config.arkOrder = {
+        mode: 'advisory',
+        planeRoots: ['src/domain'],
+        managedLayers: ['DomainModel'],
+        maxXiKeys: 7,
+        xiKeys: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'],
+      };
+      fs.writeFileSync(path.join(root, 'ark.config.json'), `${JSON.stringify(config, null, 2)}\n`);
+      const result = run(root, ['--sensors']);
+      expect(result.status).toBe(0);
+      expect(result.stdout).toContain('no TypeScript');
+      expect(`${result.stdout}${result.stderr}`).not.toMatch(/maxXiKeys/);
+      expect(`${result.stdout}${result.stderr}`).not.toMatch(/Ark check passed/);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('ark-check --sensors help vs success honesty (EOSF6-001)', () => {
+  it('help already names the skipped work; success path must too', () => {
+    expect(checkUsage()).toMatch(/does not run analysis/);
+    expect(checkUsageAll()).toMatch(/no TypeScript/);
+    expect(checkUsageAll()).toMatch(/no analysis/);
+    expect(checkUsageAll()).toMatch(/Not a validity verdict/i);
   });
 });
 
@@ -445,6 +512,7 @@ describe('ark-check --sensors without ArkRules', () => {
       const result = run(root, ['--sensors']);
       expect(result.status).toBe(2);
       expect(`${result.stderr}${result.stdout}`).not.toContain('promotable per rule');
+      expect(`${result.stderr}${result.stdout}`).not.toMatch(/Not a validity verdict/i);
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
     }

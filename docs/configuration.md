@@ -90,7 +90,13 @@ Top-level fields:
   which files count as tests, replacing the built-in `*.test.*` / `tests/` name heuristic),
   `maxFiles` (evidence file budget, default `400`) and `coverageRoots` (path prefixes where the
   project declares its runner actually executes tests). Absence is silent and changes no verdict.
-  Unknown keys fail closed. When the budget is hit, `INVARIANT_UNCOVERED` reports the numbers
+  Unknown keys fail closed. **`maxFiles` also bounds structural-hint preload** for
+  `orchestration-only`, `thin-adapter`, and `writes-via-aggregate` (the hint loader reuses
+  coverage contents when present). There is no separate `arkrules.hintBudget`. When eligible
+  governed files exceed that budget, the loader emits `ARKRULE_HINT_BUDGET_EXHAUSTED` with
+  exact hinted/governed counts and per-sensor reviewed N/M of scope; `--strict-config` fails
+  if an enforced hint sensor cannot see its scope. `--doctor` names this coupling.
+  When the coverage budget is hit, `INVARIANT_UNCOVERED` reports the numbers
   (files loaded, tests retained, files discarded at the cap) and names `coverage.maxFiles` as
   the knob that raises it — coverage never claims "never had tests" because of our own cap.
   `maxFiles` is clamped to a hard ceiling of 20000 (the config validator has no
@@ -446,6 +452,13 @@ type than product source:
 Write-gate ApplyPatch denies a batch that mixes law files with product source. Humans who
 never hit PreToolUse are unchanged. Local `pnpm` gates should call `--changed --base`, not
 only full-tree `--strict-merge`.
+
+`--changed` honors the touched-file list for **file-local** ArkRules structure sensors
+(class shape, orchestration-only, thin-adapter, writes-via-aggregate) and for
+structural-hint preload. Import-edge, layer, and cycle sensors still evaluate the full
+governed graph. That is a bound on the existing scan, not a second analysis engine, and
+it does not turn a full-tree run into a seconds-long one. A `--changed` pass is not a
+full-tree structural verdict.
 
 MCP clients can call `ark_policy_delta` with the previous `baseConfig`, an optional candidate
 contract (the current project contract is the default), and the same optional acknowledgement.

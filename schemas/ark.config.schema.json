@@ -837,7 +837,7 @@
     "coverage": {
       "type": "object",
       "additionalProperties": false,
-      "description": "Invariant coverage scan controls. testGlobs replaces the built-in test-name heuristic; maxFiles raises or lowers the evidence file budget; coverageRoots declares where the project runs its tests, so a covering test found outside them is reported instead of silently certifying an invariant.",
+      "description": "Invariant coverage scan controls. testGlobs replaces the built-in test-name heuristic; maxFiles raises or lowers the evidence file budget and also bounds structural-hint preload for orchestration-only, thin-adapter, and writes-via-aggregate (default 400; there is no arkrules.hintBudget); coverageRoots declares where the project runs its tests, so a covering test found outside them is reported instead of silently certifying an invariant.",
       "properties": {
         "testGlobs": {
           "type": "array",
@@ -850,7 +850,8 @@
         },
         "maxFiles": {
           "type": "integer",
-          "minimum": 1
+          "minimum": 1,
+          "description": "Evidence file budget (default 400) and structural-hint preload cap for orchestration-only, thin-adapter, and writes-via-aggregate. Raise this when hinted/governed counts show truncated sensors. There is no separate arkrules.hintBudget."
         },
         "coverageRoots": {
           "type": "array",
