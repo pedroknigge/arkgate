@@ -144,7 +144,10 @@ or `dist/` except `ark-mcp` loading the built library. Shared CLI logic lives in
 | `src/domain/improvementCompassMap.ts` | `bin/lib/improvement-compass-map.mjs` | (same `cli-pure` scripts); DF03 split child |
 | `src/domain/improvementCompass.ts` | `bin/lib/improvement-compass.mjs` | (same `cli-pure` scripts); facade re-exports types + mappers |
 | `src/domain/deepeningCoach.ts` | `bin/lib/deepening-coach.mjs` | (same `cli-pure` scripts); deep-module coach deepening candidates (notAScore) |
-| `src/domain/agentProjection.ts` | `bin/lib/agent-projection.mjs` | (same `cli-pure` scripts) |
+| `src/domain/agentProjectionTypes.ts` | `bin/lib/agent-projection-types.mjs` | (same `cli-pure` scripts); Shape split child |
+| `src/domain/agentProjectionFormatters.ts` | `bin/lib/agent-projection-formatters.mjs` | (same `cli-pure` scripts); Shape split child |
+| `src/domain/agentProjectionMerge.ts` | `bin/lib/agent-projection-merge.mjs` | (same `cli-pure` scripts); Shape split child |
+| `src/domain/agentProjection.ts` | `bin/lib/agent-projection.mjs` | (same `cli-pure` scripts); facade re-exports |
 | `src/domain/teamParliament.ts` | `bin/lib/team-parliament.mjs` | (same `cli-pure` scripts); TW team lock |
 | `src/domain/agentSkillsPackage.ts` | `bin/lib/agent-skills-package.mjs` | (same `cli-pure` scripts); layout via `generate:agent-skills` / `check:agent-skills` |
 | `src/domain/resolvedCandidateFactsSchema.ts` | `schemas/ark.resolved-candidate-facts.schema.json` | (same `cli-pure` scripts) |

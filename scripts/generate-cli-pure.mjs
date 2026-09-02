@@ -19,6 +19,9 @@
  *   src/domain/improvementCompassTypes.ts → bin/lib/improvement-compass-types.mjs
  *   src/domain/improvementCompassMap.ts   → bin/lib/improvement-compass-map.mjs
  *   src/domain/improvementCompass.ts      → bin/lib/improvement-compass.mjs
+ *   src/domain/agentProjectionTypes.ts → bin/lib/agent-projection-types.mjs
+ *   src/domain/agentProjectionFormatters.ts → bin/lib/agent-projection-formatters.mjs
+ *   src/domain/agentProjectionMerge.ts → bin/lib/agent-projection-merge.mjs
  *   src/domain/agentProjection.ts → bin/lib/agent-projection.mjs
  *   src/domain/agentSkillsPackage.ts → bin/lib/agent-skills-package.mjs
  *   src/domain/resolvedCandidateFactsSchema.ts → schemas/ark.resolved-candidate-facts.schema.json
@@ -200,9 +203,24 @@ const MODULES = [
     label: 'deepening candidates pure projection (deep-module coach; notAScore)',
   },
   {
+    canonical: 'src/domain/agentProjectionTypes.ts',
+    derived: 'bin/lib/agent-projection-types.mjs',
+    label: 'agent contract projection types/markers (ACS04 split child)',
+  },
+  {
+    canonical: 'src/domain/agentProjectionFormatters.ts',
+    derived: 'bin/lib/agent-projection-formatters.mjs',
+    label: 'agent contract projection body/meta formatters (ACS04 split child)',
+  },
+  {
+    canonical: 'src/domain/agentProjectionMerge.ts',
+    derived: 'bin/lib/agent-projection-merge.mjs',
+    label: 'agent contract projection merge/stamp (ACS04 split child)',
+  },
+  {
     canonical: 'src/domain/agentProjection.ts',
     derived: 'bin/lib/agent-projection.mjs',
-    label: 'version-matched agent contract projection (ACS04)',
+    label: 'version-matched agent contract projection (ACS04 facade)',
   },
   {
     canonical: 'src/domain/agentSkillsPackage.ts',
