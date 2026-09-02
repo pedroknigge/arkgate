@@ -120,6 +120,73 @@ describe('OR06 ArkOrder skip corpus', () => {
     }
   );
 
+  it('EOSF5-001: React/UI .set() without arkgate/order stays silent', async () => {
+    const reactView = `import { useState } from 'react';
+
+export function ScheduleMilestoneTrialView(): void {
+  const [tab, setTab] = useState('schedule');
+  const order = new Map<string, string>();
+  order.set('milestone', 'trial');
+  const searchParams = new URLSearchParams();
+  searchParams.set('tab', tab);
+  setTab('done');
+}
+`;
+
+    const writeView = (root: string) => {
+      const dir = path.join(root, 'src/application');
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(path.join(dir, 'schedule-milestone-trial-view.ts'), reactView);
+    };
+
+    const absentRoot = copyTree('trees/unvalved-release');
+    writeView(absentRoot);
+    const absent = await analyzeRoot(absentRoot, configFor('absent'));
+    expect(orderIds(absent.ir.violations)).toEqual([]);
+    expect(orderIds(absent.ir.warnings)).toEqual([]);
+    expect(absent.valid).toBe(true);
+
+    const enforcedRoot = copyTree('trees/unvalved-release');
+    writeView(enforcedRoot);
+    const enforced = await analyzeRoot(enforcedRoot, configFor('enforced'));
+    expect(orderIds(enforced.ir.violations)).not.toContain('ARKORDER_GENERIC_UPDATE');
+    expect(orderIds(enforced.ir.warnings)).not.toContain('ARKORDER_GENERIC_UPDATE');
+    expect(enforced.valid).toBe(true);
+
+    const advisoryRoot = copyTree('trees/unvalved-release');
+    writeView(advisoryRoot);
+    const advisory = await analyzeRoot(advisoryRoot, configFor('advisory'));
+    expect(orderIds(advisory.ir.violations)).not.toContain('ARKORDER_GENERIC_UPDATE');
+    expect(orderIds(advisory.ir.warnings)).not.toContain('ARKORDER_GENERIC_UPDATE');
+  });
+
+  it('EOSF5-001: plane.set / orderPlane.update still deny when enforced', async () => {
+    const writeDenies = (root: string) => {
+      const dir = path.join(root, 'src/application');
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(
+        path.join(dir, 'plane-set.ts'),
+        `export function bump(plane: { set(xi: object): void }): void {
+  plane.set({ plan: 'pro' });
+}
+`
+      );
+      fs.writeFileSync(
+        path.join(dir, 'order-plane-update.ts'),
+        `export function bump(orderPlane: { update(xi: object): void }): void {
+  orderPlane.update({ plan: 'pro' });
+}
+`
+      );
+    };
+
+    const enforcedRoot = copyTree('trees/unvalved-release');
+    writeDenies(enforcedRoot);
+    const enforced = await analyzeRoot(enforcedRoot, configFor('enforced'));
+    expect(orderIds(enforced.ir.violations)).toContain('ARKORDER_GENERIC_UPDATE');
+    expect(enforced.valid).toBe(false);
+  });
+
   it('unvalved second freeze is runtime fail-closed, not a lexical skip (LV02)', async () => {
     const tree = 'trees/unvalved-release';
     const absentRoot = copyTree(tree);

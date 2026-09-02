@@ -16,14 +16,29 @@ import {
   baselineKey,
   baselineOccurrenceKeys,
   findingRefFromTargetKey,
+  isFreezableBaselineViolation,
+  structureFreezeTarget,
 } from '../../../src/domain/baselineKey';
 import {
   baselineKey as cliBaselineKey,
   baselineOccurrenceKeys as cliBaselineOccurrenceKeys,
   findingRefFromTargetKey as cliBaselineFindingRef,
+  isFreezableBaselineViolation as cliIsFreezableBaselineViolation,
+  structureFreezeTarget as cliStructureFreezeTarget,
 } from '../../../bin/lib/baseline-key.mjs';
 import { deterministicNextAction } from '../../../src/domain/remediation';
 import { classifyPublishFacts, looksLikeArkIntent } from '../../../src/domain/sourcePolicy';
+import {
+  buildEffectiveArkRules,
+  loadArkRulesContract,
+} from '../../../src/domain/arkRulesContract';
+import {
+  RESOLVED_CANDIDATE_FACTS_SCHEMA_VERSION,
+  createResolvedCandidateFacts,
+  loadContract,
+  resolvedFactsEvidenceRequirementsHash,
+} from '../../../src/gate';
+import { analyzeCanonicalResolvedProject } from '../../../src/kernel/resolvedAnalysis';
 
 describe('cross-adapter result contract v1.5', () => {
   it('keeps 1.2 as a legacy value and emits resolved evidence + finding refs in 1.5', () => {
@@ -408,6 +423,201 @@ describe('ACS06 stable finding refs', () => {
     expect(schema.properties.diagnostics.items.properties.findingRef).toBeDefined();
     expect(schema.properties.diagnostics.items.properties.targetKey).toBeDefined();
     expect(schema.properties.diagnostics.items.properties.docsCodePath).toBeDefined();
+  });
+});
+
+describe('SCOPE-001 ARKRULE_SCOPE_EMPTY is not freezable', () => {
+  it('treats ARKRULE_SCOPE_EMPTY as a config diagnostic, not code debt', () => {
+    const emptyScope = {
+      ruleId: 'ARKRULE_SCOPE_EMPTY',
+      file: 'arkrules/ApplicationOrchestration.json',
+      fromLayer: 'ApplicationOrchestration',
+    };
+    expect(isFreezableBaselineViolation(emptyScope)).toBe(false);
+    expect(cliIsFreezableBaselineViolation(emptyScope)).toBe(false);
+    expect(baselineOccurrenceKeys([emptyScope])).toEqual(['']);
+    expect(isFreezableBaselineViolation({ ...emptyScope, freezable: false })).toBe(false);
+    expect(
+      isFreezableBaselineViolation({
+        ruleId: 'ARKRULE_STRUCTURE',
+        file: 'src/app/foo.ts',
+        fromLayer: 'ApplicationOrchestration',
+        target: 'orchestration-only',
+      })
+    ).toBe(true);
+  });
+
+  it('omits non-freezable findings from freeze occurrence keys even with --force-shaped lists', () => {
+    const scopeEmpty = {
+      ruleId: 'ARKRULE_SCOPE_EMPTY',
+      file: 'arkrules/ApplicationOrchestration.json',
+      fromLayer: 'ApplicationOrchestration',
+      freezable: false,
+    };
+    const structure = {
+      ruleId: 'ARKRULE_STRUCTURE',
+      file: 'src/app/foo.ts',
+      fromLayer: 'ApplicationOrchestration',
+      target: 'orchestration-only',
+    };
+    expect(baselineOccurrenceKeys([scopeEmpty, structure, scopeEmpty])).toEqual([
+      '',
+      baselineKey(structure),
+      '',
+    ]);
+    expect(cliBaselineOccurrenceKeys([scopeEmpty, structure, scopeEmpty])).toEqual([
+      '',
+      cliBaselineKey(structure),
+      '',
+    ]);
+  });
+});
+
+describe('BASEKEY-001 STRUCTURE freeze keys include sensor', () => {
+  it('folds sensor (+ symbol) into the target field for new STRUCTURE freezes', () => {
+    expect(structureFreezeTarget({ sensor: 'orchestration-only' })).toBe('orchestration-only');
+    expect(
+      structureFreezeTarget({ sensor: 'domain-event-on-mutation', symbol: 'Order.close' })
+    ).toBe('domain-event-on-mutation:Order.close');
+    expect(cliStructureFreezeTarget({ sensor: 'thin-adapter' })).toBe('thin-adapter');
+    expect(
+      baselineKey({
+        ruleId: 'ARKRULE_STRUCTURE',
+        file: 'src/app/foo.ts',
+        fromLayer: 'ApplicationOrchestration',
+        target: structureFreezeTarget({ sensor: 'orchestration-only' }),
+      })
+    ).toBe('ARKRULE_STRUCTURE|src/app/foo.ts|ApplicationOrchestration||orchestration-only');
+    expect(
+      baselineKey({
+        ruleId: 'ARKRULE_STRUCTURE',
+        file: 'src/app/foo.ts',
+        fromLayer: 'ApplicationOrchestration',
+        message:
+          'File appears to embed domain branching beyond guard-and-delegate orchestration (sensor orchestration-only).',
+      })
+    ).toBe('ARKRULE_STRUCTURE|src/app/foo.ts|ApplicationOrchestration||orchestration-only');
+  });
+
+  it('does not let a v1 empty-target key silence a later sensor on the same file', () => {
+    const file = 'src/app/foo.ts';
+    const layer = 'ApplicationOrchestration';
+    const v1 = baselineKey({
+      ruleId: 'ARKRULE_STRUCTURE',
+      file,
+      fromLayer: layer,
+    });
+    const orchestration = baselineKey({
+      ruleId: 'ARKRULE_STRUCTURE',
+      file,
+      fromLayer: layer,
+      target: structureFreezeTarget({ sensor: 'orchestration-only' }),
+    });
+    const thin = baselineKey({
+      ruleId: 'ARKRULE_STRUCTURE',
+      file,
+      fromLayer: layer,
+      target: structureFreezeTarget({ sensor: 'thin-adapter' }),
+    });
+    expect(v1).toBe('ARKRULE_STRUCTURE|src/app/foo.ts|ApplicationOrchestration||');
+    expect(orchestration).not.toBe(v1);
+    expect(thin).not.toBe(v1);
+    expect(orchestration).not.toBe(thin);
+    const frozen = new Set([v1]);
+    expect(frozen.has(orchestration)).toBe(false);
+    expect(frozen.has(thin)).toBe(false);
+  });
+
+  it('Kernel copies sensor into STRUCTURE target and refuses SCOPE_EMPTY freeze identity', () => {
+    const config = {
+      schemaVersion: '1.1' as const,
+      include: ['src'],
+      layers: [
+        { name: 'DomainModel', patterns: ['src/domain/**'] },
+        { name: 'ApplicationOrchestration', patterns: ['src/application/**'] },
+      ],
+      rules: [{ from: 'DomainModel', to: 'ApplicationOrchestration', allowed: false }],
+    };
+    const domainFile = loadArkRulesContract({
+      schemaVersion: '1.0',
+      layer: 'DomainModel',
+      structure: [
+        { id: 'private-state', sensor: 'aggregate-private-state', mode: 'enforced' },
+      ],
+    }).config;
+    const appFile = loadArkRulesContract({
+      schemaVersion: '1.0',
+      layer: 'ApplicationOrchestration',
+      structure: [
+        {
+          id: 'writes',
+          sensor: 'writes-via-aggregate',
+          mode: 'enforced',
+          appliesTo: ['src/lib/features/management/domain/activity-progress/**'],
+        },
+      ],
+    }).config;
+    const arkRules = buildEffectiveArkRules([
+      { layer: 'DomainModel', sourceFile: 'arkrules/DomainModel.json', file: domainFile },
+      {
+        layer: 'ApplicationOrchestration',
+        sourceFile: 'arkrules/ApplicationOrchestration.json',
+        file: appFile,
+      },
+    ]);
+    const contract = loadContract(config as never, 'ark.config.json', { arkRules });
+    const facts = createResolvedCandidateFacts({
+      schemaVersion: RESOLVED_CANDIDATE_FACTS_SCHEMA_VERSION,
+      completeness: 'complete',
+      completenessReasons: [],
+      resolverIdentity: 'test-resolver',
+      compilerIdentity: 'test-compiler',
+      compilerOptionsHash: 'opts',
+      tsconfigHash: 'tsconfig',
+      evidenceRequirementsHash: resolvedFactsEvidenceRequirementsHash(contract.config),
+      files: [
+        {
+          path: 'src/domain/order.ts',
+          contentHash: 'hash-order',
+          parseStatus: 'parsed',
+          parseDiagnosticCount: 0,
+          exportsOnlyTypes: false,
+          typeOnlyExportNames: [],
+          hasTopLevelSideEffects: false,
+        },
+      ],
+      dependencies: [],
+      capabilityUses: [],
+      ambientUses: [],
+      publishCalls: [],
+      intentReferences: [],
+      safetyUses: [],
+      classShapes: [
+        {
+          file: 'src/domain/order.ts',
+          className: 'Order',
+          exported: true,
+          hasPublicMutableFields: true,
+          hasPublicSetters: false,
+          hasPublicConstructor: true,
+          hasStaticFactory: false,
+          mutatingMethods: [],
+        },
+      ],
+    });
+    const result = analyzeCanonicalResolvedProject({ contract, facts });
+    const structure = result.ir.violations.find((v) => v.ruleId === 'ARKRULE_STRUCTURE');
+    expect(structure?.target).toBe('aggregate-private-state');
+    expect(structure?.sensor).toBe('aggregate-private-state');
+    expect(baselineKey(structure as never)).toBe(
+      'ARKRULE_STRUCTURE|src/domain/order.ts|DomainModel||aggregate-private-state'
+    );
+    const scopeEmpty = result.ir.violations.find((v) => v.ruleId === 'ARKRULE_SCOPE_EMPTY');
+    expect(scopeEmpty).toBeDefined();
+    expect(scopeEmpty?.freezable).toBe(false);
+    expect(isFreezableBaselineViolation(scopeEmpty as never)).toBe(false);
+    expect(baselineOccurrenceKeys([scopeEmpty as never])).toEqual(['']);
+    expect(result.valid).toBe(false);
   });
 });
 

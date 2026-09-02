@@ -11,6 +11,72 @@
 /** Keep in lockstep with arkRulesTypes.ARK_RULE_TIER2_SENSOR_IDS (self-contained for CLI gen). */
 const ARK_RULE_TIER2_SENSOR_IDS = ['no-anemic-model'];
 /**
+ * Shared Domain + rulesInventory guard/publish vocabulary (DSHAPE-001).
+ * One list: sensors and inventory suggestions must not drift.
+ */
+export const DOMAIN_INVARIANT_WORDS = [
+    'ensureInvariants',
+    'assertInvariants',
+    'validate',
+    'publish',
+    'emit',
+    'raise',
+    'record',
+];
+/** No `g` flag: `.test` must not advance lastIndex. */
+export const DOMAIN_INVARIANT_WORD_RE = new RegExp(`\\b(${DOMAIN_INVARIANT_WORDS.join('|')})\\b`);
+const EVENTS_ARRAY_PROP = '(?:_?pendingEvents|domainEvents|uncommittedEvents|recordedEvents)';
+export const DOMAIN_EVENTS_PUSH_RE = new RegExp(`\\bthis\\.${EVENTS_ARRAY_PROP}\\.push\\s*\\(`);
+const EVENTS_ARRAY_RESET_RE = new RegExp(`^this\\.${EVENTS_ARRAY_PROP}\\s*=\\s*\\[\\s*\\]`);
+const ANY_THIS_EMPTY_ARRAY_RE = /^this\.[A-Za-z_][A-Za-z0-9_]*\s*=\s*\[\s*\]/;
+const THIS_FIELD_ASSIGNMENT_RE = /\bthis\.[A-Za-z_][A-Za-z0-9_]*\s*=(?!=)/g;
+const SHAPE_TRUNCATED_UNTIL = 'truncatedUntil';
+export function expectedDomainInvariantWordsPhrase() {
+    return `${DOMAIN_INVARIANT_WORDS.join(', ')}, or events-array .push(`;
+}
+export function referencesGuardOrPublish(source) {
+    return DOMAIN_INVARIANT_WORD_RE.test(source) || DOMAIN_EVENTS_PUSH_RE.test(source);
+}
+export function isIdiomaticEventsReset(source, assignIndex, methodName) {
+    const slice = source.slice(assignIndex);
+    if (EVENTS_ARRAY_RESET_RE.test(slice))
+        return true;
+    if (!ANY_THIS_EMPTY_ARRAY_RE.test(slice))
+        return false;
+    if (methodName && /^pullEvents$/i.test(methodName))
+        return true;
+    const windowStart = assignIndex > 200 ? assignIndex - 200 : 0;
+    return /\bpullEvents\b/.test(source.slice(windowStart, assignIndex + 200));
+}
+function methodAssignsThis(methodName, methodBody) {
+    const re = new RegExp(THIS_FIELD_ASSIGNMENT_RE.source, 'g');
+    let match;
+    while ((match = re.exec(methodBody)) !== null) {
+        if (isIdiomaticEventsReset(methodBody, match.index, methodName))
+            continue;
+        return true;
+    }
+    return false;
+}
+function attachShapeTruncation(shape, truncatedUntil) {
+    if (truncatedUntil == null)
+        return shape;
+    Object.defineProperty(shape, SHAPE_TRUNCATED_UNTIL, {
+        value: truncatedUntil,
+        enumerable: false,
+        configurable: true,
+    });
+    return shape;
+}
+function shapeTruncatedUntil(shape) {
+    const value = Object.getOwnPropertyDescriptor(shape, SHAPE_TRUNCATED_UNTIL)?.value;
+    return typeof value === 'number' ? value : undefined;
+}
+function shapeTruncationSuffix(shape) {
+    const until = shapeTruncatedUntil(shape);
+    return until == null ? '' : ` shape analysed until character ${until}`;
+}
+/**
  * Glob to RegExp for appliesTo. Keep in lockstep with layerMatch.globToRegExp
  * (zero path segments for double-star-slash; self-contained for generate:cli-pure).
  * Critical: double-star-slash patterns match files with no intermediate directory.
@@ -152,10 +218,15 @@ function evaluateAlwaysValidFactory(rule, shapes, layerForFile) {
 }
 function evaluateDomainEventOnMutation(rule, shapes, layerForFile) {
     const out = [];
+    const expected = expectedDomainInvariantWordsPhrase();
     for (const shape of shapesForRule(rule, shapes, layerForFile)) {
+        const truncation = shapeTruncationSuffix(shape);
+        if (shapeTruncatedUntil(shape) != null) {
+            out.push(baseViolation(rule, shape.file, `Exported class ${shape.className} shape analysed until character ${shapeTruncatedUntil(shape)}; later methods may be invisible (sensor domain-event-on-mutation).`));
+        }
         for (const method of shape.mutatingMethods) {
             if (!method.referencesGuardOrPublish) {
-                out.push(baseViolation(rule, shape.file, `Mutating method ${shape.className}.${method.name} does not reference a guard or publish symbol (sensor domain-event-on-mutation).`));
+                out.push(baseViolation(rule, shape.file, `Mutating method ${shape.className}.${method.name} does not reference ${expected} (sensor domain-event-on-mutation).${truncation}`));
             }
         }
     }
@@ -307,10 +378,39 @@ export function collectEmptyAppliesToFindings(arkRules, files) {
         a.arkruleId.localeCompare(b.arkruleId) ||
         a.message.localeCompare(b.message));
 }
-/** IO / ORM import evidence (mirrors design-smells; kept local for Domain purity). */
-const IO_IMPORT_HINT_RE = /\bfrom\s+['"](?:@?prisma\/client|@supabase\/|drizzle-orm|typeorm|knex|mongodb|pg|mysql2|mongoose|better-sqlite3|ioredis|redis|kysely|sequelize)['"]|require\(\s*['"](?:@?prisma\/client|pg|knex|typeorm|mongoose)/;
-/** Write tokens that skip the aggregate when paired with a persistence driver import. */
-const PERSISTENCE_WRITE_HINT_RE = /\.(?:insert(?:One|Many)?|update(?:One|Many)?|upsert|delete(?:One|Many)?|createMany|create|replaceOne|findOneAnd(?:Update|Delete|Replace))\s*\(|\bINSERT\s+INTO\b|\bUPDATE\s+[A-Za-z_][\w.]*\s+SET\b|\bDELETE\s+FROM\b/i;
+/** IO / ORM import evidence. postgres and drizzle-orm include package subpaths. Keep in lockstep with arkOrderFacts. */
+const IO_IMPORT_HINT_RE = /\bfrom\s+['"](?:@?prisma\/client|@supabase\/|drizzle-orm(?:\/[^'"]+)?|postgres(?:\/[^'"]+)?|typeorm|knex|mongodb|pg|mysql2|mongoose|better-sqlite3|ioredis|redis|kysely|sequelize)['"]|require\(\s*['"](?:@?prisma\/client|pg|postgres(?:\/[^'"]+)?|drizzle-orm(?:\/[^'"]+)?|knex|typeorm|mongoose)/;
+/**
+ * Path-alias / local db module (`@/lib/db`) without resolving tsconfig.
+ * Keep in lockstep with arkOrderFacts.
+ */
+const IO_ALIAS_IMPORT_RE = /\bfrom\s+['"](?:@\/|~\/)?(?:[\w.-]+\/)*(?:db|database|prisma|drizzle)(?:\.[cm]?[jt]sx?)?['"]|require\(\s*['"](?:@\/|~\/)?(?:[\w.-]+\/)*(?:db|database|prisma|drizzle)/;
+/**
+ * Write tokens that skip the aggregate when paired with a persistence driver import.
+ * Callee must be db|tx|client|prisma|drizzle (PrismaClient included); not repo.update(.
+ * Keep in lockstep with arkOrderFacts.
+ */
+const PERSISTENCE_WRITE_HINT_RE = /\b(?:db|tx|client|prisma(?:Client)?|drizzle)\b(?:\s*\.\s*[A-Za-z_]\w*)*\s*\.\s*(?:insert(?:One|Many)?|update(?:One|Many)?|upsert|delete(?:One|Many)?|createMany|create|replaceOne|findOneAnd(?:Update|Delete|Replace))\s*\(|\bINSERT\s+INTO\b|\bUPDATE\s+[A-Za-z_][\w.]*\s+SET\b|\bDELETE\s+FROM\b/i;
+export function isPersistenceDriverLayer(layer) {
+    return layer === 'PersistenceAdapters';
+}
+export function sourceImportsPersistenceDriver(content, resolvedImports) {
+    if (IO_IMPORT_HINT_RE.test(content) || IO_ALIAS_IMPORT_RE.test(content))
+        return true;
+    if (!resolvedImports)
+        return false;
+    for (const imp of resolvedImports) {
+        if (isPersistenceDriverLayer(imp.layer))
+            return true;
+        const specifier = imp.specifier;
+        if (!specifier)
+            continue;
+        const synthetic = `from '${specifier}'`;
+        if (IO_IMPORT_HINT_RE.test(synthetic) || IO_ALIAS_IMPORT_RE.test(synthetic))
+            return true;
+    }
+    return false;
+}
 const HANDLER_SHAPE_HINT_RE = /\b(?:@Controller|@Get|@Post|@Put|@Delete|Router\(\)|createRouter|express\.Router|fastify\.(?:get|post)|export\s+(?:async\s+)?function\s+(?:GET|POST|PUT|DELETE|PATCH)\b|export\s+const\s+(?:GET|POST|PUT|DELETE|PATCH)\s*=)/;
 const FRAMEWORK_HTTP_HINT_RE = /(?:^|[;\n])\s*(?:import\s+(?:type\s+)?(?:[^;]{0,512}?\s+from\s+)?|export\s+(?:type\s+)?[^;]{0,512}?\s+from\s+)['"]next\/server(?:\.js)?['"]/;
 /** Business-predicate / domain branching signals (conservative). */
@@ -321,9 +421,15 @@ const BUSINESS_BRANCH_HINT_RE = /\bif\s*\(\s*(?:!)?(?:order|invoice|cart|user|ac
  * Prefers false negatives over false positives (ADR 0013 discipline).
  * Returns null when neither flag is set (callers may omit the path).
  */
-export function deriveArkRuleFileHints(_file, content) {
-    if (!content || content.length < 40)
+export function deriveArkRuleFileHints(_file, content, resolvedImports) {
+    if (!content)
         return null;
+    const hasIo = sourceImportsPersistenceDriver(content, resolvedImports);
+    const persistenceWrite = hasIo && PERSISTENCE_WRITE_HINT_RE.test(content);
+    // Orchestration/adapter heuristics need a longer window; writes still fire on short probes.
+    if (content.length < 40) {
+        return persistenceWrite ? { persistenceWrite: true } : null;
+    }
     const domainPredicates = content.match(new RegExp(DOMAIN_PREDICATE_HINT_RE.source, 'g')) ?? [];
     const businessBranches = content.match(new RegExp(BUSINESS_BRANCH_HINT_RE.source, 'g')) ?? [];
     const ifCount = (content.match(/\bif\s*\(/g) ?? []).length;
@@ -334,7 +440,6 @@ export function deriveArkRuleFileHints(_file, content) {
         (domainPredicates.length >= 1 && businessBranches.length >= 2) ||
         (businessBranches.length >= 3 && ifCount + switchCount >= 6);
     // Adapter-thick: multi-concern mixing — domain branching + persistence/HTTP in one module.
-    const hasIo = IO_IMPORT_HINT_RE.test(content);
     const hasHandler = HANDLER_SHAPE_HINT_RE.test(content) || FRAMEWORK_HTTP_HINT_RE.test(content);
     const hasDomainSignal = domainPredicates.length >= 1 || businessBranches.length >= 2;
     const hasMapping = /\b(?:mapTo|toDomain|toDto|fromRow|toEntity|fromPrisma|serialize|deserialize)\w*\s*[(=]/.test(content);
@@ -342,7 +447,6 @@ export function deriveArkRuleFileHints(_file, content) {
         (hasHandler && hasDomainSignal) ||
         (hasIo && hasMapping && (ifCount >= 4 || domainPredicates.length >= 1)) ||
         (hasHandler && hasIo); // hollow-persistence style: HTTP + persistence together
-    const persistenceWrite = hasIo && PERSISTENCE_WRITE_HINT_RE.test(content);
     if (!orchestrationHeavy && !adapterThick && !persistenceWrite)
         return null;
     return {
@@ -354,14 +458,217 @@ export function deriveArkRuleFileHints(_file, content) {
 /**
  * Build fileHints map from path→content. Omits paths with no flags (sparse map).
  */
-export function buildArkRuleFileHints(fileContents) {
+export function buildArkRuleFileHints(fileContents, resolvedImportsByFile) {
     const out = {};
     for (const [file, content] of Object.entries(fileContents)) {
-        const hint = deriveArkRuleFileHints(file, content);
+        const rel = file.replace(/\\/g, '/');
+        const hint = deriveArkRuleFileHints(file, content, resolvedImportsByFile?.[rel]);
         if (hint)
-            out[file.replace(/\\/g, '/')] = hint;
+            out[rel] = hint;
     }
     return out;
+}
+const MEMBER_MODIFIERS = new Set([
+    'public',
+    'private',
+    'protected',
+    'static',
+    'async',
+    'readonly',
+    'abstract',
+    'override',
+    'declare',
+    'get',
+    'set',
+]);
+const CONTROL_FLOW_METHOD_NAMES = new Set(['if', 'match', 'when']);
+function skipStringOrComment(src, index) {
+    const ch = src[index];
+    if (ch === '/' && src[index + 1] === '/') {
+        const nl = src.indexOf('\n', index);
+        return nl === -1 ? src.length : nl;
+    }
+    if (ch === '/' && src[index + 1] === '*') {
+        const end = src.indexOf('*/', index + 2);
+        return end === -1 ? src.length : end + 2;
+    }
+    if (ch === "'" || ch === '"' || ch === '`') {
+        let j = index + 1;
+        while (j < src.length) {
+            if (src[j] === '\\') {
+                j += 2;
+                continue;
+            }
+            if (src[j] === ch)
+                return j + 1;
+            j += 1;
+        }
+        return src.length;
+    }
+    return index;
+}
+function skipWsAndComments(src, index) {
+    let i = index;
+    while (i < src.length) {
+        if (/\s/.test(src[i])) {
+            i += 1;
+            continue;
+        }
+        if (src[i] === '/' && (src[i + 1] === '/' || src[i + 1] === '*')) {
+            i = skipStringOrComment(src, i);
+            continue;
+        }
+        break;
+    }
+    return i;
+}
+function readIdent(src, index) {
+    const ch = src[index];
+    if (!ch || !/[A-Za-z_]/.test(ch))
+        return null;
+    let j = index + 1;
+    while (j < src.length && /[A-Za-z0-9_]/.test(src[j]))
+        j += 1;
+    return { ident: src.slice(index, j), end: j };
+}
+function skipBalanced(src, openIndex, openCh, closeCh) {
+    if (src[openIndex] !== openCh)
+        return null;
+    let depth = 1;
+    let i = openIndex + 1;
+    while (i < src.length && depth > 0) {
+        const skipped = skipStringOrComment(src, i);
+        if (skipped !== i) {
+            i = skipped;
+            continue;
+        }
+        const ch = src[i];
+        if (ch === openCh)
+            depth += 1;
+        else if (ch === closeCh)
+            depth -= 1;
+        i += 1;
+    }
+    return depth === 0 ? i : null;
+}
+function scanClassMembers(body) {
+    const members = [];
+    let i = 0;
+    let truncatedAt;
+    while (i < body.length) {
+        i = skipWsAndComments(body, i);
+        if (i >= body.length)
+            break;
+        if (body[i] === ';') {
+            i += 1;
+            continue;
+        }
+        const modifiers = [];
+        let cursor = i;
+        while (true) {
+            const tok = readIdent(body, cursor);
+            if (!tok || !MEMBER_MODIFIERS.has(tok.ident))
+                break;
+            modifiers.push(tok.ident);
+            cursor = skipWsAndComments(body, tok.end);
+        }
+        const nameTok = readIdent(body, cursor);
+        if (!nameTok) {
+            i += 1;
+            continue;
+        }
+        cursor = skipWsAndComments(body, nameTok.end);
+        if (body[cursor] === '<') {
+            const afterGeneric = skipBalanced(body, cursor, '<', '>');
+            if (afterGeneric == null) {
+                truncatedAt = body.length;
+                break;
+            }
+            cursor = skipWsAndComments(body, afterGeneric);
+        }
+        if (body[cursor] === '(') {
+            const afterParen = skipBalanced(body, cursor, '(', ')');
+            if (afterParen == null) {
+                truncatedAt = body.length;
+                break;
+            }
+            cursor = skipWsAndComments(body, afterParen);
+            if (body[cursor] === ':') {
+                cursor += 1;
+                while (cursor < body.length && body[cursor] !== '{' && body[cursor] !== ';') {
+                    const skipped = skipStringOrComment(body, cursor);
+                    if (skipped !== cursor) {
+                        cursor = skipped;
+                        continue;
+                    }
+                    cursor += 1;
+                }
+            }
+            if (body[cursor] === '{') {
+                const afterBrace = skipBalanced(body, cursor, '{', '}');
+                if (afterBrace == null) {
+                    truncatedAt = body.length;
+                    break;
+                }
+                members.push({
+                    name: nameTok.ident,
+                    modifiers,
+                    kind: 'method',
+                    body: body.slice(cursor + 1, afterBrace - 1),
+                });
+                i = afterBrace;
+                continue;
+            }
+            if (body[cursor] === ';') {
+                i = cursor + 1;
+                continue;
+            }
+            i = cursor + 1;
+            continue;
+        }
+        let depthBrace = 0;
+        let depthParen = 0;
+        let depthBracket = 0;
+        while (cursor < body.length) {
+            const skipped = skipStringOrComment(body, cursor);
+            if (skipped !== cursor) {
+                cursor = skipped;
+                continue;
+            }
+            const ch = body[cursor];
+            if (ch === '{')
+                depthBrace += 1;
+            else if (ch === '}') {
+                if (depthBrace === 0)
+                    break;
+                depthBrace -= 1;
+            }
+            else if (ch === '(')
+                depthParen += 1;
+            else if (ch === ')')
+                depthParen -= 1;
+            else if (ch === '[')
+                depthBracket += 1;
+            else if (ch === ']')
+                depthBracket -= 1;
+            else if (ch === ';' &&
+                depthBrace === 0 &&
+                depthParen === 0 &&
+                depthBracket === 0) {
+                cursor += 1;
+                break;
+            }
+            cursor += 1;
+        }
+        members.push({
+            name: nameTok.ident,
+            modifiers,
+            kind: 'field',
+            body: '',
+        });
+        i = cursor;
+    }
+    return { members, truncatedAt };
 }
 /**
  * Lightweight class-shape extraction from TypeScript source text (no compiler).
@@ -393,80 +700,69 @@ export function extractClassShapesFromSource(file, content) {
             i += 1;
         }
         const body = content.slice(start, i - 1);
-        // P1-L — prefer false negatives: readonly public props are not mutable state.
-        // Strip only readonly property *declarations*, not whole lines (co-located
-        // `public readonly id; public count = 0` must keep the mutable field).
-        // Also ignore comment lines that merely mention the word "readonly".
-        const bodyNoReadonly = body
-            .split('\n')
-            .map((line) => {
-            if (/^\s*\/\//.test(line) || /^\s*\/\*|\*\//.test(line))
-                return line;
-            // Remove `public readonly foo` / `readonly foo` decls; leave other decls.
-            return line
-                .replace(/(?:public\s+|protected\s+)?readonly\s+[a-zA-Z_][a-zA-Z0-9_]*\s*(?::[^=;]+)?(?:=\s*[^;]+)?[;,]?/g, '')
-                .replace(/(?:^|[\s;{])readonly\s+[a-zA-Z_][a-zA-Z0-9_]*\s*(?::[^=;]+)?(?:=\s*[^;]+)?[;,]?/g, ' ');
-        })
-            .join('\n');
-        const hasPublicMutableFields = /(?:^|\n)\s*(?:public\s+)?[a-zA-Z_][a-zA-Z0-9_]*\s*[:=]/m.test(bodyNoReadonly.replace(/(?:public\s+|private\s+|protected\s+|static\s+|async\s+|get\s+|set\s+)/g, '')) &&
-            /(?:^|\n)\s*(public\s+)?(?!constructor|static|get|set|private|protected|readonly)[a-zA-Z_][a-zA-Z0-9_]*\s*[:=]/m.test(bodyNoReadonly);
-        // Public mutable field: "public foo" (not readonly) or unadorned assignable field.
-        const publicField = /(?:^|\n)\s*public\s+(?!static|async|get|set|constructor|readonly)[a-zA-Z_]/.test(bodyNoReadonly) ||
-            /(?:^|[\n;])\s*[a-zA-Z_][a-zA-Z0-9_]*\s*:\s*[^=;\n]+[;=]/m.test(bodyNoReadonly
-                .split('\n')
-                .filter((line) => !/^\s*(private|protected|static|constructor|get |set |async |\/)/.test(line))
-                .join('\n'));
+        const classUnclosed = depth > 0;
+        const scanned = scanClassMembers(body);
+        const truncatedUntil = classUnclosed
+            ? content.length
+            : scanned.truncatedAt == null
+                ? undefined
+                : start + scanned.truncatedAt;
+        const publicMutableFields = scanned.members.filter((member) => {
+            if (member.kind !== 'field')
+                return false;
+            if (member.name === 'constructor')
+                return false;
+            if (member.modifiers.includes('private') || member.modifiers.includes('protected')) {
+                return false;
+            }
+            if (member.modifiers.includes('readonly'))
+                return false;
+            if (member.modifiers.includes('static'))
+                return false;
+            if (member.modifiers.includes('get') || member.modifiers.includes('set'))
+                return false;
+            return true;
+        });
+        const hasPublicMutableFields = publicMutableFields.length > 0;
         const hasPublicSetters = /(?:^|[\n;{])\s*(?:public\s+)?set\s+[a-zA-Z_]/.test(body);
         const hasPrivateConstructor = /(?:^|[\n;{])\s*private\s+constructor\s*\(/.test(body);
         const hasPublicConstructor = /(?:^|[\n;{])\s*(?:public\s+)?constructor\s*\(/.test(body) && !hasPrivateConstructor;
         const hasStaticFactory = /(?:^|[\n;{])\s*static\s+(?:async\s+)?(?:create|of|from|parse|build|make|new)\s*[<(]/.test(body) ||
             /(?:^|[\n;{])\s*static\s+(?:async\s+)?[A-Za-z_][A-Za-z0-9_]*\s*\([^)]*\)\s*:\s*[A-Za-z_]/.test(body);
         const mutatingMethods = [];
-        // P1-L / P1L-STRUCTURE-NOISE-CONTROL-FLOW: fluent control-flow helpers (Property.if,
-        // .match, .when) often assign this.* for chaining — not domain mutators. Prefer FN.
-        const CONTROL_FLOW_METHOD_NAMES = new Set(['if', 'match', 'when']);
-        const methodRe = /(?:^|\n)\s*(?:public\s+|private\s+|protected\s+|async\s+)*(?!constructor|get|set|static)([a-zA-Z_][a-zA-Z0-9_]*)\s*\([^)]*\)\s*(?::\s*[^{]+)?\{/g;
-        let methodMatch;
-        while ((methodMatch = methodRe.exec(body)) !== null) {
-            const name = methodMatch[1];
-            if (CONTROL_FLOW_METHOD_NAMES.has(name))
+        for (const member of scanned.members) {
+            if (member.kind !== 'method')
                 continue;
-            const mStart = methodMatch.index + methodMatch[0].length;
-            let mDepth = 1;
-            let j = mStart;
-            while (j < body.length && mDepth > 0) {
-                if (body[j] === '{')
-                    mDepth += 1;
-                else if (body[j] === '}')
-                    mDepth -= 1;
-                j += 1;
-            }
-            const methodBody = body.slice(mStart, j - 1);
-            const assignsThis = /this\.\w+\s*=/.test(methodBody);
-            if (!assignsThis)
+            if (member.name === 'constructor')
                 continue;
-            const referencesGuardOrPublish = /\b(ensureInvariants|assertInvariants|validate|publish|emit|raise|record)\b/.test(methodBody);
-            mutatingMethods.push({ name, referencesGuardOrPublish });
+            if (member.modifiers.includes('static'))
+                continue;
+            if (member.modifiers.includes('get') || member.modifiers.includes('set'))
+                continue;
+            if (CONTROL_FLOW_METHOD_NAMES.has(member.name))
+                continue;
+            if (!methodAssignsThis(member.name, member.body))
+                continue;
+            mutatingMethods.push({
+                name: member.name,
+                referencesGuardOrPublish: referencesGuardOrPublish(member.body),
+            });
         }
-        const methodCount = (body.match(/(?:^|\n)\s*(?:public\s+|private\s+|protected\s+)?(?:async\s+)?[a-zA-Z_][a-zA-Z0-9_]*\s*\(/g) ?? []).length;
-        // P1-L — raise anemic bar: need multiple public fields and essentially no behavior.
-        // Single-field bags and intentional property bags with one helper stay quiet.
-        // Count fields after line starts *or* after `;` so one-line class bodies still work.
-        const publicFieldCount = (bodyNoReadonly.match(/(?:^|[\n;])\s*(?:public\s+)?(?!constructor|static|get|set|private|protected|readonly)[a-zA-Z_][a-zA-Z0-9_]*\s*[:=]/g) ?? []).length;
+        const methodCount = scanned.members.filter((member) => member.kind === 'method').length;
         const dataOnly = methodCount <= 1 &&
-            publicFieldCount >= 2 &&
-            (publicField || hasPublicMutableFields);
-        shapes.push({
+            publicMutableFields.length >= 2 &&
+            hasPublicMutableFields;
+        shapes.push(attachShapeTruncation({
             file,
             className,
             exported: true,
-            hasPublicMutableFields: publicField || hasPublicMutableFields,
+            hasPublicMutableFields,
             hasPublicSetters,
             hasPublicConstructor,
             hasStaticFactory,
             mutatingMethods: [...mutatingMethods],
             dataOnly,
-        });
+        }, truncatedUntil));
     }
     return shapes;
 }

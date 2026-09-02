@@ -36,6 +36,7 @@ import {
 import { runStatusCommand } from './lib/status-command.mjs';
 import { runAgentProjectionCommand } from './lib/agent-projection-command.mjs';
 import { setupUsage, setupUsageAll, upgradeUsage } from './lib/first-run-help.mjs';
+import { runUpstreamReportCommand } from './lib/upstream-report.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const arkCheck = path.join(here, 'ark-check.mjs');
@@ -45,20 +46,20 @@ Usage: arkgate dashboard [--url <snapshot-url>] [--interval <ms>]
 Polls an ArkRun inspector; it does not start the kernel.`;
 
 function withDashboardHelp(text, detailed) {
+  const extra = detailed
+    ? '  arkgate dashboard [--url <snapshot-url>] [--interval <ms>]\n  arkgate report  [--root <project>] [--json] [--title <text>] [--finding <ref>] [--submit] [--i-confirm-submit]\n'
+    : '';
+  const extraDesc = detailed
+    ? '  dashboard  ANSI observability TUI (spawns ark-dashboard).\n  report     Draft an upstream GitHub issue for pedroknigge/arkgate. Create needs --submit plus confirm. --yes does not submit.\n'
+    : '';
   if (detailed) {
     return text
-      .replace(
-        '  arkgate agents-md [--root',
-        '  arkgate dashboard [--url <snapshot-url>] [--interval <ms>]\n  arkgate agents-md [--root'
-      )
-      .replace(
-        '  agents-md Version-matched',
-        '  dashboard  ANSI observability TUI against a running ArkRun inspector (spawns ark-dashboard).\n  agents-md Version-matched'
-      );
+      .replace('  arkgate agents-md [--root', `${extra}  arkgate agents-md [--root`)
+      .replace('  agents-md Version-matched', `${extraDesc}  agents-md Version-matched`);
   }
   return text.replace(
     '  arkgate-check --doctor     status — one next step\n',
-    '  arkgate-check --doctor     status — one next step\n  arkgate dashboard         observability TUI (inspector)\n'
+    '  arkgate-check --doctor     status — one next step\n  arkgate dashboard         observability TUI (inspector)\n  arkgate report            draft an upstream GitHub issue\n'
   );
 }
 
@@ -181,7 +182,7 @@ function parseArgs(argv) {
     else if (!arg.startsWith('-') && args.command === undefined) {
       args.command = arg;
       // Dashboard owns its flags (--url/--interval); pass the rest through untouched.
-      if (arg === 'dashboard') {
+      if (arg === 'dashboard' || arg === 'report') {
         args.passthrough = argv.slice(i + 1);
         break;
       }
@@ -943,6 +944,13 @@ async function main() {
       host: args.tools,
       arkgateVersion: cliVersion(),
       vs: args.vs,
+    });
+  }
+
+  if (args.command === 'report') {
+    return runUpstreamReportCommand({
+      root: args.root, json: args.json, yes: args.yes,
+      arkgateVersion: cliVersion(), argv: args.passthrough,
     });
   }
 

@@ -19,6 +19,7 @@ description: Map import rules and leftover design. No apply. CLI is a sensor; yo
 - Doctor #1: if ENFORCE + empty plan A and gates are already installed → **Shape** (`/ark-explore` then `/ark-autopilot`). Do not say install-agent-gates.
 - Distinguish **missing** skills vs **stale** catalog. Installed ≠ stale.
 - Hook green is not tree green (scripted edits bypass PreToolUse).
+- Bug / false green / false red / missing doc / improvable behavior **in ArkGate itself** → draft one upstream GitHub issue (`pedroknigge/arkgate` or the installed package `repository.url`), **ask the human to confirm send**, then `gh issue create`. Never auto-file. Never file ArkGate defects on the consumer product repo.
 
 ## Autonomy contract
 
@@ -27,7 +28,24 @@ incomplete. **Do not write** config or product code (that is `/ark-adopt` / `/ar
 **CLI budget:** one doctor / coverage; then open ≥12 files across ≥4 dirs; then the map.
 
 **Still never:** weaken the config; invent `mechanical-safe` kinds; claim healthy because
-plan A is empty while leftover design work remains.
+plan A is empty while leftover design work remains; auto-file GitHub issues; file ArkGate
+defects on the consumer product repo; skip the human confirm step.
+
+## Report ArkGate defects (ask first)
+
+This skill maps **this** tree. If recon shows a bug, false green, false red, missing doc, or
+improvable behavior **in ArkGate itself** (the `arkgate` package — not leftover design in the
+consumer app):
+
+1. Draft one GitHub issue for **upstream** (`pedroknigge/arkgate`, or `package.json`
+   `repository.url` of the installed `arkgate` package).
+2. **Ask the human in the loop to confirm send.** Do not create the issue until they say yes.
+3. If confirmed, `gh issue create` with the logged-in account. One finding per issue. Include
+   repro commands, version, and measured evidence.
+4. Never auto-file, batch-spam, or skip confirm. Never file ArkGate defects on the consumer
+   product repo.
+
+Reporting is not applying product code. Stay map-only on this tree.
 
 Use when you need a decision-grade map or the **Primary post-green door**; hand off to
 `/ark-autopilot` to apply. Day-to-day place + gate work does not require this skill.
@@ -431,6 +449,9 @@ Optional: **Diff vs naive sensor-only read** (what reading the tree changed).
 - Mode respected: no multi-week roadmap in recon mode; dual-plan seed capped at 3–5 B bets.
 - Clear handoff: `/ark-adopt` | `/ark-autopilot` | `/ark-place` | CLI | `stop`.
 - No gate weakening; no false ENFORCE claim; no README echo as primary content.
+- If you found a bug / false green / false red / missing doc / improvable behavior in the
+  **ArkGate package**, you drafted one upstream issue, asked the human to confirm, and did not
+  `gh issue create` until they said yes. Never filed it on the consumer repo.
 
 ## Completion contract (skill incomplete if missing)
 

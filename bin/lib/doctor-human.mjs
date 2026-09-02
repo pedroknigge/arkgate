@@ -359,7 +359,7 @@ export function printDoctorDetailsHuman(view) {
       `${violations.length} total${typeNote}${supNote}${activeCount > 0 ? ` — ${activeCount} NOT baselined` : ''}`
     );
     for (const edge of summary.edges.slice(0, 3)) line(' ', color.dim(`${edge.count}  ${edge.edge}`));
-    if (summary.concentrated) {
+    if (summary.concentrated && typeof summary.dominant === 'string' && summary.dominant.includes(' → ')) {
       line(warn, color.dim(`${Math.round(summary.dominantShare * 100)}% on one edge (${summary.dominant}) — likely a contract fix, not debt`));
     }
   }
@@ -474,7 +474,7 @@ export function printDoctorDetailsHuman(view) {
   console.log('');
   console.log(color.bold('Baseline'));
   if (!baseline.exists) {
-    line(!analysisComplete || violations.length > 0 ? warn : ok, !analysisComplete ? 'No baseline — current violations were not fully evaluated' : violations.length > 0 ? 'No baseline — adopting a dirty repo? freeze with --update-baseline' : 'No baseline (nothing to freeze)');
+    line(!analysisComplete || violations.length > 0 ? warn : ok, !analysisComplete ? 'No baseline — current violations were not fully evaluated' : violations.length > 0 ? 'No baseline — adopting a dirty repo? freeze with --update-baseline --force --contract-session --author <steward>' : 'No baseline (nothing to freeze)');
   } else {
     const baseMark = !analysisComplete || baselineHonesty.dirtyBaselineRisk ? warn : ok;
     line(baseMark, `${baseline.keys.size} frozen key(s)${analysisComplete ? '' : ' — stale comparison not verified'}`);
@@ -482,7 +482,7 @@ export function printDoctorDetailsHuman(view) {
       line(warn, baselineHonesty.message);
     }
     if (analysisComplete && staleBaseline > 0) {
-      line(warn, `${staleBaseline} stale entr(y/ies) no longer occur — tighten with --update-baseline`);
+      line(warn, `${staleBaseline} stale entr(y/ies) no longer occur — tighten with --update-baseline --force --contract-session --author <steward>`);
     }
   }
 

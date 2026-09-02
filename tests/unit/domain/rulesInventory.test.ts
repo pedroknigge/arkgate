@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { DOMAIN_INVARIANT_WORDS } from '../../../src/domain/arkRuleSensors';
 import {
   buildRulesInventory,
   inventoryToExtractionCard,
@@ -271,6 +272,45 @@ describe('AR13–AR15 rules inventory + extraction cards', () => {
           candidate.kind === 'validation-in-controller'
       )
     ).toBe(true);
+  });
+
+  it('shares the Domain invariant-word list and does not flag === or pendingEvents = [] (DSHAPE-001)', () => {
+    expect(DOMAIN_INVARIANT_WORDS).toEqual(
+      expect.arrayContaining(['ensureInvariants', 'raise', 'record'])
+    );
+    const inventory = buildRulesInventory({
+      fileContents: {
+        'src/domain/order.ts': `
+          export class Order {
+            private status = 'Open';
+            private pendingEvents: unknown[] = [];
+            ensureInvariants() { if (this.status === 'Closed') throw new Error('closed'); }
+            pullEvents() { const out = this.pendingEvents; this.pendingEvents = []; return out; }
+            close() { this.status = 'Closed'; this.raise({ type: 'Closed' }); }
+          }
+        `,
+      },
+      fileLayers: { 'src/domain/order.ts': 'DomainModel' },
+    });
+    expect(inventory.candidates.filter((c) => c.kind === 'mutation-without-guard')).toEqual([]);
+  });
+
+  it('names expected invariant words on mutation-without-guard (DSHAPE-001)', () => {
+    const inventory = buildRulesInventory({
+      fileContents: {
+        'src/domain/offer.entity.ts': `
+          export class Offer {
+            private total = 0;
+            bump() { this.total = this.total + 1; }
+          }
+        `,
+      },
+      fileLayers: { 'src/domain/offer.entity.ts': 'DomainModel' },
+    });
+    const mut = inventory.candidates.find((c) => c.kind === 'mutation-without-guard');
+    expect(mut?.message).toContain('ensureInvariants');
+    expect(mut?.message).toContain('raise');
+    expect(mut?.message).toContain('record');
   });
 
   it('keeps the generated CLI inventory artifact behaviorally aligned', () => {

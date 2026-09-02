@@ -209,6 +209,15 @@ describe('q1 coverage top-up (dense, non-overlapping)', () => {
       syncBaselineIntoCheckSurfaces(root, {});
       expect(ensureBaselineFlagInCheckCommand('npx ark-check --strict').changed).toBe(true);
       expect(ensureBaselineFlagInCheckCommand('npx ark-check --baseline x.json').changed).toBe(false);
+      expect(
+        ensureBaselineFlagInCheckCommand('  group: ark-check-${{ github.ref }}').changed
+      ).toBe(false);
+      expect(ensureBaselineFlagInCheckCommand('  ark-check:').changed).toBe(false);
+      expect(ensureBaselineFlagInCheckCommand('      - run: npx ark-check --strict-merge').changed).toBe(
+        true
+      );
+      expect(ensureBaselineFlagInCheckCommand('pnpm exec ark-check --strict').changed).toBe(true);
+      expect(ensureBaselineFlagInCheckCommand('node bin/ark-check.mjs').changed).toBe(true);
 
       // false-green with real IO dirs
       for (const seg of IO_DIR_SEGMENTS.slice(0, 4)) {

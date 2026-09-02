@@ -3,6 +3,7 @@ import {
   buildEffectiveArkRules,
   loadArkRulesContract,
 } from '../../../src/domain/arkRulesContract';
+import { ARK_CONFIG_SCHEMA } from '../../../src/domain/configContract';
 import {
   canPromoteInvariant,
   evaluateInvariantCoverage,
@@ -492,5 +493,22 @@ describe('AR09–AR11 invariant coverage + promotion', () => {
     expect(gate.ok).toBe(false);
     expect(gate.reason).toMatch(/INV-ORDER-001/);
     expect(gate.reason).toMatch(/uncovered/i);
+  });
+
+  it('coverage.maxFiles schema names the structural-hint preload coupling (HINTDOC-001)', () => {
+    const coverage = ARK_CONFIG_SCHEMA.$defs.coverage as {
+      description?: string;
+      properties?: { maxFiles?: { description?: string } };
+    };
+    const text = `${coverage.description ?? ''} ${coverage.properties?.maxFiles?.description ?? ''}`;
+    expect(text).toMatch(/structural-hint preload/);
+    expect(text).toMatch(/maxFiles/);
+    expect(text).toMatch(/orchestration-only/);
+    expect(text).toMatch(/thin-adapter/);
+    expect(text).toMatch(/writes-via-aggregate/);
+    expect(coverage.properties).not.toHaveProperty('hintBudget');
+    expect(
+      (ARK_CONFIG_SCHEMA.properties as { arkRules?: unknown }).arkRules
+    ).not.toHaveProperty('hintBudget');
   });
 });

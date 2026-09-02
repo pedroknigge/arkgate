@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-09-01 (Engineering doing: none; Release `RL89` **done** — 4.8.9 published on npm `latest`, MCP Registry, and website; Patch `AH01`/`CS01`/`CI01`/`UP01`/`PX01`/`INT01` **done** and Amarilla ArkOrder `AO10`–`AO16` **done**; Release `RL88` **done** — 4.8.8 published; Phase **LD** `LD01`–`LD06` **done** (4.8.7 published); Patch `ST02` **done** — unlabeled public story; Patch `ST01` **done** — beginner-clear STAR openings; Patch `AO09` **done** — ArkOrder recomputable-status honesty; Phase **LV** ArkOrder valved loop `LV01`–`LV09` **done** (4.8.6 published); Phase **XP** ArkOrder x ArkRun convergence **done** (`XP01`-`XP08`); Patch **4.8.5** `AGY01`+XP **done** — published; Patch **4.8.5** `AGY01` **done** — Antigravity skill refresh (`--antigravity-home` + default tools + dogfood `.agents/skills`); published; Patch **4.8.4** **done** — three false greens closed (coverage certifying tests no runner runs, an empty analysis passing), `--path-drift`, `--sensors`/`--promote`, peer isolation, git install without a build allowlist entry, and honest `--plan`; Phase OR `OR01`–`OR08` **done**; `K01` remains parked; Z09 still parked; npm `latest` is **4.8.9**)
+- **Status date:** 2026-09-02 (Engineering doing: `RL810`; Patch **4.8.10** Amarilla first-aggregate sensors `HINT01`–`IN01` **done** on `release/4.8.10` prepared tree; does not close `Z09` / `K01`; no new skill names; no schemaVersion bump; Release `RL89` **done** — 4.8.9 published on npm `latest`, MCP Registry, and website; Patch `AH01`/`CS01`/`CI01`/`UP01`/`PX01`/`INT01` **done** and Amarilla ArkOrder `AO10`–`AO16` **done**; Release `RL88` **done** — 4.8.8 published; Phase **LD** `LD01`–`LD06` **done** (4.8.7 published); Patch `ST02` **done** — unlabeled public story; Patch `ST01` **done** — beginner-clear STAR openings; Patch `AO09` **done** — ArkOrder recomputable-status honesty; Phase **LV** ArkOrder valved loop `LV01`–`LV09` **done** (4.8.6 published); Phase **XP** ArkOrder x ArkRun convergence **done** (`XP01`-`XP08`); Patch **4.8.5** `AGY01`+XP **done** — published; Patch **4.8.5** `AGY01` **done** — Antigravity skill refresh (`--antigravity-home` + default tools + dogfood `.agents/skills`); published; Patch **4.8.4** **done** — three false greens closed (coverage certifying tests no runner runs, an empty analysis passing), `--path-drift`, `--sensors`/`--promote`, peer isolation, git install without a build allowlist entry, and honest `--plan`; Phase OR `OR01`–`OR08` **done**; `K01` remains parked; Z09 still parked; npm `latest` is **4.8.9**)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -362,6 +362,39 @@ tarball.
 |---:|---|---|---:|---|---|
 | 248 | `RL89` | `done` | M | AO16 | Prepare, tag, and publish **4.8.9** (AH01+CS01+CI01+UP01+PX01+INT01+AO10–AO16). Does not close `Z09` / `K01` |
 
+### Patch 4.8.10 — Amarilla first-aggregate sensors
+
+Amarilla first-aggregate A1–A11 (MAP-001 APPLY/PARTIAL). **Write. Check. Ship.**
+No `schemaVersion` bump, no new skill names.
+Does not close `Z09` / `K01`. One `doing` at a time. Branch
+`release/4.8.10`. `AO10`/`AO11` stay `done` — do not re-open.
+
+Park (vision): `arkrules.hintBudget` key; `allowEmptyScope`; `kernel.dtypePrefixes`;
+a second analysis engine.
+
+Engineering doing: `RL810`. `HINT01` `HINT02` `YAML01` `SH01` `DS01` `WA01` `SC01`
+`BK01` `IR01` `MSG01` `IN01` landed on this branch.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 256 | `HINT01` | `done` | M | RL89 | A1: when governed files exceed the structural-hint budget, warn with exact hinted/governed counts; under `--strict-config` fail. Per-sensor N/M in the check summary. Reuse 400 / `coverage.maxFiles` as the visible budget. No `arkrules.hintBudget` key |
+| 257 | `HINT02` | `done` | S | HINT01 | A9: schema description + `--doctor` name that `coverage.maxFiles` (and the 400 default) also bound structural-hint preload. Pair with HINT01 fail-closed so docs are not the only tooth |
+| 258 | `YAML01` | `done` | S | HINT02 | A2: `--update-baseline` GitHub rewrite touches only the `ark-check` / `arkgate-check` invocation line, never `concurrency.group` or job ids. Announce writes outside the three law files |
+| 259 | `SH01` | `done` | M | YAML01 | A3 PARTIAL: class bodies are already brace-balanced (ALREADY). Remaining: method params brace/paren-balanced so a later broken method is visible; report residual truncation. Do not re-write class-body matching |
+| 260 | `DS01` | `done` | M | SH01 | A4: one shared invariant-word list; distinguish `=` from `===`/`!==`/`<=`/`>=`; treat `pendingEvents = []` as idiomatic; `.push(` on an events array counts as publish; sensor message names the expected word; public-field regex not object literals |
+| 261 | `WA01` | `done` | M | DS01 | A5: `writes-via-aggregate` resolves tsconfig path aliases and classifies destination layer; `db.update(`/`tx.insert(` are writes; `repo.update(` is not |
+| 262 | `SC01` | `done` | S | WA01 | A6: `ARKRULE_SCOPE_EMPTY` is not freezable (even with `--force`). Document law-then-product PR sequence. No `allowEmptyScope` key |
+| 263 | `BK01` | `done` | M | SC01 | A7: STRUCTURE baseline keys include sensor id (+ symbol). V1 empty-target keys: document compat; new freezes use the sensor field. A freeze for one sensor must not silence another |
+| 264 | `IR01` | `done` | M | BK01 | A8: intent-prefix checks apply only at declared intent-reference sites (events, sagas / publish metadata), not every string literal. No `kernel.dtypePrefixes`. DType names like `Management.EvmInspection.Data` must not trip `LAYER_INTENT_REFERENCE_VIOLATION` |
+| 265 | `MSG01` | `done` | S | IR01 | A10: baseline regenerate note lists the full command (`--update-baseline --force --contract-session --author`). Doctor concentration looks at `sensor` (orchestration-only is code debt). `--sensors` short-help says it does not run analysis. Do not treat AO11 9-vs-7 as a bug |
+| 266 | `IN01` | `done` | M | HINT02+IR01 | A11: honor `--changed` for file-local structural sensors + hint load; graph / import-edge / cycle sensors still see the whole governed set. Optional hint cache by content hash. Document the bound; do not claim 170s becomes seconds. No second analysis engine |
+
+### Release 4.8.10 — complete publish
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 267 | `RL810` | `doing` | M | IN01 | Prepare, tag, and publish **4.8.10** (HINT01–IN01 + report CLI). Does not close `Z09` / `K01` |
+
 ### Patch 4.8.5 — Antigravity skills refresh
 
 Antigravity reads workspace `.agents/skills` and the official global catalog
@@ -390,7 +423,7 @@ Plan: [docs/plans/alive-in-six-months/README.md](docs/plans/alive-in-six-months/
 | 183 | `AL05` | `parked` | S | required-status possible + 3 partners | Field enrollment. Does **not** close Z09 |
 | 184 | `AL06` | `done` | S | AL04 | Compact first-screen vs Details independently invocable; first-screen honesty stays |
 
-Engineering doing: none. `RL89` **done** (4.8.9 published). `AH01`/`CS01`/`CI01`/`UP01`/`PX01`/`INT01` **done**. Amarilla ArkOrder `AO10`–`AO16` **done**. `RL88` **done** (4.8.8 published). Phase **LD** `LD01`–`LD06` **done** (4.8.7 published). `ST02`, `ST01`, and `AO09` **done**. Phase **LV** `LV01`–`LV09` **done** (4.8.6 published). `AGY01` **done** (4.8.5 published). `OR01`–`OR07` **done**. `WH01` **done** (ADR 0026). `PK01` **done**.
+Engineering doing: `RL810`. Patch 4.8.10 `HINT01`–`IN01` **done** (4.8.10 prepared tree). `RL89` **done** (4.8.9 published). `AH01`/`CS01`/`CI01`/`UP01`/`PX01`/`INT01` **done**. Amarilla ArkOrder `AO10`–`AO16` **done**. `RL88` **done** (4.8.8 published). Phase **LD** `LD01`–`LD06` **done** (4.8.7 published). `ST02`, `ST01`, and `AO09` **done**. Phase **LV** `LV01`–`LV09` **done** (4.8.6 published). `AGY01` **done** (4.8.5 published). `OR01`–`OR07` **done**. `WH01` **done** (ADR 0026). `PK01` **done**.
 `K01` **parked** (4.7.6 primitives only).
 Phase DX (`DX01`–`DX03`) **done** and present in published `arkgate@4.8.0+` (4.7.6 predates them).
 Phase HS (`HS01`–`HS05`) **done**. Remaining first-contact copy **4.7.3** published. Write. Check. Ship. patch **4.7.5** published. **4.8.9** is on npm `latest`.

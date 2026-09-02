@@ -95,12 +95,74 @@ Non-interactive (no TTY): uses the same defaults as --yes — never calls readli
 `;
 }
 
+/** `--sensors` is contract + coverage-evidence only — never a full-check pass. */
+export const SENSORS_PARTIAL_MODE_LINE =
+  'Contract + coverage-evidence only: no TypeScript, no analysis. Not a validity verdict.';
+
+export const SENSORS_DID_NOT_RUN = Object.freeze(['TypeScript', 'analysis']);
+
+/**
+ * Stamp a successful `--sensors --json` payload so agents cannot read exit 0 as
+ * a full-check pass. Failure payloads (`sensors.ok === false`) stay untouched.
+ */
+export function stampSensorsPartialModePayload(payload) {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return payload;
+  const sensors = payload.sensors;
+  if (!sensors || typeof sensors !== 'object' || Array.isArray(sensors)) return payload;
+  if (sensors.ok === false) return payload;
+  return {
+    ...payload,
+    sensors: {
+      ...sensors,
+      notAVerdict: true,
+      didNotRun: [...SENSORS_DID_NOT_RUN],
+      partialMode: 'contract-only',
+    },
+  };
+}
+
+/**
+ * After `runSensors`, name what this mode skipped. Human success prints the
+ * line on stdout; JSON success restamps the captured object. Failures reprint
+ * as-is so exit 2 does not look like a map.
+ */
+export async function withSensorsPartialModeHonesty(args, run) {
+  if (args?.json) {
+    const chunks = [];
+    const original = console.log;
+    console.log = (...parts) => {
+      chunks.push(parts.map(String).join(' '));
+    };
+    try {
+      await run();
+    } finally {
+      console.log = original;
+    }
+    const text = chunks.join('\n');
+    if ((process.exitCode ?? 0) !== 0) {
+      if (text) original(text);
+      return;
+    }
+    try {
+      original(JSON.stringify(stampSensorsPartialModePayload(JSON.parse(text)), null, 2));
+    } catch {
+      original(text);
+    }
+    return;
+  }
+  await run();
+  if ((process.exitCode ?? 0) === 0) {
+    console.log(SENSORS_PARTIAL_MODE_LINE);
+  }
+}
+
 export function checkUsage() {
   return [
     'arkgate-check (alias ark-check) — the architecture check.',
     '',
     '  arkgate-check --doctor         where you are: one status light, one next action',
     '  arkgate-check --strict-merge   CI / merge gate (required GitHub status)',
+    '  arkgate-check --sensors        which sensors can ever be enforced (does not run analysis)',
     '',
     'Every flag and command: arkgate-check --help --all',
   ].join('\n');
@@ -124,7 +186,7 @@ export function checkUsageAll() {
     '           Exit 0 ran and clean, 1 drift remains, 2 could not run (no usable base ref).',
     '       ark-check --sensors [--json]           every sensor with its tier and whether it can EVER be enforced, plus every declared rule',
     '           with its local id, the sensor it delegates to, its source file, its mode and why it can or cannot be promoted.',
-    '           Contract + coverage-evidence only: no TypeScript, no analysis. Exit 0 on a report, 2 if the contract will not load.',
+    `           ${SENSORS_PARTIAL_MODE_LINE} Exit 0 on a report, 2 if the contract will not load.`,
     '       ark-check --promote [<ruleId>] [--json] [--apply]',
     '           what enforcing would cost: the findings each advisory rule already produces, from ONE run rather than one run per attempt.',
     '           Plan by default; --promote <ruleId> --apply (or --promote=<ruleId>) writes mode "enforced" into the ArkRules file that declares it.',
@@ -143,12 +205,14 @@ export function checkUsageAll() {
     '       ark-check --init [--preset hexagonal|layered|feature-sliced|monorepo|ui-surface|vertical-slice|ddd-bounded-contexts|vite-vercel-spa|clean-architecture|onion-architecture] [--force] [--follow-config-root]',
     '       --follow-config-root  On writes (init/install-agent-gates/migrate --write/…), adopt walked-up monorepo config root (default: keep explicit --root)',
     '       ark-check --install-agent-gates [--tools claude,cursor,codex,grok,antigravity] [--require-write-hook <host>] [--skills-only] [--codex-home] [--claude-home] [--grok-home] [--antigravity-home] [--agent-homes] [--force]',
-    '       ark-check --update-baseline [file]     freeze current violations (default .ark-baseline.json)',
+    '       ark-check --update-baseline [file] --force --contract-session --author <steward>',
+    '           freeze current violations (default .ark-baseline.json). --contract-session is required;',
+    '           --force when freeze-refuse fires; --author when stewards[] is set.',
     '       ark-check --print-config eleven-layer',
     '',
-    'Adopting Ark in an existing codebase? Run --update-baseline once to freeze existing',
-    'violations, commit the baseline file, and gate CI with --baseline: only NEW violations',
-    'fail the check, so the ratchet only moves toward zero.',
+    'Adopting Ark in an existing codebase? Run --update-baseline --force --contract-session --author <steward>',
+    'once to freeze existing violations, commit the baseline file, and gate CI with --baseline: only NEW',
+    'violations fail the check, so the ratchet only moves toward zero.',
     '',
     'Team parliament: law files (ark.config / arkrules / .ark-baseline.json) cannot ship in',
     'the same diff as product source. --changed --base <ref> checks touched files only.',

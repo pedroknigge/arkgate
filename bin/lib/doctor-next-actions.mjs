@@ -116,7 +116,9 @@ export function collectDoctorNextActions(ctx) {
     actions.push('review dirty baseline freezes — fix the contract before trusting green-via-freeze');
   }
   if (ctx.analysisComplete && ctx.staleBaseline > 0) {
-    actions.push('tighten the baseline (--update-baseline)');
+    actions.push(
+      'tighten the baseline (--update-baseline --force --contract-session --author <steward>)'
+    );
   }
   if (ctx.staleRunners.length > 0) {
     actions.push(

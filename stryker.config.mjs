@@ -37,7 +37,9 @@ const config = {
     'bin/lib/ast-scan.mjs:301-322',
     'bin/lib/ast-scan.mjs:411-427',
     'bin/ark-shared.mjs:450-475',
-    'src/domain/baselineKey.ts:20-48',
+    // STRUCTURE freeze target + non-freezable SCOPE_EMPTY + baselineKey join
+    // (type-only fields above line 40 are not executable — do not pin them).
+    'src/domain/baselineKey.ts:40-120',
     // 4.0: migrateArkConfig critical slices (excludes redundant throw-only / guard noise).
     // 471 is an equivalent mutant: forcing the typeof guard true routes a
     // non-string schemaVersion to the unknown-version throw, same message.

@@ -163,11 +163,11 @@ describe('ark-check --init', () => {
     expect(withStray.warnings.some((w) => w.ruleId === 'CONFIG_UNCLASSIFIED_FILES')).toBe(true);
 
     // Code inside a conventional directory is governed immediately: a domain file
-    // referencing a persistence intent must fail the strict check.
+    // referencing a persistence intent at a declared site must fail the strict check.
     fs.mkdirSync(path.join(root, 'src/domain'), { recursive: true });
     fs.writeFileSync(
       path.join(root, 'src/domain/order.ts'),
-      "export const ref = 'Adapter.Persistence.Save';\n"
+      "defineIntent('Adapter.Persistence.Save');\n"
     );
     fs.rmSync(path.join(root, 'src/lib'), { recursive: true });
     const governed = runArkCheck(root, ['--strict-config']);
@@ -1569,10 +1569,10 @@ describe('ark-check include accepts single files', () => {
   function seed(root: string, include: string[]) {
     fs.mkdirSync(path.join(root, 'lib'), { recursive: true });
     fs.writeFileSync(path.join(root, 'lib/svc.ts'), 'export const a = 1;\n');
-    // A root-level file (like Next.js middleware.ts) that references a denied layer.
+    // A root-level file (like Next.js middleware.ts) that imports a denied layer.
     fs.writeFileSync(
       path.join(root, 'middleware.ts'),
-      "export const ref = 'Adapter.Persistence.Save';\n"
+      "import { a } from './lib/svc';\nexport const ref = a;\n"
     );
     fs.writeFileSync(
       path.join(root, 'ark.config.json'),
@@ -1966,7 +1966,7 @@ describe('ark-check CLI', () => {
     fs.mkdirSync(path.join(root, 'src/domain'), { recursive: true });
     fs.writeFileSync(
       path.join(root, 'src/domain/order.ts'),
-      "export const ref = 'Adapter.Persistence.Save';\n"
+      "defineIntent('Adapter.Persistence.Save');\n"
     );
     // Layer has a file pattern but no intentPrefixes and the config has no rules — both
     // must fall back to the built-in defaults (previously the fallback silently no-op'd).
@@ -2008,7 +2008,7 @@ describe('ark-check CLI', () => {
     fs.writeFileSync(path.join(root, 'src/infra/db.ts'), 'export const db = {};');
     fs.writeFileSync(
       path.join(root, 'src/domain/order.ts'),
-      "import { db } from '../infra/db';\nexport const ref = 'Adapter.Persistence.Save';\n"
+      "import { db } from '../infra/db';\ndefineIntent('Adapter.Persistence.Save');\n"
     );
     fs.writeFileSync(
       path.join(root, 'ark.config.json'),

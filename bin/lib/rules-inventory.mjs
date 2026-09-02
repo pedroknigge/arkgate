@@ -8,6 +8,7 @@
  * Pure CLI helper (bin/lib/rules-inventory.mjs). Zero Node I/O.
  */
 
+import { DOMAIN_EVENTS_PUSH_RE, DOMAIN_INVARIANT_WORD_RE, expectedDomainInvariantWordsPhrase, isIdiomaticEventsReset, } from './arkrules-sensors.mjs';
 function lineOf(content, index) {
     return content.slice(0, index).split('\n').length;
 }
@@ -226,7 +227,7 @@ export function buildRulesInventory(input) {
                 /(?:^|\/)[^/]*(?:-access)?\.error\./i.test(posix) ||
                 /(?:^|\/)errors?(?:\/|$)/i.test(posix);
             if (!isErrorBag) {
-                const mutRe = /this\.\w+\s*=/g;
+                const mutRe = /\bthis\.[A-Za-z_][A-Za-z0-9_]*\s*=(?!=)/g;
                 let mut;
                 while ((mut = mutRe.exec(content)) !== null) {
                     const classStart = content.lastIndexOf('class ', mut.index);
@@ -239,15 +240,18 @@ export function buildRulesInventory(input) {
                     if (/\bextends\s+(?:Error|[A-Za-z_$][A-Za-z0-9_$]*Error)\b/.test(classHeader)) {
                         continue;
                     }
+                    if (isIdiomaticEventsReset(content, mut.index))
+                        continue;
                     const window = content.slice(Math.max(0, mut.index - 200), mut.index + 200);
-                    if (!/\b(ensureInvariants|assertInvariants|validate|publish|emit)\b/.test(window)) {
+                    if (!DOMAIN_INVARIANT_WORD_RE.test(window) &&
+                        !DOMAIN_EVENTS_PUSH_RE.test(window)) {
                         seq += 1;
                         candidates.push({
                             id: `inv-mut-${seq}`,
                             kind: 'mutation-without-guard',
                             file,
                             line: lineOf(content, mut.index),
-                            message: 'Domain field mutation without nearby guard/publish call.',
+                            message: `Domain field mutation without nearby ${expectedDomainInvariantWordsPhrase()}.`,
                             confidence: 'heuristic',
                             governedLayer,
                             suggestedArkRule: {

@@ -96,7 +96,7 @@ import {
   writeArkRulesTemplates,
 } from './lib/presets.mjs';
 import { loadArkConfigContract, parseArkConfigJson } from './lib/config-contract.mjs';
-import { checkUsage, checkUsageAll } from './lib/first-run-help.mjs';
+import { checkUsage, checkUsageAll, withSensorsPartialModeHonesty } from './lib/first-run-help.mjs';
 import { createAdapterResult } from './lib/adapter-contract.mjs';
 import {
   UNGOVERNED_PROBE_CAP,
@@ -1140,7 +1140,7 @@ async function main() {
 
   if (args.sensors) {
     const { runSensors } = await import('./lib/sensor-promote-cli.mjs');
-    await runSensors(args, readConfig);
+    await withSensorsPartialModeHonesty(args, () => runSensors(args, readConfig));
     return;
   }
 

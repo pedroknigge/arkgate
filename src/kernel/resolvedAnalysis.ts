@@ -27,10 +27,12 @@ import {
   resolveIntentLayer,
 } from '../domain/sourcePolicy';
 import { emptyEffectiveArkRules } from '../domain/arkRulesContract';
+import { structureFreezeTarget } from '../domain/baselineKey';
 import {
   buildArkRuleFileHints,
   collectEmptyAppliesToFindings,
   evaluateArkRuleSensors,
+  type ArkRuleSensorViolation,
 } from '../domain/arkRuleSensors';
 import { evaluateInvariantCoverage } from '../domain/invariantCoverage';
 import { classifyResolvedLayerCoverage } from '../domain/extraMergeTeeth';
@@ -46,6 +48,35 @@ import type {
   ResolvedAnalysisResult,
   ResolvedSafetyReport,
 } from './analysisTypes';
+
+function toArkRuleEngineViolation(
+  finding: ArkRuleSensorViolation,
+  nextAction: string
+): ArchitectureEngineViolation {
+  const isStructure = finding.ruleId === 'ARKRULE_STRUCTURE';
+  const isScopeEmpty = finding.ruleId === 'ARKRULE_SCOPE_EMPTY';
+  return {
+    ruleId: finding.ruleId,
+    file: finding.file,
+    line: finding.line,
+    message: finding.message,
+    fromLayer: finding.fromLayer,
+    arkruleId: finding.arkruleId,
+    arkruleSource: finding.arkruleSource,
+    ...(isStructure
+      ? {
+          sensor: finding.sensor,
+          code: finding.code,
+          target: structureFreezeTarget({
+            sensor: finding.sensor,
+            code: finding.code,
+          }),
+        }
+      : {}),
+    ...(isScopeEmpty ? { freezable: false } : {}),
+    nextAction,
+  };
+}
 
 function matchesAny(file: string, patterns: readonly string[]): boolean {
   return patterns.some((pattern) => {
@@ -442,34 +473,24 @@ export function analyzeCanonicalResolvedProject(
   ];
   const arkRuleViolations: ArchitectureEngineViolation[] = arkRuleFindings
     .filter((finding) => finding.failsStrict)
-    .map((finding) => ({
-      ruleId: finding.ruleId,
-      file: finding.file,
-      line: finding.line,
-      message: finding.message,
-      fromLayer: finding.fromLayer,
-      arkruleId: finding.arkruleId,
-      arkruleSource: finding.arkruleSource,
-      nextAction:
+    .map((finding) =>
+      toArkRuleEngineViolation(
+        finding,
         finding.ruleId === 'ARKRULE_SCOPE_EMPTY'
-          ? `Fix appliesTo globs for ${finding.arkruleId} in ${finding.arkruleSource} so they match governed files, or remove the rule.`
-          : `Fix the structure or invariant for ${finding.arkruleId} (declared in ${finding.arkruleSource}), then preflight again.`,
-    }));
+          ? `Fix appliesTo globs for ${finding.arkruleId} in ${finding.arkruleSource} so they match governed files, or remove the rule. ARKRULE_SCOPE_EMPTY is a config diagnostic and is not freezable (even with --force). Land the rule as advisory until the folder exists, then promote.`
+          : `Fix the structure or invariant for ${finding.arkruleId} (declared in ${finding.arkruleSource}), then preflight again.`
+      )
+    );
   const arkRuleWarnings: ArchitectureEngineViolation[] = arkRuleFindings
     .filter((finding) => !finding.failsStrict)
     .map((finding) => ({
-      ruleId: finding.ruleId,
-      file: finding.file,
-      line: finding.line,
-      message: finding.message,
-      fromLayer: finding.fromLayer,
-      arkruleId: finding.arkruleId,
-      arkruleSource: finding.arkruleSource,
-      failsStrict: false,
-      nextAction:
+      ...toArkRuleEngineViolation(
+        finding,
         finding.ruleId === 'ARKRULE_SCOPE_EMPTY'
-          ? `Review appliesTo for ${finding.arkruleId} in ${finding.arkruleSource} (zero-match scope; advisory).`
-          : `Review ArkRule ${finding.arkruleId} in ${finding.arkruleSource} (advisory).`,
+          ? `Review appliesTo for ${finding.arkruleId} in ${finding.arkruleSource} (zero-match scope; advisory). Empty scope is not freezable; promote only after the folder exists.`
+          : `Review ArkRule ${finding.arkruleId} in ${finding.arkruleSource} (advisory).`
+      ),
+      failsStrict: false,
     }));
 
   // AR10: invariant coverage. Without Tooling-supplied contents, report partial (never covered).

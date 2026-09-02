@@ -750,6 +750,83 @@ function declaredIntent(value, config) {
   );
 }
 
+/** Call names whose string arguments are declared intent-reference sites. */
+const INTENT_CALL_NAMES = new Set(['publish', 'subscribe', 'defineIntent', 'registerHandler']);
+
+function isSyntaxWrapper(ts, node) {
+  return Boolean(
+    node &&
+      (ts.isParenthesizedExpression(node) ||
+        ts.isAsExpression(node) ||
+        (typeof ts.isTypeAssertionExpression === 'function' &&
+          ts.isTypeAssertionExpression(node)) ||
+        (typeof ts.isSatisfiesExpression === 'function' && ts.isSatisfiesExpression(node)))
+  );
+}
+
+function unwrapWrappers(ts, node) {
+  let current = node;
+  while (current?.parent && isSyntaxWrapper(ts, current.parent)) {
+    current = current.parent;
+  }
+  return current;
+}
+
+function callCalleeName(ts, node) {
+  if (!node || !ts.isCallExpression(node)) return undefined;
+  const expression = node.expression;
+  if (ts.isIdentifier(expression)) return expression.text;
+  if (ts.isPropertyAccessExpression(expression)) return expression.name.text;
+  return undefined;
+}
+
+function isPublishMetadataSource(ts, sourceProp) {
+  const object = sourceProp.parent;
+  if (!object || !ts.isObjectLiteralExpression(object)) return false;
+  const objectSite = unwrapWrappers(ts, object);
+  const objectParent = objectSite.parent;
+  if (!objectParent) return false;
+  if (ts.isCallExpression(objectParent) && callCalleeName(ts, objectParent) === 'publish') {
+    const args = objectParent.arguments;
+    return args[1] === objectSite || args[2] === objectSite;
+  }
+  if (
+    ts.isPropertyAssignment(objectParent) &&
+    syntaxPropertyName(ts, objectParent.name) === 'metadata'
+  ) {
+    const eventObject = objectParent.parent;
+    if (!eventObject) return false;
+    const eventSite = unwrapWrappers(ts, eventObject);
+    const call = eventSite.parent;
+    return Boolean(
+      call && ts.isCallExpression(call) && callCalleeName(ts, call) === 'publish'
+    );
+  }
+  return false;
+}
+
+/** Events, sagas, and publish metadata — not every string that matches a prefix. */
+function isDeclaredIntentSite(ts, node) {
+  const siteNode = unwrapWrappers(ts, node);
+  const parent = siteNode.parent;
+  if (!parent) return false;
+  if (ts.isCallExpression(parent)) {
+    const name = callCalleeName(ts, parent);
+    if (INTENT_CALL_NAMES.has(name) && parent.arguments.some((arg) => arg === siteNode)) {
+      return true;
+    }
+  }
+  if (ts.isArrayLiteralExpression(parent)) {
+    return isDeclaredIntentSite(ts, parent);
+  }
+  if (ts.isPropertyAssignment(parent)) {
+    const name = syntaxPropertyName(ts, parent.name);
+    if (name === 'intent' || name === 'onEvent' || name === 'reactsTo') return true;
+    if (name === 'source' && isPublishMetadataSource(ts, parent)) return true;
+  }
+  return false;
+}
+
 function mayContainForbiddenCapability(ts, sourceFile, forbiddenGlobals) {
   // Every symbol-aware match originates in an identifier or static string path segment.
   // Inspect decoded AST text so escaped identifiers still take the full checker path.
@@ -788,7 +865,11 @@ function collectPolicyFacts(ts, sourceFile, relativePath, config) {
           : {}),
       });
     }
-    if (ts.isStringLiteralLike(node) && declaredIntent(node.text, config)) {
+    if (
+      ts.isStringLiteralLike(node) &&
+      declaredIntent(node.text, config) &&
+      isDeclaredIntentSite(ts, node)
+    ) {
       intentReferences.push({
         file: relativePath,
         line: lineOf(sourceFile, node.getStart(sourceFile)),

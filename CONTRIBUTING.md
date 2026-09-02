@@ -86,6 +86,14 @@ Maintainer-only local notes may live under gitignored `internal/` — never comm
 - **Bug fixes:** PR with a failing test that goes green.
 - **Features / behavior:** open an issue first — keep the public surface small.
 
+**Agent reports (human confirms first):** if a session finds a bug, false green, false red,
+missing doc, or improvable behavior **in ArkGate**, draft one GitHub issue for **this**
+repository (`pedroknigge/arkgate`, or `package.json` `repository.url`), ask the human in the
+loop to confirm send, then `gh issue create` with the logged-in account. One finding per issue;
+include repro commands, version, and measured evidence. Never auto-file. Never file ArkGate
+defects on a consumer product repo. Recipe:
+[agent-guide — Session recipe](docs/agent-guide.md#session-recipe-agent-turn).
+
 Good first contributions: adoption friction reports, host-install honesty, docs in the
 **use / develop / contribute** lanes (not unsolicited epic rewrites).
 
@@ -157,7 +165,7 @@ mcp-publisher login github -token "$(gh auth token)"
 mcp-publisher validate server.json && mcp-publisher publish server.json
 ```
 
-**Current release:** [docs/releases/4.8.9.md](docs/releases/4.8.9.md) (`arkgate@4.8.9`, published on npm `latest`).
+**Current release candidate:** [docs/releases/4.8.10.md](docs/releases/4.8.10.md) (`arkgate@4.8.10`, prepared; not published).
 **Current published release:** [docs/releases/4.8.9.md](docs/releases/4.8.9.md) (`arkgate@4.8.9` on npm `latest`).
 
 **Prior published:** [docs/releases/4.8.8.md](docs/releases/4.8.8.md) (`arkgate@4.8.8`) · [docs/releases/4.8.7.md](docs/releases/4.8.7.md) (`arkgate@4.8.7`) · [docs/releases/4.8.6.md](docs/releases/4.8.6.md) (`arkgate@4.8.6`) · [docs/releases/4.8.5.md](docs/releases/4.8.5.md) (`arkgate@4.8.5`) · [docs/releases/4.8.4.md](docs/releases/4.8.4.md) (`arkgate@4.8.4`) · [docs/releases/4.8.3.md](docs/releases/4.8.3.md) (`arkgate@4.8.3`) · [docs/releases/4.8.2.md](docs/releases/4.8.2.md) (`arkgate@4.8.2`) · [docs/releases/4.8.1.md](docs/releases/4.8.1.md) (`arkgate@4.8.1`) · [docs/releases/4.8.0.md](docs/releases/4.8.0.md) (`arkgate@4.8.0`) · [docs/releases/4.7.6.md](docs/releases/4.7.6.md) (`arkgate@4.7.6`) · [docs/releases/4.7.5.md](docs/releases/4.7.5.md) (`arkgate@4.7.5`) · [docs/releases/4.7.4.md](docs/releases/4.7.4.md) (`arkgate@4.7.4`) · [docs/releases/4.7.3.md](docs/releases/4.7.3.md) (`arkgate@4.7.3`) · [docs/releases/4.7.2.md](docs/releases/4.7.2.md) (`arkgate@4.7.2`) · [docs/releases/4.7.1.md](docs/releases/4.7.1.md) (`arkgate@4.7.1`) · [docs/releases/4.7.0.md](docs/releases/4.7.0.md) (`arkgate@4.7.0`).

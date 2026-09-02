@@ -10,7 +10,7 @@ import { version } from '../../../src/version.ts';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 /** Tree package identity. */
-const CURRENT = '4.8.9';
+const CURRENT = '4.8.10';
 /** Version confirmed on npm `latest`. */
 const PUBLISHED_LATEST = '4.8.9';
 
@@ -22,6 +22,29 @@ function read(rel: string) {
 function changelogText() {
   return `${read('CHANGELOG.md')}\n${read('docs/archive/CHANGELOG-pre-4.6.md')}`;
 }
+
+/** Headings are `## X.Y.Z — …`. Bare `indexOf('## 4.8.1')` matches `## 4.8.10`. */
+function changelogHeading(changelog: string, version: string): number {
+  return changelog.indexOf(`## ${version} —`);
+}
+
+function changelogSection(changelog: string, from: string, until: string): string {
+  return changelog.slice(changelogHeading(changelog, from), changelogHeading(changelog, until));
+}
+
+describe('CHANGELOG heading matchers do not treat 4.8.10 as 4.8.1 or 4.8.2', () => {
+  it('slices 4.8.2 with an em-dash boundary while 4.8.10 notes remain', () => {
+    const changelog = changelogText();
+    expect(changelog).toMatch(/## 4\.8\.10 —/);
+    expect(changelogHeading(changelog, '4.8.10')).toBeGreaterThanOrEqual(0);
+    expect(changelogHeading(changelog, '4.8.2')).toBeGreaterThan(changelogHeading(changelog, '4.8.10'));
+    expect(changelogHeading(changelog, '4.8.1')).toBeGreaterThan(changelogHeading(changelog, '4.8.2'));
+    const section = changelogSection(changelog, '4.8.2', '4.8.1');
+    expect(section).toMatch(/^## 4\.8\.2 —/);
+    expect(section).not.toMatch(/## 4\.8\.10 —/);
+    expect(section).not.toMatch(/## 4\.8\.1 —/);
+  });
+});
 
 describe('package budget ceilings retain 10% headroom over the recorded clean candidate', () => {
   it('retains at least 10% headroom over the recorded clean candidate', () => {
@@ -85,7 +108,7 @@ describe(`version bump ${CURRENT}`, () => {
 describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => {
   it('records identity, activation, multi-repo skills, portability, and published status', () => {
     const changelog = changelogText();
-    expect(changelog).toMatch(/## 4\.2\.0/);
+    expect(changelog).toMatch(/## 4\.2\.0 —/);
     expect(changelog).toMatch(/published/i);
     expect(changelog).toMatch(/ark_identity|project identity/i);
     expect(changelog).toMatch(/ark_manifest/i);
@@ -108,7 +131,7 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
 
   it('keeps 4.8.9 published on npm latest and 4.8.8 as prior', () => {
     expect(PUBLISHED_LATEST).toBe('4.8.9');
-    expect(CURRENT).toBe('4.8.9');
+    expect(CURRENT).toBe('4.8.10');
     expect(read('docs/releases/4.8.9.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.8.9.md')).toMatch(/arkgate@4\.8\.9/);
     expect(read('docs/releases/4.8.9.md')).not.toMatch(/\*\*Status:\*\*\s*prepared/i);
@@ -160,9 +183,10 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
     expect(read('README.md')).toMatch(/docs\/releases\/4\.6\.7\.md/);
     expect(read('README.md')).toMatch(/4\.6\.6/);
     expect(read('README.md')).toMatch(/docs\/releases\/4\.6\.6\.md/);
-    expect(read('CONTRIBUTING.md')).toMatch(/Current release:.*4\.8\.9/s);
+    expect(read('CONTRIBUTING.md')).toMatch(/Current release candidate:.*4\.8\.10/s);
     expect(read('CONTRIBUTING.md')).toMatch(/Current published release:.*4\.8\.9/s);
     expect(read('CONTRIBUTING.md')).toMatch(/Prior published:.*4\.8\.8/s);
+    expect(read('docs/README.md')).toMatch(/Prepared:.*4\.8\.10/s);
     expect(read('docs/README.md')).toMatch(/Current published:.*4\.8\.9/s);
     expect(read('docs/README.md')).toMatch(/Prior published:.*4\.8\.8/s);
     expect(read('docs/README.md')).toMatch(/Prior:.*4\.6\.2/s);
@@ -202,10 +226,52 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
   });
 });
 
+describe('CHANGELOG + release note cover 4.8.10 Amarilla first-aggregate patch', () => {
+  it('records the complete prepared release without claiming publication', () => {
+    const changelog = changelogText();
+    const section = changelogSection(changelog, '4.8.10', '4.8.9');
+    expect(section).toMatch(/Status:\s*prepared/i);
+    expect(section).toMatch(/npm `latest` remains \*\*4\.8\.9\*\*/);
+    expect(section).toMatch(/ARKRULE_HINT_BUDGET_EXHAUSTED/);
+    expect(section).toMatch(/writes-via-aggregate/);
+    expect(section).toMatch(/postgres/);
+    expect(section).toMatch(/drizzle-orm\/postgres-js/);
+    expect(section).toMatch(/ARKORDER_GENERIC_UPDATE/);
+    expect(section).toMatch(/--sensors/);
+    expect(section).toMatch(/validity verdict/);
+    expect(section).toMatch(/arkgate report/);
+    expect(section).toMatch(/No required config migration/i);
+    expect(section).toMatch(/Does not close\s*`K01`\s*\/\s*`Z09`/);
+    expect(section).not.toMatch(/Status:\s*published/i);
+    expect(section).not.toMatch(/No package version bump/);
+    expect(section).not.toMatch(/Status:\s*unreleased/i);
+
+    const notes = read('docs/releases/4.8.10.md');
+    expect(notes).toMatch(/\*\*Status:\*\*\s*prepared/i);
+    expect(notes).toMatch(/arkgate@4\.8\.10/);
+    expect(notes).toMatch(/HINT01/);
+    expect(notes).toMatch(/writes-via-aggregate/);
+    expect(notes).toMatch(/postgres/);
+    expect(notes).toMatch(/drizzle-orm\/postgres-js/);
+    expect(notes).toMatch(/GENERIC_UPDATE/);
+    expect(notes).toMatch(/--sensors/);
+    expect(notes).toMatch(/validity verdict/);
+    expect(notes).toMatch(/arkgate report/);
+    expect(notes).toMatch(/Does \*\*not\*\* close `K01` \/ `Z09`/);
+    expect(notes).toMatch(/No `schemaVersion` bump/);
+    expect(notes).toMatch(/1\. \[ \].*Final release gates/s);
+    expect(notes).toMatch(/10\. \[ \].*RL810/s);
+    expect(notes).not.toMatch(/\*\*Status:\*\*\s*published/i);
+    expect(read('ROADMAP.md')).toMatch(/\| 256 \| `HINT01` \| `done`/);
+    expect(read('ROADMAP.md')).toMatch(/\| 266 \| `IN01` \| `done`/);
+    expect(read('ROADMAP.md')).toMatch(/\| 267 \| `RL810` \| `doing`/);
+  });
+});
+
 describe('CHANGELOG + release note cover 4.8.9 field diagnostic patch', () => {
   it('records the complete published release', () => {
     const changelog = changelogText();
-    const section = changelog.slice(changelog.indexOf('## 4.8.9'), changelog.indexOf('## 4.8.8'));
+    const section = changelogSection(changelog, '4.8.9', '4.8.8');
     expect(section).toMatch(/Status:\s*published/i);
     expect(section).toMatch(/os\.homedir|CLAUDE_HOME/i);
     expect(section).toMatch(/contract-dead-rule/);
@@ -251,7 +317,7 @@ describe('CHANGELOG + release note cover 4.8.9 field diagnostic patch', () => {
 describe('CHANGELOG + release note cover 4.8.8 dashboard and honesty patch', () => {
   it('records the complete published release', () => {
     const changelog = changelogText();
-    const section = changelog.slice(changelog.indexOf('## 4.8.8'), changelog.indexOf('## 4.8.7'));
+    const section = changelogSection(changelog, '4.8.8', '4.8.7');
     expect(section).toMatch(/Status:\s*published/i);
     expect(section).toMatch(/ark-dashboard.*arkgate-dashboard/is);
     expect(section).toMatch(/ark dashboard.*dispatch/is);
@@ -286,8 +352,8 @@ describe('CHANGELOG + release note cover 4.8.8 dashboard and honesty patch', () 
 describe('CHANGELOG + release note cover 4.8.7 layer description projection', () => {
   it('records LD captions, published status, and does not close K01/Z09', () => {
     const changelog = changelogText();
-    expect(changelog).toMatch(/## 4\.8\.7/);
-    const section = changelog.slice(changelog.indexOf('## 4.8.7'), changelog.indexOf('## 4.8.6'));
+    expect(changelog).toMatch(/## 4\.8\.7 —/);
+    const section = changelogSection(changelog, '4.8.7', '4.8.6');
     expect(section).toMatch(/Status:\s*published/i);
     expect(section).toMatch(/layers\[\]\.description/);
     expect(section).toMatch(/Purchase requests — from asked to received/);
@@ -313,8 +379,8 @@ describe('CHANGELOG + release note cover 4.8.7 layer description projection', ()
 describe('CHANGELOG + release note cover 4.8.3 writes-via-aggregate', () => {
   it('records the sensor, ADR 0032, published status, and does not close K01/Z09', () => {
     const changelog = changelogText();
-    expect(changelog).toMatch(/## 4\.8\.3/);
-    const section = changelog.slice(changelog.indexOf('## 4.8.3'), changelog.indexOf('## 4.8.2'));
+    expect(changelog).toMatch(/## 4\.8\.3 —/);
+    const section = changelogSection(changelog, '4.8.3', '4.8.2');
     expect(section).toMatch(/writes-via-aggregate/);
     expect(section).toMatch(/xiKeys/);
     expect(section).toMatch(/ARKORDER_XI_FIELD_WRITE|XI_FIELD_WRITE/);
@@ -337,9 +403,9 @@ describe('CHANGELOG + release note cover 4.8.3 writes-via-aggregate', () => {
 describe('CHANGELOG + release note cover 4.8.2 skills four-plane honesty', () => {
   it('records four-plane skills, published status, and does not close K01/Z09', () => {
     const changelog = changelogText();
-    expect(changelog).toMatch(/## 4\.8\.2/);
+    expect(changelog).toMatch(/## 4\.8\.2 —/);
     expect(changelog).toMatch(/Does not close `K01` \/ `Z09`|Does not close K01/);
-    const section = changelog.slice(changelog.indexOf('## 4.8.2'), changelog.indexOf('## 4.8.1'));
+    const section = changelogSection(changelog, '4.8.2', '4.8.1');
     expect(section).toMatch(/No required config migration/i);
     expect(section).toMatch(/Status:\s*published/i);
     expect(section).toMatch(/four-plane|ArkOrder/i);
@@ -362,9 +428,9 @@ describe('CHANGELOG + release note cover 4.8.2 skills four-plane honesty', () =>
 describe('CHANGELOG + release note cover 4.7.6 ArkRun workflow primitives', () => {
   it('records primitives, published status, and does not close K01', () => {
     const changelog = changelogText();
-    expect(changelog).toMatch(/## 4\.7\.6/);
+    expect(changelog).toMatch(/## 4\.7\.6 —/);
     expect(changelog).toMatch(/Does \*\*not\*\* close `K01`|Does not close K01/);
-    const section = changelog.slice(changelog.indexOf('## 4.7.6'), changelog.indexOf('## 4.7.5'));
+    const section = changelogSection(changelog, '4.7.6', '4.7.5');
     expect(section).toMatch(/No required config migration/i);
     expect(section).toMatch(/Status:\s*published/i);
     expect(section).toMatch(/tx|OCC|lease|resume/i);
@@ -380,11 +446,11 @@ describe('CHANGELOG + release note cover 4.7.6 ArkRun workflow primitives', () =
 describe('CHANGELOG + release note cover 4.7.5 Write. Check. Ship. patch', () => {
   it('records Write. Check. Ship. first-contact copy and no required migration', () => {
     const changelog = changelogText();
-    expect(changelog).toMatch(/## 4\.7\.5/);
+    expect(changelog).toMatch(/## 4\.7\.5 —/);
     expect(changelog).toMatch(/Write\. Check\. Ship\./);
     expect(changelog).toMatch(/bad import/);
     expect(changelog).toMatch(/Does not close Z09/);
-    const section = changelog.slice(changelog.indexOf('## 4.7.5'), changelog.indexOf('## 4.7.4'));
+    const section = changelogSection(changelog, '4.7.5', '4.7.4');
     expect(section).toMatch(/No required config migration/i);
     expect(section).toMatch(/Status:\s*published/i);
     expect(section).toMatch(/README H1/);
@@ -406,11 +472,11 @@ describe('CHANGELOG + release note cover 4.7.5 Write. Check. Ship. patch', () =>
 describe('CHANGELOG + release note cover 4.7.4 companion registry', () => {
   it('records experimental companion publish and no required migration', () => {
     const changelog = changelogText();
-    expect(changelog).toMatch(/## 4\.7\.4/);
+    expect(changelog).toMatch(/## 4\.7\.4 —/);
     expect(changelog).toMatch(/@arkgate\/runtime/);
     expect(changelog).toMatch(/experimental/);
     expect(changelog).toMatch(/Does not close Z09/);
-    const section = changelog.slice(changelog.indexOf('## 4.7.4'), changelog.indexOf('## 4.7.3'));
+    const section = changelogSection(changelog, '4.7.4', '4.7.3');
     expect(section).toMatch(/No required config migration/i);
     expect(section).toMatch(/Status:\s*published/i);
     const notes = read('docs/releases/4.7.4.md');
@@ -429,11 +495,11 @@ describe('CHANGELOG + release note cover 4.7.4 companion registry', () => {
 describe('CHANGELOG + release note cover 4.7.3 remaining wording patch', () => {
   it('records remaining first-contact copy and no required migration', () => {
     const changelog = changelogText();
-    expect(changelog).toMatch(/## 4\.7\.3/);
+    expect(changelog).toMatch(/## 4\.7\.3 —/);
     expect(changelog).toMatch(/illegal import/);
     expect(changelog).toMatch(/API Gateway/);
     expect(changelog).toMatch(/Does not close Z09/);
-    const section = changelog.slice(changelog.indexOf('## 4.7.3'), changelog.indexOf('## 4.7.2'));
+    const section = changelogSection(changelog, '4.7.3', '4.7.2');
     expect(section).toMatch(/No required config migration/i);
     expect(section).toMatch(/Status:\s*published/i);
     expect(section).toMatch(/README H1/);
@@ -453,11 +519,11 @@ describe('CHANGELOG + release note cover 4.7.3 remaining wording patch', () => {
 describe('CHANGELOG + release note cover 4.7.2 wording patch', () => {
   it('records common-language first-contact copy and no required migration', () => {
     const changelog = changelogText();
-    expect(changelog).toMatch(/## 4.7\.2/);
+    expect(changelog).toMatch(/## 4\.7\.2 —/);
     expect(changelog).toMatch(/illegal import/);
     expect(changelog).toMatch(/API Gateway/);
     expect(changelog).toMatch(/Does not close Z09/);
-    const section = changelog.slice(changelog.indexOf('## 4.7.2'), changelog.indexOf('## 4.7.1'));
+    const section = changelogSection(changelog, '4.7.2', '4.7.1');
     expect(section).toMatch(/No required config migration/i);
     expect(section).toMatch(/Status:\s*published/i);
     const notes = read('docs/releases/4.7.2.md');
@@ -474,12 +540,12 @@ describe('CHANGELOG + release note cover 4.7.2 wording patch', () => {
 describe('CHANGELOG + release note cover 4.7.1 one-catalog patch', () => {
   it('records picker stamp, canonical catalog, prune, and no new skill names', () => {
     const changelog = changelogText();
-    expect(changelog).toMatch(/## 4\.7\.1/);
+    expect(changelog).toMatch(/## 4\.7\.1 —/);
     expect(changelog).toMatch(/arkgate@<version>|visible skill version|picker/i);
     expect(changelog).toMatch(/prune-home-duplicates/);
     expect(changelog).toMatch(/\.agents\/skills/);
     expect(changelog).toMatch(/Does not close Z09/);
-    const section = changelog.slice(changelog.indexOf('## 4.7.1'), changelog.indexOf('## 4.7.0'));
+    const section = changelogSection(changelog, '4.7.1', '4.7.0');
     expect(section).toMatch(/No required config migration/i);
     expect(section).toMatch(/Status:\s*published/i);
     expect(section).not.toMatch(/Status:\s*unpublished/i);
@@ -498,7 +564,7 @@ describe('CHANGELOG + release note cover 4.7.1 one-catalog patch', () => {
 describe('CHANGELOG + release note cover 4.7.0 ArkRun extra', () => {
   it('records arkRun extra, skip corpus, durability honesty, and published status', () => {
     const changelog = changelogText();
-    expect(changelog).toMatch(/## 4\.7\.0/);
+    expect(changelog).toMatch(/## 4\.7\.0 —/);
     expect(changelog).toMatch(/arkRun extra|ArkRun/);
     expect(changelog).toMatch(/skip corpus/);
     expect(changelog).toMatch(/notAScore/);
@@ -506,7 +572,7 @@ describe('CHANGELOG + release note cover 4.7.0 ArkRun extra', () => {
     expect(changelog).toMatch(/@arkgate\/runtime/);
     expect(changelog).toMatch(/Does not close Z09/);
     expect(changelog).toMatch(/Does not close Z09 \/ K01|Does not close K01/);
-    const section = changelog.slice(changelog.indexOf('## 4.7.0'), changelog.indexOf('## 4.6.7'));
+    const section = changelogSection(changelog, '4.7.0', '4.6.7');
     expect(section).toMatch(/No required config migration/i);
     expect(section).toMatch(/Status:\s*published/i);
     expect(section).not.toMatch(/Status:\s*prepared/i);
@@ -532,14 +598,14 @@ describe('CHANGELOG + release note cover 4.7.0 ArkRun extra', () => {
 describe('CHANGELOG + release note cover 4.6.7 production-hardening patch', () => {
   it('records CODEOWNERS, eval/pack honesty, CLI extracts, timeouts, and HTML cap', () => {
     const changelog = changelogText();
-    expect(changelog).toMatch(/## 4\.6\.7/);
+    expect(changelog).toMatch(/## 4\.6\.7 —/);
     expect(changelog).toMatch(/CODEOWNERS/);
     expect(changelog).toMatch(/saas-dashboard/);
     expect(changelog).toMatch(/npm pack/);
     expect(changelog).toMatch(/SPAWN_TIMEOUT_MS/);
     expect(changelog).toMatch(/HTML violation cap|HTML list cap/i);
     expect(changelog).toMatch(/Does not close Z09/);
-    const section = changelog.slice(changelog.indexOf('## 4.6.7'), changelog.indexOf('## 4.6.6'));
+    const section = changelogSection(changelog, '4.6.7', '4.6.6');
     expect(section).toMatch(/No required config migration/i);
     expect(section).toMatch(/Status:\s*published/i);
     expect(section).not.toMatch(/Status:\s*current/i);
@@ -557,12 +623,12 @@ describe('CHANGELOG + release note cover 4.6.7 production-hardening patch', () =
 describe('CHANGELOG + release note cover 4.6.6 Phase AL honesty', () => {
   it('records adopted, created-path, stewards, compact doctor, and docs surface', () => {
     const changelog = changelogText();
-    expect(changelog).toMatch(/## 4\.6\.6/);
+    expect(changelog).toMatch(/## 4\.6\.6 —/);
     expect(changelog).toMatch(/adoption-stance/);
     expect(changelog).toMatch(/domain-logic-in-ui/);
     expect(changelog).toMatch(/--doctor --all/);
     expect(changelog).toMatch(/Does not close Z09/);
-    const section = changelog.slice(changelog.indexOf('## 4.6.6'), changelog.indexOf('## 4.6.5'));
+    const section = changelogSection(changelog, '4.6.6', '4.6.5');
     expect(section).toMatch(/No required config migration/i);
     const notes = read('docs/releases/4.6.6.md');
     expect(notes).toMatch(/arkgate@4\.6\.6/);
@@ -576,13 +642,13 @@ describe('CHANGELOG + release note cover 4.6.6 Phase AL honesty', () => {
 describe('CHANGELOG + release note cover 4.6.5 product honesty', () => {
   it('records adopt/place/doctor/upgrade surfaces without internal repo names', () => {
     const changelog = changelogText();
-    expect(changelog).toMatch(/## 4\.6\.5/);
+    expect(changelog).toMatch(/## 4\.6\.5 —/);
     expect(changelog).toMatch(/SharedKernel/);
     expect(changelog).toMatch(/golden-pattern/);
     expect(changelog).toMatch(/filePath/);
     expect(changelog).toMatch(/ci-merge-boundary/);
     expect(changelog).toMatch(/envelope:\s*"doctor"/);
-    const section = changelog.slice(changelog.indexOf('## 4.6.5'), changelog.indexOf('## 4.6.4'));
+    const section = changelogSection(changelog, '4.6.5', '4.6.4');
     expect(section).not.toMatch(/amarilla/i);
     const notes = read('docs/releases/4.6.5.md');
     expect(notes).toMatch(/arkgate@4\.6\.5/);
@@ -595,7 +661,7 @@ describe('CHANGELOG + release note cover 4.6.5 product honesty', () => {
 describe('CHANGELOG + release note cover 4.6.4 Codex upgrade guidance', () => {
   it('records the upgrade card, exact refresh command, and published status', () => {
     const changelog = changelogText();
-    expect(changelog).toMatch(/## 4\.6\.4/);
+    expect(changelog).toMatch(/## 4\.6\.4 —/);
     expect(changelog).toMatch(/codex-hard-write/);
     expect(changelog).toMatch(/install-agent-gates --tools codex --force/);
     expect(changelog).toMatch(/Status:\s*published/i);
@@ -614,7 +680,7 @@ describe('CHANGELOG + release note cover 4.6.4 Codex upgrade guidance', () => {
 describe('CHANGELOG + release note cover 4.6.3 Codex hard-write truth', () => {
   it('records the current payload, operation scope, and published status', () => {
     const changelog = changelogText();
-    expect(changelog).toMatch(/## 4\.6\.3/);
+    expect(changelog).toMatch(/## 4\.6\.3 —/);
     expect(changelog).toMatch(/tool_input\.command/);
     expect(changelog).toMatch(/complete.*apply_patch|apply_patch.*complete/is);
     expect(changelog).toMatch(/Status:\s*published/i);
@@ -634,7 +700,7 @@ describe('CHANGELOG + release note cover 4.6.3 Codex hard-write truth', () => {
 describe('CHANGELOG + release note cover 4.6.2 first-contact copy train', () => {
   it('records first-contact surfaces and published status', () => {
     const changelog = changelogText();
-    expect(changelog).toMatch(/## 4\.6\.2/);
+    expect(changelog).toMatch(/## 4\.6\.2 —/);
     expect(changelog).toMatch(/First-contact|first-contact|\/ark-adopt/i);
     expect(changelog).toMatch(/blocked \{file\}|SessionStart|ark_identity/i);
     expect(changelog).toMatch(/Status:\s*published|on npm `latest`/i);
@@ -660,7 +726,7 @@ describe('CHANGELOG + release note cover 4.6.2 first-contact copy train', () => 
 describe('CHANGELOG + release note cover 4.6.1 five-door + team parliament train', () => {
   it('records five doors, team lock, published status', () => {
     const changelog = changelogText();
-    expect(changelog).toMatch(/## 4\.6\.1/);
+    expect(changelog).toMatch(/## 4\.6\.1 —/);
     expect(changelog).toMatch(/Five-door|five-door|\/ark-adopt/i);
     expect(changelog).toMatch(/Team parliament|stewards|--contract-session|--changed/i);
     expect(changelog).toMatch(/GitHub handle|noreply|user\.name/i);
@@ -689,7 +755,7 @@ describe('CHANGELOG + release note cover 4.6.1 five-door + team parliament train
 describe('CHANGELOG + release note cover 4.6.0 understandable Ark train', () => {
   it('records plain language, shared homes, published status', () => {
     const changelog = changelogText();
-    expect(changelog).toMatch(/## 4\.6\.0/);
+    expect(changelog).toMatch(/## 4\.6\.0 —/);
     expect(changelog).toMatch(/leftover design work|plain language|Understandable Ark/i);
     expect(changelog).toMatch(/--agent-homes|--claude-home|--grok-home/);
     expect(changelog).toMatch(/ArkGate/i);
@@ -711,7 +777,7 @@ describe('CHANGELOG + release note cover 4.6.0 understandable Ark train', () => 
 describe('CHANGELOG + release note cover 4.5.7 Cursor hard-write train', () => {
   it('records Cursor hard write surfaces and published status', () => {
     const changelog = changelogText();
-    expect(changelog).toMatch(/## 4\.5\.7/);
+    expect(changelog).toMatch(/## 4\.5\.7 —/);
     expect(changelog).toMatch(/Cursor hard write|\.cursor\/hooks\.json|preToolUse/i);
     expect(changelog).toMatch(/Write\|StrReplace|Write \/ StrReplace|Write\/StrReplace/i);
     expect(changelog).toMatch(/Status:\s*published|on npm `latest`/i);
@@ -733,7 +799,7 @@ describe('CHANGELOG + release note cover 4.5.7 Cursor hard-write train', () => {
 describe('CHANGELOG + release note cover 4.5.6 field-upgrade MCP truth train', () => {
   it('records FX surfaces and published status', () => {
     const changelog = changelogText();
-    expect(changelog).toMatch(/## 4\.5\.6/);
+    expect(changelog).toMatch(/## 4\.5\.6 —/);
     expect(changelog).toMatch(/Registry-aware|BEHIND_REGISTRY|reasonCode/i);
     expect(changelog).toMatch(/skillDrift|refresh-skills/i);
     expect(changelog).toMatch(/processPackage|processPackageMismatch|processStale/i);
@@ -755,7 +821,7 @@ describe('CHANGELOG + release note cover 4.5.6 field-upgrade MCP truth train', (
 describe('CHANGELOG + release note cover 4.5.5 deep-module coach train', () => {
   it('records deep-module coach, whatsNew, two-axis done, published status', () => {
     const changelog = changelogText();
-    expect(changelog).toMatch(/## 4\.5\.5/);
+    expect(changelog).toMatch(/## 4\.5\.5 —/);
     expect(changelog).toMatch(/Deep-module coach|deepModuleCoach/i);
     expect(changelog).toMatch(/whatsNew|what.?s new|Suggested improvements/i);
     expect(changelog).toMatch(/two-axis done|Enforce green/i);
@@ -779,7 +845,7 @@ describe('CHANGELOG + release note cover 4.5.5 deep-module coach train', () => {
 describe('CHANGELOG + release note cover 4.5.0 session honesty train', () => {
   it('records status honesty, self-service upgrade, session recipe, and published status', () => {
     const changelog = changelogText();
-    expect(changelog).toMatch(/## 4\.5\.0/);
+    expect(changelog).toMatch(/## 4\.5\.0 —/);
     expect(changelog).toMatch(/full.*subset.*unavailable|mode `full`/is);
     expect(changelog).toMatch(/Session recipe|session recipe/i);
     expect(changelog).toMatch(/selfService|self-service|Self-service/i);
@@ -818,7 +884,7 @@ describe('CHANGELOG + release note cover 4.5.0 session honesty train', () => {
 describe('CHANGELOG + release note cover 4.4.0 improvement compass train', () => {
   it('records compass surfaces and published status', () => {
     const changelog = changelogText();
-    expect(changelog).toMatch(/## 4\.4\.0/);
+    expect(changelog).toMatch(/## 4\.4\.0 —/);
     expect(changelog).toMatch(/Improvement compass|improvement compass/i);
     expect(changelog).toMatch(/notAScore/);
     expect(changelog).toMatch(/data-advisory="improvementCompass"|improvementCompass/i);
@@ -840,7 +906,7 @@ describe('CHANGELOG + release note cover 4.4.0 improvement compass train', () =>
 describe('CHANGELOG + release note cover 4.3.0 agent contract surface train', () => {
   it('records ACS surfaces and published status', () => {
     const changelog = changelogText();
-    expect(changelog).toMatch(/## 4\.3\.0/);
+    expect(changelog).toMatch(/## 4\.3\.0 —/);
     expect(changelog).toMatch(/Diagnostic code catalog|ACS02/i);
     expect(changelog).toMatch(/status --json|status manifest|ACS03/i);
     expect(changelog).toMatch(/agents-md|agent projection|ACS04/i);
@@ -869,7 +935,7 @@ describe('CHANGELOG + release note cover 4.3.0 agent contract surface train', ()
 describe('CHANGELOG + release note cover 4.2.1 Next 16.3 train', () => {
   it('records Next 16 proxy include fix and published status', () => {
     const changelog = changelogText();
-    expect(changelog).toMatch(/## 4\.2\.1/);
+    expect(changelog).toMatch(/## 4\.2\.1 —/);
     expect(changelog).toMatch(/published/i);
     expect(changelog).toMatch(/proxy\.ts|Next 16/i);
     expect(changelog).toMatch(/16\.3\.0/);
@@ -1167,7 +1233,7 @@ describe('CHANGELOG + release note cover 3.9.1 patch hygiene', () => {
       expect(verbsAt).toBeGreaterThan(0);
       expect(html).toMatch(/Not an API Gateway/);
       expect(html).toMatch(/just documentation/);
-      expect(html).toContain(CURRENT);
+      expect(html).toContain(PUBLISHED_LATEST);
       expect(html).toMatch(/ArkOrder/);
       expect(html).toMatch(/arkgate\/order/);
       expect(html).not.toMatch(/CONTRACT ACTIVE/);

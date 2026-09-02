@@ -894,3 +894,11 @@ Adopting Ark on an existing codebase with violations? Freeze them once and ratch
 npx ark-check --update-baseline   # writes .ark-baseline.json — commit it
 npx ark-check --baseline          # only NEW violations fail
 ```
+
+`--update-baseline` also patches existing check **invocations** so CI keeps using the
+new freeze file: `package.json` scripts and GitHub workflow `run:` lines that already
+call `ark-check` / `arkgate-check` via `npx`, `pnpm`, `yarn`, `npm`, or `node`. Those
+writes are outside the three law files (`ark.config.json`, `arkrules/`,
+`.ark-baseline.json`) and are announced (`Synced --baseline into: …`). The matcher
+does **not** append `--baseline` to YAML that only *names* the check — a
+`concurrency.group` such as `ark-check-${{ github.ref }}`, or a job id `ark-check:`.

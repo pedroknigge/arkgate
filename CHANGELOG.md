@@ -3,6 +3,84 @@
 All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are documented here or
 in the immutable pre-2.0 archive linked below.
 
+## 4.8.10 — 2026-09-02
+
+**Patch** over **4.8.9**. Amarilla first-aggregate sensors. Incomplete analysis
+never looks green: an enforced sensor that cannot see its scope is not a pass.
+**Write. Check. Ship.** **No required config migration.** No `schemaVersion` bump.
+Does not close `K01` / `Z09`. No new skill names.
+
+**Status: prepared** (tree candidate; npm `latest` remains **4.8.9** until the
+signed-tag provenance workflow succeeds).
+
+### Added
+- `arkgate report` / `ark report` on the existing dual bins: draft an upstream GitHub issue for
+  `pedroknigge/arkgate` (`package.json` `bugs.url`), never the consumer repo. Default prints the
+  draft (arkgate version + last-check snippet). Create only with `--submit` and
+  `--i-confirm-submit` (or TTY `Type submit to send`). `--yes` does not submit. Missing or
+  unauthenticated `gh` prints the draft and the exact `gh issue create` command, then exits 2.
+  Not `ark-check --report` (HTML). Does not close `K01` / `Z09`. No new skill names.
+
+### Fixed
+- Structural-hint budget: when eligible governed files exceed `coverage.maxFiles`
+  (default `400`), emit `ARKRULE_HINT_BUDGET_EXHAUSTED` with exact hinted/governed
+  counts and per-sensor reviewed N/M of scope. `--strict-config` fails if an
+  enforced hint sensor is truncated. No `arkrules.hintBudget` key.
+- `--update-baseline` GitHub rewrite touches only `ark-check` / `arkgate-check`
+  invocation lines (`run:` / package scripts). It does not append `--baseline` to
+  `concurrency.group` or job-id lines that merely name the check. Writes outside
+  the three law files are announced (`Synced --baseline into: …`).
+- DomainModel class sensors: method finder is paren-balanced, so a later broken
+  method is visible. Remaining truncation is reported (`shape analysed until
+  character N`), not silent green.
+- One shared invariant-word list (`ensureInvariants` / `raise` / `record` / `.push(`).
+  Assignment `=` is distinct from `===` / `!==` / `<=` / `>=`. `pendingEvents = []`
+  is idiomatic; events-array `.push(` counts as publish. Object literals and
+  multiline params are not public fields.
+- `ARKRULE_SCOPE_EMPTY` is not freezable, even with `--force`. It is a config
+  diagnostic, not code debt. No `allowEmptyScope` key.
+- `ARKRULE_STRUCTURE` freeze keys include the sensor id (and symbol when present).
+  A freeze for `orchestration-only` does not silence `thin-adapter` or
+  `writes-via-aggregate` on the same file. v1 empty-target keys remain exact-match
+  only.
+- Intent-prefix checks apply only at declared intent-reference sites (`publish` /
+  `subscribe` / `defineIntent` / `registerHandler`, `intent` / `onEvent` /
+  `reactsTo`, publish `metadata.source`). Not every string literal. No
+  `kernel.dtypePrefixes`. A kernel DType such as `Management.EvmInspection.Data`
+  does not trip `LAYER_INTENT_REFERENCE_VIOLATION`.
+- A5: `writes-via-aggregate` treats `@/lib/db` (and local `…/db`) as an IO import
+  without opening tsconfig. Write tokens require callee `db` / `tx` / `client` /
+  `prisma` / `drizzle`; `repo.update(` is not a write. Optional resolved-import
+  facts: PersistenceAdapters layer is a driver.
+- IO import hints match `postgres` and `drizzle-orm/postgres-js` (package
+  subpaths), in lockstep for ArkRules and ArkOrder. `require()` matches the same
+  packages.
+- React/UI `.set()` is not `ARKORDER_GENERIC_UPDATE`. Only `plane` /
+  `orderPlane` callees (or a file that constructs `createOrderPlane`) count as ξ
+  mutation. `Map` / `URLSearchParams` / `useState` setters stay silent.
+- `--sensors` success is not a validity verdict. Stdout names the contract-only
+  skip (`Contract + coverage-evidence only: no TypeScript, no analysis. Not a
+  validity verdict.`); `--json` stamps `notAVerdict` / `didNotRun` /
+  `partialMode=contract-only`. It does not print `Ark check passed`.
+
+### Changed
+- `coverage.maxFiles` schema description, configuration docs, and diagnostics name
+  that the same budget also bounds structural-hint preload for `orchestration-only`,
+  `thin-adapter`, and `writes-via-aggregate`.
+- Brownfield: law-then-product PR sequence when a rule’s folder does not exist yet
+  (advisory or placeholder path, then product, then promote). STRUCTURE key compat
+  for v1 empty-target rows is documented.
+- A10: baseline regenerate note lists
+  `ark-check --update-baseline --force --contract-session --author <steward>`.
+  Doctor concentration looks at `sensor` / `arkruleId`; orchestration-only
+  majority is code debt, not “Fixing the contract”. Short `--help`: `--sensors`
+  does not run analysis; `--help --all` lists `--update-baseline` / `--author`.
+  AO11 9-vs-7 is not a bug.
+- A11: `--changed` bounds file-local structural sensors and hint load to the
+  touched files. Import-edge, layer, and cycle sensors still see the full
+  governed graph. Optional process-local hint cache by content hash. Does not
+  claim 170s becomes seconds. No second analysis engine.
+
 ## 4.8.9 — 2026-09-01
 
 **Patch** over **4.8.8**. Field diagnostic honesty: doctor default homedir, live

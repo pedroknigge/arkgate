@@ -334,7 +334,7 @@ describe('AI Code Gate (basic)', () => {
     });
 
     const res = gate.validate(
-      `const repo = 'Adapter.Persistence.OrderRepository';`,
+      `bus.publish('Adapter.Persistence.OrderRepository', {});`,
       { layer: 'DomainModel' }
     );
 
@@ -344,6 +344,65 @@ describe('AI Code Gate (basic)', () => {
     expect(res.violations[0].fromLayer).toBe('DomainModel');
     expect(res.violations[0].toLayer).toBe('PersistenceAdapters');
     expect(res.violations[0].target).toBe('Adapter.Persistence.OrderRepository');
+  });
+
+  it('does not treat DType / assignment strings as layer intent references', () => {
+    const gate = createAICodeGate({
+      architectureProfile: elevenLayerProfile,
+      enforceIntentAllowlist: false,
+    });
+
+    const assignment = gate.validate(
+      `const repo = 'Adapter.Persistence.OrderRepository';`,
+      { layer: 'DomainModel' }
+    );
+    expect(
+      assignment.violations.filter((v) => v.ruleId === 'LAYER_REFERENCE_VIOLATION')
+    ).toEqual([]);
+
+    const dtype = gate.validate(
+      [
+        "registerDType('Application.EvmInspection.Data');",
+        "export const name = 'Application.EvmInspection.Data';",
+      ].join('\n'),
+      { filePath: 'src/kernel/dtypes.ts', layer: 'Kernel' }
+    );
+    expect(
+      dtype.violations.filter((v) => v.ruleId === 'LAYER_REFERENCE_VIOLATION')
+    ).toEqual([]);
+
+    const astGate = createAICodeGate({
+      typescript: ts,
+      architectureProfile: elevenLayerProfile,
+      enforceIntentAllowlist: false,
+    });
+    const astDtype = astGate.validate(
+      [
+        "registerDType('Application.EvmInspection.Data');",
+        "export const name = 'Application.EvmInspection.Data';",
+      ].join('\n'),
+      { filePath: 'src/kernel/dtypes.ts', layer: 'Kernel' }
+    );
+    expect(
+      astDtype.violations.filter((v) => v.ruleId === 'LAYER_REFERENCE_VIOLATION')
+    ).toEqual([]);
+
+    const astPublish = astGate.validate(
+      `bus.publish('Adapter.Persistence.OrderRepository', {});`,
+      { layer: 'DomainModel' }
+    );
+    expect(
+      astPublish.violations.some((v) => v.ruleId === 'LAYER_REFERENCE_VIOLATION')
+    ).toBe(true);
+  });
+
+  it('does not flag DType literals as UNKNOWN_INTENT when an allowlist is configured', () => {
+    const OrderPlaced = defineIntent<'Domain.Order.Placed', {}>('Domain.Order.Placed');
+    const gate = createAICodeGate({ intents: [OrderPlaced] });
+    const res = gate.validate(
+      "registerDType('Application.EvmInspection.Data');\nexport const name = 'Domain.Order.Other';\n"
+    );
+    expect(res.violations.filter((v) => v.ruleId === 'UNKNOWN_INTENT')).toEqual([]);
   });
 
   it('fail-closes peerIsolation on path-less intent references (same-layer)', () => {
@@ -368,7 +427,7 @@ describe('AI Code Gate (basic)', () => {
       enforceIntentAllowlist: false,
     });
 
-    const res = gate.validate(`const target = 'Domain.OtherSlice.Command';`, {
+    const res = gate.validate(`bus.publish('Domain.OtherSlice.Command', {});`, {
       layer: 'DomainModel',
     });
     const refs = res.violations.filter((v) => v.ruleId === 'LAYER_REFERENCE_VIOLATION');

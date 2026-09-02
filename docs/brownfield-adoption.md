@@ -135,6 +135,36 @@ If Ark still refuses (a single edge dominates), the contract is still wrong — 
 step 3; don't `--force` past it. From now `ark-check --baseline` fails only on NEW
 violations — the ratchet only moves toward zero.
 
+`ARKRULE_SCOPE_EMPTY` is a **config diagnostic**, not code debt. It is **not freezable**
+(even with `--force`). There is no `allowEmptyScope` key: an enforced rule whose
+`appliesTo` matches zero governed files is incomplete analysis and must not look green.
+
+### Law then product (when a rule needs a folder that does not exist yet)
+
+`mixed-law-and-product` still requires law files (`ark.config.json`, `arkrules/`,
+`.ark-baseline.json`) to travel without product. When the product folder is not there
+yet, do **not** freeze the empty-scope finding. Sequence:
+
+1. **Law PR (advisory or placeholder):** declare the ArkRule as `advisory`, *or* point
+   `appliesTo` at a tracked placeholder path that already exists. Empty enforced scope
+   fails the gate and cannot be baselined.
+2. **Product PR:** add the folder and the code so `appliesTo` matches governed files.
+3. **Law PR (promote):** raise the rule to `enforced` (hash-bound policy acknowledgement
+   when required). The ratchet then protects the now-visible scope.
+
+### STRUCTURE freeze keys include the sensor
+
+New `ARKRULE_STRUCTURE` keys are `ARKRULE_STRUCTURE|<file>|<layer>||<sensor>` (and
+`<sensor>:<symbol>` when a class/method symbol is known). A freeze for
+`orchestration-only` on a file must not silence `thin-adapter` or `writes-via-aggregate`
+on the same file.
+
+**v1 empty-target keys** (`ARKRULE_STRUCTURE|<file>|<layer>||`) still load as frozen
+residual, but they are **exact-match only**. They do not prefix-match every later sensor
+on that file — hidden new debt must not look green. After upgrade they go stale; re-freeze
+in a law PR (`--update-baseline --force --contract-session --author <steward>` as
+applicable) so new keys carry the sensor. Do not treat stale v1 rows as a wildcard mute.
+
 ## 5. Burn down, in order
 
 `summary.edges` is the burn-down order. Prefer `ark-check --plan`: it tags each step

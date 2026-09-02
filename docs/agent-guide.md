@@ -93,11 +93,26 @@ Default loop for each agent session (product language — no inventing residual)
    `unavailable`, run `ark-check --doctor` (and `--json` for the full 15-lens map) before treating
    residual as complete. When mode is `full`, status residual ids are a subset of doctor residual
    for the same facts.
+5. **Report ArkGate defects to upstream (human confirms first)** — if you find a bug, a false
+   green, a false red, a missing doc, or improvable behavior **in ArkGate itself** (the `arkgate`
+   package — not leftover design in the consumer app), run **`arkgate report` / `ark report`**
+   (existing dual bins — not a new skill). Default prints a draft GitHub issue for **upstream**
+   `pedroknigge/arkgate` (`package.json` `bugs.url`) with the installed arkgate version and an
+   optional last-check snippet. **Ask the human to confirm send.** Create only with `--submit`
+   **and** `--i-confirm-submit` (after they said yes) or a TTY `Type submit to send`. `--yes`
+   does not submit. One finding per invocation (`--finding <ref>`); otherwise one bundled field
+   report (`--title` is editable). If `gh` is missing or not logged in, the CLI prints the draft
+   plus the exact `gh issue create --repo pedroknigge/arkgate` command and exits 2. Never auto-file.
+   Never file ArkGate defects on the consumer product repo. This is not `ark-check --report` (HTML).
 
 ```bash
 npx ark status --json --expected-root /abs/project/root
 # mode !== full → full residual map:
 npx ark-check --doctor --json
+# draft an upstream issue (nothing created yet):
+npx ark report
+# after the human says yes — one finding, upstream only:
+npx ark report --submit --i-confirm-submit
 ```
 
 `--doctor --json` is a stable envelope (4.6.5+): `{ "schemaVersion": "1.0", "envelope": "doctor", "ok": boolean, "doctor": { … } }`.
@@ -1096,7 +1111,7 @@ edges are not denied by that rule.
 - **`allowedCrossSlice`** (4.8.4): `[{ "from": "features/checkout", "to": "features/catalog" }]` — one directed slice→slice edge the repo declares on purpose. The reverse still denies.
 - **The denial names its reason:** `cross-slice edge a → b` (a fact about the code) vs `unclassifiable path (…)`, `no slice folders`, `no path evidence` (facts about the evidence ArkGate had).
 - Promoting a genuinely shared slice to its own layer remains the recommended model; the two declarations exist so ArkGate can enforce a repo that deliberately chose otherwise.
-- Enforced by `ark-check`, `arkgate/eslint`, and `ark-mcp` (path-aware edges and path-less intent refs share the same SoT).
+- Enforced by `ark-check`, `arkgate/eslint`, and `ark-mcp` (path-aware edges and path-less intent refs at declared event/saga/publish-metadata sites share the same SoT).
 - Fixes are **judgment** (not mechanical-safe).
 
 Agents can generate a config from the project's actual directory layout instead of inventing layer mappings:
@@ -1146,6 +1161,15 @@ Example config:
 `ark-check` resolves relative, alias, package/workspace, `import =`, `import()` and `require()` edges
 plus intent/publish evidence. It uses the nearest `tsconfig.json` unless `--tsconfig` is set;
 importless type references are out.
+
+Intent-prefix checks (`LAYER_INTENT_REFERENCE_VIOLATION` on the candidate, write-hook
+`LAYER_REFERENCE_VIOLATION` / `UNKNOWN_INTENT`) apply only at declared intent-reference sites:
+`publish` / `subscribe` / `defineIntent` / `registerHandler` arguments, `intent` / `onEvent` /
+`reactsTo` properties, and publish `metadata.source` (or the 2nd/3rd-arg `source` object). A
+string that merely matches a layer prefix — including a kernel DType name such as
+`Management.EvmInspection.Data` — is not an intent reference. `looksLikeArkIntent` still
+classifies names; it is not a scan of every quoted string. There is no `kernel.dtypePrefixes`
+exemption list. Real event and saga string refs still fail closed.
 
 Each run parses the full candidate and ignores retired `.cache/ark-check.json`; `--no-cache` is a
 no-op. Z07 owns the identity-keyed snapshot after exact cold/warm parity.
