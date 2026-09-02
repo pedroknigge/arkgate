@@ -82,6 +82,84 @@ describe('findNearestArkConfig / resolveEffectiveProjectRoot', () => {
     expect(effective.root).toBe(root);
   });
 
+  it('nested relative --config is a path, not a walk-up filename', () => {
+    const parent = mk();
+    fs.writeFileSync(
+      path.join(parent, 'ark.config.json'),
+      JSON.stringify({
+        schemaVersion: '1.0',
+        include: ['src'],
+        layers: [{ name: 'DomainModel', patterns: ['src/**'] }],
+        rules: [],
+      })
+    );
+    fs.mkdirSync(path.join(parent, 'src'), { recursive: true });
+    fs.writeFileSync(path.join(parent, 'src', 'parent.ts'), 'export const parent = 1;\n');
+
+    const nestedRel = path.join('examples', 'app');
+    const nested = path.join(parent, nestedRel);
+    fs.mkdirSync(path.join(nested, 'src', 'domain'), { recursive: true });
+    fs.mkdirSync(path.join(nested, 'src', 'application'), { recursive: true });
+    fs.writeFileSync(
+      path.join(nested, 'ark.config.json'),
+      JSON.stringify({
+        schemaVersion: '1.0',
+        include: ['src'],
+        layers: [
+          { name: 'DomainModel', patterns: ['src/domain/**'] },
+          { name: 'ApplicationOrchestration', patterns: ['src/application/**'] },
+        ],
+        rules: [],
+      })
+    );
+    fs.writeFileSync(path.join(nested, 'src', 'domain', 'order.ts'), 'export const order = 1;\n');
+    fs.writeFileSync(
+      path.join(nested, 'src', 'application', 'place.ts'),
+      'export const place = 1;\n'
+    );
+
+    const nestedConfigRel = path.join(nestedRel, 'ark.config.json');
+    const effective = resolveEffectiveProjectRoot(nested, { configName: nestedConfigRel });
+    expect(effective.configFound).toBe(true);
+    expect(effective.walkedUp).toBe(false);
+    expect(effective.root).toBe(nested);
+    expect(effective.configRoot).toBe(nested);
+    expect(effective.configPath).toBe(path.join(nested, 'ark.config.json'));
+
+    const arkCheck = path.resolve('bin/ark-check.mjs');
+    const run = spawnSync(
+      process.execPath,
+      [
+        arkCheck,
+        '--root',
+        nested,
+        '--config',
+        nestedConfigRel,
+        '--coverage',
+        '--json',
+        '--no-cache',
+      ],
+      { encoding: 'utf8', cwd: parent, env: { ...process.env, NO_COLOR: '1' } }
+    );
+    const out = (run.stdout || '') + (run.stderr || '');
+    const jsonStart = out.indexOf('{');
+    expect(jsonStart, out.slice(0, 800)).toBeGreaterThanOrEqual(0);
+    const payload = JSON.parse(out.slice(jsonStart)) as {
+      coverage?: {
+        unclassified?: { files?: string[] };
+        layers?: Array<{ name: string; files: number }>;
+        governed?: { totalFiles: number };
+      };
+    };
+    const unclassified = payload.coverage?.unclassified?.files ?? [];
+    expect(unclassified).not.toContain('src/parent.ts');
+    const byName = Object.fromEntries(
+      (payload.coverage?.layers ?? []).map((layer) => [layer.name, layer.files])
+    );
+    expect(byName.ApplicationOrchestration).toBeGreaterThan(0);
+    expect(payload.coverage?.governed?.totalFiles).toBe(2);
+  });
+
   it('returns configFound false for true greenfield (no parent config)', () => {
     const root = mk();
     fs.writeFileSync(path.join(root, 'package.json'), '{"name":"gf"}\n');

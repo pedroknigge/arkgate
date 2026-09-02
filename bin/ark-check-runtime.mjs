@@ -1066,6 +1066,12 @@ function applyConfigRootWalkUp(args) {
   args.configRoot = effective.configRoot;
   args.configFound = effective.configFound;
   args.writeRoot = effective.writeRoot;
+  // Nested relative --config (`examples/app/ark.config.json`) must stay a resolved
+  // file path under --root. Leaving the relative string makes readConfig join it
+  // again and miss; walk-up used to latch the parent instead.
+  if (effective.configFound && typeof effective.configPath === 'string') {
+    args.config = effective.configPath;
+  }
   if (effective.walkedUp && effective.root !== path.resolve(args.root)) {
     // Read paths (or write + --follow-config-root): adopt discovered config root.
     args.root = effective.root;

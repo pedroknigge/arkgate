@@ -41,6 +41,9 @@ function residentArgs(argv) {
   // Same monorepo walk-up as full runtime (NEW-MONOREPO-CWD-WALKUP).
   const effective = resolveEffectiveProjectRoot(args.root, { configName: args.config });
   args.configRoot = effective.configRoot;
+  if (effective.configFound && typeof effective.configPath === 'string') {
+    args.config = effective.configPath;
+  }
   if (effective.walkedUp) {
     args.root = effective.root;
     args.configWalkedUp = true;
