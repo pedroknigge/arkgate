@@ -168,11 +168,14 @@ function extractQuotedStrings(source: string): StringMatch[] {
       if (value) push(value, captureIndex(match, value));
     }
   };
+  // Bound whitespace and type-arg spans: `\s*` on library input (file source)
+  // is polynomial ReDoS (CodeQL js/polynomial-redos). Intent sites never need
+  // more than a handful of spaces.
   pushFrom(
-    /\b(?:publish|subscribe|defineIntent|registerHandler)\s*(?:<[^>]*>)?\s*\(\s*['"`]([A-Za-z][A-Za-z0-9_.]*)['"`]/g
+    /\b(?:publish|subscribe|defineIntent|registerHandler)\s{0,8}(?:<[^>]{0,120}>)?\s{0,8}\(\s{0,8}['"`]([A-Za-z][A-Za-z0-9_.]*)['"`]/g
   );
-  pushFrom(/\b(?:intent|onEvent)\s*:\s*['"`]([A-Za-z][A-Za-z0-9_.]*)['"`]/g);
-  const reactsRe = /\breactsTo\s*:\s*\[([^\]]*)\]/g;
+  pushFrom(/\b(?:intent|onEvent)\s{0,8}:\s{0,8}['"`]([A-Za-z][A-Za-z0-9_.]*)['"`]/g);
+  const reactsRe = /\breactsTo\s{0,8}:\s{0,8}\[([^\]]{0,2000})\]/g;
   let reacts: RegExpExecArray | null;
   while ((reacts = reactsRe.exec(source)) !== null) {
     const inner = reacts[1] ?? '';
@@ -184,9 +187,11 @@ function extractQuotedStrings(source: string): StringMatch[] {
       if (value) push(value, innerStart + nested.index + nested[0].indexOf(value));
     }
   }
-  pushFrom(/\bmetadata\s*:\s*\{[^}]*\bsource\s*:\s*['"`]([A-Za-z][A-Za-z0-9_.]*)['"`]/g);
   pushFrom(
-    /\bpublish\s*(?:<[^>]*>)?\s*\([^;]{0,400}?\bsource\s*:\s*['"`]([A-Za-z][A-Za-z0-9_.]*)['"`]/g
+    /\bmetadata\s{0,8}:\s{0,8}\{[^}]{0,400}\bsource\s{0,8}:\s{0,8}['"`]([A-Za-z][A-Za-z0-9_.]*)['"`]/g
+  );
+  pushFrom(
+    /\bpublish\s{0,8}(?:<[^>]{0,120}>)?\s{0,8}\([^;]{0,400}?\bsource\s{0,8}:\s{0,8}['"`]([A-Za-z][A-Za-z0-9_.]*)['"`]/g
   );
   return matches.sort((left, right) => left.index - right.index);
 }
