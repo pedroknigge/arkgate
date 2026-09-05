@@ -37,7 +37,7 @@ Works with Cursor, Claude, Codex, and Grok.
 
 </div>
 
-> **ArkGate 4.8.11** is on npm `latest`.
+> **ArkGate 4.8.12** is prepared on this tree; npm `latest` remains **4.8.11**.
 > Write. Check. Ship. Adopted = required GitHub
 > status running `arkgate-check --strict-merge`, or an explicit `advisory-only` stance.
 > Status is compact (`arkgate-check --doctor`; `--all` for Details). Optional **ArkRun**
@@ -45,7 +45,7 @@ Works with Cursor, Claude, Codex, and Grok.
 > (`arkgate/order`) stops rewriting a big product choice — like the billing plan —
 > as if it were a seat count. Change those choices through a valve, not a generic update.
 > `@arkgate/runtime` is deprecated.
-> [4.8.11 published](docs/releases/4.8.11.md) · [4.8.10](docs/releases/4.8.10.md) · [4.8.9](docs/releases/4.8.9.md) · [4.8.8](docs/releases/4.8.8.md) · [4.8.7](docs/releases/4.8.7.md) · [4.8.6](docs/releases/4.8.6.md) · [4.8.5](docs/releases/4.8.5.md) · [4.8.4](docs/releases/4.8.4.md) · [4.8.3](docs/releases/4.8.3.md) · [4.8.2](docs/releases/4.8.2.md) · [4.8.1](docs/releases/4.8.1.md) · [4.8.0](docs/releases/4.8.0.md) · [Docs hub](docs/README.md) · [Voice](docs/product-voice.md)
+> [4.8.12 prepared](CHANGELOG.md) · [4.8.11 published](docs/releases/4.8.11.md) · [4.8.10](docs/releases/4.8.10.md) · [4.8.9](docs/releases/4.8.9.md) · [4.8.8](docs/releases/4.8.8.md) · [4.8.7](docs/releases/4.8.7.md) · [4.8.6](docs/releases/4.8.6.md) · [4.8.5](docs/releases/4.8.5.md) · [4.8.4](docs/releases/4.8.4.md) · [4.8.3](docs/releases/4.8.3.md) · [4.8.2](docs/releases/4.8.2.md) · [4.8.1](docs/releases/4.8.1.md) · [4.8.0](docs/releases/4.8.0.md) · [Docs hub](docs/README.md) · [Voice](docs/product-voice.md)
 
 ---
 
@@ -331,6 +331,7 @@ Compact starters leave it off. Details: [ArkOrder](docs/arkorder.md).
 | Config · package surface · TS | [configuration](docs/configuration.md) · [package-surface](docs/package-surface.md) · [typescript-support](docs/typescript-support.md) |
 | Brownfield | [docs/brownfield-adoption.md](docs/brownfield-adoption.md) |
 | Security | [SECURITY.md](SECURITY.md) |
+| Prepared (4.8.12; not published) | [CHANGELOG](CHANGELOG.md) |
 | Current published (4.8.11 on npm `latest`) | [docs/releases/4.8.11.md](docs/releases/4.8.11.md) · [CHANGELOG](CHANGELOG.md) |
 | Prior published (4.8.10) | [docs/releases/4.8.10.md](docs/releases/4.8.10.md) · [CHANGELOG](CHANGELOG.md) |
 | Prior published (4.8.9) | [docs/releases/4.8.9.md](docs/releases/4.8.9.md) · [CHANGELOG](CHANGELOG.md) |
