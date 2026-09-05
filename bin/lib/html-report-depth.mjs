@@ -19,8 +19,7 @@ import {
   buildProductHonesty,
 } from './enforcement-honesty.mjs';
 import { summarizeRulesUnderContract } from './rules-under-contract.mjs';
-import { summarizeArkRunSection } from './ark-run-doctor.mjs';
-import { summarizeArkOrderSection } from './ark-order-doctor.mjs';
+import { attachExtraDoctorSections } from './doctor-advisories.mjs';
 import { readBaseline, baselineOccurrenceKeys } from './violations.mjs';
 import { describePackageVersionDualTruth } from './field-install.mjs';
 import { buildDoctorImprovementCompass } from './improvement-compass-doctor.mjs';
@@ -137,37 +136,12 @@ export function buildReportDepthPayload(
     classifiedFiles: coverage?.governed?.classifiedFiles ?? null,
   };
   const rulesUnderContract = summarizeRulesUnderContract(root, config, undefined, classification);
-  const arkRulesMerge = {
-    active: rulesUnderContract?.active === true,
-    structureEnforced: rulesUnderContract?.mergePlanes?.structureSensors?.enforced,
-    structureTotal: rulesUnderContract?.mergePlanes?.structureSensors?.total,
-    structureAdvisory: rulesUnderContract?.mergePlanes?.structureSensors?.advisory,
-    invariantEnforced: rulesUnderContract?.mergePlanes?.invariants?.enforced,
-    invariantTotal: rulesUnderContract?.mergePlanes?.invariants?.total,
-    invariantAdvisory: rulesUnderContract?.mergePlanes?.invariants?.advisory,
-    covered: rulesUnderContract?.mergePlanes?.invariants?.covered,
-    uncovered: rulesUnderContract?.mergePlanes?.invariants?.uncovered,
-  };
-  const arkRun = summarizeArkRunSection({
-    arkRun: config?.arkRun,
-    findings: activeViolations,
+  const { arkRun, arkOrder } = attachExtraDoctorSections(
+    rulesUnderContract,
+    config,
     classification,
-    arkRules: arkRulesMerge,
-  });
-  const arkOrder = summarizeArkOrderSection({
-    arkOrder: config?.arkOrder,
-    findings: activeViolations,
-    classification,
-    arkRules: arkRulesMerge,
-    arkRun: {
-      present: arkRun.active === true,
-      mode: arkRun.mode,
-      residualCount: arkRun.residual?.count,
-    },
-  });
-  if (rulesUnderContract?.mergePlanes) rulesUnderContract.mergePlanes = arkOrder.mergePlanes;
-  arkRun.mergePlanes = arkOrder.mergePlanes;
-  arkRun.failMergeWhen = arkOrder.failMergeWhen;
+    activeViolations
+  );
   // Single residual expression (parity with doctor): nextPilot || extractionCard.
   const residualPilot =
     pilotLoop?.nextPilot || pilotLoop?.extractionCard || null;

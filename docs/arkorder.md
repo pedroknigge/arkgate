@@ -189,8 +189,9 @@ one axis: the factory root.
 Do not rename `planeRoots` to `kernelRoots`. They name different factories.
 List both on `ark-check --sensors` (same table, same tier vocabulary).
 
-Turn extras on with `/ark-adopt`. Place new files with `/ark-place`. There is
-no `/ark-order` skill.
+Turn extras on with `/ark-adopt`. Place new files with `/ark-place`. First
+contact is doctor + the `[ArkOrder]` check label — same envelope as a bad
+import. A dedicated `/ark-order` skill is not required for that.
 
 ---
 
@@ -247,7 +248,8 @@ cash received against amount due, not a key to freeze or change with
 
 The valved loop ships in **4.8.6** ([ADR 0034](adr/0034-arkorder-valved-loop.md)).
 In-memory `ReleaseStore` is **not** durable. Doctor / status `arkOrder` stays
-`notAScore`. This does **not** close `K01` / `Z09`. No `/ark-order` skill.
+`notAScore`. This does **not** close `K01` / `Z09`. The extras door stays
+`/ark-adopt`.
 
 ---
 
