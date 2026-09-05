@@ -85,6 +85,17 @@ describe('RN08 mergePlanes honesty', () => {
     expect(onlyRun.dualPlaneStamp).toMatch(/not a score/i);
   });
 
+  it('enforced ArkOrder arms extra merge teeth when classified', () => {
+    const onlyOrder = composeMergePlanesHonesty({
+      arkRules: { active: false },
+      arkOrder: { present: true, mode: 'enforced', residualCount: 1 },
+      classification: { governedPercent: 80, populatedLayerCount: 1 },
+    });
+    expect(onlyOrder.extraMergeTeeth).toBe(true);
+    expect(onlyOrder.arkOrder.extraMergeTeeth).toBe(true);
+    expect(onlyOrder.failMergeWhen).toMatch(/ArkOrder/i);
+  });
+
   it('else-branch failMergeWhen names ArkRun when the extra is advisory or absent', () => {
     const advisoryOnly = composeMergePlanesHonesty({
       arkRules: { active: false },
@@ -101,5 +112,46 @@ describe('RN08 mergePlanes honesty', () => {
     expect(absent.extraMergeTeeth).toBe(false);
     expect(absent.failMergeWhen).toMatch(/arkRun/i);
     expect(absent.failMergeWhen).toMatch(/silent/i);
+  });
+
+  it('else-branch failMergeWhen names ArkOrder when advisory, present-unarmed, or absent', () => {
+    const advisory = composeMergePlanesHonesty({
+      arkRules: { active: false },
+      arkOrder: { present: true, mode: 'advisory', residualCount: 1 },
+    });
+    expect(advisory.extraMergeTeeth).toBe(false);
+    expect(advisory.failMergeWhen).toMatch(/advisory ArkOrder never merge-blocks/i);
+
+    const unarmed = composeMergePlanesHonesty({
+      arkRules: { active: false },
+      arkOrder: { present: true, residualCount: 1 },
+    });
+    expect(unarmed.arkOrder.mode).toBeNull();
+    expect(unarmed.failMergeWhen).toMatch(/does not arm merge teeth/i);
+
+    const silent = composeMergePlanesHonesty({
+      arkRules: { active: false },
+      arkOrder: { present: false },
+    });
+    expect(silent.failMergeWhen).toMatch(/Absence of arkOrder is silent/i);
+  });
+
+  it('enforced ArkOrder + ArkRun join failMergeWhen; deferred floor names ArkOrder', () => {
+    const both = composeMergePlanesHonesty({
+      arkRules: { active: false },
+      arkRun: { present: true, mode: 'enforced', residualCount: 1 },
+      arkOrder: { present: true, mode: 'enforced', residualCount: 1 },
+      classification: { governedPercent: 80, populatedLayerCount: 1 },
+    });
+    expect(both.extraMergeTeeth).toBe(true);
+    expect(both.failMergeWhen).toMatch(/ArkRun skip findings and enforced ArkOrder skip findings/i);
+
+    const deferred = composeMergePlanesHonesty({
+      arkRules: { active: false },
+      arkOrder: { present: true, mode: 'enforced', residualCount: 1 },
+      classification: { governedPercent: 10, populatedLayerCount: 1 },
+    });
+    expect(deferred.extraMergeTeeth).toBe(false);
+    expect(deferred.failMergeWhen).toMatch(/enforced ArkOrder findings are demoted/i);
   });
 });

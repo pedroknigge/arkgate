@@ -155,6 +155,7 @@ or `dist/` except `ark-mcp` loading the built library. Shared CLI logic lives in
 | `src/domain/extraMergeTeeth.ts` | `bin/lib/extra-merge-teeth.mjs` | (same `cli-pure` scripts); RN07 extra-plane teeth floor |
 | `src/domain/arkRunSensors.ts` | `bin/lib/ark-run-sensors.mjs` | (same `cli-pure` scripts); RN04 tier-1 ArkRun sensors |
 | `src/domain/arkRunDoctor.ts` | `bin/lib/ark-run-doctor.mjs` | (same `cli-pure` scripts); RN08 doctor/status/report arkRun (notAScore) |
+| `src/domain/arkOrderDoctor.ts` | `bin/lib/ark-order-doctor.mjs` | (same `cli-pure` scripts); doctor/status/report arkOrder (notAScore) |
 | `src/domain/arkOrderTypes.ts` | `bin/lib/ark-order-types.mjs` | (same `cli-pure` scripts); ArkOrder vocabulary |
 | `src/domain/arkOrderError.ts` | `bin/lib/ark-order-error.mjs` | (same `cli-pure` scripts) |
 | `src/domain/arkOrderInvariants.ts` | `bin/lib/ark-order-invariants.mjs` | (same `cli-pure` scripts); Haken freeze/ingest/blast |

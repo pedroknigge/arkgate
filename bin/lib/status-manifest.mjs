@@ -9,6 +9,7 @@
  */
 
 import { projectStatusArkRun } from './ark-run-doctor.mjs';
+import { projectStatusArkOrder } from './ark-order-doctor.mjs';
 export const ARK_STATUS_MANIFEST_SCHEMA_VERSION = '1.0';
 export const ARK_STATUS_MANIFEST_SCHEMA_URL = 'https://unpkg.com/arkgate@4/schemas/ark.status-manifest.schema.json';
 /**
@@ -249,6 +250,12 @@ export function resolveStatusNextAction(facts, binding, activation, lastCheck, r
             summary: 'ArkRun residual remains — wire kernel usage or declarations through arkgate/runtime. Not a score.',
         };
     }
+    if (facts.arkOrder?.present === true && (facts.arkOrder.residual ?? 0) > 0) {
+        return {
+            id: 'review-arkorder-residual',
+            summary: 'ArkOrder leftover remains — change that product choice through the valve (proposeRelease then apply), not a generic update. Not a score.',
+        };
+    }
     if (facts.adopted === 'required-merge' || facts.adopted === 'advisory-only-acked') {
         return {
             id: 'stay-enforced',
@@ -335,6 +342,9 @@ export function buildStatusManifest(facts) {
     }
     if (facts.arkRun && typeof facts.arkRun === 'object') {
         status.arkRun = projectStatusArkRun(facts.arkRun);
+    }
+    if (facts.arkOrder && typeof facts.arkOrder === 'object') {
+        status.arkOrder = projectStatusArkOrder(facts.arkOrder);
     }
     return status;
 }
@@ -618,6 +628,19 @@ export const ARK_STATUS_MANIFEST_SCHEMA = {
         arkRun: {
             type: 'object',
             description: 'ArkRun extra residual (notAScore). present/mode from config; residual is a finding-id count (null = unknown, not green). extraMergeTeeth is honesty, never a score.',
+            additionalProperties: false,
+            required: ['notAScore', 'present', 'mode', 'extraMergeTeeth', 'residual'],
+            properties: {
+                notAScore: { const: true },
+                present: { type: 'boolean' },
+                mode: { anyOf: [{ enum: ['advisory', 'enforced'] }, { type: 'null' }] },
+                extraMergeTeeth: { type: 'boolean' },
+                residual: { anyOf: [{ type: 'integer', minimum: 0 }, { type: 'null' }] },
+            },
+        },
+        arkOrder: {
+            type: 'object',
+            description: 'ArkOrder extra residual (notAScore). present/mode from config; residual is a finding-id count (null = unknown, not green). extraMergeTeeth is honesty, never a score.',
             additionalProperties: false,
             required: ['notAScore', 'present', 'mode', 'extraMergeTeeth', 'residual'],
             properties: {

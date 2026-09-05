@@ -29,6 +29,7 @@
  *   src/domain/extraMergeTeeth.ts → bin/lib/extra-merge-teeth.mjs
  *   src/domain/arkRunSensors.ts → bin/lib/ark-run-sensors.mjs
  *   src/domain/arkRunDoctor.ts → bin/lib/ark-run-doctor.mjs
+ *   src/domain/arkOrderDoctor.ts → bin/lib/ark-order-doctor.mjs
  *   src/domain/literalPathDrift.ts → bin/lib/literal-path-drift.mjs
  *
  * Layer match remains scripts/generate-layer-match.mjs (R1).
@@ -124,6 +125,11 @@ const MODULES = [
     canonical: 'src/domain/arkRunDoctor.ts',
     derived: 'bin/lib/ark-run-doctor.mjs',
     label: 'ArkRun doctor/status/report section (notAScore; RN08)',
+  },
+  {
+    canonical: 'src/domain/arkOrderDoctor.ts',
+    derived: 'bin/lib/ark-order-doctor.mjs',
+    label: 'ArkOrder doctor/status/report section (notAScore)',
   },
   {
     canonical: 'src/domain/arkOrderFacts.ts',

@@ -7,7 +7,7 @@ import { arkCommand } from '../ark-shared.mjs';
 import { operatingModeTitle } from './product-copy.mjs';
 import { isDoctorHealthyNothingToDo } from './post-green-path.mjs';
 import { printParseHealthSection } from './parse-health.mjs';
-import { printDoctorAdvisories } from './doctor-advisories.mjs';
+import { printDoctorAdvisories, printCompactExtraDoctorLines } from './doctor-advisories.mjs';
 import { designDeltaDoctorLines } from './design-delta.mjs';
 import { enforcementDoctorLines } from './enforcement-state.mjs';
 import { analysisIncompleteStatement } from './analysis-completeness.mjs';
@@ -164,15 +164,7 @@ export function printDoctorCompactHuman(view) {
     line(warn, nudge.ask);
   }
 
-  const arkRun = doctorAdvisories.arkRun;
-  if (arkRun?.active === true && arkRun.notAScore === true) {
-    console.log('');
-    const residual = Number(arkRun.residual?.count) || 0;
-    line(
-      residual > 0 ? warn : ' ',
-      `ArkRun: ${arkRun.mode || 'on'} · residual=${residual} · not a score`
-    );
-  }
+  printCompactExtraDoctorLines(doctorAdvisories, { line, warn });
 
   if (violations.length === 0) {
     if (!analysisComplete) {

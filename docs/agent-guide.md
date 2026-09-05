@@ -536,7 +536,8 @@ npx ark-check --promote <ruleId> --apply      # write mode "enforced" into that 
 ArkOrder — with its plane, its tier and whether it can *ever* be enforced, so
 Tier-2 shows up before you write the rule rather than after you wait for a run.
 ArkOrder: `proposeRelease` then `apply`; `refreshSigma`; ingest residual;
-capacity pack; `ReleaseStore`; ArkRun `decisionTape`. No `/ark-order` skill.
+capacity pack; `ReleaseStore`; ArkRun `decisionTape`. Extras door:
+`/ark-adopt`. First contact: doctor + `[ArkOrder]` on the check.
 It also says *how*: only the ArkRules plane is promoted per rule; ArkRun and
 ArkOrder are switched by the plane-level `arkRun.mode` / `arkOrder.mode`, and
 `--promote --apply` writes ArkRules documents only.

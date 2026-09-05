@@ -80,7 +80,7 @@ export function demoteExtraPlaneTeethUnderClassificationFloor(violations, classi
     return violations;
 }
 /** Stamp for extra-plane honesty: never one architecture score. */
-export const MERGE_PLANES_DUAL_STAMP = 'Structure = heuristics; invariants = catalog+coverage evidence (not business runtime); ArkRun = kernel usage + declarations (not a score); ArkOrder = pattern slaving (not a score). Extra planes never merge into one architecture score. Advisory ArkRules ≠ merge teeth. Advisory ArkRun ≠ merge teeth. Advisory ArkOrder ≠ merge teeth.';
+export const MERGE_PLANES_DUAL_STAMP = 'Structure = heuristics; invariants = catalog+coverage evidence (not business runtime); ArkRun = kernel usage + declarations (not a score); ArkOrder = the few big product choices (not a score). Extra planes never merge into one architecture score. Advisory ArkRules ≠ merge teeth. Advisory ArkRun ≠ merge teeth. Advisory ArkOrder ≠ merge teeth.';
 function countOrZero(value) {
     return typeof value === 'number' && Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
 }
@@ -112,7 +112,14 @@ export function composeMergePlanesHonesty(input = {}) {
     const arkRunResidual = countOrZero(input.arkRun?.residualCount);
     const arkRunHasEnforced = arkRunPresent && arkRunMode === 'enforced';
     const arkRunTeeth = arkRunHasEnforced && classificationAllowsTeeth;
-    const hasEnforcedTeeth = arkRulesHasEnforced || arkRunHasEnforced;
+    const arkOrderPresent = input.arkOrder?.present === true;
+    const arkOrderMode = input.arkOrder?.mode === 'enforced' || input.arkOrder?.mode === 'advisory'
+        ? input.arkOrder.mode
+        : null;
+    const arkOrderResidual = countOrZero(input.arkOrder?.residualCount);
+    const arkOrderHasEnforced = arkOrderPresent && arkOrderMode === 'enforced';
+    const arkOrderTeeth = arkOrderHasEnforced && classificationAllowsTeeth;
+    const hasEnforcedTeeth = arkRulesHasEnforced || arkRunHasEnforced || arkOrderHasEnforced;
     const extraMergeTeeth = hasEnforcedTeeth && classificationAllowsTeeth;
     const teethDeferredForClassification = hasEnforcedTeeth && classificationKnown && !classificationAllowsTeeth;
     let failMergeWhen;
@@ -122,12 +129,15 @@ export function composeMergePlanesHonesty(input = {}) {
             extras.push('enforced structure/invariant findings');
         if (arkRunHasEnforced)
             extras.push('enforced ArkRun skip findings');
+        if (arkOrderHasEnforced)
+            extras.push('enforced ArkOrder skip findings');
         failMergeWhen = `Layer graph failures plus ${extras.join(' and ')} (advisory extras never fail merge alone).`;
     }
     else if (teethDeferredForClassification) {
         const which = [
             arkRulesHasEnforced ? 'ArkRules structure/invariant' : null,
             arkRunHasEnforced ? 'ArkRun' : null,
+            arkOrderHasEnforced ? 'ArkOrder' : null,
         ]
             .filter((part) => Boolean(part))
             .join(' and ');
@@ -139,15 +149,21 @@ export function composeMergePlanesHonesty(input = {}) {
             : arkRunMode === 'advisory'
                 ? ' Advisory ArkRun never merge-blocks.'
                 : ' ArkRun extra is present but does not arm merge teeth.';
+        const arkOrderBit = !arkOrderPresent
+            ? ' Absence of arkOrder is silent.'
+            : arkOrderMode === 'advisory'
+                ? ' Advisory ArkOrder never merge-blocks.'
+                : ' ArkOrder extra is present but does not arm merge teeth.';
         failMergeWhen =
             'Layer graph only — no enforced ArkRules structure/invariant teeth on this tree. Advisory packs do not arm merge teeth.' +
-                arkRunBit;
+                arkRunBit +
+                arkOrderBit;
     }
     const out = {
         layers: {
             role: 'inter-layer-edges',
             alwaysOnGate: true,
-            note: 'Import/export layer graph — the default merge plane. Absent arkRules or arkRun changes nothing here.',
+            note: 'Import/export layer graph — the default merge plane. Absent extras change nothing here.',
         },
         structureSensors: {
             role: 'intra-layer-heuristics',
@@ -176,6 +192,18 @@ export function composeMergePlanesHonesty(input = {}) {
                     ? 'Enforced ArkRun arms extra merge teeth only when the layer plane is classified. Residual is a count, never a score.'
                     : 'Advisory ArkRun never adds merge teeth and never flips valid. Residual is a count, never a score.'
                 : 'Absence of arkRun is silent — Layers and ArkRules verdicts unchanged. The extra never becomes a score.',
+        },
+        arkOrder: {
+            role: 'pattern-slaving',
+            present: arkOrderPresent,
+            mode: arkOrderMode,
+            residualCount: arkOrderResidual,
+            extraMergeTeeth: arkOrderTeeth,
+            note: arkOrderPresent
+                ? arkOrderMode === 'enforced'
+                    ? 'Enforced ArkOrder arms extra merge teeth only when the layer plane is classified. Residual is a count, never a score.'
+                    : 'Advisory ArkOrder never adds merge teeth and never flips valid. Residual is a count, never a score.'
+                : 'Absence of arkOrder is silent — Layers verdicts unchanged. The extra never becomes a score.',
         },
         extraMergeTeeth,
         dualPlaneStamp: MERGE_PLANES_DUAL_STAMP,

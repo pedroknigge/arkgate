@@ -152,6 +152,8 @@ export function buildReportSnapshot({
   improvementCompass = null,
   /** RN08 — thin status ArkRun slice (notAScore; residual count, never a score). */
   arkRun = null,
+  /** Thin status ArkOrder slice (notAScore; residual count, never a score). */
+  arkOrder = null,
 }) {
   const layers = Array.isArray(config?.layers) ? config.layers : [];
   const rules = Array.isArray(config?.rules) ? config.rules : [];
@@ -210,6 +212,20 @@ export function buildReportSnapshot({
           ? arkRun.residual
           : typeof arkRun.residual?.count === 'number'
             ? arkRun.residual.count
+            : null,
+    };
+  }
+  if (arkOrder && typeof arkOrder === 'object' && arkOrder.notAScore === true) {
+    snapshot.arkOrder = {
+      notAScore: true,
+      present: arkOrder.active === true || arkOrder.present === true,
+      mode: arkOrder.mode === 'enforced' || arkOrder.mode === 'advisory' ? arkOrder.mode : null,
+      extraMergeTeeth: arkOrder.extraMergeTeeth === true,
+      residual:
+        typeof arkOrder.residual === 'number'
+          ? arkOrder.residual
+          : typeof arkOrder.residual?.count === 'number'
+            ? arkOrder.residual.count
             : null,
     };
   }

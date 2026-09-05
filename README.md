@@ -42,8 +42,8 @@ Works with Cursor, Claude, Codex, and Grok.
 > status running `arkgate-check --strict-merge`, or an explicit `advisory-only` stance.
 > Status is compact (`arkgate-check --doctor`; `--all` for Details). Optional **ArkRun**
 > (`arkgate/runtime`) is an in-memory runtime — not Postgres. Optional **ArkOrder**
-> (`arkgate/order`) stops the agent rewriting the few slow product decisions as CRUD;
-> later pattern change is `proposeRelease` then `apply`.
+> (`arkgate/order`) stops rewriting a big product choice — like the billing plan —
+> as if it were a seat count. Change those choices through a valve, not a generic update.
 > `@arkgate/runtime` is deprecated.
 > [4.8.11 published](docs/releases/4.8.11.md) · [4.8.10](docs/releases/4.8.10.md) · [4.8.9](docs/releases/4.8.9.md) · [4.8.8](docs/releases/4.8.8.md) · [4.8.7](docs/releases/4.8.7.md) · [4.8.6](docs/releases/4.8.6.md) · [4.8.5](docs/releases/4.8.5.md) · [4.8.4](docs/releases/4.8.4.md) · [4.8.3](docs/releases/4.8.3.md) · [4.8.2](docs/releases/4.8.2.md) · [4.8.1](docs/releases/4.8.1.md) · [4.8.0](docs/releases/4.8.0.md) · [Docs hub](docs/README.md) · [Voice](docs/product-voice.md)
 
@@ -114,7 +114,7 @@ once you adopt. The other three are optional.
 | **Before merge** | `arkgate-check` as a **required** CI status | Always (ArkGate) |
 | **ArkRules** | Optional policies *inside* a layer | When you ask |
 | **ArkRun** | Optional experimental runtime (`arkgate/runtime`) | Off unless you turn it on |
-| **ArkOrder** | Stops the agent rewriting the few slow product decisions as CRUD (`arkgate/order`). Valve: first `release()`, later ξ is `proposeRelease` then `apply` | Off unless you turn it on |
+| **ArkOrder** | Stops rewriting a big product choice (like billing plan) as if it were a seat count. Change it through a valve, not a generic update (`arkgate/order`) | Off unless you turn it on |
 
 Layers (who may import whom) always run. ArkRules, ArkRun, and ArkOrder change no
 inter-layer verdict when absent. Label leftovers **`[Layer]`** vs **`[ArkRules]`** vs
@@ -231,7 +231,7 @@ expectation.
 | Placement + preflight for multi-file changes | ✅ | ❌ |
 | Honest governed % + dual plan (edges vs shape) | ✅ | ❌ |
 | Opt-in intra-layer ArkRules (structure + invariants) | ✅ | ❌ |
-| Stops agents rewriting slow product decisions as CRUD (ArkOrder) | ✅ | ❌ |
+| Stops rewriting a big product choice like billing plan (ArkOrder) | ✅ | ❌ |
 | Incomplete analysis cannot look green | ✅ | varies |
 
 ---
@@ -302,31 +302,20 @@ interfaces for production. Details: [docs/production-hardening.md](docs/producti
 
 ## Optional ArkOrder
 
-Layers stop a bad import. They do not stop a *legal* import that overwrites the
-billing plan.
+Layers stop a bad import. ArkOrder stops rewriting a big product choice — like
+the billing plan — as if it were a seat count. Change those choices through a
+valve, not a generic update.
 
-If the product can name a few slow decisions in an afternoon — plan, cycle,
-tenancy; a clinical protocol; match rules — an agent will still ship one PUT
-that changes them together with seats and invoices. The write gate stays green
-because “what may be the plan” was never a rule.
+Off unless you add `arkOrder`. Same npm package (`arkgate/order`). In-memory.
+Not a service. Does not replace ArkGate or ArkRun.
 
-**ArkOrder** (`arkgate/order`) is that rule. Off unless you add `arkOrder`.
-Name the slow keys (`xiKeys`: plan, protocol, cost-code bound — not `projectId`).
-A status you can recompute from data you already have is not a slow decision. Derive it. Do not freeze it.
-Posting an invoice is absorbed. Changing plan is `proposeRelease` then `apply`.
-`refreshSigma`; ingest residual `absorb | escalate_up | hold` + `reasonCode`;
-capacity pack as data; in-memory `ReleaseStore`; `ingestTravelAction`; ArkRun
-`decisionTape`. A generic `update` of the plan does not land. A use-case that
-PATCHes those keys through Prisma is named. Same npm package.
-In-memory. Not durable. Does not replace ArkRun.
-**ArkOrder freezes the pattern through a valve. ArkRun is how the residual travels.**
+Name the few choices (`xiKeys`: plan, cycle, tenancy — not seat counts). First
+freeze is `release()`. Later change is `proposeRelease` then `apply`. A generic
+`update` does not land.
 
-The billing gallery (`plan` / `cycle` / `tenancy`) lives on GitHub, not in the
-npm tarball:
+The billing gallery lives on GitHub, not in the npm tarball:
 [examples/arkorder-billing](https://github.com/pedroknigge/arkgate/tree/main/examples/arkorder-billing).
-Rename the three keys. Compact starters leave it off. Details:
-[ArkOrder](docs/arkorder.md) · [configuration](docs/configuration.md) ·
-[package surface](docs/package-surface.md).
+Compact starters leave it off. Details: [ArkOrder](docs/arkorder.md).
 
 ---
 

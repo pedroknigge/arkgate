@@ -21,6 +21,82 @@ import { detectGraphBlindSpots, printGraphBlindSection } from './graph-blind.mjs
 import { summarizeRulesUnderContract } from './rules-under-contract.mjs';
 import { collectStewardNudge } from './team-parliament-io.mjs';
 import { formatArkRunDoctorLines, summarizeArkRunSection } from './ark-run-doctor.mjs';
+import {
+  ARKORDER_ONE_BREATH,
+  formatArkOrderDoctorLines,
+  summarizeArkOrderSection,
+} from './ark-order-doctor.mjs';
+import { composeMergePlanesHonesty } from './extra-merge-teeth.mjs';
+
+export function attachExtraDoctorSections(rulesUnderContract, config, classification, findings) {
+  const arkRulesMerge = {
+    active: rulesUnderContract?.active === true,
+    structureEnforced: rulesUnderContract?.mergePlanes?.structureSensors?.enforced,
+    structureTotal: rulesUnderContract?.mergePlanes?.structureSensors?.total,
+    structureAdvisory: rulesUnderContract?.mergePlanes?.structureSensors?.advisory,
+    invariantEnforced: rulesUnderContract?.mergePlanes?.invariants?.enforced,
+    invariantTotal: rulesUnderContract?.mergePlanes?.invariants?.total,
+    invariantAdvisory: rulesUnderContract?.mergePlanes?.invariants?.advisory,
+    covered: rulesUnderContract?.mergePlanes?.invariants?.covered,
+    uncovered: rulesUnderContract?.mergePlanes?.invariants?.uncovered,
+  };
+  const arkRun = summarizeArkRunSection({
+    arkRun: config?.arkRun,
+    findings,
+    classification,
+    arkRules: arkRulesMerge,
+  });
+  const arkOrder = summarizeArkOrderSection({
+    arkOrder: config?.arkOrder,
+    findings,
+    classification,
+    arkRules: arkRulesMerge,
+    arkRun: {
+      present: arkRun.active === true,
+      mode: arkRun.mode,
+      residualCount: arkRun.residual?.count,
+    },
+  });
+  const mergePlanes = composeMergePlanesHonesty({
+    classification,
+    arkRules: arkRulesMerge,
+    arkRun: {
+      present: arkRun.active === true,
+      mode: arkRun.mode,
+      residualCount: arkRun.residual?.count,
+    },
+    arkOrder: {
+      present: arkOrder.active === true,
+      mode: arkOrder.mode,
+      residualCount: arkOrder.residual?.count,
+    },
+  });
+  if (rulesUnderContract?.mergePlanes) rulesUnderContract.mergePlanes = mergePlanes;
+  arkRun.mergePlanes = mergePlanes;
+  arkRun.failMergeWhen = mergePlanes.failMergeWhen;
+  arkOrder.mergePlanes = mergePlanes;
+  arkOrder.failMergeWhen = mergePlanes.failMergeWhen;
+  return { arkRun, arkOrder, mergePlanes };
+}
+
+export function printCompactExtraDoctorLines(advisories, io) {
+  const arkRun = advisories?.arkRun;
+  if (arkRun?.active === true && arkRun.notAScore === true) {
+    console.log('');
+    const residual = Number(arkRun.residual?.count) || 0;
+    io.line(residual > 0 ? io.warn : ' ', `ArkRun: ${arkRun.mode || 'on'} · residual=${residual} · not a score`);
+  }
+  const arkOrder = advisories?.arkOrder;
+  if (arkOrder?.active === true && arkOrder.notAScore === true) {
+    console.log('');
+    const residual = Number(arkOrder.residual?.count) || 0;
+    const keys =
+      Array.isArray(arkOrder.xiKeys) && arkOrder.xiKeys.length > 0 ? arkOrder.xiKeys.join(', ') : 'unnamed';
+    const mark = residual > 0 ? io.warn : ' ';
+    io.line(mark, ARKORDER_ONE_BREATH);
+    io.line(mark, `ArkOrder: ${arkOrder.mode || 'on'} · xiKeys=${keys} · residual=${residual} · not a score`);
+  }
+}
 
 function classificationFromCoverage(cov) {
   return {
@@ -55,25 +131,12 @@ export function computeDoctorAdvisories(root, config, cov, rules, files, ts, par
       : undefined);
   const classification = classificationFromCoverage(cov);
   const rulesUnderContract = summarizeRulesUnderContract(root, config, factPaths, classification);
-  const arkRun = summarizeArkRunSection({
-    arkRun: config?.arkRun,
-    findings: activeViolations,
+  const { arkRun, arkOrder } = attachExtraDoctorSections(
+    rulesUnderContract,
+    config,
     classification,
-    arkRules: {
-      active: rulesUnderContract?.active === true,
-      structureEnforced: rulesUnderContract?.mergePlanes?.structureSensors?.enforced,
-      structureTotal: rulesUnderContract?.mergePlanes?.structureSensors?.total,
-      structureAdvisory: rulesUnderContract?.mergePlanes?.structureSensors?.advisory,
-      invariantEnforced: rulesUnderContract?.mergePlanes?.invariants?.enforced,
-      invariantTotal: rulesUnderContract?.mergePlanes?.invariants?.total,
-      invariantAdvisory: rulesUnderContract?.mergePlanes?.invariants?.advisory,
-      covered: rulesUnderContract?.mergePlanes?.invariants?.covered,
-      uncovered: rulesUnderContract?.mergePlanes?.invariants?.uncovered,
-    },
-  });
-  if (rulesUnderContract?.mergePlanes) {
-    rulesUnderContract.mergePlanes = arkRun.mergePlanes;
-  }
+    activeViolations
+  );
   return {
     contractHealth: computeContractHealth(root, config, cov, rules),
     ambientState: computeAmbientState(ts, root, config, files),
@@ -86,6 +149,7 @@ export function computeDoctorAdvisories(root, config, cov, rules, files, ts, par
     stewardNudge: collectStewardNudge(root, config),
     rulesUnderContract,
     arkRun,
+    arkOrder,
   };
 }
 
@@ -113,6 +177,15 @@ export function printDoctorAdvisories(advisories, io) {
     console.log(io.color.bold('ArkRun (not a score)'));
     const mark = arkRun.active && arkRun.residual?.count > 0 ? io.warn : ' ';
     for (const text of formatArkRunDoctorLines(arkRun)) {
+      io.line(mark, text);
+    }
+  }
+  const arkOrder = advisories.arkOrder;
+  if (arkOrder && arkOrder.notAScore === true) {
+    console.log('');
+    console.log(io.color.bold('ArkOrder (not a score)'));
+    const mark = arkOrder.active && arkOrder.residual?.count > 0 ? io.warn : ' ';
+    for (const text of formatArkOrderDoctorLines(arkOrder)) {
       io.line(mark, text);
     }
   }

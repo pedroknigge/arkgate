@@ -3,6 +3,27 @@
 All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are documented here or
 in the immutable pre-2.0 archive linked below.
 
+## Unreleased
+
+First-contact honesty for the optional ArkOrder extra. **No package version
+bump** — sensors, valve, and `arkgate/order` are already shipped on 4.8.11;
+this projects them through doctor / start / status / the check label, in
+plain words. No `schemaVersion` bump. Does not close `K01` / `Z09`.
+This mother `ark.config.json` still does **not** turn `arkOrder` on.
+
+### Added
+- Doctor / HTML / status `arkOrder` section (`notAScore`), same envelope as
+  ArkRun. Absence is a silent row. When on: one-breath + named choices + leftover count.
+- Check prints `[ArkOrder]` on `ARKORDER_*` denies (and `[ArkRun]` on
+  `ARKRUN_*`) so rewriting `plan` like a seat count reads as clearly as a bad import.
+- `ark start` preview says extras stay off — layers only, they stop bad imports.
+
+### Changed
+- Merge-planes honesty now names enforced ArkOrder skip findings. The stamp
+  already claimed this plane; `failMergeWhen` now matches.
+- First-contact copy (README, use, doctor, deny `Next:`, start, gallery) uses
+  the one-minute breath. No ξ / Haken / slaving on the first screen.
+
 ## 4.8.11 — 2026-09-02
 
 **Patch** over **4.8.10**. Nested `--config` with `--root` stays inside that

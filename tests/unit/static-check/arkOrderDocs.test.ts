@@ -28,7 +28,10 @@ describe('docs/arkorder.md (XP01)', () => {
     expect(body).toMatch(/proposeRelease/);
     expect(body).toMatch(/apply/);
     expect(body).toMatch(/refreshSigma/);
-    expect(body).toMatch(/ArkOrder freezes the pattern through a valve/);
+    expect(body).toMatch(/Layers stop a bad import/);
+    expect(body).toMatch(/billing plan/);
+    expect(body).toMatch(/seat count/);
+    expect(body).toMatch(/valve, not a generic update/);
     expect(body).toMatch(/ArkRun is how the residual travels/);
     expect(body).toMatch(/library/i);
     expect(body).toMatch(/static sensors/i);
