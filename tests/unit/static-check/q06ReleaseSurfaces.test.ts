@@ -250,17 +250,7 @@ describe('CHANGELOG + release note cover 4.8.12 ArkOrder first-contact patch', (
     expect(section).not.toMatch(/Status:\s*published/i);
     expect(section).not.toMatch(/No package version bump/);
     expect(section).not.toMatch(/Status:\s*unreleased/i);
-
-    const notes = read('docs/releases/4.8.12.md');
-    expect(notes).toMatch(/\*\*Status:\*\*\s*prepared/i);
-    expect(notes).toMatch(/arkgate@4\.8\.12/);
-    expect(notes).toMatch(/ArkOrder/);
-    expect(notes).toMatch(/\[ArkOrder\]/);
-    expect(notes).toMatch(/plan vs seats/);
-    expect(notes).toMatch(/Does \*\*not\*\* close `K01` \/ `Z09`/);
-    expect(notes).toMatch(/No `schemaVersion` bump/);
-    expect(notes).toMatch(/npm install -D arkgate@4\.8\.12/);
-    expect(notes).not.toMatch(/\*\*Status:\*\*\s*published/i);
+    expect(fs.existsSync(path.join(REPO, 'docs/releases/4.8.12.md'))).toBe(false);
     expect(read('ROADMAP.md')).toMatch(/\| 269 \| `AO17` \| `done`/);
     expect(read('ROADMAP.md')).toMatch(/\| 270 \| `RL812` \| `doing`/);
   });
