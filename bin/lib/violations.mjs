@@ -59,9 +59,18 @@ export const FIX_HINTS = {
     'Break the cycle: extract the shared code into a module both sides import, invert one edge behind a port/interface, or merge the files if they are really one unit.',
 };
 
+/** Extra-plane label so a slow-key deny reads as clearly as a bad import. */
+export function violationPlaneLabel(ruleId) {
+  if (typeof ruleId !== 'string') return '';
+  if (ruleId.startsWith('ARKORDER_')) return '[ArkOrder] ';
+  if (ruleId.startsWith('ARKRUN_')) return '[ArkRun] ';
+  return '';
+}
+
 export function printViolation(violation) {
   const location = `${violation.file}:${violation.line}`;
-  console.error(`${color.red('✖')} ${color.bold(violation.ruleId)}  ${location}`);
+  const plane = violationPlaneLabel(violation.ruleId);
+  console.error(`${color.red('✖')} ${color.bold(`${plane}${violation.ruleId}`)}  ${location}`);
   if (violation.fromLayer && violation.toLayer) {
     const target = violation.target ? `  ${color.dim(`(${violation.target})`)}` : '';
     console.error(`  ${violation.fromLayer} → ${violation.toLayer}${target}`);

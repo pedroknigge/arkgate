@@ -251,6 +251,19 @@ In-memory `ReleaseStore` is **not** durable. Doctor / status `arkOrder` stays
 
 ---
 
+## Doctor / start / status
+
+`--doctor` always emits an ArkOrder row (`notAScore`). Absence is a silent
+line. When the extra is on, the first human line is the one-breath:
+
+**ArkOrder freezes the pattern through a valve. A Prisma PATCH of a named
+slow key fails like a bad import.**
+
+`ark start` leaves extras off (`Optional extras stay off. Layers only.`).
+`ark status` projects a thin `arkOrder` slice (present / mode / residual
+count). A deny prints `[ArkOrder]` next to `ARKORDER_*`, the same envelope
+as a bad import.
+
 ## Next step
 
 ```bash
@@ -258,4 +271,5 @@ npx arkgate-check --doctor
 # gallery (not in the npm tarball):
 # https://github.com/pedroknigge/arkgate/tree/main/examples/arkorder-billing
 # /ark-adopt to turn arkOrder on advisory
+# Proof deny: skip corpus trees/xi-field-write (Prisma PATCH of plan)
 ```

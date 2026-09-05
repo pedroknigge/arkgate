@@ -35,6 +35,7 @@
         "bin/lib/extra-merge-teeth.mjs",
         "bin/lib/ark-run-sensors.mjs",
         "bin/lib/ark-run-doctor.mjs",
+        "bin/lib/ark-order-doctor.mjs",
         "bin/lib/ark-order-facts.mjs",
         "bin/lib/ark-order-sensors.mjs",
         "bin/lib/ark-order-invariants.mjs",

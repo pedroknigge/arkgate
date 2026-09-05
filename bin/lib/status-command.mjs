@@ -26,6 +26,7 @@ import { readBaseline } from './violations.mjs';
 import { reportsDir, readJsonSafe } from './html-report.mjs';
 import { summarizeRulesUnderContract } from './rules-under-contract.mjs';
 import { projectStatusArkRun } from './ark-run-doctor.mjs';
+import { projectStatusArkOrder } from './ark-order-doctor.mjs';
 import { collectVsBaseFacts, discoverTeamBaseRef } from './team-parliament-io.mjs';
 import { classifyAdopted, readAdoptionStance } from './adoption-stance.mjs';
 
@@ -354,6 +355,19 @@ export function collectStatusFacts(options = {}) {
     return projectStatusArkRun({ present: true, mode, extraMergeTeeth, residual });
   })();
 
+  const arkOrder = (() => {
+    const extra = config?.arkOrder;
+    if (!extra || typeof extra !== 'object') {
+      return projectStatusArkOrder({ present: false, residual: 0 });
+    }
+    const snap = latest?.arkOrder && typeof latest.arkOrder === 'object' ? latest.arkOrder : null;
+    const mode = extra.mode === 'enforced' || extra.mode === 'advisory' ? extra.mode : null;
+    const extraMergeTeeth =
+      snap && typeof snap.extraMergeTeeth === 'boolean' ? snap.extraMergeTeeth === true : false;
+    const residual = typeof snap?.residual === 'number' ? snap.residual : null;
+    return projectStatusArkOrder({ present: true, mode, extraMergeTeeth, residual });
+  })();
+
   // DF02 — always project compass with honesty mode (never invent green residual).
   // Prefer explicit override (tests/MCP inject doctor-facts); else report snapshot.
   let improvementCompass = null;
@@ -403,6 +417,7 @@ export function collectStatusFacts(options = {}) {
       latest?.designFitness?.designWeak === true ||
       latest?.doctor?.designFitness?.designWeak === true,
     arkRun: options.arkRun ?? arkRun,
+    arkOrder: options.arkOrder ?? arkOrder,
     adopted:
       options.adopted ??
       classifyAdopted({
@@ -530,6 +545,19 @@ export function runStatusCommand(args = {}) {
             ` · residual=${residual}` +
             (arkRunLine.present
               ? ` · extraMergeTeeth=${arkRunLine.extraMergeTeeth === true}`
+              : '') +
+            ' · not a score'
+        );
+      }
+      const arkOrderLine = manifest.arkOrder;
+      if (arkOrderLine && arkOrderLine.notAScore === true) {
+        const residual =
+          arkOrderLine.residual == null ? 'unknown' : String(arkOrderLine.residual);
+        write(
+          `  arkOrder: ${arkOrderLine.present ? arkOrderLine.mode || 'on' : 'absent'}` +
+            ` · residual=${residual}` +
+            (arkOrderLine.present
+              ? ` · extraMergeTeeth=${arkOrderLine.extraMergeTeeth === true}`
               : '') +
             ' · not a score'
         );

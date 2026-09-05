@@ -1821,6 +1821,7 @@ async function main() {
         mode: fitness.mode,
         improvementCompass: reportCompass,
         arkRun: designDepth?.arkRun ?? null,
+        arkOrder: designDepth?.arkOrder ?? null,
       }),
       leftoverDesignWork: designDepth?.designFitness?.designWeak === true,
     };
@@ -1863,6 +1864,7 @@ async function main() {
           ? { deepModuleCoach: designDepth.deepModuleCoach }
           : {}),
         ...(designDepth?.arkRun ? { arkRun: designDepth.arkRun } : {}),
+        ...(designDepth?.arkOrder ? { arkOrder: designDepth.arkOrder } : {}),
       },
     };
     const html = args.beginner

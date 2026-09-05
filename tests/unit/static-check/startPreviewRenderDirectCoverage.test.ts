@@ -52,6 +52,7 @@ describe('renderStartPreview direct output coverage', () => {
     expect(output).toContain('delete .legacy-ark');
     expect(output).toContain('Setup: install package + host gates (see --json).');
     expect(output).toContain('Preview does not write. Apply installs CI.');
+    expect(output).toContain('Optional extras stay off. Layers only.');
     expect(output).not.toContain('Commands in the approved setup plan:');
     expect(output).not.toContain('Host guarantees:');
     expect(output).toContain('Unresolved decisions:');

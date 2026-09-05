@@ -411,6 +411,18 @@ Engineering: `RL811` **done**.
 |---:|---|---|---:|---|---|
 | 268 | `RL811` | `done` | M | RL810 | Prepare, tag, and publish **4.8.11** (nested `--config`, Shape splits, doctorResidentWarm ceiling, lock pins). Does not close `Z09` / `K01` |
 
+### Patch — ArkOrder killer-optional first contact
+
+Doctor / start / check label already exist for ArkRun. ArkOrder sensors and
+the billing skip corpus already deny a Prisma PATCH of `plan`. This cut
+projects that extra through the same first-contact envelope. No new skill.
+No `schemaVersion` bump. No version bump (not a publishable API/valve cut).
+Does not close `Z09` / `K01`. Mother `ark.config.json` stays extras-off.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 269 | `AO17` | `doing` | S | RL811 | Doctor/status/HTML `arkOrder` (`notAScore`); `[ArkOrder]` on check denies; start extras-off line; merge-planes honesty names ArkOrder; billing gallery one-breath + skip-corpus proof |
+
 ### Patch 4.8.5 — Antigravity skills refresh
 
 Antigravity reads workspace `.agents/skills` and the official global catalog

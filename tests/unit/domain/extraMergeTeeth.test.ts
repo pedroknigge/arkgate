@@ -85,6 +85,17 @@ describe('RN08 mergePlanes honesty', () => {
     expect(onlyRun.dualPlaneStamp).toMatch(/not a score/i);
   });
 
+  it('enforced ArkOrder arms extra merge teeth when classified', () => {
+    const onlyOrder = composeMergePlanesHonesty({
+      arkRules: { active: false },
+      arkOrder: { present: true, mode: 'enforced', residualCount: 1 },
+      classification: { governedPercent: 80, populatedLayerCount: 1 },
+    });
+    expect(onlyOrder.extraMergeTeeth).toBe(true);
+    expect(onlyOrder.arkOrder.extraMergeTeeth).toBe(true);
+    expect(onlyOrder.failMergeWhen).toMatch(/ArkOrder/i);
+  });
+
   it('else-branch failMergeWhen names ArkRun when the extra is advisory or absent', () => {
     const advisoryOnly = composeMergePlanesHonesty({
       arkRules: { active: false },

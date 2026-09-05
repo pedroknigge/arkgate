@@ -62,6 +62,18 @@ function arkRunMergeInput(config, residualCount = 0) {
   };
 }
 
+function arkOrderMergeInput(config, residualCount = 0) {
+  const extra = config?.arkOrder;
+  if (!extra || typeof extra !== 'object') {
+    return { present: false, mode: null, residualCount: 0 };
+  }
+  return {
+    present: true,
+    mode: extra.mode === 'enforced' || extra.mode === 'advisory' ? extra.mode : null,
+    residualCount: Number(residualCount) || 0,
+  };
+}
+
 export function summarizeRulesUnderContract(root, config, facts, classification) {
   if (!config?.arkRules || Object.keys(config.arkRules).length === 0) {
     return {
@@ -74,6 +86,7 @@ export function summarizeRulesUnderContract(root, config, facts, classification)
         classification,
         arkRules: { active: false },
         arkRun: arkRunMergeInput(config),
+        arkOrder: arkOrderMergeInput(config),
       }),
       notAScore: true,
       note: 'No arkRules map — intra-layer ArkRules are opt-in.',
@@ -187,6 +200,7 @@ export function summarizeRulesUnderContract(root, config, facts, classification)
         uncovered: uncoveredInvariants,
       },
       arkRun: arkRunMergeInput(config),
+      arkOrder: arkOrderMergeInput(config),
     });
 
     return {

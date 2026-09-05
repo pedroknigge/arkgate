@@ -11,6 +11,7 @@ import { effectiveCapabilityDeny } from './analysis-engine.mjs';
 import { graphBlindSpotsHtml } from './graph-blind.mjs';
 import { formatRulesUnderContractHtml } from './rules-under-contract.mjs';
 import { formatArkRunHtml } from './ark-run-report.mjs';
+import { formatArkOrderHtml } from './ark-order-report.mjs';
 import { primaryImprovementCompassNextAction } from './improvement-compass.mjs';
 
 // htmlEscape is injected by the caller (html-report.mjs) — importing it back
@@ -353,6 +354,7 @@ export function renderAdvisorySections(advisories, escape) {
     graphBlindSpotsHtml(advisories.graphBlindSpots, esc),
     rulesUnderContractHtml(advisories.rulesUnderContract),
     formatArkRunHtml(advisories.arkRun, esc),
+    formatArkOrderHtml(advisories.arkOrder, esc),
   ]
     .filter(Boolean)
     .join('\n');

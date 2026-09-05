@@ -21,6 +21,8 @@ import { detectGraphBlindSpots, printGraphBlindSection } from './graph-blind.mjs
 import { summarizeRulesUnderContract } from './rules-under-contract.mjs';
 import { collectStewardNudge } from './team-parliament-io.mjs';
 import { formatArkRunDoctorLines, summarizeArkRunSection } from './ark-run-doctor.mjs';
+import { formatArkOrderDoctorLines, summarizeArkOrderSection } from './ark-order-doctor.mjs';
+import { composeMergePlanesHonesty } from './extra-merge-teeth.mjs';
 
 function classificationFromCoverage(cov) {
   return {
@@ -55,25 +57,55 @@ export function computeDoctorAdvisories(root, config, cov, rules, files, ts, par
       : undefined);
   const classification = classificationFromCoverage(cov);
   const rulesUnderContract = summarizeRulesUnderContract(root, config, factPaths, classification);
+  const arkRulesMerge = {
+    active: rulesUnderContract?.active === true,
+    structureEnforced: rulesUnderContract?.mergePlanes?.structureSensors?.enforced,
+    structureTotal: rulesUnderContract?.mergePlanes?.structureSensors?.total,
+    structureAdvisory: rulesUnderContract?.mergePlanes?.structureSensors?.advisory,
+    invariantEnforced: rulesUnderContract?.mergePlanes?.invariants?.enforced,
+    invariantTotal: rulesUnderContract?.mergePlanes?.invariants?.total,
+    invariantAdvisory: rulesUnderContract?.mergePlanes?.invariants?.advisory,
+    covered: rulesUnderContract?.mergePlanes?.invariants?.covered,
+    uncovered: rulesUnderContract?.mergePlanes?.invariants?.uncovered,
+  };
   const arkRun = summarizeArkRunSection({
     arkRun: config?.arkRun,
     findings: activeViolations,
     classification,
-    arkRules: {
-      active: rulesUnderContract?.active === true,
-      structureEnforced: rulesUnderContract?.mergePlanes?.structureSensors?.enforced,
-      structureTotal: rulesUnderContract?.mergePlanes?.structureSensors?.total,
-      structureAdvisory: rulesUnderContract?.mergePlanes?.structureSensors?.advisory,
-      invariantEnforced: rulesUnderContract?.mergePlanes?.invariants?.enforced,
-      invariantTotal: rulesUnderContract?.mergePlanes?.invariants?.total,
-      invariantAdvisory: rulesUnderContract?.mergePlanes?.invariants?.advisory,
-      covered: rulesUnderContract?.mergePlanes?.invariants?.covered,
-      uncovered: rulesUnderContract?.mergePlanes?.invariants?.uncovered,
+    arkRules: arkRulesMerge,
+  });
+  const arkOrder = summarizeArkOrderSection({
+    arkOrder: config?.arkOrder,
+    findings: activeViolations,
+    classification,
+    arkRules: arkRulesMerge,
+    arkRun: {
+      present: arkRun.active === true,
+      mode: arkRun.mode,
+      residualCount: arkRun.residual?.count,
+    },
+  });
+  const mergePlanes = composeMergePlanesHonesty({
+    classification,
+    arkRules: arkRulesMerge,
+    arkRun: {
+      present: arkRun.active === true,
+      mode: arkRun.mode,
+      residualCount: arkRun.residual?.count,
+    },
+    arkOrder: {
+      present: arkOrder.active === true,
+      mode: arkOrder.mode,
+      residualCount: arkOrder.residual?.count,
     },
   });
   if (rulesUnderContract?.mergePlanes) {
-    rulesUnderContract.mergePlanes = arkRun.mergePlanes;
+    rulesUnderContract.mergePlanes = mergePlanes;
   }
+  arkRun.mergePlanes = mergePlanes;
+  arkRun.failMergeWhen = mergePlanes.failMergeWhen;
+  arkOrder.mergePlanes = mergePlanes;
+  arkOrder.failMergeWhen = mergePlanes.failMergeWhen;
   return {
     contractHealth: computeContractHealth(root, config, cov, rules),
     ambientState: computeAmbientState(ts, root, config, files),
@@ -86,6 +118,7 @@ export function computeDoctorAdvisories(root, config, cov, rules, files, ts, par
     stewardNudge: collectStewardNudge(root, config),
     rulesUnderContract,
     arkRun,
+    arkOrder,
   };
 }
 
@@ -113,6 +146,15 @@ export function printDoctorAdvisories(advisories, io) {
     console.log(io.color.bold('ArkRun (not a score)'));
     const mark = arkRun.active && arkRun.residual?.count > 0 ? io.warn : ' ';
     for (const text of formatArkRunDoctorLines(arkRun)) {
+      io.line(mark, text);
+    }
+  }
+  const arkOrder = advisories.arkOrder;
+  if (arkOrder && arkOrder.notAScore === true) {
+    console.log('');
+    console.log(io.color.bold('ArkOrder (not a score)'));
+    const mark = arkOrder.active && arkOrder.residual?.count > 0 ? io.warn : ' ';
+    for (const text of formatArkOrderDoctorLines(arkOrder)) {
       io.line(mark, text);
     }
   }

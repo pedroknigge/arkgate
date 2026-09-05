@@ -1,8 +1,11 @@
 # ArkOrder billing fixture
 
-What this extra is *for*: layers can be green while an agent still PATCHes
-`plan` as if it were `seatCount`. Here `plan` / `cycle` / `tenancy` are the
-slow decisions; invoices and seats are not.
+Layers can be green while an agent PATCHes `plan` as if it were `seatCount`.
+**ArkOrder freezes the pattern through a valve. A Prisma PATCH of `plan` fails
+like a bad import.**
+
+Here `plan` / `cycle` / `tenancy` are the slow decisions; invoices and seats
+are not.
 
 Consumer physics for the ArkOrder plane. The core does not know these keys.
 
@@ -47,5 +50,17 @@ const over = plane.ingest({ kind: 'SeatAdded', payload: { seats: 11 } }); // hol
 let tape = buildDependencyInformationPackage({ kernelInstanceId: 'billing' });
 tape = appendDecisionTape(tape, { xiHash: over.xiHash, event: over.event, residual: over });
 ```
+
+The skip that must not land — same keys, Prisma PATCH of `plan`
+(`skip-prisma-plan.ts` in this folder):
+
+```ts
+import { PrismaClient } from '@prisma/client';
+await new PrismaClient().billing.update({ data: { plan: 'pro' } });
+```
+
+Proof reuses the existing skip corpus (same `xiKeys`), not a second sensor:
+`tests/fixtures/arkorder-skip-corpus/trees/xi-field-write`. Enforced check
+prints `[ArkOrder] ARKORDER_XI_FIELD_WRITE`.
 
 Domain files must not import `arkgate/order`. No `/ark-order` skill.

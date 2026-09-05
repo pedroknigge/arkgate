@@ -658,11 +658,11 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
       pilotTarget: residualPilot?.pilotTarget ?? residualPilot?.pilot ?? null,
       arkRulesMergeHonesty: rulesUnderContract?.mergePlanes
         ? {
-            active: rulesUnderContract.active === true || arkRun?.active === true,
+            active: rulesUnderContract.active === true || arkRun?.active === true || doctorAdvisories.arkOrder?.active === true,
             ...rulesUnderContract.mergePlanes,
           }
-        : rulesUnderContract?.active === true || arkRun?.active === true
-          ? { active: true, extraMergeTeeth: arkRun?.extraMergeTeeth === true }
+        : rulesUnderContract?.active === true || arkRun?.active === true || doctorAdvisories.arkOrder?.active === true
+          ? { active: true, extraMergeTeeth: arkRun?.extraMergeTeeth === true || doctorAdvisories.arkOrder?.extraMergeTeeth === true }
           : null,
       primaryNextAction:
         adopted === 'not-adopted' ? NOT_ADOPTED_NEXT_ACTION : postGreenPath?.action ?? dualTruthNext,
@@ -757,6 +757,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
             ...doctorAdvisories,
             rulesUnderContract,
             arkRun,
+            arkOrder: doctorAdvisories.arkOrder,
             // P0-B — single anti-false-green honesty surface (never a score).
             productHonesty,
             governed: cov.governed,

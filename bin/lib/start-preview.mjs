@@ -162,6 +162,7 @@ export function renderStartPreview(preview, options = {}) {
   if (!applying) {
     console.log('Setup: install package + host gates (see --json).');
     console.log('Preview does not write. Apply installs CI.');
+    console.log('Optional extras stay off. Layers only.');
   }
   if (preview.runtimeActivation) {
     console.log('Host: Codex is configured but not verified yet. Restart the host, then confirm this project.');
