@@ -177,4 +177,21 @@ describe('enrichViolationWithFixClass (src/domain — pure, no CLI spawn)', () =
       );
     }
   });
+
+  it('ArkOrder first-contact Next: is human and names the valve', () => {
+    expect(deterministicNextAction({ ruleId: 'ARKORDER_GENERIC_UPDATE' })).toMatch(
+      /Don't use a generic update/
+    );
+    expect(
+      deterministicNextAction({ ruleId: 'ARKORDER_XI_FIELD_WRITE', target: 'plan' })
+    ).toMatch(/Don't write plan from a use-case/);
+    expect(deterministicNextAction({ ruleId: 'ARKORDER_XI_FIELD_WRITE' })).toMatch(
+      /Don't write a named product choice/
+    );
+    const hint = enrichViolationWithFixClass({ ruleId: 'ARKORDER_XI_FIELD_WRITE' });
+    expect(hint.enthusiastHint).toMatch(/valve, not a generic update/);
+    expect(enrichViolationWithFixClass({ ruleId: 'ARKORDER_GENERIC_UPDATE' }).enthusiastHint).toMatch(
+      /Don't PATCH the billing plan/
+    );
+  });
 });

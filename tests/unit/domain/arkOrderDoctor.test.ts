@@ -18,6 +18,7 @@ import {
   projectStatusArkOrder as cliProject,
   summarizeArkOrderSection as cliSummarize,
 } from '../../../bin/lib/ark-order-doctor.mjs';
+import { printCompactExtraDoctorLines } from '../../../bin/lib/doctor-advisories.mjs';
 
 const extra = {
   mode: 'enforced' as const,
@@ -149,5 +150,65 @@ describe('ArkOrder doctor section', () => {
         arkOrder: { present: true, mode: 'enforced' },
       }).dualPlaneStamp
     ).toBe(MERGE_PLANES_DUAL_STAMP);
+  });
+
+  it('human lines cover off, empty residual, unnamed keys, and residual cap', () => {
+    expect(formatArkOrderDoctorLines(summarizeArkOrderSection({}))).toEqual([
+      'ArkOrder extra is off — silent on Layers (not a score).',
+    ]);
+    expect(formatArkOrderDoctorLines({ notAScore: false } as never)).toEqual([]);
+
+    const clean = formatArkOrderDoctorLines(
+      summarizeArkOrderSection({
+        arkOrder: { mode: 'enforced', planeRoots: ['src/main.ts'] },
+        classification: { governedPercent: 90, populatedLayerCount: 1 },
+      })
+    );
+    expect(clean[0]).toBe(ARKORDER_ONE_BREATH);
+    expect(clean.join('\n')).toMatch(/none named/);
+    expect(clean.join('\n')).toMatch(/Residual: none/);
+
+    const many = Array.from({ length: 13 }, (_, i) => ({ ruleId: `ARKORDER_CAP_${i}` }));
+    const capped = formatArkOrderDoctorLines(
+      summarizeArkOrderSection({
+        arkOrder: extra,
+        findings: many,
+        classification: { governedPercent: 90, populatedLayerCount: 1 },
+      })
+    );
+    expect(capped.join('\n')).toMatch(/\+1 more/);
+  });
+
+  it('compact doctor prints the one-breath only when the extra is on', () => {
+    const printed: string[] = [];
+    const io = { line: (_mark: string, text: string) => printed.push(text), warn: '!' };
+    printCompactExtraDoctorLines({ arkOrder: { active: false, notAScore: true } }, io);
+    expect(printed).toEqual([]);
+
+    printCompactExtraDoctorLines(
+      {
+        arkOrder: {
+          active: true,
+          notAScore: true,
+          mode: 'enforced',
+          xiKeys: ['plan', 'cycle', 'tenancy'],
+          residual: { count: 1 },
+        },
+      },
+      io
+    );
+    expect(printed[0]).toBe(ARKORDER_ONE_BREATH);
+    expect(printed[1]).toMatch(/xiKeys=plan, cycle, tenancy/);
+    expect(printed[1]).toMatch(/residual=1/);
+
+    printed.length = 0;
+    printCompactExtraDoctorLines(
+      {
+        arkOrder: { active: true, notAScore: true, mode: 'advisory', residual: { count: 0 } },
+      },
+      io
+    );
+    expect(printed[1]).toMatch(/residual=0/);
+    expect(printed[1]).toMatch(/unnamed/);
   });
 });
