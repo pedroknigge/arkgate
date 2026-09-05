@@ -21,7 +21,11 @@ import { detectGraphBlindSpots, printGraphBlindSection } from './graph-blind.mjs
 import { summarizeRulesUnderContract } from './rules-under-contract.mjs';
 import { collectStewardNudge } from './team-parliament-io.mjs';
 import { formatArkRunDoctorLines, summarizeArkRunSection } from './ark-run-doctor.mjs';
-import { formatArkOrderDoctorLines, summarizeArkOrderSection } from './ark-order-doctor.mjs';
+import {
+  ARKORDER_ONE_BREATH,
+  formatArkOrderDoctorLines,
+  summarizeArkOrderSection,
+} from './ark-order-doctor.mjs';
 import { composeMergePlanesHonesty } from './extra-merge-teeth.mjs';
 
 export function attachExtraDoctorSections(rulesUnderContract, config, classification, findings) {
@@ -89,7 +93,7 @@ export function printCompactExtraDoctorLines(advisories, io) {
     const keys =
       Array.isArray(arkOrder.xiKeys) && arkOrder.xiKeys.length > 0 ? arkOrder.xiKeys.join(', ') : 'unnamed';
     const mark = residual > 0 ? io.warn : ' ';
-    io.line(mark, 'ArkOrder freezes the pattern through a valve. A Prisma PATCH of a named slow key fails like a bad import.');
+    io.line(mark, ARKORDER_ONE_BREATH);
     io.line(mark, `ArkOrder: ${arkOrder.mode || 'on'} · xiKeys=${keys} · residual=${residual} · not a score`);
   }
 }

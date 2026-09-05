@@ -11,7 +11,7 @@
 import { composeMergePlanesHonesty, extraMergeTeethAllowed, isArkOrderRuleId, } from './extra-merge-teeth.mjs';
 export const ARK_ORDER_DOCTOR_SCHEMA_VERSION = '1.0';
 const RESIDUAL_RULE_CAP = 12;
-export const ARKORDER_ONE_BREATH = 'ArkOrder freezes the pattern through a valve. A Prisma PATCH of a named slow key fails like a bad import.';
+export const ARKORDER_ONE_BREATH = 'Layers stop a bad import. ArkOrder stops rewriting a big product choice — like the billing plan — as if it were a seat count. Change those choices through a valve, not a generic update.';
 function closedMode(value) {
     return value === 'enforced' || value === 'advisory' ? value : null;
 }

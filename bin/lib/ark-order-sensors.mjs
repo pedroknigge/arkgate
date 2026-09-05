@@ -219,7 +219,7 @@ export function evaluateArkOrderSensors(input) {
             continue;
         if (!matchesArkOrderAppliesTo(write.file, extra.appliesTo))
             continue;
-        findings.push(finding(extra, 'arkorder-xi-field-write', write.file, write.line, `File writes slow key ${JSON.stringify(write.key)} through a persistence driver; route the field through ingest or a pattern change through proposeRelease.`, { fromLayer, target: write.key }, teethAllowed));
+        findings.push(finding(extra, 'arkorder-xi-field-write', write.file, write.line, `This file writes ${JSON.stringify(write.key)} the same way it would write a seat count. Take the event in, or change that choice through the valve (propose, then apply).`, { fromLayer, target: write.key }, teethAllowed));
     }
     findings.sort((left, right) => left.file.localeCompare(right.file) ||
         left.ruleId.localeCompare(right.ruleId) ||

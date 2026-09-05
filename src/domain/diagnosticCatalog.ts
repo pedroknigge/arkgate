@@ -320,9 +320,9 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
   entry(
     'ARKORDER_GENERIC_UPDATE',
     'arkorder',
-    'Generic update of ξ',
-    'A call to update/patch/set on the order plane rewrites the slow pattern. Haken slaving forbids generic ξ mutation.',
-    'Use release() for the first freeze of ξ. Later pattern change is proposeRelease then apply(ProposeResult). Never update/patch/set. Never mechanical-safe.'
+    'Generic update of a big product choice',
+    'A call to update/patch/set rewrites a named product choice (like billing plan) as if it were a seat count.',
+    'Don\'t use a generic update. First freeze with release(). Later, propose the change, then apply it.'
   ),
   entry(
     'ARKORDER_TOO_MANY_PARAMS',
@@ -341,9 +341,9 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
   entry(
     'ARKORDER_XI_FIELD_WRITE',
     'arkorder',
-    'Slow key written around the order plane',
-    'A managed-layer file imports a persistence driver and writes a declared arkOrder.xiKeys name. Field events absorb or escalate; they do not PATCH the slow pattern.',
-    'Keep invoices, seats, hours, and logs on ingest. Change the slow key with proposeRelease then apply(ProposeResult), then preflight again. Never mechanical-safe.'
+    'Big product choice written like a seat count',
+    'A use-case writes a named product choice (like billing plan) through a database update. Invoices and seats can flow. That choice cannot.',
+    'Keep invoices and seats as events. Change the choice through the valve (proposeRelease then apply), not a generic update.'
   ),
   entry(
     'ARKORDER_INFORMATION_BUDGET',

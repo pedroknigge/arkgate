@@ -1,6 +1,8 @@
 /**
  * HTML for the doctor ArkOrder advisory (report parity: data-advisory="arkOrder").
  */
+import { ARKORDER_ONE_BREATH } from './ark-order-doctor.mjs';
+
 export function formatArkOrderHtml(section, esc) {
   if (!section || typeof section !== 'object' || section.notAScore !== true) return '';
   const escape = typeof esc === 'function' ? esc : (v) => String(v);
@@ -10,8 +12,8 @@ export function formatArkOrderHtml(section, esc) {
   <section class="section card" data-advisory="arkOrder">
     <h2>ArkOrder <span class="muted">(opt-in extra — not a score)</span></h2>
     <p class="dim" style="margin:.15rem 0 .55rem;font-size:.88rem">
-      Stops the agent rewriting the few slow product decisions as CRUD.
-      Absence is silent — Layers verdicts stay the same.
+      ${ARKORDER_ONE_BREATH}
+      Off until you turn it on — Layers stay the same.
     </p>
     ${note}
   </section>`;
@@ -44,7 +46,7 @@ export function formatArkOrderHtml(section, esc) {
   <section class="section card" data-advisory="arkOrder">
     <h2>ArkOrder <span class="muted">(not a score)</span></h2>
     <p class="dim" style="margin:.15rem 0 .55rem;font-size:.88rem">
-      <b>[ArkOrder]</b> ArkOrder freezes the pattern through a valve. A Prisma PATCH of a named slow key fails like a bad import.
+      <b>[ArkOrder]</b> ${ARKORDER_ONE_BREATH}
       Separate from <b>[Layer]</b> imports, <b>[ArkRules]</b> shape, and <b>[ArkRun]</b> travel.
     </p>
     ${merge}

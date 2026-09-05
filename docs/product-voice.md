@@ -21,9 +21,10 @@ The same check fails the pull request.
 **ArkRun** is an optional runtime (`arkgate/runtime`). Experimental. In-memory.
 Not Postgres.
 
-**ArkOrder** is the extra that stops the agent from rewriting the few slow
-product decisions as CRUD (`arkgate/order`). Off unless you turn it on. Same
-npm package. In-memory. Not durable. Does not replace ArkRun.
+**ArkOrder** is the extra that stops rewriting a big product choice — like
+the billing plan — as if it were a seat count (`arkgate/order`). Change those
+choices through a valve, not a generic update. Off unless you turn it on.
+Same npm package. In-memory. Not durable. Does not replace ArkRun.
 
 ```text
 Write.   the agent writes
@@ -35,7 +36,7 @@ Ship.    required GitHub check, then merge
 ArkGate   always     import rules (write + required CI)
 ArkRules  optional   policies inside a layer
 ArkRun    optional   experimental runtime — in-memory, not Postgres
-ArkOrder  optional   the few slow product decisions the agent must not CRUD
+ArkOrder  optional   big product choices (billing plan, not seat counts)
 ```
 
 Status first (`arkgate-check --doctor`). One next step. CLI flag `--doctor` stays;
@@ -53,7 +54,7 @@ On the eight canonical public openings — `README.md`, `docs/use.md`,
 2. **Deny:** `When the agent writes a bad import, the write doesn’t land. The same check fails the pull request.`
 3. **Not-that (below the fold, one line):** `Not an API Gateway. Not a folder linter. If the check is not required on the PR, the config is just documentation.`
 4. **Story:** the exact four-paragraph introduction below, with no visible heading or labels.
-5. **Technical nouns (below the introduction):** ArkGate is import rules. ArkRules is optional policies. ArkRun is an optional experimental runtime. ArkOrder is the extra that stops the agent from rewriting the few slow product decisions (plan, protocol) as CRUD — named when the consumer opts in, never as the first noun.
+5. **Technical nouns (below the introduction):** ArkGate is import rules. ArkRules is optional policies. ArkRun is an optional experimental runtime. ArkOrder stops rewriting a big product choice (like billing plan) as if it were a seat count — named when the consumer opts in, never as the first noun. No ξ / Haken / slaving on the first screen.
 
 Do not lead with folders, `ark.config.json`, “contract”, “gate”, “house”, or “doctor”
 as the first noun. Historical: `If the AI writes an illegal import, the write is rejected`
@@ -80,7 +81,7 @@ Safer changes, fewer surprises, and extra protection only when you choose it.
 
 Do not add technical terms to these four paragraphs. In the next section, explain that
 ArkGate checks imports, ArkRules is optional, ArkRun is experimental and in-memory,
-and ArkOrder is optional and for a few slow product decisions.
+and ArkOrder is optional and stops rewriting a big product choice like the billing plan.
 
 ---
 
@@ -113,7 +114,7 @@ Three beats when a line teaches:
 | `arkgate-check --doctor` — **status**, one next step | control plane, coach, doctor as the product name |
 | optional policies inside a layer | dual plane, intra-layer sensors, Saturday tidy |
 | experimental runtime / in-memory / not Postgres | production kernel, durable runtime, training wheels |
-| the few slow product decisions / billing plan vs seats / that PUT doesn’t land / `proposeRelease` then `apply` | four verbs, freeze a pattern, Haken, slaving, ξ vs s, extra plane, construction OS |
+| Layers stop a bad import. ArkOrder stops rewriting a big product choice (like billing plan) as if it were a seat count. Change those choices through a valve, not a generic update. | four verbs, freeze a pattern, Haken, slaving, ξ vs s, extra plane, construction OS, Prisma PATCH of a named slow key |
 
 Command names stay command names (`--doctor` is a flag). If a word is not here,
 cut it or put it below the fold (develop, JSON, ADRs).
@@ -201,7 +202,7 @@ Invoking a command **is** the approval. CLI checks; it does not silently rewrite
 - [ ] **Write. Check. Ship.** is on first-contact.
 - [ ] Deny is `When the agent writes a bad import, the write doesn’t land.`
 - [ ] One next action is obvious.
-- [ ] ArkGate / ArkRules / ArkRun / ArkOrder are import rules / policies / experimental runtime / the extra that stops slow product decisions being CRUD.
+- [ ] ArkGate / ArkRules / ArkRun / ArkOrder are import rules / policies / experimental runtime / the extra that stops a big product choice being rewritten like a seat count.
 - [ ] ArkRun is never implied durable / Postgres.
 - [ ] ArkOrder is never implied durable, a second install, or a replacement for ArkRun.
 - [ ] Status lights read Setup / In progress / Ready to humans.

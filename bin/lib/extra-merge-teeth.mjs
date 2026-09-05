@@ -80,7 +80,7 @@ export function demoteExtraPlaneTeethUnderClassificationFloor(violations, classi
     return violations;
 }
 /** Stamp for extra-plane honesty: never one architecture score. */
-export const MERGE_PLANES_DUAL_STAMP = 'Structure = heuristics; invariants = catalog+coverage evidence (not business runtime); ArkRun = kernel usage + declarations (not a score); ArkOrder = pattern slaving (not a score). Extra planes never merge into one architecture score. Advisory ArkRules ≠ merge teeth. Advisory ArkRun ≠ merge teeth. Advisory ArkOrder ≠ merge teeth.';
+export const MERGE_PLANES_DUAL_STAMP = 'Structure = heuristics; invariants = catalog+coverage evidence (not business runtime); ArkRun = kernel usage + declarations (not a score); ArkOrder = the few big product choices (not a score). Extra planes never merge into one architecture score. Advisory ArkRules ≠ merge teeth. Advisory ArkRun ≠ merge teeth. Advisory ArkOrder ≠ merge teeth.';
 function countOrZero(value) {
     return typeof value === 'number' && Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
 }

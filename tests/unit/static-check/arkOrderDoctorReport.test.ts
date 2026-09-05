@@ -117,8 +117,10 @@ describe('ArkOrder doctor / deny label', () => {
   it('human doctor leads with the one-breath when the extra is on', () => {
     const root = copyTree('trees/xi-field-write', configFor('enforced'));
     const doctor = runCheck(root, ['--doctor']);
-    expect(doctor.raw).toMatch(/ArkOrder freezes the pattern through a valve/);
-    expect(doctor.raw).toMatch(/Prisma PATCH of a named slow key/);
+    expect(doctor.raw).toMatch(/Layers stop a bad import/);
+    expect(doctor.raw).toMatch(/billing plan/);
+    expect(doctor.raw).toMatch(/seat count/);
+    expect(doctor.raw).toMatch(/valve, not a generic update/);
     expect(doctor.raw).toMatch(/xiKeys[=:] ?plan, cycle, tenancy/);
   });
 

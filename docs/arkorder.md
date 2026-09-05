@@ -1,15 +1,15 @@
 # ArkOrder
 
-**Write. Check. Ship.** Layers can be green while an agent still PATCHes the
-billing plan as if it were a seat count. ArkOrder is the extra that names the
-few slow product decisions and stops that write.
+**Layers stop a bad import. ArkOrder stops rewriting a big product choice —
+like the billing plan — as if it were a seat count. Change those choices
+through a valve, not a generic update.**
 
 Import: `arkgate/order` (same npm package `arkgate`). Off until you add
-`arkOrder` on schema `1.3`. Absence is silent. In-memory. Not durable. It is
-a library plus sensors, not a service. Does **not** replace ArkRun.
+`arkOrder`. Absence is silent. In-memory. Not durable. A library plus
+sensors, not a service. Does **not** replace ArkRun.
 
-First-contact copy: freeze through a valve / no `update`. Haken (ξ vs s) lives
-below. **ArkOrder freezes the pattern through a valve. ArkRun is how the residual travels.**
+Turn the extra on with `/ark-adopt`. First contact is doctor + `[ArkOrder]`
+on the check. Names like ξ live below, in the valve and sensor tables.
 
 Canonical plan seed: [plans/arkorder/README.md](plans/arkorder/README.md).
 ADRs: [0027](adr/0027-arkorder-gated-extra-plane.md)–[0030](adr/0030-opt-in-extras-same-npm-package.md),
@@ -258,11 +258,13 @@ In-memory `ReleaseStore` is **not** durable. Doctor / status `arkOrder` stays
 `--doctor` always emits an ArkOrder row (`notAScore`). Absence is a silent
 line. When the extra is on, the first human line is the one-breath:
 
-**ArkOrder freezes the pattern through a valve. A Prisma PATCH of a named
-slow key fails like a bad import.**
+**Layers stop a bad import. ArkOrder stops rewriting a big product choice —
+like the billing plan — as if it were a seat count. Change those choices
+through a valve, not a generic update.**
 
-`ark start` leaves extras off (`Optional extras stay off. Layers only.`).
-`ark status` projects a thin `arkOrder` slice (present / mode / residual
+`ark start` leaves extras off (`Optional extras stay off. This start is
+layers only — they stop bad imports.`).
+`ark status` projects a thin `arkOrder` slice (present / mode / leftover
 count). A deny prints `[ArkOrder]` next to `ARKORDER_*`, the same envelope
 as a bad import.
 

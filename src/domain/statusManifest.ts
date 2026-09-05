@@ -476,7 +476,7 @@ export function resolveStatusNextAction(
     return {
       id: 'review-arkorder-residual',
       summary:
-        'ArkOrder residual remains — route slow-key writes through proposeRelease then apply, not Prisma/PATCH. Not a score.',
+        'ArkOrder leftover remains — change that product choice through the valve (proposeRelease then apply), not a generic update. Not a score.',
     };
   }
   if (facts.adopted === 'required-merge' || facts.adopted === 'advisory-only-acked') {

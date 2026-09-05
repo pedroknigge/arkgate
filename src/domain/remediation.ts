@@ -333,15 +333,15 @@ export function deterministicNextAction(violation: ArkViolationLike): string {
     case 'ARKORDER_KERNEL_IN_DOMAIN':
       return 'Move the arkgate/order import out of the Domain-role layer into a plane root or adapter, then preflight again. Never mechanical-safe.';
     case 'ARKORDER_GENERIC_UPDATE':
-      return 'Use release() for the first freeze of ξ. Later pattern change is proposeRelease then apply(ProposeResult). Never update/patch/set. Never mechanical-safe.';
+      return 'Don\'t use a generic update. First freeze with release(). Later, propose the change, then apply it.';
     case 'ARKORDER_TOO_MANY_PARAMS':
       return 'Cut ξ to the slow keys that actually slave the rest, then preflight again. Never mechanical-safe.';
     case 'ARKORDER_INGEST_WRITES_XI':
       return 'Keep ingest results as absorb/escalate_up/hold only. Change ξ with proposeRelease then apply(ProposeResult). Never mechanical-safe.';
     case 'ARKORDER_XI_FIELD_WRITE':
       return typeof violation.target === 'string' && violation.target.length > 0
-        ? `Do not persist slow key ${violation.target} from a use-case. Absorb the field with ingest() or change the pattern with proposeRelease then apply, then preflight again.`
-        : 'Do not persist a declared slow key from a use-case. Absorb the field with ingest() or change the pattern with proposeRelease then apply, then preflight again. Never mechanical-safe.';
+        ? `Don't write ${violation.target} from a use-case. Take the event in, or change that choice through the valve (proposeRelease then apply), not a generic update.`
+        : "Don't write a named product choice from a use-case. Take the event in, or change that choice through the valve (proposeRelease then apply), not a generic update.";
     case 'ARKORDER_UNVALVED_RELEASE':
       return 'Change ξ with proposeRelease then apply(ProposeResult). release() is only the first freeze. Never mechanical-safe.';
     default:
@@ -646,7 +646,7 @@ export function enrichViolationWithFixClass<T extends ArkViolationLike>(
       enriched.effort = 'medium';
       enriched.enthusiastHint =
         violation.ruleId === 'ARKORDER_GENERIC_UPDATE'
-          ? 'Do not PATCH the slow pattern. Freeze ξ with release() or propose a pattern change that lists what dies.'
+          ? 'Don\'t PATCH the billing plan. First freeze with release(), or propose the change then apply it.'
           : violation.ruleId === 'ARKORDER_KERNEL_IN_DOMAIN'
             ? 'Domain stays plane-free. Import arkgate/order only from a listed plane root.'
             : violation.ruleId === 'ARKORDER_TOO_MANY_PARAMS'
@@ -654,7 +654,7 @@ export function enrichViolationWithFixClass<T extends ArkViolationLike>(
               : violation.ruleId === 'ARKORDER_INGEST_WRITES_XI'
                 ? 'ingest can absorb or escalate. It never writes a new house.'
                 : violation.ruleId === 'ARKORDER_XI_FIELD_WRITE'
-                  ? 'Name the slow keys in arkOrder.xiKeys. Invoices and seats still flow; changing the plan is a new release, not prisma.update.'
+                  ? 'Name the few big choices in arkOrder.xiKeys. Invoices and seats still flow; changing the plan goes through the valve, not a generic update.'
                   : violation.ruleId === 'ARKORDER_INFORMATION_BUDGET'
                     ? 'A scale may not observe a denied kind. Cut it from the projector or from cannotObserve.'
                     : violation.ruleId === 'ARKORDER_XI_TTL'

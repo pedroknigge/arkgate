@@ -85,4 +85,4 @@ Older notes: [releases/](releases/). Config: [configuration.md](configuration.md
 2. **One primary flow** — `start` → doctor → optional guided work.
 3. **Honest hardness** — host write guarantees differ; a **required GitHub status context** running the merge CLI is the shared hard boundary.
 4. **History is not the product** — version archaeology lives under `releases/` and `plans/`, not the front door.
-5. **Common language** — first-contact copy uses ordinary software words (import rules, the write doesn’t land, required CI). ArkGate is import rules; ArkRules is policies; ArkRun is an experimental runtime; ArkOrder stops the agent rewriting the few slow product decisions as CRUD. Voice: [product-voice.md](product-voice.md).
+5. **Common language** — first-contact copy uses ordinary software words (import rules, the write doesn’t land, required CI). ArkGate is import rules; ArkRules is policies; ArkRun is an experimental runtime; ArkOrder stops rewriting a big product choice (like billing plan) as if it were a seat count. Voice: [product-voice.md](product-voice.md).

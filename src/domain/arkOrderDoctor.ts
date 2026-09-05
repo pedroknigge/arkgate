@@ -16,7 +16,7 @@ export const ARK_ORDER_DOCTOR_SCHEMA_VERSION = '1.0' as const;
 const RESIDUAL_RULE_CAP = 12;
 
 export const ARKORDER_ONE_BREATH =
-  'ArkOrder freezes the pattern through a valve. A Prisma PATCH of a named slow key fails like a bad import.';
+  'Layers stop a bad import. ArkOrder stops rewriting a big product choice — like the billing plan — as if it were a seat count. Change those choices through a valve, not a generic update.';
 
 export type ArkOrderDoctorMode = 'advisory' | 'enforced';
 

@@ -351,7 +351,7 @@ export function evaluateArkOrderSensors(
         'arkorder-xi-field-write',
         write.file,
         write.line,
-        `File writes slow key ${JSON.stringify(write.key)} through a persistence driver; route the field through ingest or a pattern change through proposeRelease.`,
+        `This file writes ${JSON.stringify(write.key)} the same way it would write a seat count. Take the event in, or change that choice through the valve (propose, then apply).`,
         { fromLayer, target: write.key },
         teethAllowed
       )
