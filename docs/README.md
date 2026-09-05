@@ -71,6 +71,7 @@ These are **not** the day-to-day product path. They stay in the repo for evidenc
 | Field adoption kit (scaffolding, not closed) | [field/](field/) |
 | Runtime hardening (experimental) | [production-hardening.md](production-hardening.md) |
 
+Prepared: [releases/4.8.12.md](releases/4.8.12.md) (`arkgate@4.8.12`; not published).
 Current published: [releases/4.8.11.md](releases/4.8.11.md) (`arkgate@4.8.11` on npm `latest`; does not close `K01`).
 Prior published: [releases/4.8.10.md](releases/4.8.10.md) (`arkgate@4.8.10`).
 Prior published: [releases/4.8.9.md](releases/4.8.9.md) (`arkgate@4.8.9`).

@@ -5,11 +5,17 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
-First-contact honesty for the optional ArkOrder extra. **No package version
-bump** — sensors, valve, and `arkgate/order` are already shipped on 4.8.11;
-this projects them through doctor / start / status / the check label, in
-plain words. No `schemaVersion` bump. Does not close `K01` / `Z09`.
-This mother `ark.config.json` still does **not** turn `arkOrder` on.
+## 4.8.12 — 2026-09-05
+
+**Patch** over **4.8.11**. First-contact honesty for the optional ArkOrder extra.
+Sensors, valve, and `arkgate/order` already shipped on 4.8.11; this projects
+them through doctor / start / status / the check label, in plain words.
+**Write. Check. Ship.** **No required config migration.** No `schemaVersion` bump.
+Does not close `K01` / `Z09`. No new skill names. This mother `ark.config.json`
+still does **not** turn `arkOrder` on.
+
+**Status: prepared** (tree candidate; npm `latest` remains **4.8.11** until the
+signed-tag provenance workflow succeeds).
 
 ### Added
 - Doctor / HTML / status `arkOrder` section (`notAScore`), same envelope as

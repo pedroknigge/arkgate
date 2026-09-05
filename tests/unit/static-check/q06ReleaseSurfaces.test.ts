@@ -10,7 +10,7 @@ import { version } from '../../../src/version.ts';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 /** Tree package identity. */
-const CURRENT = '4.8.11';
+const CURRENT = '4.8.12';
 /** Version confirmed on npm `latest`. */
 const PUBLISHED_LATEST = '4.8.11';
 
@@ -138,7 +138,7 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
 
   it('keeps 4.8.11 published on npm latest and 4.8.10 as prior', () => {
     expect(PUBLISHED_LATEST).toBe('4.8.11');
-    expect(CURRENT).toBe('4.8.11');
+    expect(CURRENT).toBe('4.8.12');
     expect(read('docs/releases/4.8.9.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.8.9.md')).toMatch(/arkgate@4\.8\.9/);
     expect(read('docs/releases/4.8.9.md')).not.toMatch(/\*\*Status:\*\*\s*prepared/i);
@@ -190,9 +190,10 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
     expect(read('README.md')).toMatch(/docs\/releases\/4\.6\.7\.md/);
     expect(read('README.md')).toMatch(/4\.6\.6/);
     expect(read('README.md')).toMatch(/docs\/releases\/4\.6\.6\.md/);
-    expect(read('CONTRIBUTING.md')).toMatch(/Current release:.*4\.8\.11/s);
+    expect(read('CONTRIBUTING.md')).toMatch(/Current release candidate:.*4\.8\.12/s);
     expect(read('CONTRIBUTING.md')).toMatch(/Current published release:.*4\.8\.11/s);
     expect(read('CONTRIBUTING.md')).toMatch(/Prior published:.*4\.8\.10/s);
+    expect(read('docs/README.md')).toMatch(/Prepared:.*4\.8\.12/s);
     expect(read('docs/README.md')).toMatch(/Current published:.*4\.8\.11/s);
     expect(read('docs/README.md')).toMatch(/Prior published:.*4\.8\.10/s);
     expect(read('docs/README.md')).toMatch(/Prior:.*4\.6\.2/s);
@@ -229,6 +230,39 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
     expect(read('docs/releases/4.5.0.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.4.0.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.3.0.md')).toMatch(/\*\*Status:\*\*\s*published/i);
+  });
+});
+
+describe('CHANGELOG + release note cover 4.8.12 ArkOrder first-contact patch', () => {
+  it('records the prepared release without claiming publication', () => {
+    const changelog = changelogText();
+    const section = changelogSection(changelog, '4.8.12', '4.8.11');
+    expect(section).toMatch(/Status:\s*prepared/i);
+    expect(section).toMatch(/npm `latest` remains \*\*4\.8\.11\*\*/);
+    expect(section).toMatch(/ArkOrder/);
+    expect(section).toMatch(/doctor/);
+    expect(section).toMatch(/\[ArkOrder\]/);
+    expect(section).toMatch(/ark start/i);
+    expect(section).toMatch(/one-minute breath/);
+    expect(section).toMatch(/No required config migration/i);
+    expect(section).toMatch(/Does not close\s*`K01`\s*\/\s*`Z09`/);
+    expect(section).toMatch(/does \*\*not\*\* turn `arkOrder` on/);
+    expect(section).not.toMatch(/Status:\s*published/i);
+    expect(section).not.toMatch(/No package version bump/);
+    expect(section).not.toMatch(/Status:\s*unreleased/i);
+
+    const notes = read('docs/releases/4.8.12.md');
+    expect(notes).toMatch(/\*\*Status:\*\*\s*prepared/i);
+    expect(notes).toMatch(/arkgate@4\.8\.12/);
+    expect(notes).toMatch(/ArkOrder/);
+    expect(notes).toMatch(/\[ArkOrder\]/);
+    expect(notes).toMatch(/plan vs seats/);
+    expect(notes).toMatch(/Does \*\*not\*\* close `K01` \/ `Z09`/);
+    expect(notes).toMatch(/No `schemaVersion` bump/);
+    expect(notes).toMatch(/npm install -D arkgate@4\.8\.12/);
+    expect(notes).not.toMatch(/\*\*Status:\*\*\s*published/i);
+    expect(read('ROADMAP.md')).toMatch(/\| 269 \| `AO17` \| `done`/);
+    expect(read('ROADMAP.md')).toMatch(/\| 270 \| `RL812` \| `doing`/);
   });
 });
 
