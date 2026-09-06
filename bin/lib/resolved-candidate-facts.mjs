@@ -211,32 +211,67 @@ function canonicalOverlayPath(
   return [...candidates].sort()[0] ?? requested;
 }
 
-function collectCandidateFiles(root, config, changes, observeInput) {
+function discoverScopedFiles(root, config, scopeRelatives, observeInput) {
+  const discovered = [];
+  const seen = new Set();
+  for (const raw of scopeRelatives ?? []) {
+    let relative;
+    try {
+      relative = canonicalProjectPath(
+        String(raw || '')
+          .replace(/\\/g, '/')
+          .replace(/^\.\//, '')
+      );
+    } catch {
+      continue;
+    }
+    if (seen.has(relative) || !isGovernableSourceFile(path.basename(relative))) continue;
+    if (!isIncluded(relative, config.include) || isScanExcludedRelative(relative, config)) {
+      continue;
+    }
+    const absolute = path.join(root, ...relative.split('/'));
+    if (!fs.existsSync(absolute)) continue;
+    seen.add(relative);
+    observeResolvedInput(observeInput, absolute, 'realpath');
+    discovered.push({
+      absolute,
+      real: fs.realpathSync(absolute),
+      relative,
+    });
+  }
+  return discovered.sort((left, right) =>
+    left.relative < right.relative ? -1 : left.relative > right.relative ? 1 : 0
+  );
+}
+
+function collectCandidateFiles(root, config, changes, observeInput, scopeRelatives) {
   const files = new Map();
   const directoryAliases = new Map();
   const expandedAliasDirectories = new Set();
-  const discovered = (config.include ?? [])
-    .flatMap((entry) =>
-      collectGovernedFiles(root, { ...config, include: [entry] }, {
-        observeInput,
-        onDirectory(absolute, real) {
-          let relative = normalize(path.relative(root, absolute));
-          if (relative === '.') relative = '';
-          rememberDirectoryAlias(directoryAliases, real, relative, absolute);
-        },
-      })
-    )
-    .map((absolute) => {
-      observeResolvedInput(observeInput, absolute, 'realpath');
-      return {
-        absolute,
-        real: fs.realpathSync(absolute),
-        relative: canonicalProjectPath(normalize(path.relative(root, absolute))),
-      };
-    })
-    .sort((left, right) =>
-      left.relative < right.relative ? -1 : left.relative > right.relative ? 1 : 0
-    );
+  const discovered = Array.isArray(scopeRelatives)
+    ? discoverScopedFiles(root, config, scopeRelatives, observeInput)
+    : (config.include ?? [])
+        .flatMap((entry) =>
+          collectGovernedFiles(root, { ...config, include: [entry] }, {
+            observeInput,
+            onDirectory(absolute, real) {
+              let relative = normalize(path.relative(root, absolute));
+              if (relative === '.') relative = '';
+              rememberDirectoryAlias(directoryAliases, real, relative, absolute);
+            },
+          })
+        )
+        .map((absolute) => {
+          observeResolvedInput(observeInput, absolute, 'realpath');
+          return {
+            absolute,
+            real: fs.realpathSync(absolute),
+            relative: canonicalProjectPath(normalize(path.relative(root, absolute))),
+          };
+        })
+        .sort((left, right) =>
+          left.relative < right.relative ? -1 : left.relative > right.relative ? 1 : 0
+        );
   const canonicalByRealpath = new Map();
   for (const candidate of discovered) {
     if (!canonicalByRealpath.has(candidate.real)) canonicalByRealpath.set(candidate.real, candidate);
@@ -582,7 +617,8 @@ function compilerContext(ts, root, tsconfig, candidateFiles, observeInput) {
   const optionsByPath = new Map();
   const configInputsByPath = new Map();
   const reasons = [];
-  for (const configPath of configPaths) {
+  const loadConfigOptions = (configPath) => {
+    if (optionsByPath.has(configPath)) return optionsByPath.get(configPath);
     const configContents = new Map();
     const readConfig = (fileName) => {
       observeResolvedInput(observeInput, fileName, 'tsconfig');
@@ -605,15 +641,16 @@ function compilerContext(ts, root, tsconfig, candidateFiles, observeInput) {
       });
       optionsByPath.set(configPath, {});
       configInputsByPath.set(configPath, configContents);
-      continue;
+      return {};
     }
     const parsed = ts.parseJsonConfigFileContent(
       read.config,
       {
         useCaseSensitiveFileNames: ts.sys?.useCaseSensitiveFileNames ?? true,
-        readDirectory(...args) {
-          observeResolvedInput(observeInput, args[0], 'tsconfig-directory');
-          return ts.sys?.readDirectory ? ts.sys.readDirectory(...args) : [];
+        readDirectory(dir) {
+          observeResolvedInput(observeInput, dir, 'tsconfig-directory');
+          // Options-only parse: `fileNames` are unused. Skip the include walk (#205).
+          return [];
         },
         fileExists(fileName) {
           observeResolvedInput(observeInput, fileName, 'tsconfig-exists');
@@ -637,11 +674,19 @@ function compilerContext(ts, root, tsconfig, candidateFiles, observeInput) {
     }
     optionsByPath.set(configPath, parsed.options ?? {});
     configInputsByPath.set(configPath, configContents);
-  }
+    return parsed.options ?? {};
+  };
+  for (const configPath of configPaths) loadConfigOptions(configPath);
 
   const optionsFor = (fileName) => {
-    const configPath = configByFile.get(path.resolve(fileName));
-    return configPath ? optionsByPath.get(configPath) ?? {} : {};
+    const resolved = path.resolve(fileName);
+    let configPath = configByFile.get(resolved);
+    if (!configPath) {
+      configPath = explicitPath
+        ?? nearestTsconfig(root, resolved, nearestConfigByDirectory, observeInput);
+      if (configPath) configByFile.set(resolved, configPath);
+    }
+    return configPath ? loadConfigOptions(configPath) ?? {} : {};
   };
   const configs = configPaths.map((configPath) => ({
     path: configLabel(root, configPath, externalAnchor),
@@ -1036,6 +1081,19 @@ function unavailableFacts(config, ts, reason) {
   });
 }
 
+function loadOneCandidateFile(root, config, relative, observeInput) {
+  const discovered = discoverScopedFiles(root, config, [relative], observeInput);
+  const found = discovered[0];
+  if (!found) return null;
+  observeResolvedInput(observeInput, found.absolute, 'source');
+  return {
+    path: found.relative,
+    absolute: path.resolve(found.absolute),
+    real: path.resolve(found.real),
+    content: fs.readFileSync(found.absolute, 'utf8'),
+  };
+}
+
 /** Resolve one complete candidate tree (base or virtual overlay) into versioned neutral facts. */
 export function resolveCandidateFacts({
   root,
@@ -1044,6 +1102,7 @@ export function resolveCandidateFacts({
   tsconfig,
   changes = [],
   observeInput,
+  scopeFiles,
 }) {
   if (!ts?.createSourceFile || !ts?.resolveModuleName) {
     return unavailableFacts(config, ts, 'No API-compatible TypeScript resolver is available.');
@@ -1053,10 +1112,17 @@ export function resolveCandidateFacts({
   let candidateFiles;
   let canonicalChanges;
   let compiler;
+  const scoped = Array.isArray(scopeFiles);
   try {
     observeResolvedInput(observeInput, root, 'realpath');
     canonicalRoot = fs.realpathSync(root);
-    const candidate = collectCandidateFiles(canonicalRoot, config, changes, observeInput);
+    const candidate = collectCandidateFiles(
+      canonicalRoot,
+      config,
+      changes,
+      observeInput,
+      scoped ? scopeFiles : undefined
+    );
     candidateFiles = candidate.files;
     canonicalChanges = candidate.changes;
     compiler = compilerContext(ts, canonicalRoot, tsconfig, candidateFiles, observeInput);
@@ -1106,7 +1172,8 @@ export function resolveCandidateFacts({
   const compositionRootPatterns = [...(config.arkRun?.compositionRoots ?? [])];
   const planeRootPatterns = [...(config.arkOrder?.planeRoots ?? [])];
 
-  for (const candidate of candidateFiles) {
+  const seedPathSet = new Set(candidateFiles.map((file) => file.path));
+  const ingest = (candidate, fullExtract) => {
     const sourceFile = ts.createSourceFile(
       candidate.absolute,
       candidate.content,
@@ -1158,6 +1225,7 @@ export function resolveCandidateFacts({
         message: `${candidate.path} has ${parseDiagnosticCount} TypeScript parse diagnostic(s).`,
       });
     }
+    if (!fullExtract) return;
     const forbiddenUses = mayContainForbiddenCapability(ts, sourceFile, forbiddenGlobals)
       ? collectForbiddenCapabilityUses(ts, sourceFile, forbiddenGlobals)
       : [];
@@ -1244,10 +1312,50 @@ export function resolveCandidateFacts({
         // Never fail the resolver for ArkOrder release key-count extraction.
       }
     }
+  };
+
+  for (const candidate of candidateFiles) ingest(candidate, true);
+
+  if (scoped) {
+    const loaded = new Set(candidateFiles.map((file) => file.path));
+    let pending = [...candidateFiles];
+    while (pending.length > 0) {
+      const discovered = [];
+      for (const source of pending) {
+        const parsedFile = parsed.get(source.path);
+        if (!parsedFile) continue;
+        for (const dependency of parsedFile.dependencies) {
+          const resolved = resolveDependency(
+            ts,
+            dependency,
+            parsedFile.candidate.absolute,
+            compiler.optionsFor(parsedFile.candidate.absolute),
+            host
+          );
+          if (resolved.resolution !== 'resolved-project' || !resolved.target) continue;
+          if (loaded.has(resolved.target)) continue;
+          const extra = loadOneCandidateFile(
+            canonicalRoot,
+            config,
+            resolved.target,
+            observeInput
+          );
+          if (!extra) continue;
+          loaded.add(extra.path);
+          candidateFiles.push(extra);
+          ingest(extra, false);
+          discovered.push(extra);
+        }
+      }
+      pending = discovered;
+    }
   }
 
+  const extractCandidates = scoped
+    ? candidateFiles.filter((file) => seedPathSet.has(file.path))
+    : candidateFiles;
   const admittedTypeNames = new Set(classShapes.map((shape) => shape.className));
-  for (const candidate of candidateFiles) {
+  for (const candidate of extractCandidates) {
     if (!/\.(tsx?|mts|cts)$/i.test(candidate.path)) continue;
     try {
       arkRunManagedNews.push(
@@ -1264,7 +1372,7 @@ export function resolveCandidateFacts({
 
   if (planeRootPatterns.length > 0) {
     const factoryFiles = new Set(arkOrderPlaneCalls.map((call) => call.file));
-    for (const candidate of candidateFiles) {
+    for (const candidate of extractCandidates) {
       for (const pattern of planeRootPatterns) {
         try {
           if (!globToRegExp(pattern).test(candidate.path)) continue;
@@ -1284,7 +1392,7 @@ export function resolveCandidateFacts({
     const factoryFiles = new Set(
       arkRunKernelCalls.filter((call) => call.kind === 'factory').map((call) => call.file)
     );
-    for (const candidate of candidateFiles) {
+    for (const candidate of extractCandidates) {
       for (const pattern of compositionRootPatterns) {
         try {
           if (!globToRegExp(pattern).test(candidate.path)) continue;

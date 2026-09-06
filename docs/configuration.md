@@ -453,12 +453,13 @@ Write-gate ApplyPatch denies a batch that mixes law files with product source. H
 never hit PreToolUse are unchanged. Local `pnpm` gates should call `--changed --base`, not
 only full-tree `--strict-merge`.
 
-`--changed` honors the touched-file list for **file-local** ArkRules structure sensors
-(class shape, orchestration-only, thin-adapter, writes-via-aggregate) and for
-structural-hint preload. Import-edge, layer, and cycle sensors still evaluate the full
-governed graph. That is a bound on the existing scan, not a second analysis engine, and
-it does not turn a full-tree run into a seconds-long one. A `--changed` pass is not a
-full-tree structural verdict.
+`--changed` resolves the touched sources plus their import closure — not the whole
+include tree. File-local ArkRules sensors (class shape, orchestration-only, thin-adapter,
+writes-via-aggregate) and hint preload stay on the touched set. Layer and cycle sensors
+see that closure, so a new illegal import or a cycle the change can complete still
+fails. Untouched files outside the closure are left to the full-tree CI check. Same
+engine; not a second analysis path. A `--changed` pass is not a full-tree structural
+verdict.
 
 MCP clients can call `ark_policy_delta` with the previous `baseConfig`, an optional candidate
 contract (the current project contract is the default), and the same optional acknowledgement.

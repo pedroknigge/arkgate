@@ -103,6 +103,8 @@ import {
   UNGOVERNED_PROBE_CAP,
   collectGovernedFiles,
   countUngovernedSourceFiles,
+  governedFilesFromRelativePaths,
+  isGovernedSourcePath,
   normalize,
   walk,
 } from './lib/scan-files.mjs';
@@ -124,7 +126,6 @@ import {
   applyAgainstRatchet,
   bindTeamBaseRefs,
   contractSessionFrom,
-  filterChangedGovernedFiles,
   runTeamPreflight,
   ungovernedDumpMessage,
 } from './lib/team-parliament-io.mjs';
@@ -1406,8 +1407,7 @@ async function main() {
   }
   const manifest = readManifest(root, args.manifest);
   const rules = manifest?.architecture?.rules ?? config.rules;
-  const allGovernedFiles = loadGovernedFiles();
-  if (verdictPath) {
+  if (verdictPath && !args.changed) {
     const refusal = emptyAnalysisRefusalNow();
     if (refusal) {
       reportEmptyAnalysis(refusal);
@@ -1415,10 +1415,9 @@ async function main() {
     }
   }
   if (args.failUngoverned && teamParliament?.changeSet?.productPaths?.length) {
-    const governedRel = new Set(
-      allGovernedFiles.map((abs) => normalize(path.relative(root, abs)))
+    const dumped = teamParliament.changeSet.productPaths.filter(
+      (rel) => !isGovernedSourcePath(root, rel, config)
     );
-    const dumped = teamParliament.changeSet.productPaths.filter((rel) => !governedRel.has(rel));
     if (dumped.length > 0) {
       const message = ungovernedDumpMessage(dumped);
       if (args.json) {
@@ -1431,8 +1430,8 @@ async function main() {
     }
   }
   const files = args.changed
-    ? filterChangedGovernedFiles(allGovernedFiles, root, changedPaths, normalize)
-    : allGovernedFiles;
+    ? governedFilesFromRelativePaths(root, changedPaths, config)
+    : loadGovernedFiles();
 
   // --coverage is a pure glob/report view (no TypeScript resolver), so serve it BEFORE the
   // TS import: the report must work — and exit 0 — even when typescript isn't installed.
