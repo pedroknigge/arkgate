@@ -5,9 +5,12 @@ description: Explain the rules file in plain language and generate the HTML repo
 
 # /ark-explain — Understand this project's architecture
 
+**Contener · Guiar · Ordenar.** This door is **Guiar**: teach the path in plain language.
+Skills never enforce — CLI / hooks / CI do.
+
 **Not a first-run door.** Teach / HTML tour only. Session 0 → **`/ark-adopt`**.
 Map → **`/ark-explore`**. Apply → **`/ark-autopilot`**.
-Do not send the user to leftover `/ark-contract` or `/ark-fix`.
+Wire ArkRun → **`/ark-runtime`**. Wire ArkOrder → **`/ark-order`**.
 
 The user wants to understand the architecture, a specific rule, or why the gate blocked them.
 
@@ -76,7 +79,7 @@ ArkGate has **always-on Layers** plus opt-in extras. The user chooses extras; yo
 3. Absence of `arkRules` is **valid** — do not force ArkRules unless the user wants them or residual inventory clearly wants a pilot.
 4. Editing `arkrules/*` or applying structure fixes is **`/ark-adopt`** / **`/ark-autopilot`** (never invent `mechanical-safe`).
 5. CLI helpers: `ark-check --rules-inventory --json`, doctor JSON `rulesUnderContract`, sensors emit `ARKRULE_*` / `INVARIANT_UNCOVERED` with `evidence.arkruleId`.
-6. Extras silent when off. Doctor `arkRun` is `notAScore`. Do not force extras. Do not invent `/ark-run` or `/ark-order`.
+6. Extras silent when off. Doctor `arkRun` / `arkOrder` is `notAScore`. Do not force extras. Wire one kernel candidate via `/ark-runtime`; one order-plane candidate via `/ark-order`. Do not invent `/ark-run`.
 
 
 ### Explain + ArkRules
@@ -217,7 +220,7 @@ when residual signals remain.
 
 ## Related
 
-- Onboarding: `/ark-adopt` (or leftover `/ark-architect`), `ark-check --recommend`, `docs/enthusiast/README.md`
+- Onboarding: `/ark-adopt`, `ark-check --recommend`, `docs/enthusiast/README.md`
 - Brownfield: `/ark-adopt`, `docs/brownfield-adoption.md`
 - Autopilot: `/ark-autopilot` after the user understands the contract
 

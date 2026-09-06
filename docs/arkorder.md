@@ -8,7 +8,8 @@ Import: `arkgate/order` (same npm package `arkgate`). Off until you add
 `arkOrder`. Absence is silent. In-memory. Not durable. A library plus
 sensors, not a service. Does **not** replace ArkRun.
 
-Turn the extra on with `/ark-adopt`. First contact is doctor + `[ArkOrder]`
+Turn the extra on with `/ark-adopt`. Wire one candidate with **`/ark-order`**
+(mirrors `/ark-runtime`). First contact is doctor + `[ArkOrder]`
 on the check. Names like ξ live below, in the valve and sensor tables.
 
 Canonical plan seed: [plans/arkorder/README.md](plans/arkorder/README.md).

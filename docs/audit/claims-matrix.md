@@ -34,11 +34,16 @@ current as-is. C-049 records `writes-via-aggregate`. C-048 gains `xiKeys` +
 **2026-09-06 addendum (identity restatement):** C-020 as-is is tree **4.8.13**
 (Status: prepared, not npm-published); npm `latest` **4.8.11**; tag `v4.8.12`
 stands; tag `v4.8.13` exists; `RL813` doing. Code wins. Last 4.8.3 C-020 claim
-kept as C-053 (do not delete). Does not close Z09 / K01. No new skill names.
+kept as C-053 (do not delete). Does not close Z09 / K01. Last freeze “no new
+skill names” is to-be: `#217` added first-class `/ark-order` to the closed catalog.
 
 **2026-09-06 addendum (hub as-is):** `Agents.md` indexes dashboard bins, `arkgate/order`,
 and `docs/plans/field-gap-closure`. C-018 and C-052 restated OK. Last Partial/omit
 wording and the 2026-07-17 “14/14 100%” sentence are to-be/Planned (not deleted).
+
+**2026-09-06 merge (`#217` on `main`):** C-037 as-is is the closed catalog with
+first-class `/ark-order` (ADR 0036). Last “frozen 13 skill names / no new skill
+names” wording is to-be/historical Planned (not deleted).
 
 ## Summary
 
@@ -93,7 +98,7 @@ to-be/historical Planned. Do not read 4.4.0 / 4.5.0 / 4.7.1 / 4.8.2 / 4.8.3 here
 | Develop | `docs/develop.md`, `docs/ai-gates.md`, `docs/agent-guide.md`, `docs/configuration.md`, `docs/package-surface.md` | Session recipe; status modes; self-service upgrade; residual ⊆ doctor when full |
 | Contribute | `CONTRIBUTING.md`, `ROADMAP.md` Next session, `Agents.md` plans | DF01–DF06 **done** at prepare; publish checklist open until npm verify |
 | Releases | `CHANGELOG.md`, `docs/releases/*` | 4.5.0 **Status: prepared**; 4.4.0 **published** on npm `latest` |
-| Templates | `action.yml`, generated workflow, `templates/agent-skills/` | First-push-safe base-ref; same 13 skill names |
+| Templates | `action.yml`, generated workflow, `templates/agent-skills/` | First-push-safe base-ref; closed skill catalog (`ARK_SKILL_NAMES`) |
 | Audit | this file | DF06 snapshot; living identity is C-020 / C-053 |
 
 ### README 0.3 checklist (signed, DF06 / 4.5.0)
@@ -121,7 +126,7 @@ Living-claims v0 columns. `anchor.hash` omitted (`—`) unless a content hash wa
 | C-007 | Config and public schema aliases, including project identity and status-manifest, are documented | [Package surface](../package-surface.md) · [Configuration](../configuration.md) | root `exports` include enforcement-state and design-delta; package-surface omits dedicated export-path rows for those two | `package.json` | `exports` | — | normal | Partial | keep; last complete alias-map claim → to-be until package-surface lists those two subpaths; do not invent schemas |
 | C-008 | Recommended ESLint config enables the documented rule set | [AI gates](../ai-gates.md#eslint-editor-feedback--same-contract-as-ci) | `src/eslint/index.ts` recommended includes arkrun + arkorder rules | `src/eslint/index.ts` | `plugin.configs.recommended` | — | critical | OK | keep |
 | C-009 | GitHub Action inputs and first-push-safe base-ref behavior are documented | [AI gates](../ai-gates.md#ci-backstop) | `action.yml` six inputs; all-zero SHA handling | `action.yml` | `inputs` | — | critical | OK | keep |
-| C-010 | Shipped hooks, isolated repo skills, Agent Skills layout (4.3), monotonic shared Codex skills, and adoption-test template have discoverable guidance | [Agent guide](../agent-guide.md#install-skills-ark-and-ecosystem) · [AI gates](../ai-gates.md) | `templates/skills/` 13 · `templates/agent-skills/` 13 · hooks · adoption test | `templates/` | — | — | critical | OK | keep |
+| C-010 | Shipped hooks, isolated repo skills, Agent Skills layout, monotonic shared Codex skills, and adoption-test template have discoverable guidance; catalog is `ARK_SKILL_NAMES` (includes `ark-order`) | [Agent guide](../agent-guide.md#install-skills-ark-and-ecosystem) · [AI gates](../ai-gates.md) · [ADR 0036](../adr/0036-skill-catalog-product-capacity.md) | `templates/skills/` + `templates/agent-skills/` match `ARK_SKILL_NAMES`; hooks · adoption test | `templates/` | — | — | critical | OK | keep as-is; last “13 skill names” count → to-be/historical Planned |
 | C-011 | Playbook, policy packs, and gallery examples map to the enthusiast track | [Enthusiast index](../enthusiast/README.md) | templates · `examples/` (gallery; not in root `files`) | `examples/` | — | — | normal | OK | keep (Demo) |
 | C-012 | Live ArkRun kernel import is `arkgate/runtime` (`createStrictArkKernel`, no process singleton); Nest uses `arkgate/nestjs`; companion `@arkgate/runtime` is deprecated leftover | [Package surface](../package-surface.md#experimental-opt-in-surfaces) · [Runtime README](../../packages/runtime/README.md) | root exports `./runtime` `./nestjs`; tsup bundles `src/runtime/index.ts` into `arkgate` | `package.json` | `exports["./runtime"]` | — | critical | OK | keep as-is (same plane as C-013 / C-047); last disputed claim “kernel uses `@arkgate/runtime`; kernel stays out of `arkgate` tarball” → to-be/historical Planned; do not delete |
 | C-013 | 4.8.0 restores **real** `arkgate/runtime` and `arkgate/nestjs` subpaths (ADR 0031); AR04 removed *shims*; `@arkgate/runtime` is deprecated | [Package surface](../package-surface.md#experimental-opt-in-surfaces) · [Migration](../migrate-from-ark-runtime-kernel.md) · [ADR 0031](../adr/0031-one-package-extras-deprecate-companion.md) | root exports `./runtime` `./nestjs`; gate root has no factories | `package.json` | `exports["./runtime"]` | — | critical | OK | keep; use `arkgate/runtime` |
@@ -148,7 +153,7 @@ Living-claims v0 columns. `anchor.hash` omitted (`—`) unless a content hash wa
 | C-034 | Public diagnostic codes have a closed catalog with why/fix docs anchors | [Diagnostics](../diagnostics.md) · [Package surface](../package-surface.md) | `diagnosticCatalog.ts` · fixtures | `src/domain/diagnosticCatalog.ts` | — | — | critical | OK | keep |
 | C-035 | `ark status --json` / MCP `ark_status` returns one identity/activation/last-check/rules snapshot (not a score) | [Agent guide](../agent-guide.md) · [Package surface](../package-surface.md) | `statusManifest.ts` · schema | `src/domain/statusManifest.ts` | — | — | critical | OK | keep |
 | C-036 | Version-matched agent projection is regenerable and labeled non-authoritative for enforcement | [Agent guide](../agent-guide.md) · [Package surface](../package-surface.md) | `agentProjection.ts` · CLI | `src/domain/agentProjection.ts` | — | — | critical | OK | keep |
-| C-037 | The same frozen 13 skill names ship in Agent Skills–compatible layout; no new skill names | [Agent guide](../agent-guide.md#install-skills-ark-and-ecosystem) | `ARK_SKILL_NAMES` · `templates/agent-skills/` | `src/domain/agentSkillsPackage.ts` | `ARK_SKILL_NAMES` | — | critical | OK | keep; no new skill names |
+| C-037 | Closed skill catalog (`ARK_SKILL_NAMES`) ships 1:1 in Agent Skills layout; first-class `/ark-order`; stubs one release; standing capacity check | [Agent guide](../agent-guide.md#install-skills-ark-and-ecosystem) · [ADR 0036](../adr/0036-skill-catalog-product-capacity.md) | `agentSkillsPackage.ts` · `templates/agent-skills/` · `skillCatalogCapacity.test.ts` | `src/domain/agentSkillsPackage.ts` | `ARK_SKILL_NAMES` | — | critical | OK | keep as-is (#217); last “frozen 13 skill names; no new skill names” → to-be/historical Planned |
 | C-038 | Factory diagnostics carry stable `findingRef` + baseline-compatible `targetKey` (schema 1.5) | [Package surface](../package-surface.md) · [Agent guide](../agent-guide.md) | `adapterContract.ts` · multi-turn fixture | `src/domain/adapterContract.ts` | — | — | critical | OK | keep |
 | C-039 | Maintainer placement A/B eval exists under `eval/` with CI-safe dry mode; not a product score | [Eval guide](../../eval/README.md) · [placement-ab README](../../eval/placement-ab/README.md) | harness · fixtures · unit test | `eval/placement-ab/README.md` | — | — | normal | OK | keep |
 | C-040 | AGENTS.md / skills / projection never decide pass/fail; gate remains CLI/hooks/CI | [Product voice](../product-voice.md) · plan ACS hard lines | analysis paths do not import projection | `docs/product-voice.md` | — | — | critical | OK | keep |

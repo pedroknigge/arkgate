@@ -5,6 +5,9 @@ description: Fix illegal imports and one leftover-design refactor. CLI is a sens
 
 # /ark-autopilot — Apply the path
 
+**Contener · Guiar · Ordenar.** This door is **Guiar**: apply leftover design and illegal
+imports. Skills never enforce — CLI / hooks / CI do.
+
 **When:** the user wants architecture cleaned end-to-end, or leftover design after a map.
 **Not when:** map only (`/ark-explore`), session 0 / config lying (`/ark-adopt`), or one new file (`/ark-place`).
 
@@ -60,7 +63,7 @@ patterns are **out-of-scope** lenses — say so; do not invent Ark enforcement f
 | Brownfield or greenfield with apply | Session 0 / config lying → `/ark-adopt` first, then return |
 | User wants A + B planned and **applied** | New file only → `/ark-place` |
 | **Apply** leftover design (one Shape refactor) | User said map only |
-| Extra skip cluster (`ARKRUN_*` / `ARKORDER_*`) after extra is on | Extra off → `/ark-adopt` (advisory); evaluate one bus → `/ark-runtime` |
+| Extra skip cluster (`ARKRUN_*` / `ARKORDER_*`) after extra is on | Extra off → `/ark-adopt` (advisory); evaluate one bus → `/ark-runtime`; evaluate one order-plane candidate → `/ark-order` |
 | Spaghetti under ENFORCE: Shape work (invoke = apply one pilot) | — |
 
 **Post-green door:** `/ark-explore` shape-focus → dual-plan B, **then this skill applies one
@@ -128,7 +131,7 @@ ArkGate has **always-on Layers** plus opt-in extras. The user chooses extras; yo
 3. Absence of `arkRules` is **valid** — do not force ArkRules unless the user wants them or residual inventory clearly wants a pilot.
 4. Editing `arkrules/*` or promoting modes and fixing structure sensors is **this skill** (judgment, never invent `mechanical-safe`).
 5. CLI helpers: `ark-check --rules-inventory --json`, doctor JSON `rulesUnderContract`, sensors emit `ARKRULE_*` / `INVARIANT_UNCOVERED` with `evidence.arkruleId`.
-6. Absence of extras is **valid**. Extra skip clusters grind **here** after the extra is on. Do not invent `/ark-run` or `/ark-order`. Skills never enforce.
+6. Absence of extras is **valid**. Extra skip clusters grind **here** after the extra is on. Evaluate one bus → `/ark-runtime`; evaluate one order-plane candidate → `/ark-order`. Do not invent `/ark-run`. Skills never enforce.
 
 
 ### Autopilot + ArkRules
@@ -148,7 +151,7 @@ When `arkRun` is present:
 ### Autopilot + ArkOrder
 When `arkOrder` is present:
 - Grind skip clusters with judgment: `ARKORDER_MISSING_PLANE` / `ARKORDER_KERNEL_IN_DOMAIN` / `ARKORDER_GENERIC_UPDATE` / `ARKORDER_TOO_MANY_PARAMS` / `ARKORDER_INGEST_WRITES_XI` / `ARKORDER_XI_FIELD_WRITE` / `ARKORDER_UNVALVED_RELEASE`. First freeze with `release()`; later ξ change is `proposeRelease` then `apply`. `refreshSigma`; ingest residual `absorb | escalate_up | hold` + `reasonCode`; capacity pack; `createMemoryReleaseStore`; `ingestTravelAction`; ArkRun `decisionTape`. Never `update`/`patch`/`set`. Name `xiKeys`; do not persist those keys from a use-case. Do not “fix” a derived status by adding it to `xiKeys`; that institutionalizes the skip, so derive it on read or fold it from ingest. Doctor / status `arkOrder` is `notAScore`.
-- Extra off → `/ark-adopt` (advisory). Do not invent `/ark-order`.
+- Extra off → `/ark-adopt` (advisory). Wire one candidate → `/ark-order`.
 - Skills never enforce.
 
 ## Subagent fan-out (optional, host-dependent)
@@ -266,7 +269,7 @@ Status lights from doctor — not settings you choose. Rank residual honestly:
 - Claim ENFORCE / “done” when doctor reports `contract-false-green-io-under-application` (adopt first).
 - Claim “done” solely because plan A is empty while explore/B residual remains unlisted.
 - Replace host Nest/DI with the runtime kernel unasked.
-- Invent `/ark-run` or `/ark-order`.
+- Invent `/ark-run`. Use `/ark-order` to wire one plane candidate.
 - Auto-apply pattern (B) bets as if they were mechanical-safe.
 - Create origin only after a long cleanup (freezes a polished “before” that never was).
 

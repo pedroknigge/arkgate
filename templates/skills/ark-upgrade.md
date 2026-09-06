@@ -5,8 +5,18 @@ description: Upgrade ArkGate. Preview first, keep customized files, then apply.
 
 # /ark-upgrade — managed ArkGate upgrade
 
+**Contener · Guiar · Ordenar.** This door is **Contener**: keep the pin current.
+Skills never enforce — CLI / hooks / CI do.
+
 **When:** bump the published `arkgate` package and refresh managed gates.
 **Not when:** session 0 (`/ark-adopt`) or leftover design (`/ark-explore`).
+
+## When / not when
+
+| Use `/ark-upgrade` when… | Do **not** use it when… |
+|--------------------------|-------------------------|
+| Bump the pin and refresh managed gates | Session 0 / path missing → `/ark-adopt` |
+| Preview then `--apply` in this turn | Leftover design / map → `/ark-explore`; apply Shape → `/ark-autopilot` |
 
 ## Steps
 
@@ -133,7 +143,7 @@ ArkGate has **always-on Layers** plus opt-in extras. The user chooses extras; yo
 3. Absence of `arkRules` is **valid** — do not force ArkRules unless the user wants them or residual inventory clearly wants a pilot.
 4. After upgrade, leftover architecture work is **`/ark-autopilot`** (never invent `mechanical-safe`).
 5. CLI helpers: `ark-check --rules-inventory --json`, doctor JSON `rulesUnderContract`, sensors emit `ARKRULE_*` / `INVARIANT_UNCOVERED` with `evidence.arkruleId`.
-6. Schema `1.3` extras stay off unless already on. Pin teaches `arkgate/runtime` (same tarball), not the deprecated companion. Do not invent `/ark-run` or `/ark-order`.
+6. Schema `1.3` extras stay off unless already on. Pin teaches `arkgate/runtime` and `arkgate/order` (same tarball), not a second install. Wire after upgrade via `/ark-runtime` / `/ark-order`. Do not invent `/ark-run`.
 
 
 ### Upgrade + ArkRules
@@ -143,7 +153,7 @@ ArkGate has **always-on Layers** plus opt-in extras. The user chooses extras; yo
 ### Upgrade + extras
 - Schema `1.3` extras (`arkRun` / `arkOrder`) stay off unless already on. Do not turn extras on during upgrade.
 - Pin teaches `arkgate/runtime` (same tarball). `@arkgate/runtime` is deprecated. Do not send agents to `packages/runtime/README.md` as the kernel guide.
-- After 4.8.2, customized skills may lag — opt-in `--refresh-skills` with consent so the frozen 13 names pick up four-plane deepen. No new skill names.
+- After 4.8.2, customized skills may lag — opt-in `--refresh-skills` with consent so the closed catalog picks up four-plane deepen + `/ark-order`. Add a name only with a live ROADMAP item.
 
 ## Safety contract
 

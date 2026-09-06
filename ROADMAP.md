@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-09-06 (Engineering: `RL813` **doing**; Patch **4.8.13** publish-coverage **prepared**; `RL812` **done** — tag `v4.8.12` cut, publish-npm failed branch coverage; Patch **4.8.12** ArkOrder first-contact **prepared** (tag stands); `AO17` **done**; `RL811` **done**; Patch **4.8.11** nested `--config` + Shape dogfood **done** — 4.8.11 published on npm `latest`, MCP Registry, and website; does not close `Z09` / `K01`; no new skill names; no schemaVersion bump; Release `RL810` **done** — 4.8.10 published; Patch **4.8.10** Amarilla first-aggregate sensors `HINT01`–`IN01` **done**; Release `RL89` **done** — 4.8.9 published; Patch `AH01`/`CS01`/`CI01`/`UP01`/`PX01`/`INT01` **done** and Amarilla ArkOrder `AO10`–`AO16` **done**; Release `RL88` **done** — 4.8.8 published; Phase **LD** `LD01`–`LD06` **done** (4.8.7 published); Patch `ST02` **done** — unlabeled public story; Patch `ST01` **done** — beginner-clear STAR openings; Patch `AO09` **done** — ArkOrder recomputable-status honesty; Phase **LV** ArkOrder valved loop `LV01`–`LV09` **done** (4.8.6 published); Phase **XP** ArkOrder x ArkRun convergence **done** (`XP01`-`XP08`); Patch **4.8.5** `AGY01`+XP **done** — published; Patch **4.8.5** `AGY01` **done** — Antigravity skill refresh (`--antigravity-home` + default tools + dogfood `.agents/skills`); published; Patch **4.8.4** **done** — three false greens closed (coverage certifying tests no runner runs, an empty analysis passing), `--path-drift`, `--sensors`/`--promote`, peer isolation, git install without a build allowlist entry, and honest `--plan`; Phase OR `OR01`–`OR08` **done**; `K01` remains parked; Z09 still parked; npm `latest` is **4.8.11**)
+- **Status date:** 2026-09-06 (Engineering: `SK216` **doing** — skill catalog 100% product capacity, issue #216; `RL813` **prepared** — Patch **4.8.13** publish-coverage; `RL812` **done** — tag `v4.8.12` cut, publish-npm failed branch coverage; Patch **4.8.12** ArkOrder first-contact **prepared** (tag stands); `AO17` **done**; `RL811` **done**; Patch **4.8.11** nested `--config` + Shape dogfood **done** — 4.8.11 published on npm `latest`, MCP Registry, and website; does not close `Z09` / `K01`; no schemaVersion bump; Release `RL810` **done** — 4.8.10 published; Patch **4.8.10** Amarilla first-aggregate sensors `HINT01`–`IN01` **done**; Release `RL89` **done** — 4.8.9 published; Patch `AH01`/`CS01`/`CI01`/`UP01`/`PX01`/`INT01` **done** and Amarilla ArkOrder `AO10`–`AO16` **done**; Release `RL88` **done** — 4.8.8 published; Phase **LD** `LD01`–`LD06` **done** (4.8.7 published); Patch `ST02` **done** — unlabeled public story; Patch `ST01` **done** — beginner-clear STAR openings; Patch `AO09` **done** — ArkOrder recomputable-status honesty; Phase **LV** ArkOrder valved loop `LV01`–`LV09` **done** (4.8.6 published); Phase **XP** ArkOrder x ArkRun convergence **done** (`XP01`-`XP08`); Patch **4.8.5** `AGY01`+XP **done** — published; Patch **4.8.5** `AGY01` **done** — Antigravity skill refresh (`--antigravity-home` + default tools + dogfood `.agents/skills`); published; Patch **4.8.4** **done** — three false greens closed (coverage certifying tests no runner runs, an empty analysis passing), `--path-drift`, `--sensors`/`--promote`, peer isolation, git install without a build allowlist entry, and honest `--plan`; Phase OR `OR01`–`OR08` **done**; `K01` remains parked; Z09 still parked; npm `latest` is **4.8.11**)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -59,8 +59,11 @@ authorized **4.6.0** train for plain-language human surfaces + shared home skill
 lift DF freezes on scores, new skill names, sensors, or LLM verdicts.
 
 - New architecture presets or policy packs.
-- New skill *names* beyond consolidating/clarifying the current 13 (prefer deepen + route +
-  Agent Skills packaging of the same names). **IC05 deepens skill bodies** for vibe coders — same names.
+- New skill *names* beyond the closed Domain catalog (`ARK_SKILL_NAMES`). Prefer deepen +
+  route. **Exception:** Issue [#216](https://github.com/pedroknigge/arkgate/issues/216) /
+  `SK216` / [ADR 0036](docs/adr/0036-skill-catalog-product-capacity.md) opens ACS05 so the
+  set covers 100% of product capacity (first-class `/ark-order`; one-release stubs).
+  Further names still need a live ROADMAP item. **IC05** deepened bodies — same era names.
 - New ArkRules sensor vocabulary (e.g. family/export symmetry) without ADR + field demand.
   **Exception:** `AW01` / ADR 0032 adds closed `writes-via-aggregate` (advisory default).
 - LLM-derived pass/fail or package “process verdict” (maintainer offline eval only).
@@ -437,6 +440,18 @@ branch floor. No `docs/releases/4.8.13.md`. Does not close `Z09` / `K01`.
 | Order | ID | Status | Size | Depends on | Outcome |
 |---:|---|---|---:|---|---|
 | 271 | `RL813` | `doing` | S | RL812 | Prepare **4.8.13** (remaining ArkOrder doctor/deny branches so the 81% floor holds). Tag and provenance publish after merge. Does not close `Z09` / `K01` |
+
+### Patch — skill catalog 100% product capacity (issue #216)
+
+Pedro bar: the shipped skill *set* exercises Layers + ArkRules + ArkRun + ArkOrder
+and Contener · Guiar · Ordenar. Skill count is secondary. ACS05 freeze opened for
+this item only ([ADR 0036](docs/adr/0036-skill-catalog-product-capacity.md)).
+Does not close `Z09` / `K01`. No `schemaVersion` bump. Extras stay off by default.
+Skills never enforce.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 272 | `SK216` | `doing` | M | RL811 | First-class `/ark-order`; retire shortcuts as one-release stubs; north-star routing; standing capacity check; generate + check:agent-skills green |
 
 ### Patch 4.8.5 — Antigravity skills refresh
 

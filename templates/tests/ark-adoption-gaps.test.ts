@@ -39,12 +39,13 @@ describe('ArkGate adoption gaps (structural)', () => {
       { dir: '.cursor', skill: (n) => path.join('.cursor', 'commands', `${n}.md`) },
     ];
     const required = [
-      'ark-autopilot',
-      'ark-loop',
-      'ark-fix',
       'ark-adopt',
-      'ark-architect',
+      'ark-place',
+      'ark-explore',
+      'ark-autopilot',
       'ark-upgrade',
+      'ark-runtime',
+      'ark-order',
     ];
     for (const h of hosts) {
       if (!exists(h.dir)) continue;

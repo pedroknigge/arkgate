@@ -5,6 +5,9 @@ description: "Where does new code go? Names the folder from the rules file and w
 
 # /ark-place — Where does this code go?
 
+**Contener · Guiar · Ordenar.** This door is **Contener**: write the new file in the
+right house. Skills never enforce — CLI / hooks / CI do.
+
 **When:** you are adding a new file or artifact and need the layer, folder, and name.
 **Not when:** session 0 / config is missing or lying (`/ark-adopt`) or an existing violation cluster (`/ark-autopilot`).
 
@@ -78,7 +81,7 @@ a caption or `/ark-describe`.
 | New artifact: where + **write** under the config | Existing violation cluster → `/ark-autopilot` |
 | Naming / directory for a known kind | Session 0 / config missing or lying → `/ark-adopt` (then come back) |
 | Kernel-managed artifact when `arkRun` is already on | Extra not chosen yet → `/ark-adopt` (advisory `arkRun`); evaluate / migrate a hand-rolled bus → `/ark-runtime` |
-| Plane-root artifact when `arkOrder` is already on | Extra not chosen yet → `/ark-adopt` (advisory `arkOrder`); skip cluster grind → `/ark-autopilot` |
+| Plane-root artifact when `arkOrder` is already on | Extra not chosen yet → `/ark-adopt` (advisory `arkOrder`); evaluate / wire one plane candidate → `/ark-order`; skip cluster grind → `/ark-autopilot` |
 
 The user describes something they need to build (a saga, a background job, an
 event handler, a repository, an HTTP client, a use case, a projection, …).
@@ -132,7 +135,7 @@ ArkGate has **always-on Layers** plus opt-in extras. The user chooses extras; yo
 4. Missing layer home: add it via **`/ark-adopt`** in this session if needed, then write the file; never invent `mechanical-safe`.
 5. CLI helpers: `ark-check --rules-inventory --json`, doctor JSON `rulesUnderContract`, sensors emit `ARKRULE_*` / `INVARIANT_UNCOVERED` with `evidence.arkruleId`.
 6. Absence of `arkRun` is **valid**. Do not introduce the kernel speculatively. Skills never enforce this extra.
-7. Absence of `arkOrder` is **valid**. When on: Domain stays plane-free; first freeze ξ with `release()`; later ξ is `proposeRelease` then `apply`; never `update`/`patch`/`set` the pattern. Import `createOrderPlane` from `arkgate/order` (same npm package). No `/ark-order` skill.
+7. Absence of `arkOrder` is **valid**. When on: Domain stays plane-free; first freeze ξ with `release()`; later ξ is `proposeRelease` then `apply`; never `update`/`patch`/`set` the pattern. Import `createOrderPlane` from `arkgate/order` (same npm package). Evaluate / wire one candidate via **`/ark-order`**.
 
 
 ### Place + ArkRules
@@ -158,8 +161,8 @@ When `arkOrder` is present on the architecture config:
 - Call the factory only inside `arkOrder.planeRoots`. Empty roots in `enforced` mode is `ARKORDER_MISSING_PLANE`.
 - Named slow keys live in `arkOrder.xiKeys`. A managed-layer Prisma/pg write of those keys is `ARKORDER_XI_FIELD_WRITE` — absorb with `ingest` or change the pattern with `proposeRelease` then `apply`.
 - A recomputable status is not a new `xiKeys` entry or a `proposeRelease`: place it as a read projection or an ingest fold. If slow-key naming remains unresolved, return to `/ark-adopt` and run the elimination test before writing the config.
-- Skip clusters (`ARKORDER_MISSING_PLANE` / `ARKORDER_KERNEL_IN_DOMAIN` / `ARKORDER_GENERIC_UPDATE` / `ARKORDER_TOO_MANY_PARAMS` / `ARKORDER_INGEST_WRITES_XI` / `ARKORDER_XI_FIELD_WRITE`): place this artifact, then grind via `/ark-autopilot`. Extra not on → `/ark-adopt`. Do not invent `/ark-order`.
-- Absence of the extra is valid. Do not invent `/ark-order`. Skills never enforce.
+- Skip clusters (`ARKORDER_MISSING_PLANE` / `ARKORDER_KERNEL_IN_DOMAIN` / `ARKORDER_GENERIC_UPDATE` / `ARKORDER_TOO_MANY_PARAMS` / `ARKORDER_INGEST_WRITES_XI` / `ARKORDER_XI_FIELD_WRITE`): place this artifact, then grind via `/ark-autopilot`. Extra not on → `/ark-adopt`. Evaluate / wire one candidate → `/ark-order`.
+- Absence of the extra is valid. Skills never enforce.
 
 ## Subagent fan-out (optional, host-dependent)
 
@@ -229,11 +232,10 @@ the same files or weaken the gate.
   hand off **one** pilot via `pilotLoop.nextPilot` / `/ark-explore` shape-focus — never multi-pilot
   batch reshape from this skill.
 - If `arkRun` is on and the user is grinding skip violations (`new` of managed types, homemade
-  bus) across many files: place this artifact through the kernel, then leftover `/ark-fix` /
-  `/ark-autopilot`. Extra not on → `/ark-adopt` (advisory) or `/ark-runtime` (evaluate).
+  bus) across many files: place this artifact through the kernel, then `/ark-autopilot`. Extra not on → `/ark-adopt` (advisory) or `/ark-runtime` (evaluate).
 - If `arkOrder` is on and the user is grinding skip violations (`ARKORDER_*`) across many files:
-  place this artifact on a plane root, then leftover `/ark-fix` / `/ark-autopilot`. Extra not on
-  → `/ark-adopt` (advisory). Do not invent `/ark-order`.
+  place this artifact on a plane root, then `/ark-autopilot`. Extra not on
+  → `/ark-adopt` (advisory). Evaluate / wire one candidate → `/ark-order`.
 
 ## Operating rules
 
