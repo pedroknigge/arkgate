@@ -115,6 +115,45 @@ export function walk(dir, files = [], options = {}) {
 }
 
 /** Walk include roots then drop codegen / config.exclude (universal scan filter). */
+export function isIncludeMatch(relativePath, include) {
+  return (include ?? []).some((entry) => {
+    const includeRoot = String(entry)
+      .replace(/\\/g, '/')
+      .replace(/^\.\//, '')
+      .replace(/\/$/, '');
+    return (
+      includeRoot === '.' ||
+      relativePath === includeRoot ||
+      relativePath.startsWith(`${includeRoot}/`)
+    );
+  });
+}
+
+/** Path-only governed check — no tree walk. Matches `collectGovernedFiles` membership. */
+export function isGovernedSourcePath(root, relativePath, config) {
+  const rel = normalize(String(relativePath || ''))
+    .replace(/^\.\//, '')
+    .replace(/\\/g, '/');
+  if (!rel || !isGovernableSourceFile(path.basename(rel))) return false;
+  if (!isIncludeMatch(rel, config?.include) || isScanExcludedRelative(rel, config)) return false;
+  return fs.existsSync(path.join(root, ...rel.split('/')));
+}
+
+/** Map diff paths to absolute governed files without walking the include tree. */
+export function governedFilesFromRelativePaths(root, relativePaths, config) {
+  const out = [];
+  const seen = new Set();
+  for (const raw of relativePaths ?? []) {
+    const rel = normalize(String(raw || ''))
+      .replace(/^\.\//, '')
+      .replace(/\\/g, '/');
+    if (!rel || seen.has(rel) || !isGovernedSourcePath(root, rel, config)) continue;
+    seen.add(rel);
+    out.push(path.resolve(root, ...rel.split('/')));
+  }
+  return out;
+}
+
 export function collectGovernedFiles(root, config, options = {}) {
   options.observeInput?.(path.resolve(root), 'realpath');
   const state = {

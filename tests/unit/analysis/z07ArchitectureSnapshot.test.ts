@@ -43,7 +43,7 @@ function input(snapshot: ReturnType<typeof resolveArchitectureSnapshot>, inputPa
   return snapshot.inputs.find(({ path: observedPath }) => observedPath === inputPath);
 }
 
-/** A11: file-local structure + hints vs full-tree graph. */
+/** A11 / #205: file-local structure + hints on the touched set; graph uses import closure. */
 function boundedProject() {
   const { root } = project();
   fs.mkdirSync(path.join(root, 'src/infra'), { recursive: true });
@@ -244,7 +244,7 @@ describe('Z07 canonical architecture snapshot seam', () => {
     );
   });
 
-  it('honors files for file-local structure sensors and hint load; graph still sees the full tree', async () => {
+  it('honors files for file-local sensors; graph uses the touched set plus import closure', async () => {
     const { root, config, files } = boundedProject();
     const loaded = await loadTypeScript(root);
     expect(loaded.ts).toBeTruthy();
@@ -273,10 +273,12 @@ describe('Z07 canonical architecture snapshot seam', () => {
     expect(findingOn(full.result.warnings, 'src/application/heavy.ts', isOrchestration)).toBe(true);
 
     const changedClean = resolveArchitectureSnapshot({ ...base, files: [files.clean] });
-    expect(changedClean.facts.factsHash).toBe(full.facts.factsHash);
-    expect(changedClean.facts.files.map((file: { path: string }) => file.path).sort()).toEqual(
-      full.facts.files.map((file: { path: string }) => file.path).sort()
-    );
+    expect(changedClean.facts.files.map((file: { path: string }) => file.path).sort()).toEqual([
+      'src/domain/clean.ts',
+      'src/domain/order.ts',
+      'src/infra/db.ts',
+    ]);
+    expect(changedClean.facts.factsHash).not.toBe(full.facts.factsHash);
     expect(findingOn(changedClean.result.violations, 'src/domain/order.ts', isPrivateState)).toBe(
       false
     );
@@ -311,6 +313,9 @@ describe('Z07 canonical architecture snapshot seam', () => {
     ).toBe(true);
 
     const changedHeavy = resolveArchitectureSnapshot({ ...base, files: [files.heavy] });
+    expect(changedHeavy.facts.files.map((file: { path: string }) => file.path)).toEqual([
+      'src/application/heavy.ts',
+    ]);
     expect(findingOn(changedHeavy.result.violations, 'src/domain/order.ts', isPrivateState)).toBe(
       false
     );
@@ -323,6 +328,6 @@ describe('Z07 canonical architecture snapshot seam', () => {
         'src/domain/order.ts',
         (row) => row.ruleId === 'LAYER_IMPORT_VIOLATION'
       )
-    ).toBe(true);
+    ).toBe(false);
   });
 });

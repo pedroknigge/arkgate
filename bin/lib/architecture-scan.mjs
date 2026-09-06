@@ -126,12 +126,18 @@ export function resolveArchitectureSnapshot({
     { ...config, rules: rules ?? config.rules },
     manifest
   );
+  const scoped = fileLocalScope(root, files);
   const facts = resolveCandidateFacts({
     root,
     config: effectiveConfig,
     ts,
     ...(args?.tsconfig ? { tsconfig: args.tsconfig } : {}),
     observeInput,
+    ...(scoped
+      ? { scopeFiles: [...scoped] }
+      : args?.changed
+        ? { scopeFiles: [] }
+        : {}),
   });
   const arkRulesLoad = loadEffectiveArkRulesFromDisk(root, effectiveConfig, {
     observeInput,
@@ -145,7 +151,6 @@ export function resolveArchitectureSnapshot({
     err.issues = arkRulesLoad.errors;
     throw err;
   }
-  const scoped = fileLocalScope(root, files);
   const loadedContract = loadContract(effectiveConfig, configPath, {
     arkRules: arkRulesLoad.arkRules,
   });
@@ -162,7 +167,8 @@ export function resolveArchitectureSnapshot({
         ...coverageOptionsFromConfig(effectiveConfig),
       })
     : undefined;
-  // File-local structure sensors + hint load honor `files`; graph still uses full facts.
+  // File-local sensors honor the touched set. Facts (and graph) use that set plus
+  // its import closure — not the whole include tree. Unbounded `files` stays full-tree.
   const fileHints = loadHintsForScope(
     root,
     facts,

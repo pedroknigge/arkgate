@@ -24,6 +24,13 @@ in the immutable pre-2.0 archive linked below.
   `K01` / `Z09`.
 
 ### Fixed
+- `--changed` no longer builds facts for the whole include tree (issue
+  [#205](https://github.com/pedroknigge/arkgate/issues/205)). The check now
+  resolves touched sources plus their import closure, skips the unused
+  tsconfig file walk, and does not list every governed file just to filter
+  the diff. File-local ArkRules sensors stay on the touched set. Full-tree
+  `ark-check` is unchanged. Dual gate (write + PR) stays the merge line.
+  Does not bump the package version.
 - Short `arkgate-check --help` now names `--changed --base <ref>` as the local /
   pre-push fast path (issue [#204](https://github.com/pedroknigge/arkgate/issues/204)).
   Encyclopedia `--help --all` is unchanged.
