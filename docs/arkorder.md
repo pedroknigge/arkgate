@@ -12,6 +12,10 @@ Turn the extra on with `/ark-adopt`. Wire one candidate with **`/ark-order`**
 (mirrors `/ark-runtime`). First contact is doctor + `[ArkOrder]`
 on the check. Names like ξ live below, in the valve and sensor tables.
 
+Proof (GitHub, not in the npm tarball):
+[examples/arkorder-billing](https://github.com/pedroknigge/arkgate/tree/main/examples/arkorder-billing).
+First freeze is `release()`. Later plan change is `proposeRelease` then `apply`.
+
 Canonical plan seed: [plans/arkorder/README.md](plans/arkorder/README.md).
 ADRs: [0027](adr/0027-arkorder-gated-extra-plane.md)–[0030](adr/0030-opt-in-extras-same-npm-package.md),
 [0033](adr/0033-arkorder-runtime-half-is-arkrun.md) (runtime half is ArkRun),

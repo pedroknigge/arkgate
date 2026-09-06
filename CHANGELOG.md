@@ -11,6 +11,13 @@ in the immutable pre-2.0 archive linked below.
   one-light, CLI help, host projections, and first-class skills share the same
   breath. Write. Check. Ship. stays the deny. No new command, schema, or skill.
   Does not close `K01` / `Z09`.
+- Billing gallery is the undeniable ArkOrder proof path: site/docs
+  (`docs/use.md`, docs hub, enthusiast) →
+  [examples/README.md](https://github.com/pedroknigge/arkgate/blob/main/examples/README.md)
+  → [examples/arkorder-billing](https://github.com/pedroknigge/arkgate/tree/main/examples/arkorder-billing)
+  (first freeze `release()`, later `proposeRelease` then `apply`). Still GitHub-only;
+  not added to the npm tarball or `GALLERY_STARTERS`. No new skill names.
+  Does not close `K01` / `Z09`.
 - Skill catalog covers 100% of product capacity (issue [#216](https://github.com/pedroknigge/arkgate/issues/216) /
   [ADR 0036](docs/adr/0036-skill-catalog-product-capacity.md)). First-class
   `/ark-order` mirrors `/ark-runtime` for ArkOrder. Leftover

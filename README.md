@@ -313,9 +313,12 @@ Name the few choices (`xiKeys`: plan, cycle, tenancy — not seat counts). First
 freeze is `release()`. Later change is `proposeRelease` then `apply`. A generic
 `update` does not land.
 
-The billing gallery lives on GitHub, not in the npm tarball:
-[examples/arkorder-billing](https://github.com/pedroknigge/arkgate/tree/main/examples/arkorder-billing).
-Compact starters leave it off. Details: [ArkOrder](docs/arkorder.md).
+Proof path (GitHub, not the npm tarball):
+[examples/arkorder-billing](https://github.com/pedroknigge/arkgate/tree/main/examples/arkorder-billing)
+— first freeze is `release()`; later plan change is `proposeRelease` then `apply`.
+Gallery index:
+[examples/README.md](https://github.com/pedroknigge/arkgate/blob/main/examples/README.md).
+Compact starters leave the extra off. Details: [ArkOrder](docs/arkorder.md).
 
 ---
 

@@ -46,7 +46,7 @@ Product site: [arkgate.online](https://www.arkgate.online/) · npm: [`arkgate`](
 | [agent-guide.md](agent-guide.md) | Agent, CLI, and MCP reference (incl. `ark status --json` / MCP `ark_status`) |
 | [diagnostics.md](diagnostics.md) | Public diagnostic `ruleId` catalog (why / fix anchors) |
 | [configuration.md](configuration.md) | `ark.config.json` contract |
-| [arkorder.md](arkorder.md) | Optional ArkOrder extra: library + sensors, not a service |
+| [arkorder.md](arkorder.md) | Optional ArkOrder extra: library + sensors, not a service. Proof: [billing gallery](https://github.com/pedroknigge/arkgate/tree/main/examples/arkorder-billing) (GitHub, not in the npm tarball) |
 | [brownfield-adoption.md](brownfield-adoption.md) | Existing messy repos |
 | [package-surface.md](package-surface.md) | Stable vs experimental package surface |
 | [typescript-support.md](typescript-support.md) | TS 5 / 6 / 7 analysis boundary |

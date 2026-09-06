@@ -12,12 +12,13 @@ npm run check
 
 Pick by archetype — see [examples/README.md](https://github.com/pedroknigge/arkgate/blob/main/examples/README.md).
 
-## When to use a starter vs hexagonal-order-api
+## When to use a starter vs hexagonal-order-api vs billing
 
 | Need | Use |
 |------|-----|
 | Fast baseline layout | `*-starter/` gallery |
 | Runnable API + break exercises | `hexagonal-order-api/` |
+| ArkOrder freeze / valve (optional extra) | [arkorder-billing](https://github.com/pedroknigge/arkgate/tree/main/examples/arkorder-billing) — not a starter, not in the npm tarball |
 
 ## After copying
 

@@ -57,5 +57,17 @@ Proof reuses the existing skip corpus (same `xiKeys`), not a second sensor:
 `tests/fixtures/arkorder-skip-corpus/trees/xi-field-write`. Enforced check
 prints `[ArkOrder] ARKORDER_XI_FIELD_WRITE`.
 
-Domain files must not import `arkgate/order`. Turn the extra on with
-`/ark-adopt`.
+## See it
+
+This folder is on GitHub, not in the npm tarball. Clone the repo, then:
+
+```bash
+npm test -- tests/unit/examples/arkorderBilling.test.ts
+```
+
+That run is first freeze (`release`), ingest an invoice, then `proposeRelease`
+of a new plan. The skip that must not land is `skip-prisma-plan.ts` in this
+folder. Index: [examples/README.md](../README.md). Extra on with `/ark-adopt`.
+Wire one candidate with `/ark-order`.
+
+Domain files must not import `arkgate/order`.

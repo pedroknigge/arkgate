@@ -768,7 +768,7 @@ Greenfield / empty-tree **depth** (only when doctor or a thin tree points here â
 1. Run `ark-check --recommend --json` or MCP `ark_recommend`.
 2. Read `archetype`, `preset`, and `adoptInOrder.phase1` â€” scaffold only those directories first.
 3. Run `ark init --archetype <id> --yes`, `--apply-policy-pack enthusiast-<preset>`, or `ark init --preset <preset> --yes` when no `ark.config.json` exists (or let `ark start --apply` install the compact contract).
-4. Optional: `--write-plan` for `ark-adoption-plan.json`; copy a gallery starter from `examples/README.md`.
+4. Optional: `--write-plan` for `ark-adoption-plan.json`; copy a gallery starter from `examples/README.md`. ArkOrder proof on that index is [arkorder-billing](https://github.com/pedroknigge/arkgate/tree/main/examples/arkorder-billing) (not a starter; GitHub tree, not in the npm tarball).
 5. Use `/ark-place` or `ark_place` for individual files after the contract exists.
 6. Re-check with `ark-check --doctor`, then `ark-check --root . --config ark.config.json --strict`.
 
