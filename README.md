@@ -11,9 +11,11 @@ AI can build fast—and make a mess just as fast.
 
 Keep the product easy to understand, change, and trust.
 
-ArkGate stops bad shortcuts. ArkRules protects how each part should behave. ArkRun keeps work moving. ArkOrder protects the few big choices that should not change by accident.
+Contain what the AI may write, and in what shape. Guide you with proven patterns and one next step. Order leftover mess toward a clean tree, a little at a time.
 
 Safer changes, fewer surprises, and extra protection only when you choose it.
+
+That is **Contener · Guiar · Ordenar**.
 
 Works with Cursor, Claude, Codex, and Grok.
 
@@ -106,15 +108,15 @@ See [docs/package-surface.md](docs/package-surface.md#installing-from-git).
 
 When the agent writes a bad import, the write doesn’t land.
 The same check fails the pull request. That is **ArkGate** — import rules, always on
-once you adopt. The other three are optional.
+once you adopt (**Contener**). The other three are optional.
 
 | | Role | When |
 |--|------|------|
 | **While the agent writes** | The write doesn’t land on supported hosts; warning only elsewhere | Always (ArkGate) |
 | **Before merge** | `arkgate-check` as a **required** CI status | Always (ArkGate) |
-| **ArkRules** | Optional policies *inside* a layer | When you ask |
-| **ArkRun** | Optional experimental runtime (`arkgate/runtime`) | Off unless you turn it on |
-| **ArkOrder** | Stops rewriting a big product choice (like billing plan) as if it were a seat count. Change it through a valve, not a generic update (`arkgate/order`) | Off unless you turn it on |
+| **ArkRules** | Optional policies *inside* a layer (**Contener** — shape) | When you ask |
+| **ArkRun** | Optional experimental runtime (`arkgate/runtime`) (**Guiar**) | Off unless you turn it on |
+| **ArkOrder** | Extra for the few big choices — billing plan, not seat counts (`arkgate/order`) (**Ordenar**) | Off unless you turn it on |
 
 Layers (who may import whom) always run. ArkRules, ArkRun, and ArkOrder change no
 inter-layer verdict when absent. Label leftovers **`[Layer]`** vs **`[ArkRules]`** vs
@@ -142,15 +144,13 @@ check: [4.3.0 — What ArkGate is / isn't](docs/releases/4.3.0.md#what-arkgate-i
 
 ## Why it exists
 
-AI coding agents generate code at unprecedented speeds. However, they tend to take the shortest path to solve a problem. If an agent needs data in a Domain layer, it might directly import a database adapter. Left unchecked, this creates spaghetti code and technical debt at light speed.
+AI takes the shortest path. Contain the write so a bad import never lands. Guide
+the next step so a non-expert is not stuck. Order leftover mess toward a clean
+tree, one small refactor at a time.
 
-Traditional linters catch these architectural violations in CI *after* the agent has finished its work, breaking the flow.
-
-ArkGate solves this by shifting the check to the exact moment of writing:
-
-1. **Fail fast at the write boundary.** Through IDE hooks and MCP, ArkGate intercepts the file write. If the agent writes a bad import, the write doesn't land. The agent gets immediate feedback and can self-correct before saving to disk.
-2. **The check is the single source of truth.** A simple `ark.config.json` defines your layers and allowed edges.
-3. **Honest reporting.** Green imports do not equal elegant design. ArkGate separates structural correctness from design smells, providing an improvement compass to guide leftover design work without blocking the PR.
+Traditional linters catch this only in CI after the agent finished. ArkGate
+checks at write time and again on the PR. Green imports are not elegant design —
+leftover mess is **needs a refactor**, not “done”.
 
 ---
 

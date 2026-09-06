@@ -11,9 +11,11 @@ AI can build fast—and make a mess just as fast.
 
 Keep the product easy to understand, change, and trust.
 
-ArkGate stops bad shortcuts. ArkRules protects how each part should behave. ArkRun keeps work moving. ArkOrder protects the few big choices that should not change by accident.
+Contain what the AI may write, and in what shape. Guide you with proven patterns and one next step. Order leftover mess toward a clean tree, a little at a time.
 
 Safer changes, fewer surprises, and extra protection only when you choose it.
+
+That is **Contener · Guiar · Ordenar**.
 
 For **anyone** shipping TypeScript with an AI coding agent.
 
@@ -56,11 +58,10 @@ In those cases a boundary linter or editor rules may be enough; see [README — 
 
 ### Why it exists
 
-AI coding agents write code at unprecedented speeds, but they tend to take the shortest path to solve a problem. If an agent needs data in a Domain layer, it might directly import a database adapter. Left unchecked, this creates spaghetti code and technical debt at light speed.
-
-Traditional linters catch these architectural violations in CI *after* the agent has finished its work, breaking the flow and requiring manual intervention.
-
-ArkGate solves this by shifting the check to the exact moment of writing. By intercepting file writes, it ensures that if the agent writes a bad import, the write doesn't land. The agent gets immediate feedback and can self-correct before the code even touches your disk.
+AI takes the shortest path. Contain the write so a bad import never lands. Guide
+the next step so a non-expert is not stuck. Order leftover mess toward a clean
+tree, one small refactor at a time. Traditional linters catch this only after
+the agent finished; ArkGate checks at write time and again on the PR.
 
 ---
 
@@ -86,10 +87,10 @@ The config only binds when the write doesn’t land and CI is required.
 
 | | Plain English | Default |
 |--|---------------|---------|
-| **ArkGate** (layers) | Import rules. The write doesn’t land. The PR fails. | Always — this is the product |
-| **ArkRules** | Optional policies *inside* a layer. | Off until you turn it on (start may ship advisory templates) |
-| **ArkRun** | Optional experimental runtime (`arkgate/runtime`) | Off. In-memory. Not Postgres. |
-| **ArkOrder** | Stops rewriting a big product choice (like billing plan) as if it were a seat count. Change it through a valve, not a generic update. Library + sensors, [not a service](arkorder.md). | Off. Same npm package (`arkgate/order`). Name the few choices (`xiKeys`). Invoices and seats still flow. In-memory. Not durable. |
+| **ArkGate** (layers) | **Contener** — import rules. The write doesn’t land. The PR fails. | Always — this is the product |
+| **ArkRules** | **Contener** — optional policies *inside* a layer. | Off until you turn it on (start may ship advisory templates) |
+| **ArkRun** | **Guiar** — optional experimental runtime (`arkgate/runtime`) | Off. In-memory. Not Postgres. |
+| **ArkOrder** | **Ordenar** extra — the few big choices (billing plan, not seat counts). Library + sensors, [not a service](arkorder.md). | Off. Same npm package (`arkgate/order`). Name the few choices (`xiKeys`). Invoices and seats still flow. In-memory. Not durable. |
 
 Start always gives you **layers**. Compact starters do **not** turn on ArkRun or
 ArkOrder. No extras is fine — only ArkGate runs. Leftovers are labeled

@@ -5,7 +5,8 @@ description: Session 0 — write the rules file (ark.config.json) to match the r
 
 # /ark-adopt — Mark the path (session 0)
 
-**Contener · Guiar · Ordenar.** This door is **Contener**: write the path so the tree
+**Contener · Guiar · Ordenar.** In plain words: contain the write, guide the next
+step, order leftover mess. This door is **Contener**: write the path so the tree
 has honest houses. Skills never enforce — CLI / hooks / CI do.
 
 **When:** empty tree, or the rules file does not match the real folders (session 0).

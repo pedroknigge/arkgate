@@ -5,7 +5,8 @@ description: How much of the tree the rules file covers. CLI is a sensor; read t
 
 # /ark-coverage — Ark adoption fitness (not full recon)
 
-**Contener · Guiar · Ordenar.** This door is **Guiar**: adoption fitness numbers, not a full map.
+**Contener · Guiar · Ordenar.** In plain words: contain the write, guide the next
+step, order leftover mess. This door is **Guiar**: adoption fitness numbers, not a full map.
 Skills never enforce — CLI / hooks / CI do.
 
 **Not a first-run door.** Fitness numbers only (governed files, gates, baseline).

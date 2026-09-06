@@ -6,6 +6,10 @@
  * common software words. See docs/product-voice.md.
  */
 
+/** First-contact north star. Ordinary English. Spanish names once. */
+export const NORTH_STAR_ONE_LINE =
+  'Contener · Guiar · Ordenar — contain the write, guide the next step, order leftover mess.';
+
 /** Status-light leftover-design qualifier (was “design-weak”). */
 export const LEFTOVER_DESIGN_LABEL = 'leftover design work';
 

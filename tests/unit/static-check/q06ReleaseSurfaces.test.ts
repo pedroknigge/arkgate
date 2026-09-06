@@ -1259,7 +1259,7 @@ describe('CHANGELOG + release note cover 3.9.1 patch hygiene', () => {
     const storyParagraphs = [
       'AI can build fast—and make a mess just as fast.',
       'Keep the product easy to understand, change, and trust.',
-      'ArkGate stops bad shortcuts. ArkRules protects how each part should behave. ArkRun keeps work moving. ArkOrder protects the few big choices that should not change by accident.',
+      'Contain what the AI may write, and in what shape. Guide you with proven patterns and one next step. Order leftover mess toward a clean tree, a little at a time.',
       'Safer changes, fewer surprises, and extra protection only when you choose it.',
     ];
     const story = storyParagraphs.join('\n\n');
@@ -1291,6 +1291,15 @@ describe('CHANGELOG + release note cover 3.9.1 patch hygiene', () => {
       expect(head, rel).not.toMatch(visibleStarScaffolding);
     }
     expect(story).not.toMatch(forbiddenStoryJargon);
+    for (const rel of openings) {
+      const head = read(rel).split(/\n/).slice(0, 40).join('\n');
+      expect(head, rel).toContain('That is **Contener · Guiar · Ordenar**.');
+    }
+    expect(read('bin/lib/product-copy.mjs')).toMatch(
+      /contain the write, guide the next step, order leftover mess/
+    );
+    expect(read('bin/lib/doctor-human.mjs')).toMatch(/NORTH_STAR_ONE_LINE/);
+    expect(read('bin/lib/first-run-help.mjs')).toMatch(/NORTH_STAR_ONE_LINE/);
     const readmeH1 = read('README.md').split(/\n/).find((line) => line.startsWith('# '));
     expect(readmeH1).toMatch(/Write\. Check\. Ship\./);
     expect(readmeH1).not.toMatch(/co-pilot/i);

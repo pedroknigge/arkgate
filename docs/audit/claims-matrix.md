@@ -46,8 +46,8 @@ wording and the 2026-07-17 “14/14 100%” sentence are to-be/Planned (not dele
 first-class `/ark-order` (ADR 0036). Leftover shortcuts are one-release stubs.
 ACS05 freeze was opened for this item; Domain `ARK_SKILL_NAMES` still closes
 the list. The *set* covers Layers + ArkRules + ArkRun + ArkOrder (when / not
-when / handoff). Filter: **Contener · Guiar · Ordenar** — contain the path,
-guide leftover design and extras, protect the few big choices. ξ / Haken stay
+when / handoff). Filter: **Contener · Guiar · Ordenar** — contain the write,
+guide the next step, order leftover mess. ξ / Haken stay
 below the fold. Last “frozen 13 skill names / no new skill names” wording is
 to-be/historical Planned (not deleted).
 

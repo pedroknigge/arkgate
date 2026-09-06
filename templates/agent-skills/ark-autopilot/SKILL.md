@@ -5,8 +5,9 @@ description: Fix illegal imports and one leftover-design refactor. CLI is a sens
 
 # /ark-autopilot — Apply the path
 
-**Contener · Guiar · Ordenar.** This door is **Guiar**: apply leftover design and illegal
-imports. Skills never enforce — CLI / hooks / CI do.
+**Contener · Guiar · Ordenar.** In plain words: contain the write, guide the next
+step, order leftover mess. This door is **Guiar**: apply leftover design and illegal
+imports, one small change at a time. Skills never enforce — CLI / hooks / CI do.
 
 **When:** the user wants architecture cleaned end-to-end, or leftover design after a map.
 **Not when:** map only (`/ark-explore`), session 0 / config lying (`/ark-adopt`), or one new file (`/ark-place`).

@@ -42,9 +42,19 @@ ArkOrder  optional   big product choices (billing plan, not seat counts)
 Status first (`arkgate-check --doctor`). One next step. CLI flag `--doctor` stays;
 human copy says **status**.
 
-**Contener · Guiar · Ordenar** is the skill filter (not a score, not the first
-screen). Contener = import rules and the path. Guiar = leftover design and extras
-that keep work moving. Ordenar = the few big product choices (ArkOrder).
+**Contener · Guiar · Ordenar** is the product north star (not a score). First
+contact says it in ordinary English: contain the write, guide the next step,
+order leftover mess.
+
+- **Contener** — decide what the AI may write, and in what shape. ArkGate is
+  this: import rules, write + required CI. ArkRules is optional shape inside a
+  part.
+- **Guiar** — show a proven next step so a non-expert is not stuck. Doctor
+  action #1. Skills. ArkRun is an optional experimental runtime.
+- **Ordenar** — tidy a messy tree toward a clean one, one small refactor at a
+  time. ArkOrder is the optional extra for the few big product choices (billing
+  plan, not seat counts).
+
 The skill *set* must cover Layers + ArkRules + ArkRun + ArkOrder and say when /
 not when / handoff. First-class `/ark-order`; leftover `/ark-*` names are
 one-release stubs. ACS05 freeze was opened for that door
@@ -63,8 +73,9 @@ On the eight canonical public openings — `README.md`, `docs/use.md`,
 1. **Verbs:** `Write. Check. Ship.`
 2. **Deny:** `When the agent writes a bad import, the write doesn’t land. The same check fails the pull request.`
 3. **Not-that (below the fold, one line):** `Not an API Gateway. Not a folder linter. If the check is not required on the PR, the config is just documentation.`
-4. **Story:** the exact four-paragraph introduction below, with no visible heading or labels.
-5. **Technical nouns (below the introduction):** ArkGate is import rules. ArkRules is optional policies. ArkRun is an optional experimental runtime. ArkOrder stops rewriting a big product choice (like billing plan) as if it were a seat count — named when the consumer opts in, never as the first noun. No ξ / Haken / slaving on the first screen.
+4. **Story:** the exact four-paragraph introduction below, with no visible heading or labels. Paragraph 3 is the north star in ordinary English.
+5. **Caption (immediately after the four paragraphs):** `That is **Contener · Guiar · Ordenar**.`
+6. **Technical nouns (below the introduction):** ArkGate is import rules. ArkRules is optional policies. ArkRun is an optional experimental runtime. ArkOrder is the extra for the few big product choices (billing plan, not seat counts) — named when the consumer opts in, never as the first noun. No ξ / Haken / slaving on the first screen.
 
 Do not lead with folders, `ark.config.json`, “contract”, “gate”, “house”, or “doctor”
 as the first noun. Historical: `If the AI writes an illegal import, the write is rejected`
@@ -85,9 +96,11 @@ AI can build fast—and make a mess just as fast.
 
 Keep the product easy to understand, change, and trust.
 
-ArkGate stops bad shortcuts. ArkRules protects how each part should behave. ArkRun keeps work moving. ArkOrder protects the few big choices that should not change by accident.
+Contain what the AI may write, and in what shape. Guide you with proven patterns and one next step. Order leftover mess toward a clean tree, a little at a time.
 
 Safer changes, fewer surprises, and extra protection only when you choose it.
+
+That is **Contener · Guiar · Ordenar**.
 
 Do not add technical terms to these four paragraphs. In the next section, explain that
 ArkGate checks imports, ArkRules is optional, ArkRun is experimental and in-memory,
@@ -211,7 +224,8 @@ does not silently rewrite.
 
 ## Checklist before shipping copy
 
-- [ ] **Write. Check. Ship.** is on first-contact.
+- [ ] **Write. Check. Ship.** is on first-contact (the deny / wedge).
+- [ ] **Contener · Guiar · Ordenar** is on first-contact in ordinary English (contain the write, guide the next step, order leftover mess).
 - [ ] Deny is `When the agent writes a bad import, the write doesn’t land.`
 - [ ] One next action is obvious.
 - [ ] ArkGate / ArkRules / ArkRun / ArkOrder are import rules / policies / experimental runtime / the extra that stops a big product choice being rewritten like a seat count.
