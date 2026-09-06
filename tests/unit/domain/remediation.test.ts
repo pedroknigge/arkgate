@@ -194,4 +194,41 @@ describe('enrichViolationWithFixClass (src/domain — pure, no CLI spawn)', () =
       /Don't PATCH the billing plan/
     );
   });
+
+  it('ArkOrder deny Next: and hints cover the remaining first-contact rule ids', () => {
+    expect(
+      deterministicNextAction({ ruleId: 'ARKORDER_MISSING_PLANE', target: 'src/main.ts' })
+    ).toMatch(/plane root src\/main\.ts/);
+    expect(deterministicNextAction({ ruleId: 'ARKORDER_MISSING_PLANE' })).toMatch(
+      /listed in arkOrder\.planeRoots/
+    );
+    expect(deterministicNextAction({ ruleId: 'ARKORDER_KERNEL_IN_DOMAIN' })).toMatch(
+      /Domain-role layer/
+    );
+    expect(deterministicNextAction({ ruleId: 'ARKORDER_TOO_MANY_PARAMS' })).toMatch(
+      /slow keys that actually slave/
+    );
+    expect(deterministicNextAction({ ruleId: 'ARKORDER_INGEST_WRITES_XI' })).toMatch(
+      /absorb\/escalate_up\/hold/
+    );
+    expect(deterministicNextAction({ ruleId: 'ARKORDER_UNVALVED_RELEASE' })).toMatch(
+      /release\(\) is only the first freeze/
+    );
+
+    const hints: Array<[string, RegExp]> = [
+      ['ARKORDER_MISSING_PLANE', /createOrderPlane from arkgate\/order/],
+      ['ARKORDER_KERNEL_IN_DOMAIN', /Domain stays plane-free/],
+      ['ARKORDER_TOO_MANY_PARAMS', /Too many slow keys/],
+      ['ARKORDER_INGEST_WRITES_XI', /never writes a new house/],
+      ['ARKORDER_INFORMATION_BUDGET', /denied kind/],
+      ['ARKORDER_XI_TTL', /TTL is σ, never ξ/],
+      ['ARKORDER_STALE_SIGMA', /Refresh σ/],
+      ['ARKORDER_UNVALVED_RELEASE', /do not call release\(\) again/],
+    ];
+    for (const [ruleId, pattern] of hints) {
+      const enriched = enrichViolationWithFixClass({ ruleId });
+      expect(enriched.fixClass, ruleId).toBe('arkorder-usage');
+      expect(enriched.enthusiastHint, ruleId).toMatch(pattern);
+    }
+  });
 });
