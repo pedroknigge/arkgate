@@ -8,6 +8,7 @@ import {
   ensureTypecheckScript,
   hasArkAgentsContract,
   hasArkMcpRegistration,
+  mergeArkMcpJson,
   hasArkWorkflow,
   hasCheckArchitectureScript,
   isArkAgentsContent,
@@ -439,12 +440,13 @@ jobs:
 
     writeFile(root, 'AGENTS.md', '# Product\nkeep this\n');
     expect(writeTemplate(root, 'AGENTS.md', '# Ark Enforcement\nmerge\n', false).status).toBe(
-      'skipped-non-ark'
-    );
-    expect(writeTemplate(root, 'AGENTS.md', '# Ark Enforcement\nmerge\n', true).status).toBe(
       'merged'
     );
     expect(fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8')).toContain('keep this');
+    expect(fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8')).toContain('# Ark Enforcement');
+    expect(writeTemplate(root, 'AGENTS.md', '# Ark Enforcement\nmerge-again\n', true).status).toBe(
+      'skipped-non-ark'
+    );
 
     writeFile(root, 'AGENTS.md', '# Product\nark.config.json is authoritative\n');
     expect(writeTemplate(root, 'AGENTS.md', '# Ark Enforcement\nmerge\n', true).status).toBe(
@@ -463,5 +465,38 @@ jobs:
     expect(
       writeTemplate(unreadableAgents, 'AGENTS.md', '# Ark Enforcement\n', true).status
     ).toBe('failed');
+  });
+
+  it('mergeArkMcpJson upserts ark without wiping sibling servers', () => {
+    const generated = JSON.stringify({
+      mcpServers: {
+        ark: {
+          type: 'stdio',
+          command: 'npx',
+          args: ['arkgate-mcp', '--root', '.', '--config', 'ark.config.json'],
+        },
+      },
+    });
+    const merged = mergeArkMcpJson(
+      JSON.stringify({
+        mcpServers: { docs: { command: 'npx', args: ['docs-mcp'] } },
+        projectNote: 'keep',
+      }),
+      generated
+    );
+    expect(merged).toBeTruthy();
+    const parsed = JSON.parse(merged!);
+    expect(parsed.projectNote).toBe('keep');
+    expect(parsed.mcpServers.docs.args).toEqual(['docs-mcp']);
+    expect(parsed.mcpServers.ark.args).toEqual([
+      'arkgate-mcp',
+      '--root',
+      '.',
+      '--config',
+      'ark.config.json',
+    ]);
+    expect(mergeArkMcpJson('{', generated)).toBeNull();
+    expect(mergeArkMcpJson('[]', generated)).toBeNull();
+    expect(mergeArkMcpJson('{}', '{"mcpServers":{}}')).toBeNull();
   });
 });

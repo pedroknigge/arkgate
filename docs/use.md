@@ -24,7 +24,7 @@ For **anyone** shipping TypeScript with an AI coding agent.
 ```bash
 npm install -D arkgate typescript
 npx arkgate start                 # preview what will change
-npx arkgate start --apply         # install compact config + host router + CI plan
+npx arkgate start --apply         # install compact config + host router + CI; merge write-path gates into existing AGENTS.md / .mcp.json
 npx arkgate-check --doctor        # status — one next step
 npx arkgate-check --doctor --all  # full details
 ```

@@ -257,6 +257,42 @@ export function hasArkMcpRegistration(root, relativePath = '.mcp.json') {
   }
 }
 
+/**
+ * Shared MCP JSON destinations written by install-agent-gates (catalog + host copies).
+ * Upsert `mcpServers.ark` without clobbering sibling servers — same contract as
+ * mergeOpencodeArkMcp / mergeCursorArkHook.
+ */
+export const MCP_JSON_GATE_FILES = ['.mcp.json', '.cursor/mcp.json', '.agents/mcp_config.json'];
+
+/**
+ * Upsert mcpServers.ark into an existing MCP JSON document.
+ * Preserves sibling servers and unknown top-level keys. Returns null if unreadable.
+ */
+export function mergeArkMcpJson(existingText, generatedText) {
+  let existing;
+  let generated;
+  try {
+    existing = existingText && existingText.trim() ? JSON.parse(existingText) : {};
+    generated = JSON.parse(generatedText);
+  } catch {
+    return null;
+  }
+  if (!existing || typeof existing !== 'object' || Array.isArray(existing)) return null;
+  if (!generated || typeof generated !== 'object' || Array.isArray(generated)) return null;
+  const generatedArk = generated.mcpServers?.ark;
+  if (!generatedArk || typeof generatedArk !== 'object' || Array.isArray(generatedArk)) {
+    return null;
+  }
+  const servers =
+    existing.mcpServers &&
+    typeof existing.mcpServers === 'object' &&
+    !Array.isArray(existing.mcpServers)
+      ? { ...existing.mcpServers }
+      : {};
+  const next = { ...existing, mcpServers: { ...servers, ark: generatedArk } };
+  return `${JSON.stringify(next, null, 2)}\n`;
+}
+
 function commandArkMcpArgs(command) {
   if (typeof command !== 'string') return null;
   const words = [];
@@ -747,12 +783,13 @@ export function writeTemplate(root, relativePath, content, force) {
       return { relativePath, status: 'skipped-self-hosted' };
     }
     if (existing && !isArkAgentsContent(existing)) {
-      // Never clobber a project-owned AGENTS.md — even with --force.
-      // If Ark section not present yet, merge once; subsequent runs leave it alone.
+      // Never replace a project-owned AGENTS.md — even with --force.
+      // Merge the Ark section once when missing so start / install-agent-gates
+      // leave a contract doctor accepts (issue #210). Subsequent runs leave it.
       const hasArkSection =
         /#\s*Ark(Gate)?\s+Enforcement\b/.test(existing) ||
         /ark\.config\.json is authoritative/i.test(existing);
-      if (force && isArkAgentsContent(content) && !hasArkSection) {
+      if (isArkAgentsContent(content) && !hasArkSection) {
         try {
           const merged = `${existing.replace(/\s*$/, '')}\n\n---\n\n${content}`;
           ensureDirForFile(fullPath);
