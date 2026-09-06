@@ -5,6 +5,21 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+## 4.8.13 — 2026-09-06
+
+**Patch** over **4.8.12**. Publish gate: remaining ArkOrder doctor/deny branches so
+`test:confidence` / `release:npm` clears the 81% floor. Tag `v4.8.12` stands;
+this is the ship. **Write. Check. Ship.** **No required config migration.** No
+`schemaVersion` bump. Does not close `K01` / `Z09`. No new skill names. This
+mother `ark.config.json` still does **not** turn `arkOrder` on.
+
+**Status: prepared** (tree candidate; npm `latest` remains **4.8.11** until the
+signed-tag provenance workflow succeeds).
+
+### Fixed
+- Confidence coverage: remaining ArkOrder doctor/deny `Next:` and HTML/doctor
+  residual paths so the publish job is not blocked by a 0.03-point branch miss.
+
 ## 4.8.12 — 2026-09-05
 
 **Patch** over **4.8.11**. First-contact honesty for the optional ArkOrder extra.

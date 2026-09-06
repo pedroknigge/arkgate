@@ -5,8 +5,10 @@ import {
   composeMergePlanesHonesty,
   demoteExtraPlaneTeethUnderClassificationFloor,
   extraMergeTeethAllowed,
+  isArkOrderRuleId,
   isArkRunRuleId,
   isExtraPlaneFinding,
+  normalizeExtraMergeTeethClassification,
 } from '../../../src/domain/extraMergeTeeth';
 import {
   EXTRA_MERGE_TEETH_GOVERNED_FLOOR as cliFloor,
@@ -58,8 +60,44 @@ describe('RN07 extra-plane merge teeth', () => {
     expect(violations[1]).toMatchObject({ failsStrict: false, severity: 'warning' });
     expect(violations[2]).toMatchObject({ failsStrict: true, severity: 'error' });
     expect(isArkRunRuleId('ARKRUN_DIRECT_NEW')).toBe(true);
+    expect(isArkOrderRuleId('ARKORDER_XI_FIELD_WRITE')).toBe(true);
+    expect(isArkOrderRuleId(12)).toBe(false);
     expect(isExtraPlaneFinding({ ruleId: 'ARKRUN_DIRECT_NEW' })).toBe(true);
+    expect(isExtraPlaneFinding({ ruleId: 'ARKORDER_GENERIC_UPDATE' })).toBe(true);
+    expect(isExtraPlaneFinding({ ruleId: 'arkrule-structure' })).toBe(true);
+    expect(isExtraPlaneFinding({ arkruleId: 'factory' })).toBe(true);
     expect(isExtraPlaneFinding({ ruleId: 'LAYER_IMPORT_VIOLATION' })).toBe(false);
+  });
+
+  it('classifiedFiles stands in for populatedLayerCount; demote skips layer and already-soft extras', () => {
+    expect(normalizeExtraMergeTeethClassification({ classifiedFiles: 4 })).toEqual({
+      governedPercent: null,
+      populatedLayerCount: 1,
+    });
+    expect(normalizeExtraMergeTeethClassification({ classifiedFiles: 0 })).toEqual({
+      governedPercent: null,
+      populatedLayerCount: 0,
+    });
+    expect(extraMergeTeethAllowed({ classifiedFiles: 3 })).toBe(false);
+
+    const violations = [
+      { ruleId: 'ARKORDER_XI_FIELD_WRITE', failsStrict: true, severity: 'error' },
+      { ruleId: 'ARKRUN_MISSING_ROOT', failsStrict: false, severity: 'warning' },
+      { ruleId: 'LAYER_IMPORT_VIOLATION', failsStrict: true, severity: 'error' },
+    ];
+    expect(
+      demoteExtraPlaneTeethUnderClassificationFloor(violations, { classifiedFiles: 2 })
+    ).toBe(violations);
+    expect(violations[0]).toMatchObject({ failsStrict: false, severity: 'warning' });
+    expect(violations[1]).toMatchObject({ failsStrict: false, severity: 'warning' });
+    expect(violations[2]).toMatchObject({ failsStrict: true, severity: 'error' });
+    expect(demoteExtraPlaneTeethUnderClassificationFloor(null as never)).toBeNull();
+    expect(
+      demoteExtraPlaneTeethUnderClassificationFloor(
+        [{ ruleId: 'ARKORDER_XI_FIELD_WRITE', failsStrict: true, severity: 'error' }],
+        { governedPercent: 80, populatedLayerCount: 1 }
+      )[0].failsStrict
+    ).toBe(true);
   });
 });
 

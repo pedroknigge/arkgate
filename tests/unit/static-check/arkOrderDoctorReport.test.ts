@@ -151,5 +151,7 @@ describe('ArkOrder doctor / deny label', () => {
     expect(violationPlaneLabel('ARKORDER_XI_FIELD_WRITE')).toBe('[ArkOrder] ');
     expect(violationPlaneLabel('ARKRUN_MISSING_ROOT')).toBe('[ArkRun] ');
     expect(violationPlaneLabel('LAYER_IMPORT_VIOLATION')).toBe('');
+    expect(violationPlaneLabel(undefined)).toBe('');
+    expect(violationPlaneLabel(12)).toBe('');
   });
 });

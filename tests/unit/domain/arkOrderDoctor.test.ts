@@ -18,7 +18,11 @@ import {
   projectStatusArkOrder as cliProject,
   summarizeArkOrderSection as cliSummarize,
 } from '../../../bin/lib/ark-order-doctor.mjs';
-import { printCompactExtraDoctorLines } from '../../../bin/lib/doctor-advisories.mjs';
+import {
+  attachExtraDoctorSections,
+  printCompactExtraDoctorLines,
+} from '../../../bin/lib/doctor-advisories.mjs';
+import { formatArkOrderHtml } from '../../../bin/lib/ark-order-report.mjs';
 
 const extra = {
   mode: 'enforced' as const,
@@ -210,5 +214,120 @@ describe('ArkOrder doctor section', () => {
     );
     expect(printed[1]).toMatch(/residual=0/);
     expect(printed[1]).toMatch(/unnamed/);
+
+    printed.length = 0;
+    printCompactExtraDoctorLines(
+      { arkRun: { active: true, notAScore: true, residual: { count: 2 } } },
+      io
+    );
+    expect(printed[0]).toMatch(/ArkRun: on · residual=2/);
+  });
+
+  it('filters residual ids, ignores junk keys, and floors status residual', () => {
+    const section = summarizeArkOrderSection({
+      arkOrder: {
+        mode: 'enforced',
+        planeRoots: 'src/main.ts' as never,
+        managedLayers: 'Application' as never,
+        xiKeys: ['plan', '', 12 as never, 'cycle'],
+      },
+      findings: [
+        { ruleId: 'ARKORDER_XI_FIELD_WRITE' },
+        { ruleId: 'ARKORDER_XI_FIELD_WRITE' },
+        { ruleId: 'LAYER_IMPORT_VIOLATION' },
+        { ruleId: 7 },
+        {},
+      ],
+      classification: { governedPercent: 90, populatedLayerCount: 1 },
+    });
+    expect(section.planeRoots).toBe(0);
+    expect(section.managedLayers).toBe(0);
+    expect(section.xiKeys).toEqual(['plan', 'cycle']);
+    expect(section.residual.ruleIds).toEqual(['ARKORDER_XI_FIELD_WRITE']);
+    expect(section.residual.count).toBe(1);
+    expect(section.note).toMatch(/Enforced ArkOrder is on the extra merge plane/);
+
+    expect(summarizeArkOrderSection({ arkOrder: null, findings: null }).active).toBe(false);
+    expect(
+      summarizeArkOrderSection({
+        arkOrder: extra,
+        findings: null,
+        classification: { governedPercent: 90, populatedLayerCount: 1 },
+      }).residual
+    ).toEqual({ count: 0, ruleIds: [] });
+
+    expect(projectStatusArkOrder()).toEqual({
+      notAScore: true,
+      present: false,
+      mode: null,
+      extraMergeTeeth: false,
+      residual: 0,
+    });
+    expect(
+      projectStatusArkOrder({
+        present: true,
+        mode: 'enforced',
+        extraMergeTeeth: true,
+        residual: 2.9,
+      })
+    ).toEqual({
+      notAScore: true,
+      present: true,
+      mode: 'enforced',
+      extraMergeTeeth: true,
+      residual: 2,
+    });
+    expect(projectStatusArkOrder({ present: true, residual: -1 }).residual).toBeNull();
+  });
+
+  it('attachExtraDoctorSections stamps one mergePlanes object onto both extras', () => {
+    const rules = {
+      active: false,
+      mergePlanes: { extraMergeTeeth: false },
+    };
+    const attached = attachExtraDoctorSections(
+      rules,
+      { arkOrder: extra, arkRun: { mode: 'advisory', compositionRoots: ['src/main.ts'] } },
+      { governedPercent: 90, populatedLayerCount: 1 },
+      [{ ruleId: 'ARKORDER_GENERIC_UPDATE' }, { ruleId: 'ARKRUN_MISSING_ROOT' }]
+    );
+    expect(attached.arkOrder.active).toBe(true);
+    expect(attached.arkOrder.residual.ruleIds).toContain('ARKORDER_GENERIC_UPDATE');
+    expect(attached.arkRun.failMergeWhen).toBe(attached.mergePlanes.failMergeWhen);
+    expect(rules.mergePlanes).toBe(attached.mergePlanes);
+    expect(
+      attachExtraDoctorSections({ active: false }, {}, null, undefined).arkOrder.active
+    ).toBe(false);
+  });
+
+  it('HTML report covers off, unnamed keys, residual cap, and missing esc', () => {
+    expect(formatArkOrderHtml(null, undefined)).toBe('');
+    expect(formatArkOrderHtml({ notAScore: false } as never, undefined)).toBe('');
+
+    const off = formatArkOrderHtml(summarizeArkOrderSection({}), undefined);
+    expect(off).toContain('data-advisory="arkOrder"');
+    expect(off).toMatch(/Off until you turn it on/);
+
+    const many = Array.from({ length: 13 }, (_, i) => ({ ruleId: `ARKORDER_CAP_${i}` }));
+    const html = formatArkOrderHtml(
+      {
+        ...summarizeArkOrderSection({
+          arkOrder: { mode: 'advisory', planeRoots: ['src/main.ts'] },
+          findings: many,
+          classification: { governedPercent: 90, populatedLayerCount: 1 },
+        }),
+        extraMergeTeeth: false,
+        residual: { count: 13, ruleIds: many.slice(0, 12).map((row) => row.ruleId) },
+        mergePlanes: undefined,
+        failMergeWhen: '',
+        xiKeys: [],
+        mode: undefined,
+      } as never,
+      undefined
+    );
+    expect(html).toMatch(/\+1 more/);
+    expect(html).toMatch(/none named/);
+    expect(html).toMatch(/extra merge teeth not armed/);
+    expect(html).toMatch(/—/);
   });
 });
