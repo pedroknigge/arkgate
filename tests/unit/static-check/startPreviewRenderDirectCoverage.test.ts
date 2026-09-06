@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { ARKORDER_FIRST_CONTACT_NEXT, ARKORDER_ONE_BREATH } from '../../../bin/lib/ark-order-doctor.mjs';
 import { renderStartPreview } from '../../../bin/lib/start-preview.mjs';
 
 afterEach(() => {
@@ -53,6 +54,10 @@ describe('renderStartPreview direct output coverage', () => {
     expect(output).toContain('Setup: install package + host gates (see --json).');
     expect(output).toContain('Preview does not write. Apply installs CI.');
     expect(output).toContain('Optional extras stay off. This start is layers only — they stop bad imports.');
+    expect(output).toContain(ARKORDER_ONE_BREATH);
+    expect(output).toContain(ARKORDER_FIRST_CONTACT_NEXT);
+    expect(output).toContain('examples/arkorder-billing');
+    expect(output).toContain('/ark-order');
     expect(output).not.toContain('Commands in the approved setup plan:');
     expect(output).not.toContain('Host guarantees:');
     expect(output).toContain('Unresolved decisions:');

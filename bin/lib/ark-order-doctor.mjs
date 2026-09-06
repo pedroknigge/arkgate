@@ -12,6 +12,8 @@ import { composeMergePlanesHonesty, extraMergeTeethAllowed, isArkOrderRuleId, } 
 export const ARK_ORDER_DOCTOR_SCHEMA_VERSION = '1.0';
 const RESIDUAL_RULE_CAP = 12;
 export const ARKORDER_ONE_BREATH = 'Layers stop a bad import. ArkOrder stops rewriting a big product choice — like the billing plan — as if it were a seat count. Change those choices through a valve, not a generic update.';
+/** First-contact next step. Reuses the billing gallery + existing doors. */
+export const ARKORDER_FIRST_CONTACT_NEXT = 'Next: examples/arkorder-billing, then /ark-adopt to turn the extra on and /ark-order to wire one candidate.';
 function closedMode(value) {
     return value === 'enforced' || value === 'advisory' ? value : null;
 }
@@ -129,7 +131,11 @@ export function formatArkOrderDoctorLines(section) {
     if (!section || section.notAScore !== true)
         return [];
     if (section.active !== true) {
-        return ['ArkOrder extra is off — silent on Layers (not a score).'];
+        return [
+            ARKORDER_ONE_BREATH,
+            'Off — Layers stay the same (not a score).',
+            ARKORDER_FIRST_CONTACT_NEXT,
+        ];
     }
     const mode = section.mode ?? 'unknown';
     const teeth = section.extraMergeTeeth === true ? 'armed' : 'not armed';

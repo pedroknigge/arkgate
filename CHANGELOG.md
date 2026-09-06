@@ -6,6 +6,11 @@ in the immutable pre-2.0 archive linked below.
 ## Unreleased
 
 ### Changed
+- Doctor / start first-contact always tell the ArkOrder one-breath (what it
+  is, when to use it, next step) even when the extra is off. Reuses
+  `/ark-order` and `examples/arkorder-billing`. Verdicts stay silent (not a
+  score; Layers unchanged). No new skill, flag, or schema. Does not close
+  `K01` / `Z09`.
 - First-contact now names **Contener · Guiar · Ordenar** in ordinary English
   (contain the write, guide the next step, order leftover mess). README, doctor
   one-light, CLI help, host projections, and first-class skills share the same

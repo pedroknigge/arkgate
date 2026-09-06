@@ -22,6 +22,7 @@ import { summarizeRulesUnderContract } from './rules-under-contract.mjs';
 import { collectStewardNudge } from './team-parliament-io.mjs';
 import { formatArkRunDoctorLines, summarizeArkRunSection } from './ark-run-doctor.mjs';
 import {
+  ARKORDER_FIRST_CONTACT_NEXT,
   ARKORDER_ONE_BREATH,
   formatArkOrderDoctorLines,
   summarizeArkOrderSection,
@@ -87,14 +88,21 @@ export function printCompactExtraDoctorLines(advisories, io) {
     io.line(residual > 0 ? io.warn : ' ', `ArkRun: ${arkRun.mode || 'on'} · residual=${residual} · not a score`);
   }
   const arkOrder = advisories?.arkOrder;
-  if (arkOrder?.active === true && arkOrder.notAScore === true) {
+  if (arkOrder && arkOrder.notAScore === true) {
     console.log('');
-    const residual = Number(arkOrder.residual?.count) || 0;
-    const keys =
-      Array.isArray(arkOrder.xiKeys) && arkOrder.xiKeys.length > 0 ? arkOrder.xiKeys.join(', ') : 'unnamed';
-    const mark = residual > 0 ? io.warn : ' ';
-    io.line(mark, ARKORDER_ONE_BREATH);
-    io.line(mark, `ArkOrder: ${arkOrder.mode || 'on'} · xiKeys=${keys} · residual=${residual} · not a score`);
+    if (arkOrder.active === true) {
+      const residual = Number(arkOrder.residual?.count) || 0;
+      const keys =
+        Array.isArray(arkOrder.xiKeys) && arkOrder.xiKeys.length > 0
+          ? arkOrder.xiKeys.join(', ')
+          : 'unnamed';
+      const mark = residual > 0 ? io.warn : ' ';
+      io.line(mark, ARKORDER_ONE_BREATH);
+      io.line(mark, `ArkOrder: ${arkOrder.mode || 'on'} · xiKeys=${keys} · residual=${residual} · not a score`);
+    } else {
+      io.line(' ', ARKORDER_ONE_BREATH);
+      io.line(' ', ARKORDER_FIRST_CONTACT_NEXT);
+    }
   }
 }
 
