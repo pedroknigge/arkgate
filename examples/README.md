@@ -36,6 +36,18 @@ preflight, strict-merge, and package import without rewriting source files.
 
 `/ark-architect` points here in step 7 after it scaffolds phase-1 layers.
 
+## ArkOrder billing (optional extra — not a starter)
+
+Not a phase-1 scaffold. Not in the npm tarball. This is the proof demo for
+the optional ArkOrder extra: freeze the few big choices, then change them
+through a valve — not a generic update.
+
+| Example | What you see |
+|---------|--------------|
+| [arkorder-billing](arkorder-billing/) | `plan` / `cycle` / `tenancy` freeze; invoices and seats still flow; later plan change is `proposeRelease` then `apply` |
+
+Clone the repo (or open the [GitHub tree](https://github.com/pedroknigge/arkgate/tree/main/examples/arkorder-billing)), copy the folder, rename the three keys to *your* product. Turn the extra on with `/ark-adopt`. Wire one candidate with `/ark-order`. Details: [ArkOrder](../docs/arkorder.md).
+
 ## hexagonal-order-api/
 
 Clonable order API with a real hexagonal layout (`domain` / `application` / `adapters`) governed by all three Ark gates: `ark-check` in CI, `ark-mcp` for agents, and the **ArkRun** kernel (intents, event contract, projection) at runtime. The runtime exercise requires the separate experimental `@arkgate/runtime` companion (`createStrictArkKernel`; not in the `arkgate` tarball); see its explicit install step in [hexagonal-order-api/README.md](hexagonal-order-api/README.md).

@@ -98,6 +98,11 @@ ArkOrder. No extras is fine — only ArkGate runs. Leftovers are labeled
 imports ≠ elegant design. Green imports also ≠ a frozen billing plan. ArkRun ≠
 durable stores. ArkOrder does not replace ArkRun.
 
+Want to see the freeze and valve? The billing gallery lives on GitHub, not in
+the npm tarball:
+[examples/arkorder-billing](https://github.com/pedroknigge/arkgate/tree/main/examples/arkorder-billing).
+First freeze is `release()`. Later plan change is `proposeRelease` then `apply`.
+
 ### New modules vs config edits
 
 **Happy path:** put a new module under an existing layer directory/glob (`layers[].patterns`). Usually
@@ -230,6 +235,7 @@ Empty plan A is **not** “architecture finished.”
 - Plain-language track: [enthusiast/](enthusiast/README.md)  
 - First project tutorial: [enthusiast/tutorial-first-project.md](enthusiast/tutorial-first-project.md)  
 - Demos: [demos/](demos/)  
+- ArkOrder proof (first freeze, then valve): [billing gallery](https://github.com/pedroknigge/arkgate/tree/main/examples/arkorder-billing) (GitHub, not in the npm tarball)  
 
 ---
 

@@ -72,6 +72,7 @@ Reproducible scripts — no video required:
 - [Write-gate self-correction](../demos/01-write-gate-self-correction.md)
 - [Brownfield baseline adoption](../demos/02-brownfield-baseline-adoption.md)
 - [Co-pilot autopilot, end to end](https://github.com/pedroknigge/arkgate/blob/main/docs/demos/03-copilot-autopilot.md)
+- [ArkOrder billing — first freeze, then valve](https://github.com/pedroknigge/arkgate/tree/main/examples/arkorder-billing) (GitHub tree, not in the npm tarball; not a gallery starter)
 
 ## Gallery starters
 
@@ -85,6 +86,8 @@ Reproducible scripts — no video required:
 | `ddd-bounded-contexts` | [examples/ddd-context-starter](https://github.com/pedroknigge/arkgate/tree/main/examples/ddd-context-starter) |
 
 Deep teaching example (runnable API + break exercises): [hexagonal-order-api](https://github.com/pedroknigge/arkgate/tree/main/examples/hexagonal-order-api).
+
+ArkOrder proof (optional extra, not a starter): [arkorder-billing](https://github.com/pedroknigge/arkgate/tree/main/examples/arkorder-billing) — first freeze is `release()`; later plan change is `proposeRelease` then `apply`. Index: [examples/README.md](https://github.com/pedroknigge/arkgate/blob/main/examples/README.md).
 
 ## Brownfield vs greenfield
 

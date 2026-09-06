@@ -71,5 +71,32 @@ describe('Phase D — example gallery starters', () => {
     }
     expect(readme).toContain('hexagonal-order-api');
     expect(readme).toContain('basic/');
+    expect(readme).toContain('arkorder-billing');
+    expect(readme).toMatch(/not in the npm tarball/i);
+    expect(readme).toMatch(/proposeRelease/);
+  });
+
+  it('does not treat arkorder-billing as a phase-1 gallery starter', () => {
+    expect(
+      GALLERY_STARTERS.some((starter) => starter.directory.includes('arkorder-billing'))
+    ).toBe(false);
+  });
+
+  it('first-contact docs point at the billing gallery GitHub tree', () => {
+    const url = 'https://github.com/pedroknigge/arkgate/tree/main/examples/arkorder-billing';
+    const surfaces = [
+      'README.md',
+      'docs/use.md',
+      'docs/README.md',
+      'docs/enthusiast/README.md',
+      'docs/enthusiast/how-to-gallery-starter.md',
+      'docs/arkorder.md',
+      'docs/develop.md',
+      'docs/agent-guide.md',
+    ];
+    for (const rel of surfaces) {
+      const text = fs.readFileSync(path.join(REPO, rel), 'utf8');
+      expect(text, rel).toContain(url);
+    }
   });
 });
