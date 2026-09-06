@@ -33,7 +33,7 @@ infrastructure beyond how this package is published.
 | T4 | Config weakened (`peerIsolation: false`, empty rules) | False green | semantic policy-delta guard in strict merge; hash-bound `--policy-ack`; `--contract-session` required even when `stewards[]` is empty; present-state safety diagnostics |
 | T5 | Baseline ratcheted open | Debt reintroduced | `--update-baseline` requires `--contract-session` even with an empty steward list (`--force` is concentration, not parliament); unused/stale signals; occurrence keys |
 | T6 | Stale MCP/global CLI or wrong root | Gate points at old package / wrong tree | project identity binding; stale process non-authoritative + `PROCESS_PACKAGE_STALE`; project-local upgrade handoff |
-| T7 | Malicious dependency in publish | Compromised gate | signed tags, npm provenance, dependency-review, CodeQL, Semgrep, `verify-package-files` |
+| T7 | Malicious dependency in publish | Compromised gate | annotated tags, npm provenance, dependency-review, CodeQL, Semgrep, `verify-package-files` |
 | T8 | Path traversal in hooks/check | Read/write outside project | root resolution + under-root import resolve |
 | T9 | Runtime InMemory mistaken for durable | Data loss | durability stance docs + safety InMemory production detector |
 | T10 | Repair payload silently applied | Unexpected rewrites | repair never writes; host must re-inject; exit 2 on deny |
@@ -48,7 +48,7 @@ Codex apply_patch --PreToolUse--> arkgate-mcp (hard for complete trusted + obser
 Any MCP host     --tool call----> arkgate-mcp (advisory validation)
 Human IDE        --disk/git-----> working tree
 working tree     --PR-----------> CI ark-check --strict-merge
-npm publish <-- signed tag ---  GitHub Release + provenance
+npm publish <-- annotated tag ---  GitHub Release + provenance
 ```
 
 Codex hosted tools, specialized hook opt-outs, shell/direct writes, and incomplete patch

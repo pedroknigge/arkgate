@@ -28,9 +28,11 @@ a private security contact without including exploit details.
 ArkGate releases are GitHub-first:
 
 1. Changes land on GitHub and must pass CI plus the dedicated security workflow.
-2. A GitHub Release is created from a signed `vX.Y.Z` tag (`git tag -s`). The publish
-   workflow verifies the signature and fails closed for unsigned tags. The local override
-   exists only for explicit emergency use and is not enabled in CI.
+2. A GitHub Release is created from an **annotated** `vX.Y.Z` tag (`git tag -a` is
+   enough). The publish workflow checks that the tag matches `package.json` and is
+   annotated. Unsigned annotated tags are allowed. Signed tags still verify when
+   present. Set `ARK_REQUIRE_SIGNED_RELEASE_TAG=true` on the publish job only if
+   you want signed-only again.
 3. The manual `Publish npm` workflow verifies the tag, requires the GitHub Release to
    exist, reruns release checks, publishes npm with provenance, and uploads a SHA-256
    checksum for the npm tarball to the GitHub Release.

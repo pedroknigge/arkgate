@@ -2,12 +2,12 @@
 /**
  * Release-trust gate for ArkGate publishes.
  *
- * Policy (P0):
+ * Thin bar (pre-adoption):
  * - Tag name MUST match package.json version (`v${version}`).
  * - Tag MUST be annotated (not lightweight).
- * - Signed/verified tags are preferred. Unsigned fails by default.
- * - Override: ARK_ALLOW_UNSIGNED_RELEASE_TAG=true for intentional unsigned annotated tags.
- * - Legacy: ARK_REQUIRE_SIGNED_RELEASE_TAG=true also requires signed (redundant with default).
+ * - Unsigned annotated tags are allowed. Signed tags still verify when present.
+ * - Opt-in signed-only: ARK_REQUIRE_SIGNED_RELEASE_TAG=true.
+ * - ARK_ALLOW_UNSIGNED_RELEASE_TAG=true still wins if both are set.
  *
  * Test hooks (not for production publishes):
  * - ARK_VERIFY_PACKAGE_VERSION — override package.json version
@@ -34,12 +34,11 @@ export function resolveSignedTagPolicy(env = process.env) {
   if (env.ARK_ALLOW_UNSIGNED_RELEASE_TAG === 'true') {
     return { allowUnsigned: true, requireSigned: false };
   }
-  if (env.ARK_REQUIRE_SIGNED_RELEASE_TAG === 'false') {
-    // explicit legacy opt-out (prefer ARK_ALLOW_UNSIGNED_RELEASE_TAG)
-    return { allowUnsigned: true, requireSigned: false };
+  if (env.ARK_REQUIRE_SIGNED_RELEASE_TAG === 'true') {
+    return { allowUnsigned: false, requireSigned: true };
   }
-  // Default fail-closed: co-pilot releases should be signed.
-  return { allowUnsigned: false, requireSigned: true };
+  // Pre-adoption default: annotated unsigned tags are enough.
+  return { allowUnsigned: true, requireSigned: false };
 }
 
 /** @param {{ tag: string, packageVersion: string }} args */
@@ -65,11 +64,11 @@ function fail(message) {
 function handleUnsignedTag(message, policy) {
   if (!policy.allowUnsigned) {
     fail(
-      `${message}. Refusing unsigned release tag (set ARK_ALLOW_UNSIGNED_RELEASE_TAG=true to override).`
+      `${message}. This run requires a signed tag (ARK_REQUIRE_SIGNED_RELEASE_TAG=true). Unsigned annotated tags are the usual pre-adoption path.`
     );
   }
   console.warn(
-    `[verify-release-tag] ${message}; continuing because ARK_ALLOW_UNSIGNED_RELEASE_TAG=true`
+    `[verify-release-tag] ${message}; continuing with an unsigned annotated tag`
   );
 }
 

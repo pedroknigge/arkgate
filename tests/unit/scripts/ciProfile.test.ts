@@ -68,7 +68,7 @@ describe('decideCiProfile', () => {
     expect(profile.run_packed).toBe(true);
   });
 
-  it('forces full matrix on main push, labels, and release-prep branch names', () => {
+  it('forces full matrix on main push or an explicit full-matrix label', () => {
     const main = decideCiProfile({
       eventName: 'push',
       refName: 'main',
@@ -93,15 +93,19 @@ describe('decideCiProfile', () => {
       changed: ['README.md'],
     });
     expect(labeled.full_matrix).toBe(true);
+  });
 
+  it('does not treat a release label or release-shaped branch as full matrix', () => {
     const releaseLabel = decideCiProfile({
       eventName: 'pull_request',
       refName: 'feat/x',
       headRef: 'feat/x',
       labels: ['release'],
-      changed: ['README.md'],
+      changed: ['src/gate.ts'],
     });
-    expect(releaseLabel.full_matrix).toBe(true);
+    expect(releaseLabel.full_matrix).toBe(false);
+    expect(releaseLabel.profile).toBe('code');
+    expect(releaseLabel.confidence_cmd).toBe('npm run test:coverage');
 
     const branch41 = decideCiProfile({
       eventName: 'pull_request',
@@ -110,8 +114,19 @@ describe('decideCiProfile', () => {
       labels: [],
       changed: ['src/gate.ts'],
     });
-    expect(branch41.full_matrix).toBe(true);
-    expect(branch41.confidence_cmd).toBe('npm run test:confidence');
+    expect(branch41.full_matrix).toBe(false);
+    expect(branch41.profile).toBe('code');
+    expect(branch41.confidence_cmd).toBe('npm run test:coverage');
+
+    const featRelease = decideCiProfile({
+      eventName: 'pull_request',
+      refName: 'feat/release-notes',
+      headRef: 'feat/release-notes',
+      labels: [],
+      changed: ['README.md'],
+    });
+    expect(featRelease.full_matrix).toBe(false);
+    expect(featRelease.docs_only).toBe(true);
   });
 
   it('detects docs-only PRs and skips packed/onboarding/perf', () => {
@@ -255,39 +270,48 @@ describe('decideCiProfile', () => {
     expect(profile.run_packed).toBe(true);
   });
 
-  it('full-matrix / release / main override hygiene and docs-only', () => {
-    for (const label of ['full-matrix', 'release'] as const) {
-      const docs = decideCiProfile({
-        eventName: 'pull_request',
-        refName: 'docs/typo',
-        headRef: 'docs/typo',
-        labels: [label],
-        changed: ['docs/README.md', 'CONTRIBUTING.md'],
-      });
-      expect(docs.full_matrix, `docs+${label}`).toBe(true);
-      expect(docs.docs_only, `docs+${label}`).toBe(false);
-      expect(docs.hygiene, `docs+${label}`).toBe(false);
-      expect(docs.profile, `docs+${label}`).toBe('full_matrix');
-      expect(docs.run_packed, `docs+${label}`).toBe(true);
-      expect(docs.run_onboarding, `docs+${label}`).toBe(true);
-      expect(docs.run_perf, `docs+${label}`).toBe(true);
-      expect(docs.confidence_cmd, `docs+${label}`).toBe('npm run test:confidence');
-      expect(docs.fail_fast, `docs+${label}`).toBe(false);
+  it('full-matrix label or main push override hygiene and docs-only', () => {
+    const docs = decideCiProfile({
+      eventName: 'pull_request',
+      refName: 'docs/typo',
+      headRef: 'docs/typo',
+      labels: ['full-matrix'],
+      changed: ['docs/README.md', 'CONTRIBUTING.md'],
+    });
+    expect(docs.full_matrix).toBe(true);
+    expect(docs.docs_only).toBe(false);
+    expect(docs.hygiene).toBe(false);
+    expect(docs.profile).toBe('full_matrix');
+    expect(docs.run_packed).toBe(true);
+    expect(docs.run_onboarding).toBe(true);
+    expect(docs.run_perf).toBe(true);
+    expect(docs.confidence_cmd).toBe('npm run test:confidence');
+    expect(docs.fail_fast).toBe(false);
 
-      const hygieneLabeled = decideCiProfile({
-        eventName: 'pull_request',
-        refName: 'chore/pins',
-        headRef: 'chore/pins',
-        labels: [label],
-        changed: ['package.json', 'package-lock.json', 'docs/README.md'],
-      });
-      expect(hygieneLabeled.full_matrix, `hygiene+${label}`).toBe(true);
-      expect(hygieneLabeled.hygiene, `hygiene+${label}`).toBe(false);
-      expect(hygieneLabeled.profile, `hygiene+${label}`).toBe('full_matrix');
-      expect(hygieneLabeled.run_packed, `hygiene+${label}`).toBe(true);
-      expect(hygieneLabeled.run_onboarding, `hygiene+${label}`).toBe(true);
-      expect(hygieneLabeled.confidence_cmd, `hygiene+${label}`).toBe('npm run test:confidence');
-    }
+    const hygieneLabeled = decideCiProfile({
+      eventName: 'pull_request',
+      refName: 'chore/pins',
+      headRef: 'chore/pins',
+      labels: ['full-matrix'],
+      changed: ['package.json', 'package-lock.json', 'docs/README.md'],
+    });
+    expect(hygieneLabeled.full_matrix).toBe(true);
+    expect(hygieneLabeled.hygiene).toBe(false);
+    expect(hygieneLabeled.profile).toBe('full_matrix');
+    expect(hygieneLabeled.run_packed).toBe(true);
+    expect(hygieneLabeled.run_onboarding).toBe(true);
+    expect(hygieneLabeled.confidence_cmd).toBe('npm run test:confidence');
+
+    const releaseStaysSlim = decideCiProfile({
+      eventName: 'pull_request',
+      refName: 'docs/typo',
+      headRef: 'docs/typo',
+      labels: ['release'],
+      changed: ['docs/README.md', 'CONTRIBUTING.md'],
+    });
+    expect(releaseStaysSlim.full_matrix).toBe(false);
+    expect(releaseStaysSlim.docs_only).toBe(true);
+    expect(releaseStaysSlim.confidence_cmd).toBe('npm run test:coverage');
 
     const mainHygiene = decideCiProfile({
       eventName: 'push',
@@ -344,7 +368,7 @@ describe('decideCiProfile', () => {
     expect(profile.confidence_cmd).toBe('npm run test:coverage');
   });
 
-  it('release-prepare branch substring forces full matrix', () => {
+  it('release-prepare branch names stay on the path their files earned', () => {
     const profile = decideCiProfile({
       eventName: 'pull_request',
       refName: 'chore/my-release-prepare-train',
@@ -352,10 +376,9 @@ describe('decideCiProfile', () => {
       labels: [],
       changed: ['docs/README.md'],
     });
-    expect(profile.full_matrix).toBe(true);
-    expect(profile.docs_only).toBe(false);
-    expect(profile.hygiene).toBe(false);
-    expect(profile.confidence_cmd).toBe('npm run test:confidence');
-    expect(profile.run_packed).toBe(true);
+    expect(profile.full_matrix).toBe(false);
+    expect(profile.docs_only).toBe(true);
+    expect(profile.confidence_cmd).toBe('npm run test:coverage');
+    expect(profile.run_packed).toBe(false);
   });
 });

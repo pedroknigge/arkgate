@@ -10,7 +10,7 @@
  *                OS portability, packed consumer matrices. Root package.json alone
  *                stays on the code path (packaging fields need packed matrices).
  * - code       — any other product path (src/bin/templates/workflows/…); PR slim
- * - full_matrix — main push, release/full-matrix labels, or release-prep branches
+ * - full_matrix — main push, or an explicit `full-matrix` label (opt-in)
  *
  * Usage:
  *   node scripts/ci-profile.mjs --json \
@@ -164,15 +164,11 @@ export function decideCiProfile(input) {
 
   let fullMatrix = false;
   if (eventName === 'push' && refName === 'main') fullMatrix = true;
-  if (labels.includes('full-matrix') || labels.includes('release')) fullMatrix = true;
+  // Explicit opt-in only. A `release` label or a release-shaped branch name
+  // must not drag a routine patch onto mutation + the complete packed matrix.
+  if (labels.includes('full-matrix')) fullMatrix = true;
 
   const branch = headRef || refName;
-  if (
-    /^(feat\/4\.1|feat\/.*release|release\/)/.test(branch) ||
-    branch.includes('release-prepare')
-  ) {
-    fullMatrix = true;
-  }
 
   let code = false;
   let docsSeen = false;

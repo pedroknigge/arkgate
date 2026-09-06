@@ -74,7 +74,8 @@ Maintainer-only local notes may live under gitignored `internal/` — never comm
 1. **Behavior change ⇒ test.** Prefer real CLI binaries against temp fixtures.
 2. **Gates agree.** CLI, MCP, ESLint share semantics; change them together.
 3. **Incomplete analysis cannot look green** (`complete | partial | unavailable`).
-4. **CI green:** typecheck, confidence, build, `check:architecture`.
+4. **CI green:** typecheck, coverage on PRs, build, `check:architecture`.
+   Mutation runs on `main` and at publish.
 5. **Small diffs.** No new abstraction without a second concrete use.
 6. **Honest docs.** Do not claim npm-published status before `npm view` succeeds.
    Product copy follows [docs/product-voice.md](docs/product-voice.md).
@@ -101,72 +102,57 @@ Queue: [ROADMAP.md](ROADMAP.md) · issues labeled `good first issue`.
 
 ---
 
-## CI profiles (PR slim vs full matrix)
+## CI (this repo)
 
-`.github/workflows/ci.yml` selects a **profile** via `scripts/ci-profile.mjs` so everyday PRs
-stay fast while release safety stays on the full path. Tiers: **docs_only** / **hygiene** /
-**code** (PR slim) / **full_matrix**.
+Everyday PRs stay on **slim** CI (coverage, not mutation). That is the path for a
+version-bump / prepare PR.
 
-| Profile | When | What runs |
-|---------|------|-----------|
-| **PR slim** (`code`, default) | Ordinary `pull_request` without a full-matrix trigger and not docs-only/hygiene | `build` with **`npm run test:coverage`** (no mutation), adapter parity, Z07, fuzz, Node smoke, architecture gate; **1** packed-TS cell (Node 20 + npm, still TS 5/6/7 in-process); **1** gallery PM (npm); onboarding **\*/small** only; `fail-fast: true` on product matrices. Performance budgets only when changed paths touch analysis/gate/hook/bench surfaces (or on full matrix). |
-| **Full matrix** | `push` to `main`; PR label **`full-matrix`** or **`release`**; branch name matching `feat/4.1*`, `feat/*release*`, `release/*`, or containing `release-prepare` | Same core jobs plus **`npm run test:confidence`** (coverage + mutation), complete 4×3 packed-TS cells, all three gallery PMs, all 12 onboarding shards, performance budgets, `fail-fast: false`. |
-| **Docs/plans-only** (`docs_only`) | PR changes only under `docs/**`, `*.md`, license/notice (no code/package surface) **and** no full-matrix trigger | Required **`build`** (coverage path) + architecture; packed/gallery/onboarding/OS portability/perf and other heavy jobs skipped. Required **TypeScript compatibility gate** still reports success when the packed matrix is **explicitly** not scheduled (`run_packed=false`). |
-| **Hygiene** | PR changes only docs/markdown **plus** root `package-lock.json` (and optionally root `package.json` **when the lock also changes**), and/or allowlisted release-surface tests such as `tests/unit/static-check/q06ReleaseSurfaces.test.ts` — **and** no full-matrix trigger | Same required **`build`** quality as PR slim (`test:coverage`, typecheck, architecture, security audit); skips onboarding, gallery, OS portability, packed consumer matrices, and the other heavy jobs that docs-only skips. Root **`package.json` alone** stays on the **code** path (packaging fields need packed matrices). Label **`full-matrix`** if you need the full path on a hygiene-shaped PR. |
+**Full matrix** (mutation + every packed / gallery / onboarding cell) runs on
+`push` to `main`, or when you add the `full-matrix` label. Nothing else selects
+it — not a `release` label, not a branch name.
 
-**Why slim PR skips mutation:** mutation is slow and remains mandatory on full-matrix / main and
-on every npm publish path (`scripts/release-npm.mjs`, `.github/workflows/publish-npm.yml`). Do
-not treat a green slim PR as a substitute for release confidence.
+Docs-only and lockfile hygiene PRs skip the heavy matrices on purpose. Mutation
+still runs before every npm publish (`scripts/release-npm.mjs`). A green slim PR
+is not a substitute for that publish gate.
 
-**Force full matrix on a PR:** add label `full-matrix` or `release` (workflow listens for
-`labeled` / `unlabeled`), or use a release-prep branch name such as `feat/4.1.0-…`.
-
-**Branch-name footgun:** `feat/*release*` is intentionally broad (safety bias). Names like
-`feat/release-notes` or `feat/release-docs-typo` also get the full matrix (including mutation),
-even if the diff is docs-only. Prefer ordinary names for non-release work, or accept the cost.
-
-Security workflow (CodeQL / Semgrep / dependency review) is unchanged and always runs on PRs.
+Security workflow (CodeQL / Semgrep / dependency review) still runs on every PR.
 
 ---
 
-## Releasing (maintainers)
+## Publish (maintainers)
 
-**Version sources (must match):** `package.json`, root `package-lock.json`, `src/version.ts`,
+Boring path. No extra labels. No extra notes file.
+
+**Must match:** `package.json`, root `package-lock.json`, `src/version.ts`,
 `server.json`.
 
-**Docs for a release:**
+**Must write:** a [CHANGELOG.md](CHANGELOG.md) line for the version.
 
-1. `CHANGELOG.md` — versioned section  
-2. `docs/releases/X.Y.Z.md` — notes + checklist  
-3. README / docs hub only if the product path changed  
+Then:
+
+1. Open a normal PR. Slim CI is the default. Do **not** add a `release` label.
+2. After merge, create an **annotated** tag (unsigned is fine):
 
 ```bash
-npm version <patch|minor|major> --no-git-tag-version
-# align server.json + src/version.ts
-
-npm run release:npm -- --dry
-git tag -s vX.Y.Z -m "arkgate vX.Y.Z"
+git tag -a vX.Y.Z -m "arkgate vX.Y.Z"
 git push origin vX.Y.Z
-gh release create vX.Y.Z --verify-tag --title "arkgate vX.Y.Z" \
-  --notes-file docs/releases/X.Y.Z.md
+gh release create vX.Y.Z --title "arkgate vX.Y.Z" --notes "See CHANGELOG.md"
 gh workflow run publish-npm.yml -f tag=vX.Y.Z -f dry_run=false
 ```
 
-Normal path is GitHub Release + signed tag + provenance publish. Root workflow publishes
-**`arkgate`** on `latest`. Leftover **`@arkgate/runtime`** may republish on `experimental` if
-that companion version is unpublished (deprecated; ADR 0031). Companion-only leftover publish:
-`gh workflow run publish-runtime.yml -f ref=main -f dry_run=false`. Do not claim the companion
-is on npm until `npm view @arkgate/runtime dist-tags --json` succeeds.
+That is the whole bar: slim CI green + version bump + CHANGELOG + annotated tag +
+GitHub Release + `publish-npm` provenance.
 
-MCP registry after npm `latest`:
+Tree version: `package.json`. What npm `latest` is: `npm view arkgate version`.
+Older notes live under [docs/releases/](docs/releases/).
 
-```bash
-mcp-publisher login github -token "$(gh auth token)"
-mcp-publisher validate server.json && mcp-publisher publish server.json
-```
+### Optional (not gates)
 
-**Current release candidate:** [CHANGELOG.md](CHANGELOG.md) (`arkgate@4.8.13`, prepared; not published).
-**Current published release:** [docs/releases/4.8.11.md](docs/releases/4.8.11.md) (`arkgate@4.8.11` on npm `latest`).
-
-**Prior published:** [docs/releases/4.8.10.md](docs/releases/4.8.10.md) (`arkgate@4.8.10`) · [docs/releases/4.8.9.md](docs/releases/4.8.9.md) (`arkgate@4.8.9`) · [docs/releases/4.8.8.md](docs/releases/4.8.8.md) (`arkgate@4.8.8`) · [docs/releases/4.8.7.md](docs/releases/4.8.7.md) (`arkgate@4.8.7`) · [docs/releases/4.8.6.md](docs/releases/4.8.6.md) (`arkgate@4.8.6`) · [docs/releases/4.8.5.md](docs/releases/4.8.5.md) (`arkgate@4.8.5`) · [docs/releases/4.8.4.md](docs/releases/4.8.4.md) (`arkgate@4.8.4`) · [docs/releases/4.8.3.md](docs/releases/4.8.3.md) (`arkgate@4.8.3`) · [docs/releases/4.8.2.md](docs/releases/4.8.2.md) (`arkgate@4.8.2`) · [docs/releases/4.8.1.md](docs/releases/4.8.1.md) (`arkgate@4.8.1`) · [docs/releases/4.8.0.md](docs/releases/4.8.0.md) (`arkgate@4.8.0`) · [docs/releases/4.7.6.md](docs/releases/4.7.6.md) (`arkgate@4.7.6`) · [docs/releases/4.7.5.md](docs/releases/4.7.5.md) (`arkgate@4.7.5`) · [docs/releases/4.7.4.md](docs/releases/4.7.4.md) (`arkgate@4.7.4`) · [docs/releases/4.7.3.md](docs/releases/4.7.3.md) (`arkgate@4.7.3`) · [docs/releases/4.7.2.md](docs/releases/4.7.2.md) (`arkgate@4.7.2`) · [docs/releases/4.7.1.md](docs/releases/4.7.1.md) (`arkgate@4.7.1`) · [docs/releases/4.7.0.md](docs/releases/4.7.0.md) (`arkgate@4.7.0`).
-**Previous:** [docs/releases/4.6.7.md](docs/releases/4.6.7.md) · [docs/releases/4.6.6.md](docs/releases/4.6.6.md) · [docs/releases/4.6.5.md](docs/releases/4.6.5.md) · [docs/releases/4.6.4.md](docs/releases/4.6.4.md) · [docs/releases/4.6.3.md](docs/releases/4.6.3.md) · [docs/releases/4.6.2.md](docs/releases/4.6.2.md) · [docs/releases/4.6.1.md](docs/releases/4.6.1.md) · [docs/releases/4.6.0.md](docs/releases/4.6.0.md) · [docs/releases/4.5.7.md](docs/releases/4.5.7.md) · [docs/releases/4.5.6.md](docs/releases/4.5.6.md) · [docs/releases/4.5.5.md](docs/releases/4.5.5.md) · [docs/releases/4.5.0.md](docs/releases/4.5.0.md) · [docs/releases/4.4.0.md](docs/releases/4.4.0.md) · [docs/releases/4.3.0.md](docs/releases/4.3.0.md).
+- Label `full-matrix` if you want mutation on the PR. `push` to `main` already
+  runs that path.
+- `docs/releases/X.Y.Z.md` — historical notes. Not required.
+- MCP registry, website sync, leftover `@arkgate/runtime` republish — after npm
+  `latest` if you want them. Not required to ship a patch.
+- Signed tags (`git tag -s`) — still accepted. Set
+  `ARK_REQUIRE_SIGNED_RELEASE_TAG=true` on the publish workflow only if you want
+  signed-only again.

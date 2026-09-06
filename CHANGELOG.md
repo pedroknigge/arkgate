@@ -5,6 +5,12 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+### Changed
+- Pre-adoption publish is the thin path: slim CI on prepare PRs (no `release`
+  label or branch-name full-matrix), annotated tags (unsigned allowed),
+  CHANGELOG + `publish-npm` provenance. MCP registry, site, companion republish,
+  and `docs/releases/` notes stay optional.
+
 ## 4.8.13 — 2026-09-06
 
 **Patch** over **4.8.12**. Publish gate: remaining ArkOrder doctor/deny branches so
@@ -14,7 +20,7 @@ this is the ship. **Write. Check. Ship.** **No required config migration.** No
 mother `ark.config.json` still does **not** turn `arkOrder` on.
 
 **Status: prepared** (tree candidate; npm `latest` remains **4.8.11** until the
-signed-tag provenance workflow succeeds).
+publish-npm provenance workflow succeeds).
 
 ### Fixed
 - Confidence coverage: remaining ArkOrder doctor/deny `Next:` and HTML/doctor
@@ -30,7 +36,7 @@ Does not close `K01` / `Z09`. No new skill names. This mother `ark.config.json`
 still does **not** turn `arkOrder` on.
 
 **Status: prepared** (tree candidate; npm `latest` remains **4.8.11** until the
-signed-tag provenance workflow succeeds).
+publish-npm provenance workflow succeeds).
 
 ### Added
 - Doctor / HTML / status `arkOrder` section (`notAScore`), same envelope as

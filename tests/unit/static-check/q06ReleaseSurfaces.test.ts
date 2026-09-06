@@ -190,9 +190,11 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
     expect(read('README.md')).toMatch(/docs\/releases\/4\.6\.7\.md/);
     expect(read('README.md')).toMatch(/4\.6\.6/);
     expect(read('README.md')).toMatch(/docs\/releases\/4\.6\.6\.md/);
-    expect(read('CONTRIBUTING.md')).toMatch(/Current release candidate:.*4\.8\.13/s);
-    expect(read('CONTRIBUTING.md')).toMatch(/Current published release:.*4\.8\.11/s);
-    expect(read('CONTRIBUTING.md')).toMatch(/Prior published:.*4\.8\.10/s);
+    expect(read('CONTRIBUTING.md')).toMatch(/slim CI/i);
+    expect(read('CONTRIBUTING.md')).toMatch(/annotated/i);
+    expect(read('CONTRIBUTING.md')).toMatch(/Optional \(not gates\)/);
+    expect(read('CONTRIBUTING.md')).not.toMatch(/Current release candidate:/);
+    expect(read('CONTRIBUTING.md')).not.toMatch(/Prior published:/);
     expect(read('docs/README.md')).toMatch(/Prepared:.*4\.8\.13/s);
     expect(read('docs/README.md')).toMatch(/Current published:.*4\.8\.11/s);
     expect(read('docs/README.md')).toMatch(/Prior published:.*4\.8\.10/s);
@@ -1074,9 +1076,8 @@ describe('CHANGELOG + release note cover 3.7.0 Phase Y', () => {
     expect(read('README.md')).toMatch(/docs\/releases\/4\.6\.0\.md/);
     expect(read('README.md')).toMatch(/4\.5\.7|4\.5\.6|4\.5\.5/);
     expect(read('README.md')).toMatch(/npm `latest`|on npm/);
-    expect(read('CONTRIBUTING.md')).toMatch(/Current published release:.*4\.6\.2/s);
-    expect(read('CONTRIBUTING.md')).toMatch(/4\.5\.7|4\.5\.6/);
-    expect(read('CONTRIBUTING.md')).toMatch(/4\.5\.0|4\.3\.0/);
+    expect(read('CONTRIBUTING.md')).toMatch(/docs\/releases\//);
+    expect(read('CONTRIBUTING.md')).toMatch(/Optional \(not gates\)/);
     expect(read('docs/package-surface.md')).toMatch(/4\.6\.0\.md/);
     expect(read('docs/package-surface.md')).toMatch(/4\.5\.7\.md|4\.5\.6\.md|4\.5\.0\.md|4\.4\.0\.md|4\.3\.0\.md/);
   });
