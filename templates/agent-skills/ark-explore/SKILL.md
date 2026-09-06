@@ -5,7 +5,11 @@ description: Map import rules and leftover design. No apply. CLI is a sensor; yo
 
 # /ark-explore — Recon the real project (map only)
 
-**When:** you need a map, or leftover design work remains after imports look green.
+**Contener · Guiar · Ordenar.** This door is **Guiar**: map leftover design. Do not apply.
+Skills never enforce — CLI / hooks / CI do.
+
+**When:** you need a map, leftover design work remains after imports look green, or
+one bounded decision needs 2–3 enforceable options.
 **Not when:** the user wants edits applied (`/ark-autopilot`) or session 0 (`/ark-adopt`).
 
 ## Steps
@@ -102,7 +106,8 @@ If the consumer tree has a **domain glossary**, prefer its terms for layer/slice
 | Map / “what next?” / residual after ENFORCE | User wants edits applied → `/ark-autopilot` |
 | **Primary post-green door:** messy / leftover design work / “clarify for AI” | Skill-shopping coverage or think for the same leftover work |
 | Spaghetti brownfield: patterns concurrent, design-weak under green check | Only “governed% + gates installed?” numbers → `/ark-coverage` |
-| Dual-plan **seed** (A remediation + B pattern bets) without applying | One design trade-off between 2–3 options already mapped → `/ark-think` |
+| Dual-plan **seed** (A remediation + B pattern bets) without applying | Apply the chosen option → `/ark-autopilot`; new file → `/ark-place` |
+| One bounded decision: 2–3 enforceable options (folded from leftover `/ark-think`) | Full apply → `/ark-autopilot`; extra off → `/ark-adopt`; one kernel candidate → `/ark-runtime`; one order-plane candidate → `/ark-order` |
 | Path-correct vs design-correct honesty | Plain-language tour / HTML report → `/ark-explain` |
 
 **Post-green single path:** when doctor `postGreenPath` / ENFORCE · leftover design work is active, **this skill
@@ -174,7 +179,7 @@ ArkGate has **always-on Layers** plus opt-in extras. The user chooses extras; yo
 3. Absence of `arkRules` is **valid** — do not force ArkRules unless the user wants them or residual inventory clearly wants a pilot.
 4. Editing `arkrules/*` or applying structure fixes is **`/ark-adopt`** / **`/ark-autopilot`** — explore does not write (never invent `mechanical-safe`).
 5. CLI helpers: `ark-check --rules-inventory --json`, doctor JSON `rulesUnderContract`, sensors emit `ARKRULE_*` / `INVARIANT_UNCOVERED` with `evidence.arkruleId`.
-6. Never write `arkRun` or `arkOrder` from this skill. When extras are present, label residual **`[ArkRun]`** / **`[ArkOrder]`**. Do not invent `/ark-run` or `/ark-order`.
+6. Never write `arkRun` or `arkOrder` from this skill. When extras are present, label residual **`[ArkRun]`** / **`[ArkOrder]`**. Wire one kernel candidate via `/ark-runtime`; one order-plane candidate via `/ark-order`. Do not invent `/ark-run`.
 
 
 ### Explore + ArkRules
@@ -186,7 +191,22 @@ ArkGate has **always-on Layers** plus opt-in extras. The user chooses extras; yo
 ### Explore + extras
 - Map extras when present; never write `arkRun` / `arkOrder`. Extra off → residual `n/a` / silent.
 - When `arkOrder` is on, name the valve: first freeze `release()`; later ξ is `proposeRelease` then `apply`; `refreshSigma`; ingest residual `absorb | escalate_up | hold` + `reasonCode`; capacity pack as data; in-memory `ReleaseStore` (`createMemoryReleaseStore`); thin travel `ingestTravelAction`. ArkRun residual may include information package `decisionTape` `{ xiHash, event, residual }`.
-- Field path may name the ArkOrder gallery on GitHub (`https://github.com/pedroknigge/arkgate/tree/main/examples/arkorder-billing`; not in the npm tarball — map only). First extra write is `/ark-adopt`; grind is `/ark-autopilot`.
+- Field path may name the ArkOrder gallery on GitHub (`https://github.com/pedroknigge/arkgate/tree/main/examples/arkorder-billing`; not in the npm tarball — map only). First extra write is `/ark-adopt`; wire one candidate is `/ark-order`; grind is `/ark-autopilot`.
+
+## One decision (2–3 options)
+
+When the job is **one** bounded import-rule or ArkRules choice (not a full map), stay here.
+Leftover `/ark-think` redirects here. Do not invent a third door.
+
+1. Open ≥5 source files on the decision surface. Name paths.
+2. Propose **2–3 options** that stay enforceable today. Label each by lens impact
+   (what residual improves / what stays out-of-scope). Always `notAScore`.
+3. Recommend one option + why it is enforceable. Pilot + kill-switch if the choice
+   adds a layer or wall.
+4. Hand off: apply → `/ark-autopilot`; new file → `/ark-place`; extra off → `/ark-adopt`;
+   one kernel candidate → `/ark-runtime`; one order-plane candidate → `/ark-order`.
+
+Never weaken `ark.config.json` to pass. Never silent judgment auto-apply.
 
 ## Output mode (pick one — do not invent a fourth)
 

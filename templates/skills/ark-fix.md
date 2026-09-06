@@ -5,28 +5,25 @@ description: Shortcut to /ark-autopilot for a small illegal-import cluster.
 
 # /ark-fix — Shortcut to /ark-autopilot
 
-**Not a first-run door.** This leftover name is a shortcut. Gate violations are
+**Not a first-class door.** One-release redirect. Gate violations are
 **`/ark-autopilot`**. Do that job now. CLI only validates.
-
-## Autonomy contract
-
-Invoking this leftover name **is** the approval to write the fix. Open importers,
-design the port/move, apply, `ark-check`. Never weaken the config. Never invent
-`mechanical-safe` kinds.
+Contener · Guiar · Ordenar — this leftover name is not a star.
 
 ## When / not when
 
 | Use this leftover name when… | Prefer instead |
 |------------------------------|----------------|
 | One change / small cluster just failed the gate | **`/ark-autopilot`** |
-| Judgment design for a known violation | Session 0 / false-green → **`/ark-adopt`** |
+| Session 0 / false-green | **`/ark-adopt`** |
+| One kernel candidate | **`/ark-runtime`** |
+| One order-plane candidate | **`/ark-order`** |
 
 ## Plan B one-pilot checklist (when leftover design, not a single edge)
 
 Empty plan A + leftover design work is **not** architecture finished. One pilot only.
 Write an **extraction card** (`docs/brownfield-adoption.md` §6) — never mechanical-safe,
 never silent B apply. **Kill-switch** required. `multiPilotBatchForbidden` — never
-multi-pilot batch.
+multi-pilot batch. Execute that work on **`/ark-autopilot`**.
 
 ## Dual engine (mandatory)
 
@@ -46,10 +43,6 @@ retain `projectIdentity.projectId`, then pass both `expectedRoot` and `expectedP
 uncertain, do not consume MCP analysis: use the workspace-local CLI and report that MCP
 restart/retargeting is required. `ark://manifest` never satisfies this preflight.
 
-## Dual plane — layers + extras (mandatory, except /ark-runtime)
-
-Label findings **`[Layer]`** vs **`[ArkRules]`** vs **`[ArkRun]`** vs **`[ArkOrder]`**. Absence of extras is valid and silent. Extra skip clusters (`ARKRUN_*` / `ARKORDER_*`) are **`/ark-autopilot`**. When ArkOrder is on: later ξ is `proposeRelease` then `apply` (not a second `release()`); `refreshSigma`; ingest residual `absorb | escalate_up | hold`; capacity pack as data; in-memory `ReleaseStore`; ArkRun `decisionTape`. Do not invent `/ark-run` or `/ark-order`. Skills never enforce.
-
 ## Subagent fan-out (optional, host-dependent)
 
 If the host supports **parallel subagents**, fan out read-only scouts; otherwise
@@ -60,6 +53,15 @@ If the host supports **parallel subagents**, fan out read-only scouts; otherwise
 - **Greenfield:** `/ark-adopt` or `ark-check --recommend` / `ark start`.
 - **Brownfield:** `/ark-adopt`.
 
+## Mechanical-edit hygiene (outcome gate)
+
+Leftover name, same edit bar as `/ark-autopilot` if you still land here.
+
+- Header injection must **merge into the existing doc comment**; the kept result has one `/**`, not stacked headers.
+- Route completion or movement must **preserve the original typed `defineRoute<…>(opts, handler)` call**; reconstruct that call instead of extracting untyped opts/handler constants that drop generics or contextual typing.
+- A convention-only `*-data.ts` stub is not a fix: move the real code or **leave the placeholder file uncreated**; never write `import "server-only"; export {}` as an empty naming token.
+- Keep the edit only when the **previously clean file stays typecheck-clean**. Otherwise roll it back and treat the change as judgment.
+
 ## Steps
 
 1. Sensor: `ark-check` / `--plan --json`.
@@ -67,13 +69,6 @@ If the host supports **parallel subagents**, fan out read-only scouts; otherwise
    **STOP — false-green:** / **STOP — concentrated edge:** execute **`/ark-adopt`** in this turn.
 3. Otherwise execute **`/ark-autopilot`** for the cluster (extraction card if Shape).
 4. Re-check.
-
-## Mechanical-edit hygiene (outcome gate)
-
-- Header injection must **merge into the existing doc comment**; the kept result has one `/**`, not stacked headers.
-- Route completion or movement must **preserve the original typed `defineRoute<…>(opts, handler)` call**; reconstruct that call instead of extracting untyped opts/handler constants that drop generics or contextual typing.
-- A convention-only `*-data.ts` stub is not a fix: move the real code or **leave the placeholder file uncreated**; never write `import "server-only"; export {}` as an empty naming token.
-- Keep the edit only when the **previously clean file stays typecheck-clean**. Otherwise roll it back and treat the change as judgment.
 
 ## Completion contract (skill incomplete if missing)
 

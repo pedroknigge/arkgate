@@ -36,10 +36,10 @@ export function buildUpgradeWhatsNewSuggestions() {
       {
         id: 'five-door-autonomy',
         title: 'Five doors (invoke = write or map)',
-        try: '/ark-adopt · /ark-place · /ark-autopilot · /ark-explore · /ark-upgrade',
-        inspect: 'Skill bodies + doctor next action (other /ark-* names are shortcuts)',
+        try: '/ark-adopt · /ark-place · /ark-autopilot · /ark-explore · /ark-upgrade · /ark-runtime · /ark-order',
+        inspect: 'Skill bodies + doctor next action (other /ark-* names are one-release shortcuts)',
         why:
-          'Invoking a door is the approval. The CLI is sensor + gate — it does not apply the change. Explore maps only. Same 13 skill names.',
+          'Invoking a door is the approval. The CLI is sensor + gate — it does not apply the change. Explore maps only. Closed catalog: first-class doors plus stubs. Contener · Guiar · Ordenar.',
       },
       {
         id: 'team-parliament',

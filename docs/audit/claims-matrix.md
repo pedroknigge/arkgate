@@ -71,7 +71,7 @@ here as live `latest`.
 | Develop | `docs/develop.md`, `docs/ai-gates.md`, `docs/agent-guide.md`, `docs/configuration.md`, `docs/package-surface.md` | Session recipe; status modes; self-service upgrade; residual ⊆ doctor when full |
 | Contribute | `CONTRIBUTING.md`, `ROADMAP.md` Next session, `Agents.md` plans | DF01–DF06 **done** at prepare; publish checklist open until npm verify |
 | Releases | `CHANGELOG.md`, `docs/releases/*` | 4.5.0 **Status: prepared**; 4.4.0 **published** on npm `latest` |
-| Templates | `action.yml`, generated workflow, `templates/agent-skills/` | First-push-safe base-ref; same 13 skill names |
+| Templates | `action.yml`, generated workflow, `templates/agent-skills/` | First-push-safe base-ref; closed skill catalog (`ARK_SKILL_NAMES`) |
 | Audit | this file | **0 Contradicted** on public lanes; new DF rows OK |
 
 ### README 0.3 checklist (signed, DF06 / 4.5.0)
@@ -124,7 +124,7 @@ here as live `latest`.
 | C-034 | Public diagnostic codes have a closed catalog with why/fix docs anchors | [Diagnostics](../diagnostics.md) · [Package surface](../package-surface.md) | `diagnosticCatalog.ts` · fixtures | OK | ACS02 |
 | C-035 | `ark status --json` / MCP `ark_status` returns one identity/activation/last-check/rules snapshot (not a score) | [Agent guide](../agent-guide.md) · [Package surface](../package-surface.md) | `statusManifest.ts` · schema | OK | ACS03 |
 | C-036 | Version-matched agent projection is regenerable and labeled non-authoritative for enforcement | [Agent guide](../agent-guide.md) · [Package surface](../package-surface.md) | `agentProjection.ts` · CLI | OK | ACS04 |
-| C-037 | The same frozen 13 skill names ship in Agent Skills–compatible layout; no new skill names | [Agent guide](../agent-guide.md#install-skills-ark-and-ecosystem) | `agentSkillsPackage.ts` · `templates/agent-skills/` | OK | ACS05 |
+| C-037 | Closed skill catalog (`ARK_SKILL_NAMES`) ships 1:1 in Agent Skills layout; first-class `/ark-order`; stubs one release; standing capacity check | [Agent guide](../agent-guide.md#install-skills-ark-and-ecosystem) · [ADR 0036](../adr/0036-skill-catalog-product-capacity.md) | `agentSkillsPackage.ts` · `templates/agent-skills/` · `skillCatalogCapacity.test.ts` | OK | ACS05 / #216 |
 | C-038 | Factory diagnostics carry stable `findingRef` + baseline-compatible `targetKey` (schema 1.5) | [Package surface](../package-surface.md) · [Agent guide](../agent-guide.md) | `adapterContract.ts` · multi-turn fixture | OK | ACS06 |
 | C-039 | Maintainer placement A/B eval exists under `eval/` with CI-safe dry mode; not a product score | [Eval guide](../../eval/README.md) · [placement-ab README](../../eval/placement-ab/README.md) | harness · fixtures · unit test | OK | ACS07 |
 | C-040 | AGENTS.md / skills / projection never decide pass/fail; gate remains CLI/hooks/CI | [Product voice](../product-voice.md) · plan ACS hard lines | analysis paths do not import projection | OK | ACS hard line |

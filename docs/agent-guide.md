@@ -227,10 +227,12 @@ The projection is **non-authoritative**. Enforcement is `ark-check` / host write
 CI (`--strict-merge`) — never AGENTS.md, skills, or this projection. Root API:
 `buildAgentProjectionBlock` / `mergeAgentProjectionDocument`.
 
-**Agent Skills packaging (4.3):** the same frozen **13** skill names are also shipped as
+**Agent Skills packaging (4.3 / #216):** the same closed catalog ships as
 an Agent Skills–compatible package under `templates/agent-skills/<name>/SKILL.md` for hosts that
 install via `npx skills` (in addition to Ark `--install-agent-gates`). See
-[Install skills — Ark and ecosystem](#install-skills-ark-and-ecosystem). No new skill names.
+[Install skills — Ark and ecosystem](#install-skills-ark-and-ecosystem).
+Closed catalog (`ARK_SKILL_NAMES`): first-class doors plus one-release stubs.
+First-class `/ark-order` mirrors `/ark-runtime`. Add a name only with a live ROADMAP item.
 Skill bodies coach residual lenses and anti false-done; they never enforce.
 
 ## Architecture playbook and `ark-check --recommend`
@@ -316,8 +318,10 @@ as unresolved decisions, and restores the integration with `ark start --tools <h
 **Five doors (emphasize):** `/ark-adopt` = session 0 (greenfield scaffold + brownfield honesty —
 write the path). `/ark-place` = new feature (place **and write**). `/ark-autopilot` = apply
 plan A + one Shape refactor (invoke = approval). `/ark-explore` = map + dual-plan seed (no
-apply). `/ark-upgrade` = preview then apply in-turn. Other `/ark-*` names stay installed as
-**shortcuts**. Empty plan A is not “architecture healthy” if leftover design remains.
+apply). `/ark-upgrade` = preview then apply in-turn. First-class extras: `/ark-runtime` wires
+ArkRun; **`/ark-order`** wires ArkOrder. Other `/ark-*` names stay installed as
+**one-release shortcuts**. Empty plan A is not “architecture healthy” if leftover design remains.
+Filter: **Contener · Guiar · Ordenar**. Skills never enforce.
 
 **Team parliament:** adopt is a **contract session** (law-only). Feature work must not edit
 `ark.config.json` / `arkrules/*` / `.ark-baseline.json`. Prefer
@@ -537,7 +541,7 @@ ArkOrder — with its plane, its tier and whether it can *ever* be enforced, so
 Tier-2 shows up before you write the rule rather than after you wait for a run.
 ArkOrder: `proposeRelease` then `apply`; `refreshSigma`; ingest residual;
 capacity pack; `ReleaseStore`; ArkRun `decisionTape`. Extras door:
-`/ark-adopt`. First contact: doctor + `[ArkOrder]` on the check.
+`/ark-adopt` (turn on) then **`/ark-order`** (wire one candidate). First contact: doctor + `[ArkOrder]` on the check.
 It also says *how*: only the ArkRules plane is promoted per rule; ArkRun and
 ArkOrder are switched by the plane-level `arkRun.mode` / `arkOrder.mode`, and
 `--promote --apply` writes ArkRules documents only.
@@ -857,8 +861,9 @@ and [shared Claude/Grok/Antigravity homes](ai-gates.md#shared-claude--grok-home-
 
 ### Install skills — Ark and ecosystem {#install-skills-ark-and-ecosystem}
 
-The same **13** skill names ship two ways. **No new skill names** (4.3 freeze): packaging and
-routing only.
+The same closed catalog ships two ways. **Closed catalog** (`ARK_SKILL_NAMES`): first-class
+doors plus one-release stubs. Add a name only with a live ROADMAP item
+([ADR 0036](adr/0036-skill-catalog-product-capacity.md) / issue #216).
 
 | Channel | What it installs | When to use |
 |---------|------------------|-------------|
@@ -883,9 +888,10 @@ npx skills add https://github.com/pedroknigge/arkgate/tree/main/templates/agent-
 npx skills add ./node_modules/arkgate/templates/agent-skills --list
 ```
 
-Frozen names: `ark-adopt`, `ark-architect`, `ark-autopilot`, `ark-contract`, `ark-coverage`,
-`ark-explain`, `ark-explore`, `ark-fix`, `ark-loop`, `ark-place`, `ark-runtime`, `ark-think`,
-`ark-upgrade`. Root API: `ARK_SKILL_NAMES` / `validateAgentSkillsPackage` (Domain
+Closed names: first-class `ark-adopt`, `ark-autopilot`, `ark-coverage`, `ark-explain`,
+`ark-explore`, `ark-order`, `ark-place`, `ark-runtime`, `ark-upgrade`; one-release stubs
+`ark-architect`, `ark-contract`, `ark-fix`, `ark-loop`, `ark-think`. Root API:
+`ARK_SKILL_NAMES` / `ARK_FIRST_CLASS_SKILL_NAMES` / `validateAgentSkillsPackage` (Domain
 `agentSkillsPackage`). Skills are **process** depth — they never decide pass/fail; enforcement
 remains `ark-check` / hooks / CI.
 

@@ -251,7 +251,7 @@ npx arkgate-check --strict-merge   # CI / required status
 npx arkgate-check --install-agent-gates --tools claude,cursor,codex,grok,antigravity
 # optional: refresh shared home skills (Claude/Grok/Antigravity/Codex; never downgrades)
 # npx arkgate-check --install-agent-gates --skills-only --agent-homes --force
-# optional: same 13 skills via Agent Skills ecosystem (no new names)
+# optional: closed skill catalog via Agent Skills ecosystem (ARK_SKILL_NAMES)
 # npx skills add ./node_modules/arkgate/templates/agent-skills
 # optional ArkRun: poll the loopback inspector (ANSI TUI — not a gate)
 # npx ark-dashboard --url http://127.0.0.1:<port>/snapshot

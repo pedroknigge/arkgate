@@ -4,13 +4,15 @@
 > Author skill bodies in `templates/skills/<name>.md`, then run
 > `npm run generate:agent-skills`. Drift: `npm run check:agent-skills`.
 
-This directory is the **Agent Skills–compatible** packaging of the same **13**
-`/ark-*` skills shipped as flat templates for Ark install. **No new skill names.**
+This directory is the **Agent Skills–compatible** packaging of the same
+closed `/ark-*` catalog shipped as flat templates for Ark install.
+**Closed catalog** (`ARK_SKILL_NAMES`) — first-class doors plus one-release
+redirect stubs. Add a name only with a live ROADMAP item.
 
-Package version when last generated context: **arkgate@4.8.9**
+Package version when last generated context: **arkgate@4.8.13**
 Schema: agent-skills package contract `1.0`
 
-## Skills (frozen catalog)
+## Skills (closed catalog)
 
 - `ark-adopt`
 - `ark-architect`
@@ -21,6 +23,7 @@ Schema: agent-skills package contract `1.0`
 - `ark-explore`
 - `ark-fix`
 - `ark-loop`
+- `ark-order`
 - `ark-place`
 - `ark-runtime`
 - `ark-think`

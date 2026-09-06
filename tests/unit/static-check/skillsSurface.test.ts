@@ -33,6 +33,7 @@ const EXPECTED_SKILLS = [
   'ark-explore',
   'ark-fix',
   'ark-loop',
+  'ark-order',
   'ark-place',
   'ark-runtime',
   'ark-think',
@@ -316,13 +317,14 @@ describe('skill role clarity + exploratory depth (P01)', () => {
   });
 });
 
-describe('ArkRun skill-body deepen (no new skill names)', () => {
+describe('ArkRun skill-body deepen (closed catalog)', () => {
   function readSkill(name: string): string {
     return fs.readFileSync(path.join(SKILLS_DIR, `${name}.md`), 'utf8');
   }
 
-  it('keeps the frozen 13 names and does not ship /ark-run', () => {
-    expect(EXPECTED_SKILLS).toHaveLength(13);
+  it('keeps the closed catalog and does not ship /ark-run', () => {
+    expect(EXPECTED_SKILLS).toEqual([...EXPECTED_SKILLS].sort());
+    expect(EXPECTED_SKILLS).toContain('ark-order');
     expect(EXPECTED_SKILLS).not.toContain('ark-run');
     expect(fs.existsSync(path.join(SKILLS_DIR, 'ark-run.md'))).toBe(false);
     const onDisk = fs
@@ -397,24 +399,26 @@ describe('ArkRun skill-body deepen (no new skill names)', () => {
   });
 });
 
-describe('ArkOrder + four-plane skill deepen (no new skill names)', () => {
+describe('ArkOrder + four-plane skill deepen (first-class /ark-order)', () => {
   function readSkill(name: string): string {
     return fs.readFileSync(path.join(SKILLS_DIR, `${name}.md`), 'utf8');
   }
 
-  it('keeps the frozen 13 names and does not ship /ark-order', () => {
-    expect(EXPECTED_SKILLS).toHaveLength(13);
-    expect(EXPECTED_SKILLS).not.toContain('ark-order');
-    expect(fs.existsSync(path.join(SKILLS_DIR, 'ark-order.md'))).toBe(false);
-    const onDisk = fs
-      .readdirSync(SKILLS_DIR)
-      .filter((n) => /^[a-z0-9-]+\.md$/.test(n))
-      .map((n) => path.basename(n, '.md'));
-    expect(onDisk).not.toContain('ark-order');
+  it('ships first-class /ark-order and does not invent /ark-run', () => {
+    expect(EXPECTED_SKILLS).toContain('ark-order');
+    expect(fs.existsSync(path.join(SKILLS_DIR, 'ark-order.md'))).toBe(true);
+    expect(fs.existsSync(path.join(SKILLS_DIR, 'ark-run.md'))).toBe(false);
+    const order = readSkill('ark-order');
+    expect(order).toMatch(/## When \/ not when/);
+    expect(order).toContain('arkgate/order');
+    expect(order).toContain('planeRoots');
+    expect(order).toContain('proposeRelease');
+    expect(order).toContain('ARKORDER_');
+    expect(order).toMatch(/Skills never enforce/);
+    expect(order).toContain('Contener · Guiar · Ordenar');
     for (const name of EXPECTED_SKILLS) {
       const body = readSkill(name);
-      expect(body, name).not.toMatch(/Invoke `?\/ark-order`/i);
-      expect(body, name).not.toMatch(/switch to \*\*`\/ark-order`/i);
+      expect(body, name).not.toMatch(/Invoke `?\/ark-run`/i);
     }
   });
 
@@ -426,7 +430,7 @@ describe('ArkOrder + four-plane skill deepen (no new skill names)', () => {
     expect(body).toContain('planeRoots');
     expect(body).toContain('maxXiKeys');
     expect(body).toMatch(/compact starter/);
-    expect(body).toMatch(/Do not invent `\/ark-order`|Invent `\/ark-order`/);
+    expect(body).toMatch(/`\/ark-order`/);
     expect(body).toMatch(/\*\*\[ArkOrder\]\*\*/);
     expect(body).toMatch(/createOrderPlane/);
     expect(body).toMatch(/arkgate\/order/);
@@ -439,7 +443,7 @@ describe('ArkOrder + four-plane skill deepen (no new skill names)', () => {
     expect(body).toContain('ARKRUN_DIRECT_NEW');
     expect(body).toContain('ARKORDER_MISSING_PLANE');
     expect(body).toContain('ARKORDER_GENERIC_UPDATE');
-    expect(body).toMatch(/Do not invent `\/ark-order`|Invent `\/ark-order`/);
+    expect(body).toMatch(/`\/ark-order`/);
     expect(body).toMatch(/\*\*\[ArkOrder\]\*\*/);
     expect(body).toMatch(/always-on Layers/);
   });
@@ -449,8 +453,8 @@ describe('ArkOrder + four-plane skill deepen (no new skill names)', () => {
     expect(body).toMatch(/first advisory `arkOrder`|first `arkOrder`/);
     expect(body).toMatch(/\/ark-autopilot/);
     expect(body).not.toMatch(/Companion/);
-    expect(body).toMatch(/Do not invent `\/ark-run` or `\/ark-order`/);
-    expect(body).toMatch(/\*\*\[ArkOrder\]\*\*/);
+    expect(body).toMatch(/`\/ark-order`/);
+    expect(body).toMatch(/Not a first-class door/);
   });
 
   it('ark-runtime prefers kernelRoots and does not treat companion README as the kernel guide', () => {
@@ -468,17 +472,17 @@ describe('ArkOrder + four-plane skill deepen (no new skill names)', () => {
     expect(body).toMatch(/compositionRoots/);
     expect(body).toContain('### Place + ArkOrder');
     expect(body).toMatch(/grind via `\/ark-autopilot`|\/ark-autopilot/);
-    expect(body).toMatch(/Do not invent `\/ark-order`/);
+    expect(body).toMatch(/`\/ark-order`/);
   });
 });
 
-describe('LD05 layer description skill deepen (no new skill names)', () => {
+describe('LD05 layer description skill deepen (no /ark-describe)', () => {
   function readSkill(name: string): string {
     return fs.readFileSync(path.join(SKILLS_DIR, `${name}.md`), 'utf8');
   }
 
-  it('keeps the frozen 13 names and does not ship /ark-describe', () => {
-    expect(EXPECTED_SKILLS).toHaveLength(13);
+  it('keeps the closed catalog and does not ship /ark-describe', () => {
+    expect(EXPECTED_SKILLS).toContain('ark-order');
     expect(EXPECTED_SKILLS).not.toContain('ark-describe');
     expect(fs.existsSync(path.join(SKILLS_DIR, 'ark-describe.md'))).toBe(false);
     const onDisk = fs

@@ -5,9 +5,12 @@ description: How much of the tree the rules file covers. CLI is a sensor; read t
 
 # /ark-coverage — Ark adoption fitness (not full recon)
 
+**Contener · Guiar · Ordenar.** This door is **Guiar**: adoption fitness numbers, not a full map.
+Skills never enforce — CLI / hooks / CI do.
+
 **Not a first-run door.** Fitness numbers only (governed files, gates, baseline).
 Session 0 → **`/ark-adopt`**. Leftover design → **`/ark-explore`**. Apply → **`/ark-autopilot`**.
-Do not send the user to leftover `/ark-contract` or `/ark-fix`.
+Wire ArkRun → **`/ark-runtime`**. Wire ArkOrder → **`/ark-order`**.
 
 You audit **how this repo uses ArkGate** (coverage, gates, baseline, host write path) and
 what adoption gaps remain. Work autonomously. End with a ranked fitness report.
@@ -41,7 +44,7 @@ patterns are **out-of-scope** lenses — say so; do not invent Ark enforcement f
 | “How adopted is Ark?” governed%, gates, baseline, skills stale | Full product map / what-next architecture → `/ark-explore` |
 | Capability gaps (CI, write path, ESLint, optional layers) | Apply fixes end-to-end → `/ark-autopilot` |
 | Ranked *adoption* opportunities (install, ratchet, contract classify) | Spaghetti pattern plan / golden pattern → `/ark-explore` dual-plan seed |
-| Quick honesty before a release checklist | One design trade-off → `/ark-think` |
+| Quick honesty before a release checklist | One design trade-off → `/ark-explore` (one decision, 2–3 options) |
 
 ## Dual engine (mandatory)
 
@@ -90,10 +93,10 @@ ArkGate has **always-on Layers** plus opt-in extras. The user chooses extras; yo
 1. Prefix each finding or next step with **`[Layer]`** or **`[ArkRules]`** or **`[ArkRun]`** or **`[ArkOrder]`** (or a table with those headers).
 2. Never call an import-edge violation an “invariant” or an aggregate sensor a “layer deny.”
 3. Absence of `arkRules` is **valid** — do not force ArkRules unless the user wants them or residual inventory clearly wants a pilot.
-4. Editing `arkrules/*` or promoting modes is **`/ark-adopt`** / leftover **`/ark-contract`**; fixing code under a structure sensor is leftover **`/ark-fix`** / **`/ark-loop`** or **`/ark-autopilot`** (judgment, never invent mechanical-safe).
+4. Editing `arkrules/*` or promoting modes is **`/ark-adopt`**; fixing code under a structure sensor is **`/ark-autopilot`** (judgment, never invent mechanical-safe).
 5. CLI helpers: `ark-check --rules-inventory --json`, doctor JSON `rulesUnderContract`, sensors emit `ARKRULE_*` / `INVARIANT_UNCOVERED` with `evidence.arkruleId`.
 5b. Invariant coverage is a **text match, never an execution**: a file walk plus the invariant id in a `describe`/`it` title. Never report `INVARIANT_UNCOVERED: 0` as “the tests pass” or “the tests run” — ArkGate does not run tests and reads no runner config. When the project declares `coverage.coverageRoots`, a covering test found outside them raises the advisory `INVARIANT_COVERAGE_OUTSIDE_ROOTS`; without that declaration ArkGate makes no claim about where tests run.
-6. Extras silent when off. Doctor `arkRun` is `notAScore`. Do not force extras. Do not invent `/ark-run` or `/ark-order`.
+6. Extras silent when off. Doctor `arkRun` / `arkOrder` is `notAScore`. Do not force extras. Wire one kernel candidate via `/ark-runtime`; one order-plane candidate via `/ark-order`. Do not invent `/ark-run`.
 
 
 ### Coverage + ArkRules
@@ -143,10 +146,10 @@ because governed% is 100% and plan is empty.
 
 ## Related onboarding
 
-- **Greenfield:** low governed% → `/ark-architect` or `ark-check --recommend`.
+- **Greenfield:** low governed% → `/ark-adopt` or `ark-check --recommend`.
 - **Brownfield:** `/ark-adopt` for action; this skill for fitness metrics.
 - **Pattern / spaghetti residual:** `/ark-explore` dual-plan seed / shape-focus.
-- **Business rules loose:** note in table; mining action → `/ark-adopt` or `/ark-contract`.
+- **Business rules loose:** note in table; mining action → `/ark-adopt`.
 
 ## Checklist (sensor + light code)
 
@@ -159,8 +162,8 @@ because governed% is 100% and plan is empty.
 7. **Governed%** + unclassified + `suggestions` from `--coverage --json`.
 8. Concentrated edges in check `summary` → contract smell, not N freezes.
 9. `layersWithoutRules` + empty cores with I/O under Application (false-green).
-    On false-green: **STOP — do not continue this skill as complete.** **STOP — false-green: invoke /ark-adopt or /ark-contract before claiming ENFORCE.** Do not claim goal.met / ENFORCE from type-only cleanup while doctor reports `contract-false-green-io-under-application`.
-    On one-edge wall: **STOP — do not continue this skill as complete.** **STOP — concentrated edge: invoke /ark-contract with source evidence** (do not freeze a wrong contract or grind N freezes).
+    On false-green: **STOP — do not continue this skill as complete.** **STOP — false-green: invoke /ark-adopt before claiming ENFORCE.** Do not claim goal.met / ENFORCE from type-only cleanup while doctor reports `contract-false-green-io-under-application`.
+    On one-edge wall: **STOP — do not continue this skill as complete.** **STOP — concentrated edge: invoke /ark-adopt with source evidence** (do not freeze a wrong contract or grind N freezes).
 10. Runtime kernel / Nest only if deps prove it — never force-fit.
 
 ## Output format

@@ -8,8 +8,8 @@
  * Derived (ecosystem package for `npx skills add`):
  *   templates/agent-skills/<name>/SKILL.md
  *
- * Content is 1:1 (LF-normalized). No new skill names — inventory must match the
- * frozen Domain catalog (ARK_SKILL_NAMES).
+ * Content is 1:1 (LF-normalized). Inventory must match the closed Domain
+ * catalog (ARK_SKILL_NAMES). Add a name only with a live ROADMAP item.
  *
  * Usage:
  *   node scripts/generate-agent-skills.mjs
@@ -79,13 +79,15 @@ function packageReadme() {
 > Author skill bodies in \`templates/skills/<name>.md\`, then run
 > \`npm run generate:agent-skills\`. Drift: \`npm run check:agent-skills\`.
 
-This directory is the **Agent Skills–compatible** packaging of the same **13**
-\`/ark-*\` skills shipped as flat templates for Ark install. **No new skill names.**
+This directory is the **Agent Skills–compatible** packaging of the same
+closed \`/ark-*\` catalog shipped as flat templates for Ark install.
+**Closed catalog** (\`ARK_SKILL_NAMES\`) — first-class doors plus one-release
+redirect stubs. Add a name only with a live ROADMAP item.
 
 Package version when last generated context: **arkgate@${version}**
 Schema: agent-skills package contract \`1.0\`
 
-## Skills (frozen catalog)
+## Skills (closed catalog)
 
 ${names}
 
@@ -204,7 +206,7 @@ function main() {
         'npx skills add',
         'templates/agent-skills',
         '--install-agent-gates',
-        'No new skill names',
+        'Closed catalog',
       ];
       for (const marker of required) {
         if (!current.includes(marker)) {

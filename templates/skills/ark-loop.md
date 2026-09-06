@@ -5,21 +5,17 @@ description: Shortcut to /ark-autopilot for illegal-import fixes. CLI validates 
 
 # /ark-loop — Shortcut to /ark-autopilot
 
-**Not a first-run door.** This leftover name is a shortcut. Driving `--plan` to `goal.met` is **`/ark-autopilot`**.
-Do that job now. Auto-apply only the four `mechanical-safe` kinds; judgment you write.
-
-## Autonomy contract
-
-Invoking this leftover name **is** the approval to apply plan A. Open every step file.
-Write. Re-check. Empty plan A + leftover design → **`/ark-explore`** then **`/ark-autopilot`**
-for one extraction card (never mechanical-safe B).
+**Not a first-class door.** One-release redirect. Driving `--plan` to `goal.met` is
+**`/ark-autopilot`**. Do that job now.
+Contener · Guiar · Ordenar — this leftover name is not a star.
 
 ## When / not when
 
 | Use this leftover name when… | Prefer instead |
 |------------------------------|----------------|
 | Plan A has steps; drive to `goal.met` | **`/ark-autopilot`** |
-| Mechanical-safe + judgment apply | Map only → `/ark-explore`; session 0 → `/ark-adopt` |
+| Map only | `/ark-explore` |
+| Session 0 | `/ark-adopt` |
 
 ## Dual engine (mandatory)
 
@@ -41,10 +37,6 @@ restart/retargeting is required. `ark://manifest` never satisfies this preflight
 
 Atomic multi-file work uses **`ark_prepare_change`** with the same matched `project` envelope.
 
-## Dual plane — layers + extras (mandatory, except /ark-runtime)
-
-Label findings **`[Layer]`** vs **`[ArkRules]`** vs **`[ArkRun]`** vs **`[ArkOrder]`**. Absence of extras is valid and silent. Extra skip clusters (`ARKRUN_*` / `ARKORDER_*`) are **`/ark-autopilot`**. When ArkOrder is on: later ξ is `proposeRelease` then `apply`; `refreshSigma`; ingest residual `absorb | escalate_up | hold`; capacity pack as data; in-memory `ReleaseStore`; ArkRun `decisionTape`. Never invent `mechanical-safe` kinds. Do not invent `/ark-run` or `/ark-order`. Skills never enforce.
-
 ## Subagent fan-out (optional, host-dependent)
 
 If the host supports **parallel subagents**, fan out read-only scouts; otherwise
@@ -55,6 +47,15 @@ If the host supports **parallel subagents**, fan out read-only scouts; otherwise
 - **Greenfield:** `/ark-adopt` or `ark-check --recommend` / `ark start`.
 - **Brownfield:** `/ark-adopt`.
 
+## Mechanical-edit hygiene (outcome gate)
+
+Leftover name, same edit bar as `/ark-autopilot` if you still land here.
+
+- Header injection must **merge into the existing doc comment**; the kept result has one `/**`, not stacked headers.
+- Route completion or movement must **preserve the original typed `defineRoute<…>(opts, handler)` call**; reconstruct that call instead of extracting untyped opts/handler constants that drop generics or contextual typing.
+- A convention-only `*-data.ts` stub is not a fix: move the real code or **leave the placeholder file uncreated**; never write `import "server-only"; export {}` as an empty naming token.
+- Keep the edit only when the **previously clean file stays typecheck-clean**. Otherwise roll it back and treat the change as judgment.
+
 ## Steps
 
 1. `--plan --json`. Open every `steps[]` file.
@@ -63,13 +64,6 @@ If the host supports **parallel subagents**, fan out read-only scouts; otherwise
 3. If empty cores + I/O under Application: **STOP — do not continue this skill as complete.**
    **STOP — false-green:** execute **`/ark-adopt`**.
 4. Else execute **`/ark-autopilot`** (mechanical-safe + judgment). Extraction card for Shape B.
-
-## Mechanical-edit hygiene (outcome gate)
-
-- Header injection must **merge into the existing doc comment**; the kept result has one `/**`, not stacked headers.
-- Route completion or movement must **preserve the original typed `defineRoute<…>(opts, handler)` call**; reconstruct that call instead of extracting untyped opts/handler constants that drop generics or contextual typing.
-- A convention-only `*-data.ts` stub is not a fix: move the real code or **leave the placeholder file uncreated**; never write `import "server-only"; export {}` as an empty naming token.
-- Keep the edit only when the **previously clean file stays typecheck-clean**. Otherwise roll it back and treat the change as judgment.
 
 ## Completion contract (skill incomplete if missing)
 

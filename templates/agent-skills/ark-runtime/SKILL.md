@@ -5,6 +5,9 @@ description: Wire the optional ArkRun extra (arkgate/runtime). One candidate. Ex
 
 # /ark-runtime — Evaluate and wire ArkRun (experimental opt-in)
 
+**Contener · Guiar · Ordenar.** This door is **Guiar**: wire the optional runtime so work
+keeps moving. Skills never enforce — CLI / hooks / CI do.
+
 The ArkRun kernel (`arkgate/runtime`) is currently **experimental**. It is **not** required
 for ArkGate enforcement and is **not** production durability. Use this skill when the user wants
 to evaluate or wire the kernel. **This skill never enforces** — the write / CI / ESLint plane
@@ -13,7 +16,15 @@ does when the `arkRun` extra is on. Do **not** invent `/ark-run`. `@arkgate/runt
 **When:** evaluate a hand-rolled bus / outbox / saga / projection / policy / Nest adapter against
 the kernel, or wire an extra that is already on (kernel root, declarations, transport).
 **Not when:** session 0 / extra not chosen (`/ark-adopt`); one new file (`/ark-place`); skip-violation
-grind (`/ark-autopilot` / leftover `/ark-fix`).
+grind (`/ark-autopilot`); wire the order plane (`/ark-order`).
+
+## When / not when
+
+| Use `/ark-runtime` when… | Do **not** use it when… |
+|--------------------------|-------------------------|
+| Wire one ArkRun candidate after the extra is on | Extra not chosen → `/ark-adopt` |
+| Evaluate a hand-rolled bus / outbox / saga | New kernel-managed file only → `/ark-place` |
+| Declarations / transport / Nest adapter | Skip cluster grind → `/ark-autopilot`; one order-plane candidate → `/ark-order` |
 
 ## Extra vs kernel (mandatory)
 
@@ -52,7 +63,7 @@ restart/retargeting is required. `ark://manifest` never satisfies this preflight
 
 ## Out of scope for ArkRules and ArkOrder
 
-This skill is **runtime-kernel only**. Do not mix ArkRules structure/invariants here; do **not** turn this skill into an ArkOrder skill. Hand off first extras to `/ark-adopt`, new files to `/ark-place`, skip clusters to `/ark-autopilot`. Label kernel-usage residual **`[ArkRun]`** so it never blurs with **`[Layer]`**, **`[ArkRules]`**, or **`[ArkOrder]`**.
+This skill is **runtime-kernel only**. Do not mix ArkRules structure/invariants here; do **not** turn this skill into an ArkOrder skill. Hand off first extras to `/ark-adopt`, new files to `/ark-place`, skip clusters to `/ark-autopilot`, one order-plane candidate to `/ark-order`. Label kernel-usage residual **`[ArkRun]`** so it never blurs with **`[Layer]`**, **`[ArkRules]`**, or **`[ArkOrder]`**.
 
 ## Subagent fan-out (optional, host-dependent)
 
@@ -119,9 +130,10 @@ the same files or weaken the gate.
 
 ## Critical handoffs
 
-- No static gates yet: **STOP — do not continue this skill as complete.** Run `/ark-adopt` first (`ark-check --recommend` / leftover `/ark-architect`).
+- No static gates yet: **STOP — do not continue this skill as complete.** Run `/ark-adopt` first (`ark-check --recommend`).
 - Extra absent and the user wants it: **STOP — do not continue this skill as complete.** **`/ark-adopt`** writes advisory `arkRun`.
-- Skip cluster (`new` of managed types, homemade bus, kernel in Domain) after the extra is on: leftover **`/ark-fix`** / **`/ark-loop`** or **`/ark-autopilot`** — this skill still wires one candidate.
+- Skip cluster (`new` of managed types, homemade bus, kernel in Domain) after the extra is on: **`/ark-autopilot`** — this skill still wires one candidate.
+- One order-plane candidate: **`/ark-order`** — do not mix planes.
 - `arkgate` not installed and no local checkout: **STOP** and report the distribution boundary.
 - Inventory finds nothing: stop; do not introduce kernel speculatively.
 

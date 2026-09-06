@@ -338,6 +338,8 @@ files; never weaken the gate via subagents.
 
 **Escapes, not a second curriculum.** Do **not** run overlapping skills for the same job.
 Pick **one** primary skill. Prefer doctor top action #1 when unsure.
+Filter: **Contener · Guiar · Ordenar**. Skills never enforce. First-class extras:
+\`/ark-runtime\` (ArkRun) · \`/ark-order\` (ArkOrder).
 
 | When | Invoke | Not this |
 |------|--------|----------|
@@ -352,10 +354,11 @@ Pick **one** primary skill. Prefer doctor top action #1 when unsure.
 | Gate violation on a change (small cluster) | \`/ark-autopilot\` | leftover \`/ark-fix\` |
 | Drive plan **A** to goal.met | \`/ark-autopilot\` | leftover \`/ark-loop\` |
 | Ark **fitness** only (governed%, gates, baseline, install gaps) | \`/ark-coverage\` | leftover design work (use single path above) |
-| One design decision, 2–3 options | \`/ark-think\` | full Shape residual (use single path) |
+| One design decision, 2–3 options | \`/ark-explore\` (one decision) | leftover \`/ark-think\`; apply → autopilot |
 | Explain / HTML report tour | \`/ark-explain\` | explore |
 | Bump arkgate + refresh hosts | \`/ark-upgrade\` | — |
-| Optional runtime kernel evaluate | \`/ark-runtime\` | — |
+| Optional runtime kernel evaluate | \`/ark-runtime\` | leftover \`/ark-run\` (not a skill); order plane → \`/ark-order\` |
+| Optional ArkOrder evaluate / wire | \`/ark-order\` | extra off → \`/ark-adopt\`; skip grind → \`/ark-autopilot\` |
 
 **Post-green door:** when doctor reports ENFORCE · leftover design work, the **primary** next action is the single Shape path above — not a choice among explore / coverage / think. Doctor JSON: \`postGreenPath\` / \`primaryNextAction\`.
 

@@ -11,7 +11,13 @@ import {
   ARK_AGENT_SKILLS_PACKAGE_SCHEMA_VERSION,
   ARK_SKILL_NAMES,
   ARK_SKILL_NAME_COUNT,
+  ARK_FIRST_CLASS_SKILL_NAMES,
+  ARK_SKILL_STUB_REDIRECTS,
+  ARK_SKILL_NORTH_STAR,
+  ARK_SKILL_CAPACITY,
   FLAT_SKILL_TEMPLATES_RELATIVE_ROOT,
+  arkSkillStubRedirect,
+  isFirstClassArkSkillName,
   agentSkillEntryRelativePath,
   agentSkillPackageFileRelativePath,
   flatSkillTemplateFileRelativePath,
@@ -65,10 +71,10 @@ function loadPackageEntries() {
 }
 
 describe('agentSkillsPackage (Domain — ACS05)', () => {
-  it('exposes schema 1.0 and a frozen catalog of exactly 13 skill names', () => {
+  it('exposes schema 1.0 and a closed catalog (first-class + one-release stubs)', () => {
     expect(ARK_AGENT_SKILLS_PACKAGE_SCHEMA_VERSION).toBe('1.0');
-    expect(ARK_SKILL_NAME_COUNT).toBe(13);
-    expect(ARK_SKILL_NAMES).toHaveLength(13);
+    expect(ARK_SKILL_NAME_COUNT).toBe(ARK_SKILL_NAMES.length);
+    expect(ARK_SKILL_NAMES).toContain('ark-order');
     expect([...ARK_SKILL_NAMES]).toEqual([...ARK_SKILL_NAMES].sort());
     for (const name of ARK_SKILL_NAMES) {
       expect(isValidAgentSkillName(name)).toBe(true);
@@ -169,9 +175,9 @@ description: Skill ${name} for ArkGate architecture co-pilot. Use when the user 
     }));
     const ok = validateAgentSkillsPackage(entries);
     expect(ok.ok).toBe(true);
-    expect(ok.presentCount).toBe(13);
+    expect(ok.presentCount).toBe(ARK_SKILL_NAME_COUNT);
 
-    const missing = validateAgentSkillsPackage(entries.slice(0, 12));
+    const missing = validateAgentSkillsPackage(entries.slice(0, ARK_SKILL_NAME_COUNT - 1));
     expect(missing.ok).toBe(false);
     expect(missing.issues.some((i) => i.code === 'MISSING_SKILL')).toBe(true);
 
@@ -194,7 +200,7 @@ description: Extra skill that must not ship.
     ).toBe(true);
   });
 
-  it('flat templates and Agent Skills layout are 1:1 for all 13 skills', () => {
+  it('flat templates and Agent Skills layout are 1:1 for the closed catalog', () => {
     const flatNames = listFlatSkillNames();
     expect(flatNames).toEqual([...ARK_SKILL_NAMES]);
 
@@ -219,7 +225,7 @@ description: Extra skill that must not ship.
     expect(readme).toContain('npx skills add');
     expect(readme).toContain('templates/agent-skills');
     expect(readme).toContain('--install-agent-gates');
-    expect(readme).toContain('No new skill names');
+    expect(readme).toContain('Closed catalog');
     for (const name of ARK_SKILL_NAMES) {
       expect(readme).toContain(name);
     }
@@ -267,5 +273,21 @@ description: Skill ${name}.
         path.join(ROOT, agentSkillPackageFileRelativePath('ark-autopilot'))
       )
     ).toBe(true);
+    expect(
+      fs.existsSync(path.join(ROOT, agentSkillPackageFileRelativePath('ark-order')))
+    ).toBe(true);
+  });
+
+  it('first-class + stubs compose the closed catalog with zero-loss redirects', () => {
+    const stubNames = Object.keys(ARK_SKILL_STUB_REDIRECTS).sort();
+    const composed = [...ARK_FIRST_CLASS_SKILL_NAMES, ...stubNames].sort();
+    expect(composed).toEqual([...ARK_SKILL_NAMES]);
+    expect(ARK_SKILL_NORTH_STAR).toEqual(['Contener', 'Guiar', 'Ordenar']);
+    for (const [stub, target] of Object.entries(ARK_SKILL_STUB_REDIRECTS)) {
+      expect(isFirstClassArkSkillName(target)).toBe(true);
+      expect(arkSkillStubRedirect(stub)).toBe(target);
+      expect(isFirstClassArkSkillName(stub)).toBe(false);
+    }
+    expect(arkSkillStubRedirect('ark-order')).toBeNull();
   });
 });
