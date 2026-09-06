@@ -6,6 +6,12 @@ in the immutable pre-2.0 archive linked below.
 ## Unreleased
 
 ### Changed
+- First-contact leftovers after the north-star / billing / one-breath ships:
+  gallery index and the hexagonal demo open in ordinary English; `arkgate-check
+  --help` leads with the deny; the write-gate fallback and the two newcomer
+  deny codes (`LAYER_IMPORT_VIOLATION`, `ARKORDER_UNVALVED_RELEASE`) drop ξ /
+  “architecture contract” from the first line. No new command, schema, or
+  skill. Does not close `K01` / `Z09`.
 - Doctor / start first-contact always tell the ArkOrder one-breath (what it
   is, when to use it, next step) even when the extra is off. Reuses
   `/ark-order` and `examples/arkorder-billing`. Verdicts stay silent (not a

@@ -343,7 +343,7 @@ export function deterministicNextAction(violation: ArkViolationLike): string {
         ? `Don't write ${violation.target} from a use-case. Take the event in, or change that choice through the valve (proposeRelease then apply), not a generic update.`
         : "Don't write a named product choice from a use-case. Take the event in, or change that choice through the valve (proposeRelease then apply), not a generic update.";
     case 'ARKORDER_UNVALVED_RELEASE':
-      return 'Change ξ with proposeRelease then apply(ProposeResult). release() is only the first freeze. Never mechanical-safe.';
+      return 'Change the choice with proposeRelease then apply. release() is only the first freeze. Never mechanical-safe.';
     default:
       if (typeof violation.ruleId === 'string' && violation.ruleId.startsWith('ARKRULE_')) {
         return `Fix the ArkRule ${
@@ -662,7 +662,7 @@ export function enrichViolationWithFixClass<T extends ArkViolationLike>(
                       : violation.ruleId === 'ARKORDER_STALE_SIGMA'
                         ? 'Refresh σ. ξ does not expire.'
                         : violation.ruleId === 'ARKORDER_UNVALVED_RELEASE'
-                          ? 'The pattern is frozen. proposeRelease then apply — do not call release() again with a different ξ.'
+                          ? 'The choice is already frozen. proposeRelease then apply — do not call release() again with a different value.'
                   : 'Call createOrderPlane from arkgate/order in a listed plane root so the app actually freezes a pattern.';
       break;
     default:

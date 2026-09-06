@@ -90,8 +90,8 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
   entry(
     'LAYER_IMPORT_VIOLATION',
     'layer',
-    'Layer import not allowed',
-    'A module import (or re-export) crosses a layer edge that ark.config.json does not allow. The architecture contract forbids that dependency direction so outer infrastructure cannot leak into pure or inner layers.',
+    'This import is not allowed',
+    'This file imported a folder it may not reach. The write doesn’t land. The same check fails the pull request.',
     'Branch by import kind: constants/types/pure → adopt into DomainModel or SharedKernel (do not invent a port); kernel/events/bootstrap from Persistence → inject a port or move the map to SharedTypes (Persistence must not emit); define a port only when the target is a real use-case. Type-only edges use `import type`. Then preflight again. Do not weaken the layer rule without a hash-bound policy acknowledgement.'
   ),
   entry(
@@ -369,9 +369,9 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
   entry(
     'ARKORDER_UNVALVED_RELEASE',
     'arkorder',
-    'Unvalved second freeze of ξ',
-    'release() ran after a pattern was already frozen and the new ξ differs. First freeze is release(); later pattern change is proposeRelease then apply.',
-    'Change ξ with proposeRelease then apply(ProposeResult). release() is only the first freeze. Never mechanical-safe.'
+    'Second freeze without the valve',
+    'release() already froze the big choice. A later release() with a different value does not land. First freeze is release(); later change is proposeRelease then apply.',
+    'Change the choice with proposeRelease then apply. release() is only the first freeze. Never mechanical-safe.'
   ),
 
   // ── atomic preflight / change set ────────────────────────────────────────

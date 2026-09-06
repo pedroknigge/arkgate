@@ -24,7 +24,7 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 
 | ruleId | Category | Title |
 |--------|----------|-------|
-| [`LAYER_IMPORT_VIOLATION`](#LAYER_IMPORT_VIOLATION) | layer | Layer import not allowed |
+| [`LAYER_IMPORT_VIOLATION`](#LAYER_IMPORT_VIOLATION) | layer | This import is not allowed |
 | [`LAYER_INTENT_REFERENCE_VIOLATION`](#LAYER_INTENT_REFERENCE_VIOLATION) | layer | Intent referenced across a blocked layer edge |
 | [`LAYER_REFERENCE_VIOLATION`](#LAYER_REFERENCE_VIOLATION) | layer | Layer reference blocked (snippet / AI gate) |
 | [`CIRCULAR_DEPENDENCY`](#CIRCULAR_DEPENDENCY) | layer | Dependency cycle |
@@ -58,7 +58,7 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 | [`ARKORDER_GENERIC_UPDATE`](#ARKORDER_GENERIC_UPDATE) | arkorder | Generic update of ξ |
 | [`ARKORDER_TOO_MANY_PARAMS`](#ARKORDER_TOO_MANY_PARAMS) | arkorder | Too many slow keys |
 | [`ARKORDER_INGEST_WRITES_XI`](#ARKORDER_INGEST_WRITES_XI) | arkorder | ingest assigned into ξ |
-| [`ARKORDER_UNVALVED_RELEASE`](#ARKORDER_UNVALVED_RELEASE) | arkorder | Unvalved second freeze of ξ |
+| [`ARKORDER_UNVALVED_RELEASE`](#ARKORDER_UNVALVED_RELEASE) | arkorder | Second freeze without the valve |
 | [`INVALID_CHANGE_PATH`](#INVALID_CHANGE_PATH) | preflight | Unsafe change path |
 | [`DUPLICATE_CHANGE_PATH`](#DUPLICATE_CHANGE_PATH) | preflight | Duplicate path in change set |
 | [`DELETE_TARGET_MISSING`](#DELETE_TARGET_MISSING) | preflight | Delete target missing |
@@ -105,9 +105,9 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 
 ### `LAYER_IMPORT_VIOLATION`
 
-**Layer import not allowed**
+**This import is not allowed**
 
-- **Why:** A module import (or re-export) crosses a layer edge that ark.config.json does not allow. The architecture contract forbids that dependency direction so outer infrastructure cannot leak into pure or inner layers.
+- **Why:** This file imported a folder it may not reach. The write doesn’t land. The same check fails the pull request.
 - **Fix:** Branch by import kind: constants/types/pure → adopt into DomainModel or SharedKernel (do not invent a port); kernel/events/bootstrap from Persistence → inject a port or move the map to SharedTypes (Persistence must not emit); define a port only when the target is a real use-case. Type-only edges use `import type`. Then preflight again. Do not weaken the layer rule without a hash-bound policy acknowledgement.
 
 <a id="LAYER_INTENT_REFERENCE_VIOLATION"></a>
@@ -466,10 +466,10 @@ Haken slaving: few slow keys (ξ) determine derived fast state. Field ingest nev
 
 ### `ARKORDER_UNVALVED_RELEASE`
 
-**Unvalved second freeze of ξ**
+**Second freeze without the valve**
 
-- **Why:** release() ran after a pattern was already frozen and the new ξ differs. First freeze is release(); later pattern change is proposeRelease then apply.
-- **Fix:** Change ξ with proposeRelease then apply(ProposeResult). release() is only the first freeze. Never mechanical-safe.
+- **Why:** release() already froze the big choice. A later release() with a different value does not land. First freeze is release(); later change is proposeRelease then apply.
+- **Fix:** Change the choice with proposeRelease then apply. release() is only the first freeze. Never mechanical-safe.
 
 ## Atomic preflight and change sets
 
