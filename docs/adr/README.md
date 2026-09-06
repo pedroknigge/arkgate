@@ -43,6 +43,7 @@ These make the deny real. Keep them.
 | [0018](0018-shared-skill-catalogs-are-monotonic.md) | Shared home skills never downgrade. |
 | [0019](0019-codex-operation-scoped-hard-write.md) | Codex hard write is only a complete trusted local `apply_patch`. |
 | [0025](0025-one-project-skill-catalog.md) | One project catalog: `.agents/skills`. No home duplicates. |
+| [0036](0036-skill-catalog-product-capacity.md) | Closed catalog covers 100% of product capacity. First-class `/ark-order`. Stubs one release. |
 
 ## ArkRules — tidy a room
 
@@ -54,7 +55,7 @@ Optional extra rules *inside* a layer. Off unless you turn them on.
 | [0013](0013-arkrules-structural-sensors.md) | Closed sensor list. Direct facts block; inference advises. |
 | [0032](0032-writes-via-aggregate-sensor.md) | Application/Feature persistence **writes** belong behind an aggregate + adapter. Advisory default. |
 | [0014](0014-arkrules-invariant-catalog.md) | Invariants are data, not executable code. Advisory until promoted. |
-| [0015](0015-arkrules-migration-skills.md) | No new skill names. Route through adopt / fix / contract / architect. |
+| [0015](0015-arkrules-migration-skills.md) | Deepen, don't mint migration names. Amended by [0036](0036-skill-catalog-product-capacity.md): first-class doors + one-release stubs. |
 | [0016](0016-arkrules-no-executable-core.md) | No user predicates in the gate. No LLM pass/fail. |
 
 ## ArkRun — experimental runtime

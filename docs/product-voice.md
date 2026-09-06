@@ -42,6 +42,11 @@ ArkOrder  optional   big product choices (billing plan, not seat counts)
 Status first (`arkgate-check --doctor`). One next step. CLI flag `--doctor` stays;
 human copy says **status**.
 
+**Contener · Guiar · Ordenar** is the skill filter (not a score, not the first
+screen). Contener = import rules and the path. Guiar = leftover design and extras
+that keep work moving. Ordenar = the few big product choices (ArkOrder).
+Skills never enforce.
+
 ---
 
 ## Locked first-contact
@@ -173,7 +178,7 @@ a product PR — that is an owner `--contract-session` (config change).
 - Emoji rain, crush-it, fake amigo, “you don’t need to understand”
 - Auto-fix-everything / magic codemod
 - Suggest / Adapt / Enforce as settings you pick — they are lights (Setup / In progress / Ready)
-- Skill-shopping thirteen names as onboarding
+- Skill-shopping leftover shortcut names as onboarding
 - “Healthy / done” while leftover design work remains
 - “MCP is active” because a file exists
 - Package AI decided pass/fail
@@ -193,7 +198,9 @@ npx arkgate start → start --apply → arkgate-check
 ```
 
 Five commands, not a menu exam: adopt · place · autopilot · explore · upgrade.
-Invoking a command **is** the approval. CLI checks; it does not silently rewrite.
+First-class extras: runtime (ArkRun) · **order** (ArkOrder). Other `/ark-*` names
+are one-release shortcuts. Invoking a command **is** the approval. CLI checks; it
+does not silently rewrite.
 
 ---
 

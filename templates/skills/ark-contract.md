@@ -5,21 +5,18 @@ description: Shortcut — edit the rules file or extra rules. Use /ark-adopt or 
 
 # /ark-contract — Shortcut to adopt / autopilot
 
-**Not a first-run door.** This leftover name is a shortcut. Writing `ark.config.json` is
+**Not a first-class door.** One-release redirect. Writing `ark.config.json` is
 **`/ark-adopt`** at session 0 and **`/ark-autopilot`** afterward. Do that job now.
-
-## Autonomy contract
-
-Invoking this leftover name **is** the approval to write an honest config. Do not
-preview-only. Never weaken the architecture config.
+Contener · Guiar · Ordenar — this leftover name is not a star.
 
 ## When / not when
 
 | Use this leftover name when… | Prefer instead |
 |------------------------------|----------------|
-| Layers / include / ArkRules / **ArkRun extra** / **ArkOrder extra** need an edit | **`/ark-adopt`** (path, first `arkRun` / first `arkOrder`) or **`/ark-autopilot`** (tighten) |
+| Layers / include / ArkRules / first extra need an edit | **`/ark-adopt`** (path, first `arkRun` / first `arkOrder`) or **`/ark-autopilot`** (tighten) |
 | False-green / concentrated edge | **`/ark-adopt`** — write the honest config |
-| Kernel extra / one kernel candidate | **`/ark-runtime`** — leftover name; wires `arkgate/runtime`, not a second package |
+| One kernel candidate | **`/ark-runtime`** |
+| One order-plane candidate | **`/ark-order`** |
 
 ## Dual engine (mandatory)
 
@@ -39,14 +36,6 @@ retain `projectIdentity.projectId`, then pass both `expectedRoot` and `expectedP
 uncertain, do not consume MCP analysis: use the workspace-local CLI and report that MCP
 restart/retargeting is required. `ark://manifest` never satisfies this preflight.
 
-## Dual plane — layers + extras (mandatory, except /ark-runtime)
-
-Label findings **`[Layer]`** vs **`[ArkRules]`** vs **`[ArkRun]`** vs **`[ArkOrder]`**. Absence of extras is valid and silent. First-time extra is **`/ark-adopt`** (advisory). Wire one kernel candidate with **`/ark-runtime`**. New kernel-managed / plane-root file with **`/ark-place`**. Grind skip clusters with **`/ark-autopilot`**. Do not invent `/ark-run` or `/ark-order`. Skills never enforce.
-
-Application / Features may declare advisory **`writes-via-aggregate`**: a use-case that imports a persistence driver and calls `.insert` / `.create` / `INSERT INTO` is the skip. Persistence adapters stay the write edge. Do not add `Externals/` or `admission.ts` as contract law.
-
-When `arkOrder` is on, name **`xiKeys`** (3–5 slow product decisions). Membership ids and recomputable statuses are not keys: derive a status on read or fold it from ingest instead. A use-case that persists those keys is `ARKORDER_XI_FIELD_WRITE`. First freeze is `release()`; later ξ is `proposeRelease` then `apply`; `refreshSigma`; ingest residual `absorb | escalate_up | hold` + `reasonCode`; capacity pack as data; in-memory `ReleaseStore`; ArkRun `decisionTape`. The billing gallery lives on GitHub, not in the npm tarball: [examples/arkorder-billing](https://github.com/pedroknigge/arkgate/tree/main/examples/arkorder-billing). Rename the three keys. The check remains silent on semantic entailment.
-
 ## Subagent fan-out (optional, host-dependent)
 
 If the host supports **parallel subagents**, fan out read-only scouts; otherwise
@@ -59,9 +48,9 @@ If the host supports **parallel subagents**, fan out read-only scouts; otherwise
 
 ## Steps
 
-1. If the path is missing or lying → execute **`/ark-adopt`** (including first advisory `arkRun` / first advisory `arkOrder`).
-2. If the path is honest and you are tightening rules or extras (`arkRun` / `arkOrder`) → execute **`/ark-autopilot`**.
-3. One kernel candidate (extra already on) → **`/ark-runtime`**. `ark-check --strict-config`.
+1. Path missing or lying → execute **`/ark-adopt`** (including first advisory `arkRun` / first advisory `arkOrder`).
+2. Path honest and tightening → execute **`/ark-autopilot`**.
+3. One kernel candidate → **`/ark-runtime`**. One order-plane candidate → **`/ark-order`**.
 
 ## Completion contract (skill incomplete if missing)
 
@@ -73,5 +62,5 @@ Skill incomplete if missing any field below.
 - **Result:** one-line outcome
 - **Planes:** one-line split of residual **[Layer]** vs **[ArkRules]** vs **[ArkRun]** vs **[ArkOrder]** (or `n/a` if unused)
 - **Compass:** top residual lenses | `n/a`
-- **Handoff:** `/ark-adopt` / `/ark-autopilot` / `none`
+- **Handoff:** `/ark-adopt` / `/ark-autopilot` / `/ark-order` / `none`
 - **Incomplete?** `no` | `yes — <what is missing>`

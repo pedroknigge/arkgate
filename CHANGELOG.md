@@ -5,6 +5,16 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+### Changed
+- Skill catalog covers 100% of product capacity (issue [#216](https://github.com/pedroknigge/arkgate/issues/216) /
+  [ADR 0036](docs/adr/0036-skill-catalog-product-capacity.md)). First-class
+  `/ark-order` mirrors `/ark-runtime` for ArkOrder. Leftover
+  `/ark-architect` / `/ark-contract` / `/ark-fix` / `/ark-loop` / `/ark-think`
+  stay as one-release redirect stubs. Remaining doors speak Contener · Guiar ·
+  Ordenar and name the sibling for each job. ACS05 “no new skill names” freeze
+  opened; the catalog stays closed in Domain (`ARK_SKILL_NAMES`). Skills never
+  enforce. Does not close `K01` / `Z09`. No `schemaVersion` bump.
+
 ### Fixed
 - `ark-check` human warnings now print `path:line` the way denies already do
   (ArkOrder / ArkRun advisory findings already carried the location; the

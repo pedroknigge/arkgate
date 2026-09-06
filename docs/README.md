@@ -54,7 +54,7 @@ Product site: [arkgate.online](https://www.arkgate.online/) · npm: [`arkgate`](
 |-----|------------|
 | [CONTRIBUTING.md](../CONTRIBUTING.md) | Setup, rules, thin publish |
 | [ROADMAP.md](../ROADMAP.md) | Live implementation queue (one `doing` at a time). History: [archive/roadmap-history.md](archive/roadmap-history.md) |
-| [adr/](adr/README.md) | Architecture decisions ([0032](adr/0032-writes-via-aggregate-sensor.md) writes-via-aggregate · [0033](adr/0033-arkorder-runtime-half-is-arkrun.md) ArkOrder runtime half · [0034](adr/0034-arkorder-valved-loop.md) valved loop) |
+| [adr/](adr/README.md) | Architecture decisions ([0032](adr/0032-writes-via-aggregate-sensor.md) writes-via-aggregate · [0033](adr/0033-arkorder-runtime-half-is-arkrun.md) ArkOrder runtime half · [0034](adr/0034-arkorder-valved-loop.md) valved loop · [0036](adr/0036-skill-catalog-product-capacity.md) skill catalog capacity) |
 | [SECURITY.md](../SECURITY.md) · [threat-model.md](threat-model.md) | Security |
 
 ---

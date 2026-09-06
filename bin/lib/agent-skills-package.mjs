@@ -19,7 +19,51 @@ export const FLAT_SKILL_TEMPLATES_RELATIVE_ROOT = 'templates/skills';
 /** Required entry filename inside each skill directory (Agent Skills standard). */
 export const AGENT_SKILL_ENTRY_FILENAME = 'SKILL.md';
 /**
- * Closed skill-name freeze (ACS / ADR skill freeze). Exactly these 13 names ship.
+ * North-star filter for first-class doors. Not a score. Not enforcement.
+ * Skills speak these so an agent picks the right sibling.
+ */
+export const ARK_SKILL_NORTH_STAR = Object.freeze(['Contener', 'Guiar', 'Ordenar']);
+/**
+ * First-class doors. Each must have crisp when / not when / handoff.
+ * Sorted alphabetically.
+ */
+export const ARK_FIRST_CLASS_SKILL_NAMES = Object.freeze([
+    'ark-adopt',
+    'ark-autopilot',
+    'ark-coverage',
+    'ark-explain',
+    'ark-explore',
+    'ark-order',
+    'ark-place',
+    'ark-runtime',
+    'ark-upgrade',
+]);
+/**
+ * One-release redirect stubs. Muscle memory / old docs still resolve.
+ * Values are first-class doors. Capability surface must stay zero-loss.
+ */
+export const ARK_SKILL_STUB_REDIRECTS = Object.freeze({
+    'ark-architect': 'ark-adopt',
+    'ark-contract': 'ark-adopt',
+    'ark-fix': 'ark-autopilot',
+    'ark-loop': 'ark-autopilot',
+    'ark-think': 'ark-explore',
+});
+/**
+ * Product surface → first-class doors that exercise it.
+ * Standing check: every surface has at least one first-class door.
+ */
+export const ARK_SKILL_CAPACITY = Object.freeze({
+    Layers: ['ark-adopt', 'ark-place', 'ark-explore', 'ark-autopilot', 'ark-coverage', 'ark-explain'],
+    ArkRules: ['ark-adopt', 'ark-explore', 'ark-autopilot'],
+    ArkRun: ['ark-adopt', 'ark-runtime', 'ark-place', 'ark-autopilot'],
+    ArkOrder: ['ark-adopt', 'ark-order', 'ark-place', 'ark-autopilot'],
+    Contener: ['ark-adopt', 'ark-place', 'ark-upgrade'],
+    Guiar: ['ark-explore', 'ark-autopilot', 'ark-explain', 'ark-coverage', 'ark-runtime'],
+    Ordenar: ['ark-order'],
+});
+/**
+ * Closed shipped catalog (first-class + one-release stubs).
  * Sorted alphabetically for deterministic inventory diffs.
  */
 export const ARK_SKILL_NAMES = Object.freeze([
@@ -32,12 +76,13 @@ export const ARK_SKILL_NAMES = Object.freeze([
     'ark-explore',
     'ark-fix',
     'ark-loop',
+    'ark-order',
     'ark-place',
     'ark-runtime',
     'ark-think',
     'ark-upgrade',
 ]);
-/** Count of frozen skill names (must stay 13 until a ROADMAP item lifts the freeze). */
+/** Count of shipped skill names (first-class + stubs). */
 export const ARK_SKILL_NAME_COUNT = ARK_SKILL_NAMES.length;
 const AGENT_SKILL_NAME_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 /**
@@ -51,9 +96,19 @@ export function isValidAgentSkillName(name) {
         return false;
     return AGENT_SKILL_NAME_PATTERN.test(name);
 }
-/** True when `name` is one of the frozen 13 Ark skill names. */
+/** True when `name` is in the closed shipped catalog. */
 export function isArkSkillName(name) {
     return ARK_SKILL_NAMES.includes(name);
+}
+/** True when `name` is a first-class door (not a redirect stub). */
+export function isFirstClassArkSkillName(name) {
+    return ARK_FIRST_CLASS_SKILL_NAMES.includes(name);
+}
+/** First-class door a leftover name redirects to, or null. */
+export function arkSkillStubRedirect(name) {
+    if (!(name in ARK_SKILL_STUB_REDIRECTS))
+        return null;
+    return ARK_SKILL_STUB_REDIRECTS[name];
 }
 /**
  * Parse a skill markdown document with optional YAML frontmatter.
@@ -135,7 +190,7 @@ export function validateAgentSkillDocument(input) {
     else if (requireArk && !isArkSkillName(name)) {
         issues.push({
             code: 'UNKNOWN_SKILL_NAME',
-            message: `Skill name "${name}" is not in the frozen Ark 13-skill catalog (no new skill names).`,
+            message: `Skill name "${name}" is not in the closed Ark skill catalog (ARK_SKILL_NAMES).`,
             skillName: name,
         });
     }
@@ -163,7 +218,7 @@ export function validateAgentSkillDocument(input) {
     return issues;
 }
 /**
- * Validate a full Agent Skills package inventory against the frozen 13-name catalog.
+ * Validate a full Agent Skills package inventory against the closed catalog.
  * Detects missing, extra, duplicate, invalid, and (when supplied) flat-template drift.
  */
 export function validateAgentSkillsPackage(entries) {
@@ -201,7 +256,7 @@ export function validateAgentSkillsPackage(entries) {
         if (!seen.has(expected)) {
             issues.push({
                 code: 'MISSING_SKILL',
-                message: `Missing frozen skill "${expected}" from Agent Skills package.`,
+                message: `Missing catalog skill "${expected}" from Agent Skills package.`,
                 skillName: expected,
             });
         }
@@ -212,14 +267,14 @@ export function validateAgentSkillsPackage(entries) {
             if (!issues.some((i) => i.code === 'UNKNOWN_SKILL_NAME' && i.skillName === name)) {
                 issues.push({
                     code: 'EXTRA_SKILL',
-                    message: `Extra skill "${name}" is not in the frozen Ark 13-skill catalog.`,
+                    message: `Extra skill "${name}" is not in the closed Ark skill catalog.`,
                     skillName: name,
                 });
             }
             else {
                 issues.push({
                     code: 'EXTRA_SKILL',
-                    message: `Extra skill "${name}" is not in the frozen Ark 13-skill catalog.`,
+                    message: `Extra skill "${name}" is not in the closed Ark skill catalog.`,
                     skillName: name,
                 });
             }

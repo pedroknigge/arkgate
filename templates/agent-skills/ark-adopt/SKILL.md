@@ -5,6 +5,9 @@ description: Session 0 — write the rules file (ark.config.json) to match the r
 
 # /ark-adopt — Mark the path (session 0)
 
+**Contener · Guiar · Ordenar.** This door is **Contener**: write the path so the tree
+has honest houses. Skills never enforce — CLI / hooks / CI do.
+
 **When:** empty tree, or the rules file does not match the real folders (session 0).
 **Not when:** a single new file (`/ark-place`) or leftover design after the path is honest (`/ark-explore` then `/ark-autopilot`).
 
@@ -111,7 +114,7 @@ Do **not** invent captions. Do not invent `/ark-describe`.
 | Mine loose business rules into Domain / advisory ArkRules | Apply leftover design after the path is honest → `/ark-autopilot` |
 | Freeze **real** debt after the config is honest | User said map only |
 | Turn **advisory** ArkRun on (`arkRun` extra, schema `1.2+`; **`kernelRoots` preferred**) | Evaluate / wire a hand-rolled bus → `/ark-runtime`; new kernel-managed file → `/ark-place` |
-| Turn **advisory** ArkOrder on (`arkOrder` extra, schema `1.3+`, `planeRoots`) | New plane-root file after extra is on → `/ark-place`; grind skip clusters → `/ark-autopilot` |
+| Turn **advisory** ArkOrder on (`arkOrder` extra, schema `1.3+`, `planeRoots`) | Wire one plane candidate after extra is on → `/ark-order`; new plane-root file → `/ark-place`; grind skip clusters → `/ark-autopilot` |
 
 ## Dual engine (mandatory)
 
@@ -149,7 +152,7 @@ ArkGate has **always-on Layers** plus opt-in extras. The user chooses extras; yo
 4. Editing `arkrules/*` or promoting modes is **this skill** (session 0) or **`/ark-autopilot`** later; never invent `mechanical-safe`.
 5. CLI helpers: `ark-check --rules-inventory --json`, doctor JSON `rulesUnderContract`, sensors emit `ARKRULE_*` / `INVARIANT_UNCOVERED` with `evidence.arkruleId`.
 6. Absence of `arkRun` is **valid**. Write it only when the user wants the extra. Skills never enforce.
-7. Absence of `arkOrder` is **valid**. Write it only when the user wants the extra. Do not invent `/ark-order`. Skills never enforce.
+7. Absence of `arkOrder` is **valid**. Write it only when the user wants the extra. After the extra is honest: handoff **`/ark-order`** to wire one candidate. Skills never enforce.
 
 
 ### Adopt + ArkRules
@@ -191,9 +194,9 @@ ArkGate has **always-on Layers** plus opt-in extras. The user chooses extras; yo
 - A use-case that `prisma.*.update({ plan })` while `plan` is in `xiKeys` is **[ArkOrder]** `ARKORDER_XI_FIELD_WRITE`. Invoices and seats still flow through `ingest`.
 
 - Do **not** put `arkOrder` on the compact starter / `ark start` scaffold. Domain stays plane-free. Import `createOrderPlane` from `arkgate/order` (same npm package).
-- Absence is valid and **silent** — never force the extra. Do not invent `/ark-order`.
+- Absence is valid and **silent** — never force the extra.
 - Demoting enforced → advisory or deleting the extra is policy-delta **weakening**.
-- After the extra is honest: handoff `/ark-place` for new plane-root files; grind skip via `/ark-autopilot`. Skills never enforce.
+- After the extra is honest: handoff **`/ark-order`** to wire one candidate, `/ark-place` for new plane-root files; grind skip via `/ark-autopilot`. Skills never enforce.
 
 ## Subagent fan-out (optional, host-dependent)
 
@@ -301,7 +304,7 @@ proposals applied or deferred, **phase**, **top Shape / design-weak opportunitie
 - Force runtime kernel over existing Nest/DI.
 - Put `arkRun` or `arkOrder` on the compact starter / `ark start` scaffold.
 - Claim in-memory kernel stores are production durability.
-- Invent `/ark-run` or `/ark-order`.
+- Invent `/ark-run`. Use `/ark-order` after this door turns the extra on.
 - Invent `layers[].description` filler or a `/ark-describe` skill.
 - Claim Enforce while governed% is low, cores empty with I/O in Application, or core bags ungoverned.
 - End adopt with only “baseline written” when design-weak residual is visible in files you opened.

@@ -1,6 +1,6 @@
 /**
  * LD06 — pin public docs for layers[].description (ADR 0035 D2).
- * App-context caption example; absence silent; no schema bump; no 14th skill.
+ * App-context caption example; absence silent; no schema bump; no /ark-describe.
  */
 import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
@@ -43,11 +43,10 @@ describe('LD06 public docs name layers[].description (ADR 0035 D2)', () => {
     expect(body).toMatch(/prior published:.*4\.8\.6/is);
   });
 
-  it('keeps schemaVersion 1.3 and the frozen 13 skill names', () => {
+  it('keeps schemaVersion 1.3 and does not invent /ark-describe', () => {
     expect(ARK_CONFIG_SCHEMA_VERSION).toBe('1.3');
-    expect(ARK_SKILL_NAME_COUNT).toBe(13);
-    expect(ARK_SKILL_NAMES).toHaveLength(13);
     expect(ARK_SKILL_NAMES).not.toContain('ark-describe');
+    expect(ARK_SKILL_NAME_COUNT).toBe(ARK_SKILL_NAMES.length);
     expect(read('docs/releases/4.8.7.md')).toMatch(/schemaVersion.*1\.3|still `1\.3`/);
     expect(read('docs/releases/4.8.7.md')).toMatch(/still 13/);
     expect(read('ROADMAP.md')).toMatch(/`K01` \| `parked`/);

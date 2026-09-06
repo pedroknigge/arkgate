@@ -5,13 +5,8 @@ description: Shortcut to /ark-adopt for a new tree. Deprecated as a first-class 
 
 # /ark-architect — Shortcut to /ark-adopt
 
-**Not a first-run door.** This leftover name is a shortcut. Session 0 is **`/ark-adopt`**.
-Do that job now. Do not send the user to `/ark-contract` or `/ark-fix`.
-
-## Autonomy contract
-
-Invoking this skill **is** the approval to mark the path. Write `ark.config.json` and
-phase-1 dirs in this turn. Then `ark-check`.
+**Not a first-class door.** One-release redirect. Session 0 is **`/ark-adopt`**.
+Do that job now. Contener · Guiar · Ordenar — this leftover name is not a star.
 
 ## When / not when
 
@@ -40,25 +35,17 @@ restart/retargeting is required. `ark://manifest` never satisfies this preflight
 
 Then call **`ark_recommend`** with the same bound `project` envelope (or `ark-check --recommend`).
 
-## Dual plane — layers + extras (mandatory, except /ark-runtime)
-
-Label findings **`[Layer]`** vs **`[ArkRules]`** vs **`[ArkRun]`** vs **`[ArkOrder]`**. Absence of extras is valid and silent. Session-0 extras (advisory `arkRun` / advisory `arkOrder`) live on **`/ark-adopt`**. When ArkOrder is on: first freeze `release()`, later ξ is `proposeRelease` then `apply`; `refreshSigma`; ingest residual `absorb | escalate_up | hold`; capacity pack as data; in-memory `ReleaseStore`; ArkRun `decisionTape`. Do not invent `/ark-run` or `/ark-order`. Skills never enforce.
-
 ## Subagent fan-out (optional, host-dependent)
 
 If the host supports **parallel subagents**, fan out read-only scouts; otherwise
 **fall back to sequential**. Never weaken the gate.
 
-## Related onboarding
-
-- **Greenfield:** this shortcut → **`/ark-adopt`** + `ark-check --recommend` / `ark start`.
-- **Brownfield:** `/ark-adopt` — do not force a starter preset.
-
 ## Steps
 
 1. Bind MCP (`ark_identity` then `ark_recommend`) or run `ark-check --recommend`.
-2. Execute **`/ark-adopt`** autonomy: write the config, dirs, optional advisory ArkRules, optional advisory ArkRun / ArkOrder when asked, gates.
-3. `ark-check --strict-config`. Handoff `/ark-place` for new files.
+2. Execute **`/ark-adopt`** now (write the path, optional advisory extras).
+3. New file → `/ark-place`. Map → `/ark-explore`. Apply → `/ark-autopilot`.
+   Wire ArkRun → `/ark-runtime`. Wire ArkOrder → `/ark-order`.
 
 ## Completion contract (skill incomplete if missing)
 
