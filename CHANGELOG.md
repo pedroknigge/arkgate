@@ -49,8 +49,8 @@ this is the ship. **Write. Check. Ship.** **No required config migration.** No
 `schemaVersion` bump. Does not close `K01` / `Z09`. No new skill names. This
 mother `ark.config.json` still does **not** turn `arkOrder` on.
 
-**Status: prepared** (tag `v4.8.13` and the GitHub Release already exist; npm
-`latest` remains **4.8.11** until Actions `publish-npm` runs with
+**Status: prepared** (tag `v4.8.13` and the GitHub Release already exist;
+npm `latest` remains **4.8.11** until Actions `publish-npm` runs with
 `tag=v4.8.13` and `dry_run=false`).
 
 ### Fixed
@@ -68,8 +68,8 @@ still does **not** turn `arkOrder` on.
 
 **Status: tagged, not published** (tag `v4.8.12` stands; `publish-npm` failed
 the 81% branch floor at 80.97%. Do not retag. Do not ship this version to npm.
-Consumers stay on **4.8.11** until **4.8.13** is published. npm `latest` remains
-**4.8.11**).
+Consumers stay on **4.8.11** until **4.8.13** is published.
+npm `latest` remains **4.8.11**).
 
 ### Added
 - Doctor / HTML / status `arkOrder` section (`notAScore`), same envelope as
