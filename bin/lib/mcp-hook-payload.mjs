@@ -314,7 +314,7 @@ export function emitHostAllow(output, { antigravityStyle, cursorStyle }) {
  */
 export function formatWriteGateDeny({ file, reason, ruleId, nextAction, extraLines = [] }) {
   const target = file || 'this write';
-  const why = String(reason || 'this change breaks the architecture layers').replace(/\s+/g, ' ').trim();
+  const why = String(reason || 'a bad import — the write doesn’t land').replace(/\s+/g, ' ').trim();
   const next =
     nextAction && /place|move|import|port/i.test(nextAction)
       ? nextAction

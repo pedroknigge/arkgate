@@ -1,26 +1,20 @@
 # hexagonal-order-api
 
-A tiny but real order API with a hexagonal architecture, governed by Ark's three gates:
+A runnable order API you can break on purpose. Layers stop a bad import. The same
+check fails the pull request.
 
-- **ark-check** — CI gate: static import analysis between layers.
-- **ark-mcp** — AI gate: the same rules, exposed to coding agents via MCP.
-- **ArkRun kernel** — strict event bus, intent registry, event contracts, projections (`createStrictArkKernel` per instance).
+This is a teaching demo, not a starter. New apps use **`arkgate/runtime`**. This
+folder still installs the leftover local companion (`@arkgate/runtime`) for the
+exercise. In-memory only — not Postgres.
 
-No application framework: the API uses `node:http`, the `arkgate` gate package, and the separate
-experimental **ArkRun** companion (`@arkgate/runtime`).
+- **ark-check** — the same import rules as CI
+- **ark-mcp** — the same rules for agents
+- **ArkRun** — optional experimental runtime (in-memory)
 
-From **arkgate@4.0**, root forwarders `arkgate/runtime` / `arkgate/nestjs` are **removed**
-(AR04). This fixture imports **`@arkgate/runtime`** directly. It opts into
-`safety.allowInMemory: true` because the stock kernel wires an InMemory outbox for local
-exercises — **not** a production pattern.
+## Optional ArkRules
 
-
-## Optional ArkRules (4.0)
-
-This exercise emphasizes **layer** edges (domain / application / adapters). From **arkgate@4.0**
-you may also opt into **ArkRules** for intra-layer structure and invariant catalogs on the same
-enforcement plane. Absence of `arkRules` does not change inter-layer verdicts. Residual labels:
-`[Layer]` vs `[ArkRules]`. See [examples README](../README.md).
+Layers first. ArkRules is optional shape *inside* a folder. Off unless you turn
+it on. See [examples README](../README.md).
 
 ## Layout
 

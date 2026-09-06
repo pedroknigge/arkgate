@@ -162,7 +162,8 @@ export async function withSensorsPartialModeHonesty(args, run) {
 
 export function checkUsage() {
   return [
-    'arkgate-check (alias ark-check) — the architecture check.',
+    'arkgate-check (alias ark-check) — Write. Check. Ship.',
+    'When the agent writes a bad import, the write doesn’t land. Same check fails the PR.',
     NORTH_STAR_ONE_LINE,
     '',
     '  arkgate-check --doctor         where you are: one status light, one next action',
@@ -176,7 +177,9 @@ export function checkUsage() {
 
 export function checkUsageAll() {
   return [
-    'arkgate-check (alias ark-check) — the architecture check.',
+    'arkgate-check (alias ark-check) — Write. Check. Ship.',
+    'When the agent writes a bad import, the write doesn’t land. Same check fails the PR.',
+    NORTH_STAR_ONE_LINE,
     '',
     'Usage: arkgate-check | ark-check  (identical bins; product name ArkGate)',
     '       arkgate-check --version',

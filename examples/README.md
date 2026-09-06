@@ -1,46 +1,44 @@
-# ArkGate Examples
+# ArkGate examples
 
-Clone a starter that matches your **application shape** (archetype), not your framework.
-Each gallery starter is a phase-1 scaffold with an enthusiast README, `ark.config.json`, and a
-passing `arkgate-check` / `ark-check --strict-config`. For deep teaching exercises, use
-`hexagonal-order-api`.
+**Write. Check. Ship.** When the agent writes a bad import, the write doesn’t land.
 
-## Gallery starters (by archetype)
+Copy a starter that matches what you are building — not your framework. Each one has
+folders, a rules file, and a passing check. Stuck? Run status (`npx arkgate-check --doctor`)
+and do action **#1**.
 
-| Example | Archetype | What it is |
-|---------|-----------|------------|
+Contain the write. Guide the next step. Order leftover mess. That is **Contener · Guiar · Ordenar**.
+
+## Starters
+
+| Example | Shape | What it is |
+|---------|-------|------------|
 | [crud-product-starter](crud-product-starter/) | `crud-product` | Product with UI and stored data |
 | [api-backend-starter](api-backend-starter/) | `api-backend` | API server without UI in this repo |
 | [worker-pipeline-starter](worker-pipeline-starter/) | `worker-pipeline` | Background jobs, cron, queue workers |
 | [multi-app-workspace-starter](multi-app-workspace-starter/) | `multi-app-workspace` | Several apps and shared packages in one repo |
-| [vertical-slice-starter](vertical-slice-starter/) | `vertical-slice-product` | Feature-first slices (`features/*` + shared; peerIsolation) |
-| [ddd-context-starter](ddd-context-starter/) | `ddd-bounded-contexts` | Multiple bounded contexts + shared kernel |
+| [vertical-slice-starter](vertical-slice-starter/) | `vertical-slice-product` | Feature-first slices (`features/*` + shared) |
+| [ddd-context-starter](ddd-context-starter/) | `ddd-bounded-contexts` | Several product areas plus shared code |
 
-Pick the closest shape, copy the directory, then run:
+Pick the closest, copy the folder, then:
 
 ```bash
-npm install --save-dev arkgate@latest   # or arkgate@4.0.0 when published
+npm install --save-dev arkgate@latest
 npm pkg set scripts.check="ark-check --root . --config ark.config.json --strict-config"
-npm run check    # inside the starter — must stay green
-npx ark-check --doctor
+npm run check
+npx arkgate-check --doctor
 ```
 
-**4.0.0 planes:** starters primarily teach **layers** (inter-layer edges). Optional **ArkRules**
-(`arkRules` + `arkrules/*.json`) may be added for intra-layer structure/invariants—start
-**advisory**, promote only with coverage. Label residual **`[Layer]`** vs **`[ArkRules]`**.
-Inventory: `npx ark-check --rules-inventory --json` (counts, never a score).
+The six starters are self-contained. CI copies each one outside this checkout and
+checks it with npm, pnpm, and Yarn.
 
-The six canonical starters use self-contained manifests. CI copies each one outside this checkout,
-installs the same candidate tarball with npm, pnpm, and Yarn, then exercises check, doctor, start,
-preflight, strict-merge, and package import without rewriting source files.
-
-`/ark-architect` points here in step 7 after it scaffolds phase-1 layers.
+**Layers** stop a bad import. **ArkRules** is optional shape *inside* a folder — off
+unless you turn it on.
 
 ## ArkOrder billing (optional extra — not a starter)
 
-Not a phase-1 scaffold. Not in the npm tarball. This is the proof demo for
-the optional ArkOrder extra: freeze the few big choices, then change them
-through a valve — not a generic update.
+Not in the npm tarball. This is the proof demo for the optional ArkOrder extra:
+the few big product choices (billing plan, not seat counts). Change those through
+a valve — not a generic update.
 
 | Example | What you see |
 |---------|--------------|
@@ -48,22 +46,13 @@ through a valve — not a generic update.
 
 Clone the repo (or open the [GitHub tree](https://github.com/pedroknigge/arkgate/tree/main/examples/arkorder-billing)), copy the folder, rename the three keys to *your* product. Turn the extra on with `/ark-adopt`. Wire one candidate with `/ark-order`. Details: [ArkOrder](../docs/arkorder.md).
 
-## hexagonal-order-api/
+## Deeper demos (not starters)
 
-Clonable order API with a real hexagonal layout (`domain` / `application` / `adapters`) governed by all three Ark gates: `ark-check` in CI, `ark-mcp` for agents, and the **ArkRun** kernel (intents, event contract, projection) at runtime. The runtime exercise requires the separate experimental `@arkgate/runtime` companion (`createStrictArkKernel`; not in the `arkgate` tarball); see its explicit install step in [hexagonal-order-api/README.md](hexagonal-order-api/README.md).
+**[hexagonal-order-api](hexagonal-order-api/)** — a runnable order API you can break on
+purpose. New apps use `arkgate/runtime`. This folder still installs the leftover
+local companion for the exercise.
 
-Use this when you need a **runnable** API and intentional “break it on purpose” exercises — not a minimal scaffold.
-
-## basic/
-
-Runnable demo that exercises multiple core features together:
-
-- Intents
-- Event Bus + attached policy enforcement
-- Dependency Graph (Mermaid + edges)
-- Metadata registry
-
-To run (tsx recommended; examples are not emitted by the build):
+**[basic/](basic/)** — maintainer demo of several kernel features together. Not a starter.
 
 ```bash
 npx tsx examples/basic/index.ts

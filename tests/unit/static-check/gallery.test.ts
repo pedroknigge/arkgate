@@ -76,6 +76,16 @@ describe('Phase D — example gallery starters', () => {
     expect(readme).toMatch(/proposeRelease/);
   });
 
+  it('gallery index passes the one-minute stranger test', () => {
+    const readme = fs.readFileSync(path.join(EXAMPLES, 'README.md'), 'utf8');
+    const head = readme.split('\n').slice(0, 12).join('\n');
+    expect(head).toMatch(/Write\. Check\. Ship\./);
+    expect(head).toMatch(/When the agent writes a bad import/);
+    expect(head).toContain('Contener · Guiar · Ordenar');
+    expect(head).not.toMatch(/intra-layer|4\.0\.0 planes|enthusiast README|phase-1 scaffold/i);
+    expect(readme).not.toMatch(/\/ark-architect/);
+  });
+
   it('does not treat arkorder-billing as a phase-1 gallery starter', () => {
     expect(
       GALLERY_STARTERS.some((starter) => starter.directory.includes('arkorder-billing'))

@@ -13,6 +13,8 @@ const arkCheck = path.join(repoRoot, 'bin/ark-check.mjs');
 describe('ark-check short --help (issue #204)', () => {
   it('names --changed --base <ref> as the local / pre-push path', () => {
     const short = checkUsage();
+    expect(short).toContain('Write. Check. Ship.');
+    expect(short).toMatch(/When the agent writes a bad import/);
     expect(short).toContain('arkgate-check --changed --base <ref>');
     expect(short).toContain('local / pre-push: checks touched files only');
     expect(short).not.toMatch(/Team parliament/i);
