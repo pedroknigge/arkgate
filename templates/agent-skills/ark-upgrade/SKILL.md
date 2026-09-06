@@ -5,7 +5,8 @@ description: Upgrade ArkGate. Preview first, keep customized files, then apply.
 
 # /ark-upgrade — managed ArkGate upgrade
 
-**Contener · Guiar · Ordenar.** This door is **Contener**: keep the pin current.
+**Contener · Guiar · Ordenar.** In plain words: contain the write, guide the next
+step, order leftover mess. This door is **Contener**: keep the pin current.
 Skills never enforce — CLI / hooks / CI do.
 
 **When:** bump the published `arkgate` package and refresh managed gates.

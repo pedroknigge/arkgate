@@ -5,8 +5,9 @@ description: Map import rules and leftover design. No apply. CLI is a sensor; yo
 
 # /ark-explore — Recon the real project (map only)
 
-**Contener · Guiar · Ordenar.** This door is **Guiar**: map leftover design. Do not apply.
-Skills never enforce — CLI / hooks / CI do.
+**Contener · Guiar · Ordenar.** In plain words: contain the write, guide the next
+step, order leftover mess. This door is **Guiar**: map leftover design so you can
+order a messy tree. Do not apply. Skills never enforce — CLI / hooks / CI do.
 
 **When:** you need a map, leftover design work remains after imports look green, or
 one bounded decision needs 2–3 enforceable options.

@@ -10,9 +10,11 @@ AI can build fast—and make a mess just as fast.
 
 Keep the product easy to understand, change, and trust.
 
-ArkGate stops bad shortcuts. ArkRules protects how each part should behave. ArkRun keeps work moving. ArkOrder protects the few big choices that should not change by accident.
+Contain what the AI may write, and in what shape. Guide you with proven patterns and one next step. Order leftover mess toward a clean tree, a little at a time.
 
 Safer changes, fewer surprises, and extra protection only when you choose it.
+
+That is **Contener · Guiar · Ordenar**.
 
 This guide is the **develop** reference for agents and codegen: write hooks, advisory MCP tools,
 CI, and `/ark-*` skills.
@@ -235,7 +237,8 @@ Closed catalog (`ARK_SKILL_NAMES`): first-class doors plus one-release stubs.
 The *set* must exercise Layers + ArkRules + ArkRun + ArkOrder (when / not when / handoff).
 First-class `/ark-order` mirrors `/ark-runtime`. ACS05 freeze was opened for that door
 ([ADR 0036](adr/0036-skill-catalog-product-capacity.md)); Domain still closes the list.
-Add a name only with a live ROADMAP item. Filter: **Contener · Guiar · Ordenar**.
+Add a name only with a live ROADMAP item. Filter: **Contener · Guiar · Ordenar**
+— contain the write, guide the next step, order leftover mess.
 Skill bodies coach residual lenses and anti false-done; they never enforce.
 
 ## Architecture playbook and `ark-check --recommend`
@@ -324,7 +327,7 @@ plan A + one Shape refactor (invoke = approval). `/ark-explore` = map + dual-pla
 apply). `/ark-upgrade` = preview then apply in-turn. First-class extras: `/ark-runtime` wires
 ArkRun; **`/ark-order`** wires ArkOrder. Other `/ark-*` names stay installed as
 **one-release shortcuts**. Empty plan A is not “architecture healthy” if leftover design remains.
-Filter: **Contener · Guiar · Ordenar**. Skills never enforce.
+Filter: **Contener · Guiar · Ordenar** — contain the write, guide the next step, order leftover mess. Skills never enforce.
 
 **Team parliament:** adopt is a **contract session** (law-only). Feature work must not edit
 `ark.config.json` / `arkrules/*` / `.ark-baseline.json`. Prefer
@@ -870,7 +873,7 @@ and route (when / not when / handoff). First-class `/ark-order`; leftover names 
 one-release stubs. ACS05 freeze was opened for `/ark-order`; Domain still closes the list.
 Add a name only with a live ROADMAP item
 ([ADR 0036](adr/0036-skill-catalog-product-capacity.md) / issue #216).
-Filter: **Contener · Guiar · Ordenar**. Skills never enforce.
+Filter: **Contener · Guiar · Ordenar** — contain the write, guide the next step, order leftover mess. Skills never enforce.
 
 | Channel | What it installs | When to use |
 |---------|------------------|-------------|

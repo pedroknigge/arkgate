@@ -5,7 +5,8 @@ description: "Where does new code go? Names the folder from the rules file and w
 
 # /ark-place — Where does this code go?
 
-**Contener · Guiar · Ordenar.** This door is **Contener**: write the new file in the
+**Contener · Guiar · Ordenar.** In plain words: contain the write, guide the next
+step, order leftover mess. This door is **Contener**: write the new file in the
 right house. Skills never enforce — CLI / hooks / CI do.
 
 **When:** you are adding a new file or artifact and need the layer, folder, and name.

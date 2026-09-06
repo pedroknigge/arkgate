@@ -4,7 +4,7 @@
  */
 import path from 'node:path';
 import { arkCommand } from '../ark-shared.mjs';
-import { operatingModeTitle } from './product-copy.mjs';
+import { NORTH_STAR_ONE_LINE, operatingModeTitle } from './product-copy.mjs';
 import { isDoctorHealthyNothingToDo } from './post-green-path.mjs';
 import { printParseHealthSection } from './parse-health.mjs';
 import { printDoctorAdvisories, printCompactExtraDoctorLines } from './doctor-advisories.mjs';
@@ -73,6 +73,7 @@ export function printDoctorCompactHuman(view) {
   const skippableCi = ciNotFailClosedNotice(view);
 
   console.log(color.bold(`Ark doctor — ${path.basename(path.resolve(root)) || '.'}`));
+  console.log(color.dim(NORTH_STAR_ONE_LINE));
   if (!analysisComplete) line(warn, analysisIncompleteStatement(completeness));
   printParseHealthSection(doctorAdvisories.parseHealth, { color, warn, line });
 

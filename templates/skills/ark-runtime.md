@@ -5,7 +5,8 @@ description: Wire the optional ArkRun extra (arkgate/runtime). One candidate. Ex
 
 # /ark-runtime — Evaluate and wire ArkRun (experimental opt-in)
 
-**Contener · Guiar · Ordenar.** This door is **Guiar**: wire the optional runtime so work
+**Contener · Guiar · Ordenar.** In plain words: contain the write, guide the next
+step, order leftover mess. This door is **Guiar**: wire the optional runtime so work
 keeps moving. Skills never enforce — CLI / hooks / CI do.
 
 The ArkRun kernel (`arkgate/runtime`) is currently **experimental**. It is **not** required

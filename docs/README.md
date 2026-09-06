@@ -10,9 +10,11 @@ AI can build fast—and make a mess just as fast.
 
 Keep the product easy to understand, change, and trust.
 
-ArkGate stops bad shortcuts. ArkRules protects how each part should behave. ArkRun keeps work moving. ArkOrder protects the few big choices that should not change by accident.
+Contain what the AI may write, and in what shape. Guide you with proven patterns and one next step. Order leftover mess toward a clean tree, a little at a time.
 
 Safer changes, fewer surprises, and extra protection only when you choose it.
+
+That is **Contener · Guiar · Ordenar**.
 
 Pick your path. Skip everything else.
 
@@ -34,7 +36,7 @@ Product site: [arkgate.online](https://www.arkgate.online/) · npm: [`arkgate`](
 | [use.md](use.md) | One flow: install → doctor → day-to-day |
 | [enthusiast/](enthusiast/README.md) | Tutorials and plain-language track |
 | [demos/](demos/) | Short end-to-end demos |
-| [product-voice.md](product-voice.md) | How ArkGate should sound (Write. Check. Ship.) |
+| [product-voice.md](product-voice.md) | How ArkGate should sound (Write. Check. Ship. · Contener · Guiar · Ordenar) |
 
 ### Develop (integrate)
 | Doc | What it is |

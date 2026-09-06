@@ -5,7 +5,8 @@ description: Explain the rules file in plain language and generate the HTML repo
 
 # /ark-explain — Understand this project's architecture
 
-**Contener · Guiar · Ordenar.** This door is **Guiar**: teach the path in plain language.
+**Contener · Guiar · Ordenar.** In plain words: contain the write, guide the next
+step, order leftover mess. This door is **Guiar**: teach the path in plain language.
 Skills never enforce — CLI / hooks / CI do.
 
 **Not a first-run door.** Teach / HTML tour only. Session 0 → **`/ark-adopt`**.

@@ -54,8 +54,8 @@ Read the **lane entry** before significant work. After changing a public surface
 boundary, decision, or plan, update its authority and the docs hub row if needed.
 
 The shipped skill *set* covers Layers + ArkRules + ArkRun + ArkOrder (when / not when /
-handoff). Filter: **Contener · Guiar · Ordenar** — contain the path, guide leftover design
-and extras, protect the few big choices. First-class **`/ark-order`**; leftover `/ark-*`
+handoff). Filter: **Contener · Guiar · Ordenar** — contain the write, guide the next step,
+order leftover mess. First-class **`/ark-order`**; leftover `/ark-*`
 names are one-release stubs. ACS05 freeze was opened for that door
 ([ADR 0036](docs/adr/0036-skill-catalog-product-capacity.md)); Domain `ARK_SKILL_NAMES`
 still closes the list. Skills never enforce. ξ / Haken stay below the fold.

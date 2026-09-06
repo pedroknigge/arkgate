@@ -338,7 +338,7 @@ files; never weaken the gate via subagents.
 
 **Escapes, not a second curriculum.** Do **not** run overlapping skills for the same job.
 Pick **one** primary skill. Prefer doctor top action #1 when unsure.
-Filter: **Contener · Guiar · Ordenar**. Skills never enforce. First-class extras:
+Filter: **Contener · Guiar · Ordenar** — contain the write, guide the next step, order leftover mess. Skills never enforce. First-class extras:
 \`/ark-runtime\` (ArkRun) · \`/ark-order\` (ArkOrder).
 
 | When | Invoke | Not this |
@@ -407,6 +407,8 @@ ${projectionBlock}
 ## Compact router
 
 **Primary path (do this):**
+
+Contener · Guiar · Ordenar — contain the write, guide the next step, order leftover mess.
 
 1. Status anytime: \`${doctorCmd}\` — what's wrong and what to do first.
 2. Read the **Improvement compass** section (not a score). Name residual lenses in plain language when present (SoC, DIP, domain, …). Out-of-scope lenses (performance, app security tooling, full resilience) stay honest — do not invent Ark enforcement for them.

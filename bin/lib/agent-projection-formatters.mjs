@@ -105,6 +105,8 @@ export function buildAgentProjectionBody(facts) {
         '',
         AGENT_PROJECTION_NON_ENFORCEMENT_LABEL,
         '',
+        'Contener · Guiar · Ordenar — contain the write, guide the next step, order leftover mess. Skills never enforce.',
+        '',
         `- **arkgateVersion:** \`${version}\` (must match the installed package; regenerate with \`ark agents-md --write\` after upgrade)`,
         `- **projectionSchema:** \`${ARK_AGENT_PROJECTION_SCHEMA_VERSION}\``,
         `- **profile:** \`${profile}\`${host ? ` · **host:** \`${host}\`` : ''}`,

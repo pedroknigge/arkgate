@@ -5,8 +5,10 @@ description: Wire the optional ArkOrder extra (arkgate/order). One candidate. Ex
 
 # /ark-order — Evaluate and wire ArkOrder (optional)
 
-**Contener · Guiar · Ordenar.** This door is **Ordenar**: protect the few big product
-choices (billing plan, not seat counts). Skills never enforce — CLI / hooks / CI do.
+**Contener · Guiar · Ordenar.** In plain words: contain the write, guide the next
+step, order leftover mess. This door is **Ordenar**: the extra for the few big product
+choices (billing plan, not seat counts). Ordering leftover folders is `/ark-explore`
+then `/ark-autopilot`. Skills never enforce — CLI / hooks / CI do.
 
 Layers stop a bad import. ArkOrder stops rewriting a big product choice as if it
 were a seat count. Change those choices through a valve, not a generic update.

@@ -2,9 +2,12 @@
  * First-run CLI help (setup + check). Encyclopedia text stays behind --help --all.
  */
 
+import { NORTH_STAR_ONE_LINE } from './product-copy.mjs';
+
 export function setupUsage() {
   return `arkgate (alias ark) — Write. Check. Ship.
 When the agent writes a bad import, the write doesn’t land. Same check fails the PR.
+${NORTH_STAR_ONE_LINE}
 
   arkgate start              preview (no writes)
   arkgate start --apply      write host + CI setup
@@ -30,6 +33,7 @@ Every flag: arkgate --help --all
 export function setupUsageAll() {
   return `arkgate (alias ark) — Write. Check. Ship.
 When the agent writes a bad import, the write doesn’t land. Same check fails the PR.
+${NORTH_STAR_ONE_LINE}
 
 Usage:
   arkgate start   [--root <project>] [--tools <host>] [--require-write-hook <host>] [--install] [--apply] [--json]
@@ -159,6 +163,7 @@ export async function withSensorsPartialModeHonesty(args, run) {
 export function checkUsage() {
   return [
     'arkgate-check (alias ark-check) — the architecture check.',
+    NORTH_STAR_ONE_LINE,
     '',
     '  arkgate-check --doctor         where you are: one status light, one next action',
     '  arkgate-check --changed --base <ref>   local / pre-push: checks touched files only',
