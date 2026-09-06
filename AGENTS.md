@@ -40,6 +40,7 @@ not every historical file:
 | Stable vs experimental package contract | [docs/package-surface.md](docs/package-surface.md) |
 | Config contract and schema | [docs/configuration.md](docs/configuration.md) |
 | Agent, CLI, MCP reference | [docs/agent-guide.md](docs/agent-guide.md) |
+| Skill filter (Contener · Guiar · Ordenar) | [Product voice](docs/product-voice.md) · [Agent guide — skills](docs/agent-guide.md#install-skills-ark-and-ecosystem) · [ADR 0036](docs/adr/0036-skill-catalog-product-capacity.md) |
 | Host enforcement setup | [docs/ai-gates.md](docs/ai-gates.md) |
 | TypeScript compatibility | [docs/typescript-support.md](docs/typescript-support.md) |
 | Brownfield and enthusiast track | [docs/brownfield-adoption.md](docs/brownfield-adoption.md) · [docs/enthusiast/](docs/enthusiast/README.md) |
@@ -52,38 +53,56 @@ not every historical file:
 Read the **lane entry** before significant work. After changing a public surface, architecture
 boundary, decision, or plan, update its authority and the docs hub row if needed.
 
+The shipped skill *set* covers Layers + ArkRules + ArkRun + ArkOrder (when / not when /
+handoff). Filter: **Contener · Guiar · Ordenar** — contain the path, guide leftover design
+and extras, protect the few big choices. First-class **`/ark-order`**; leftover `/ark-*`
+names are one-release stubs. ACS05 freeze was opened for that door
+([ADR 0036](docs/adr/0036-skill-catalog-product-capacity.md)); Domain `ARK_SKILL_NAMES`
+still closes the list. Skills never enforce. ξ / Haken stay below the fold.
+
 ### Package index
 
 The product tree contains two publishable Node/TypeScript packages. Example manifests under
-`examples/` are gallery fixtures, not additional workspace packages.
+`examples/` are gallery fixtures, not additional workspace packages. The live **ArkRun**
+kernel is `arkgate/runtime` **inside** package `arkgate`. `packages/runtime` is the leftover
+deprecated companion `@arkgate/runtime`, not the current kernel package.
 
 | Package path | Role | Manifest | Canonical docs | Docs status |
 |--------------|------|----------|----------------|-------------|
-| `.` | Stable ArkGate gate, CLIs, MCP, ESLint, schemas, and integration assets | [package.json](package.json) | [README.md](README.md) · [package surface](docs/package-surface.md) | documented |
-| `packages/runtime` | Optional experimental **ArkRun** kernel and NestJS adapter | [package.json](packages/runtime/package.json) | [package README](packages/runtime/README.md) · [package surface](docs/package-surface.md#experimental-opt-in-surfaces) | documented |
+| `.` | Stable ArkGate gate, CLIs, MCP, ESLint, schemas, integration assets, and in-package extras (`arkgate/runtime`, `arkgate/nestjs`, `arkgate/order`) | [package.json](package.json) | [README.md](README.md) · [package surface](docs/package-surface.md) | documented |
+| `packages/runtime` | Deprecated leftover companion **`@arkgate/runtime`** (`experimental` dist-tag). Last hub claim that this directory is the live experimental ArkRun kernel is **to-be (`Planned`)** — kept as history, not current as-is. | [package.json](packages/runtime/package.json) | [package README](packages/runtime/README.md) · [package surface](docs/package-surface.md#experimental-opt-in-surfaces) | documented |
 
 ### Surface coverage
 
 Coverage units are externally consumable manifest entries and shipped integration-asset
 families, plus the repository-only maintainer evidence surface. Internal `bin/lib/` helpers,
 generated artifacts, individual source modules, and test fixtures are evidence for these rows,
-not separate product surfaces. **Audit result (2026-07-17): 100% of this bounded set has a
-canonical documentation authority.**
+not separate product surfaces.
+
+**Historical (2026-07-17):** an audit claimed **100%** of the then-bounded **14** rows had a
+canonical documentation authority. That 100% sentence is **to-be (`Planned`)** — not current
+as-is — because `package.json` later added export `./order` and bins `arkgate-dashboard` /
+`ark-dashboard`. Do not delete the 2026-07-17 date.
+
+**As-is:** the table below indexes those manifests (16 bounded rows). Consumer contract:
+[docs/package-surface.md](docs/package-surface.md).
 
 | Surface | Code / manifest evidence | Canonical documentation | Status | Documentation gap |
 |---------|--------------------------|-------------------------|--------|-------------------|
 | Stable `arkgate` package and programmatic gate API | `package.json` export `.` · `src/gate.ts` | [Package surface](docs/package-surface.md#programmatic-root-api) | Real | — |
 | Setup CLI (`arkgate` / `ark`) | `package.json` bins · `bin/ark.mjs` | [README commands](README.md#common-commands) · [Agent guide](docs/agent-guide.md#terminal-onboarding-phase-b) | Real | — |
 | Check/doctor CLI (`arkgate-check` / `ark-check`) | `package.json` bins · `bin/ark-check.mjs` | [Agent guide](docs/agent-guide.md) · [Brownfield guide](docs/brownfield-adoption.md) | Real | — |
+| Dashboard CLI (`arkgate-dashboard` / `ark-dashboard`) | `package.json` bins · `bin/ark-dashboard.mjs` | [Package surface](docs/package-surface.md) (CLI) · [Agent guide](docs/agent-guide.md) | Real | not a gate verdict |
 | MCP, `ark_manifest`, compatibility `ark://manifest`, write hooks, and registry descriptor | `bin/ark-mcp.mjs` · `server.json` | [MCP reference](docs/agent-guide.md#write-path-gate-mcp) · [AI gates](docs/ai-gates.md) | Real | — |
 | Config and public schemas | `ark.config.json` · `schemas/` · package schema exports | [Configuration](docs/configuration.md) · [Package surface](docs/package-surface.md) | Real | — |
 | ESLint plugin | package export `./eslint` · `src/eslint/index.ts` | [AI gates](docs/ai-gates.md#eslint-editor-feedback--same-contract-as-ci) | Real | — |
-| Agent integration assets | `templates/skills/` · `templates/agent-skills/` · `templates/hooks/` · `templates/tests/` | [Agent guide](docs/agent-guide.md#install-skills-ark-and-ecosystem) · [AI gates](docs/ai-gates.md) | Real | — |
+| Agent integration assets | `templates/skills/` · `templates/agent-skills/` · `templates/hooks/` · `templates/tests/` | [Agent guide](docs/agent-guide.md#install-skills-ark-and-ecosystem) · [AI gates](docs/ai-gates.md) · [ADR 0036](docs/adr/0036-skill-catalog-product-capacity.md) | Real | first-class `/ark-order`; leftover names are one-release stubs; set covers Layers + ArkRules + ArkRun + ArkOrder |
 | Shape playbook, policy packs, and gallery starters | `templates/architecture-playbook.json` · `templates/policy-packs/` · `examples/` | [Enthusiast track](docs/enthusiast/README.md) | Demo | — |
 | GitHub Action | `action.yml` | [Action setup and inputs](docs/ai-gates.md#ci-backstop) · [Package surface](docs/package-surface.md) | Real | — |
 | Experimental ArkRun kernel (`arkgate/runtime`) | package export `./runtime` · `src/runtime/index.ts` · `src/index.ts` | [Package surface](docs/package-surface.md#experimental-opt-in-surfaces) · [Hardening](docs/production-hardening.md) | Partial | durability, not a second package |
 | Experimental ArkRun NestJS adapter | package export `./nestjs` · `src/nestjs/index.ts` | [Package surface](docs/package-surface.md#experimental-opt-in-surfaces) | Partial | — |
-| ~~Companion `@arkgate/runtime`~~ | deprecated (ADR 0031) | [Package surface](docs/package-surface.md#experimental-opt-in-surfaces) | Deprecated | Use `arkgate/runtime` / `arkgate/nestjs` |
+| Optional ArkOrder plane (`arkgate/order`) | package export `./order` · `src/kernel/order/index.ts` | [Package surface](docs/package-surface.md#experimental-opt-in-surfaces) · [ArkOrder](docs/arkorder.md) | Partial | durability, same npm package; not `@arkgate/order` |
+| ~~Companion `@arkgate/runtime`~~ | deprecated leftover (ADR 0031) | [Package surface](docs/package-surface.md#experimental-opt-in-surfaces) | Deprecated | Use `arkgate/runtime` / `arkgate/nestjs` |
 | Published payload and compatibility fixture | root `package.json` `files` · `scripts/verify-package-files.mjs` | [Package surface](docs/package-surface.md) · [Contributing](CONTRIBUTING.md) | Real | — |
 | Maintainer verification, evaluation, and release workflows | root scripts · `tests/` · `eval/` · `.github/workflows/` | [Contributing](CONTRIBUTING.md) · [Eval guide](eval/README.md) · [Roadmap](ROADMAP.md) | Real | — |
 
@@ -187,8 +206,9 @@ retained shipped rationale live under `docs/plans/`:
 | [enforcement-truth-at-speed](docs/plans/enforcement-truth-at-speed/README.md) | In progress (Phase Z; Z01–Z08 + Z10 done; Z09 parked claim gate / residual RB-11) | Restore packed-artifact truth and one adapter verdict; residual retained-adoption + independent close only |
 | [arkrules-evolution](docs/plans/arkrules-evolution/README.md) | Prepared for 4.0.0 (`AR01`–`AR19` implemented; field train progressive) | Intra-layer ArkRules contract (structural sensors + invariant catalogs) + brownfield rules-migration toolkit on the same enforcement plane |
 | [enforcement-evidence-and-docs-truth](docs/plans/enforcement-evidence-and-docs-truth/README.md) | Shipped / implemented (Phase EH; `EH01`–`EH08` done; **4.1.1 published**) | Soft-host evidence modeling (Codex field) + mechanical CI/report fixes + deep documentation audit; claims matrix 2026-07-25 |
+| [field-gap-closure](docs/plans/field-gap-closure/README.md) | Closed for 4.1.0 ship window (S0–S7; 15/15 critical assertions) | Field-lab gap closure after 4.1.0; residual unfinished states stay honest; does not close Z09 / RB-11 |
 | [workspace-identity-activation-truth](docs/plans/workspace-identity-activation-truth/README.md) | Shipped in 4.2.0 (`WI01` done; **published**) | Project-bound MCP identity handshake, fail-closed cross-project evidence, honest runtime activation/verdicts, and layer-aware ArkRules inventory |
-| [agent-contract-surface-4.3](docs/plans/agent-contract-surface-4.3/README.md) | Shipped in **4.3.0** (`ACS01`–`ACS08` done; **published**) | Agent Skills packaging, version-matched projection, diagnostic code catalog, unified status JSON, finding refs, maintainer A/B eval — guardrail catalog + scan/process voice; freeze restated; no new skill names, no LLM verdict |
+| [agent-contract-surface-4.3](docs/plans/agent-contract-surface-4.3/README.md) | Shipped in **4.3.0** (`ACS01`–`ACS08` done; **published**) | Agent Skills packaging, version-matched projection, diagnostic code catalog, unified status JSON, finding refs, maintainer A/B eval — guardrail catalog + scan/process voice; ACS05 freeze later opened for `/ark-order` (ADR 0036); Domain still closes the catalog; no LLM verdict |
 | [improvement-compass](docs/plans/improvement-compass/README.md) | Shipped in **4.4.0** (`IC01`–`IC07` done; **published**) | Improvement compass (lenses, not scores) + vibe-coder skill deepen; public docs product-only |
 | [domain-fitness-session-truth](docs/plans/domain-fitness-session-truth/README.md) | Shipped in **4.5.0** (`DF01`–`DF06` done; **published**) | Session control-plane honesty (status compass modes + residual ⊆ doctor); domain budget **and** mandatory split; pure verification ratchet; self-service upgrade residual; session recipe at release; LEVELS 4 hybrid + Scale Stack seams |
 | [deep-module-coach](docs/plans/deep-module-coach/README.md) | Shipped in **4.5.5** (`DC01`–`DC04` done; **published**) | Post-4.5 coach: deep-module vocabulary, hot-path / deepening advisory, consumer glossary hook, two-axis done recipe — process + advisory only |

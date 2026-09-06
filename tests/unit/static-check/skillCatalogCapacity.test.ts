@@ -89,6 +89,28 @@ describe('skill catalog product capacity (issue #216)', () => {
     }
   });
 
+  it('living hub and skill authorities name /ark-order and do not restate ACS freeze as current', () => {
+    const living = {
+      'AGENTS.md': fs.readFileSync(path.join(ROOT, 'AGENTS.md'), 'utf8'),
+      'docs/agent-guide.md': fs.readFileSync(path.join(ROOT, 'docs/agent-guide.md'), 'utf8'),
+      'docs/audit/claims-matrix.md': fs.readFileSync(
+        path.join(ROOT, 'docs/audit/claims-matrix.md'),
+        'utf8'
+      ),
+      'docs/product-voice.md': fs.readFileSync(path.join(ROOT, 'docs/product-voice.md'), 'utf8'),
+    };
+    for (const [name, body] of Object.entries(living)) {
+      expect(body, name).toContain('/ark-order');
+      expect(body, name).toContain('Contener · Guiar · Ordenar');
+      expect(body, name).not.toMatch(/Do not invent `\/ark-order`/);
+    }
+    expect(living['AGENTS.md']).not.toMatch(/freeze restated; no new skill names/);
+    expect(living['docs/agent-guide.md']).toMatch(/one-release stubs/);
+    expect(living['docs/agent-guide.md']).toContain('Layers + ArkRules + ArkRun + ArkOrder');
+    expect(living['docs/audit/claims-matrix.md']).toMatch(/ACS05 freeze was opened/);
+    expect(living['docs/product-voice.md']).toMatch(/ACS05 freeze was opened/);
+  });
+
   it('leftover mechanical-edit names keep the Y04 hygiene outcomes', () => {
     const outcomes = [
       'merge into the existing doc comment',

@@ -232,7 +232,10 @@ an Agent Skills–compatible package under `templates/agent-skills/<name>/SKILL.
 install via `npx skills` (in addition to Ark `--install-agent-gates`). See
 [Install skills — Ark and ecosystem](#install-skills-ark-and-ecosystem).
 Closed catalog (`ARK_SKILL_NAMES`): first-class doors plus one-release stubs.
-First-class `/ark-order` mirrors `/ark-runtime`. Add a name only with a live ROADMAP item.
+The *set* must exercise Layers + ArkRules + ArkRun + ArkOrder (when / not when / handoff).
+First-class `/ark-order` mirrors `/ark-runtime`. ACS05 freeze was opened for that door
+([ADR 0036](adr/0036-skill-catalog-product-capacity.md)); Domain still closes the list.
+Add a name only with a live ROADMAP item. Filter: **Contener · Guiar · Ordenar**.
 Skill bodies coach residual lenses and anti false-done; they never enforce.
 
 ## Architecture playbook and `ark-check --recommend`
@@ -862,8 +865,12 @@ and [shared Claude/Grok/Antigravity homes](ai-gates.md#shared-claude--grok-home-
 ### Install skills — Ark and ecosystem {#install-skills-ark-and-ecosystem}
 
 The same closed catalog ships two ways. **Closed catalog** (`ARK_SKILL_NAMES`): first-class
-doors plus one-release stubs. Add a name only with a live ROADMAP item
+doors plus one-release stubs. The *set* must exercise Layers + ArkRules + ArkRun + ArkOrder
+and route (when / not when / handoff). First-class `/ark-order`; leftover names stay as
+one-release stubs. ACS05 freeze was opened for `/ark-order`; Domain still closes the list.
+Add a name only with a live ROADMAP item
 ([ADR 0036](adr/0036-skill-catalog-product-capacity.md) / issue #216).
+Filter: **Contener · Guiar · Ordenar**. Skills never enforce.
 
 | Channel | What it installs | When to use |
 |---------|------------------|-------------|
