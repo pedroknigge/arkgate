@@ -47,6 +47,15 @@ If the host supports **parallel subagents**, fan out read-only scouts; otherwise
 - **Greenfield:** `/ark-adopt` or `ark-check --recommend` / `ark start`.
 - **Brownfield:** `/ark-adopt`.
 
+## Mechanical-edit hygiene (outcome gate)
+
+Leftover name, same edit bar as `/ark-autopilot` if you still land here.
+
+- Header injection must **merge into the existing doc comment**; the kept result has one `/**`, not stacked headers.
+- Route completion or movement must **preserve the original typed `defineRoute<…>(opts, handler)` call**; reconstruct that call instead of extracting untyped opts/handler constants that drop generics or contextual typing.
+- A convention-only `*-data.ts` stub is not a fix: move the real code or **leave the placeholder file uncreated**; never write `import "server-only"; export {}` as an empty naming token.
+- Keep the edit only when the **previously clean file stays typecheck-clean**. Otherwise roll it back and treat the change as judgment.
+
 ## Steps
 
 1. `--plan --json`. Open every `steps[]` file.

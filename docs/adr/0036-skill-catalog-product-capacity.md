@@ -42,7 +42,8 @@ unreachable.
 ## Consequences
 
 - Catalog count is **14** this release (9 first-class + 5 stubs). Stubs may
-  drop in a later item when old docs have moved.
+  drop in a later item when old docs have moved. Leftover mechanical-edit
+  names (`ark-fix`, `ark-loop`) keep the Y04 hygiene outcomes until they drop.
 - Generate / check still require 1:1 flat templates ↔ Agent Skills layout.
 - Host projections and dogfood links follow `ARK_SKILL_NAMES`.
 - Do not invent `/ark-run`. Do not force extras on. Do not weaken write + PR gates.

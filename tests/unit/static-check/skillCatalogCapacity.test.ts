@@ -88,4 +88,19 @@ describe('skill catalog product capacity (issue #216)', () => {
       expect(isFirstClassArkSkillName(target)).toBe(true);
     }
   });
+
+  it('leftover mechanical-edit names keep the Y04 hygiene outcomes', () => {
+    const outcomes = [
+      'merge into the existing doc comment',
+      'preserve the original typed `defineRoute<…>(opts, handler)` call',
+      'leave the placeholder file uncreated',
+      'previously clean file stays typecheck-clean',
+    ];
+    for (const name of ['ark-fix', 'ark-loop'] as const) {
+      const body = readSkill(name);
+      for (const outcome of outcomes) {
+        expect(body, `${name} missing ${outcome}`).toContain(outcome);
+      }
+    }
+  });
 });

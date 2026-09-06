@@ -12,8 +12,9 @@ in the immutable pre-2.0 archive linked below.
   `/ark-architect` / `/ark-contract` / `/ark-fix` / `/ark-loop` / `/ark-think`
   stay as one-release redirect stubs. Remaining doors speak Contener · Guiar ·
   Ordenar and name the sibling for each job. ACS05 “no new skill names” freeze
-  opened; the catalog stays closed in Domain (`ARK_SKILL_NAMES`). Skills never
-  enforce. Does not close `K01` / `Z09`. No `schemaVersion` bump.
+  opened; the catalog stays closed in Domain (`ARK_SKILL_NAMES`). Leftover
+  `/ark-fix` / `/ark-loop` stubs keep the Y04 mechanical-edit hygiene outcomes.
+  Skills never enforce. Does not close `K01` / `Z09`. No `schemaVersion` bump.
 
 ### Fixed
 - `ark-check` human warnings now print `path:line` the way denies already do
