@@ -85,7 +85,7 @@ describe('a passing run points at --plan when design bets remain', () => {
     expect(res.status, out).toBe(0);
     expect(out).toMatch(/Ark check passed/);
     expect(out).toContain('Import rules are clean; the design bets are not settled');
-    expect(out).toContain('soft-contract');
+    expect(out).toContain('soft-contract at layer:');
     expect(out).toContain('--plan');
     // Never a warning, never a failure: it is a hint on an already-green run.
     expect(out).not.toMatch(/✖/);

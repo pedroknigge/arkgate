@@ -114,6 +114,7 @@ import {
   readBaseline,
   writeBaseline,
   printViolation,
+  printWarning,
   printViolationBreakdown,
   summarizeViolations,
   violationEdge,
@@ -841,6 +842,7 @@ describe('violations + remediation + suggestions + mcp + port-proof', () => {
       expect(bl.keys.size).toBeGreaterThan(0);
       expect(violationEdge(v)).toMatch(/DomainModel|Persistence/);
       printViolation(v);
+      printWarning({ ruleId: 'ARKORDER_GENERIC_UPDATE', file: 'a.ts', line: 1, message: 'x' });
       printViolationBreakdown(summarizeViolations([v, { ...v, file: 'b.ts', typeOnly: false }]), {
         toStderr: true,
       });

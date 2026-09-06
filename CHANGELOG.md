@@ -6,6 +6,11 @@ in the immutable pre-2.0 archive linked below.
 ## Unreleased
 
 ### Fixed
+- `ark-check` human warnings now print `path:line` the way denies already do
+  (ArkOrder / ArkRun advisory findings already carried the location; the
+  printer dropped it). Findings with no file say so — they are about the
+  project rules, not a line you just edited. The green `--plan` pointer names
+  the first evidence path next to each design smell (issue #203).
 - `start --apply` / `--install-agent-gates` now merge the Ark write-path
   contract into a project-owned `AGENTS.md` and upsert `mcpServers.ark` in
   existing `.mcp.json` (and host copies) without `--force`. Doctor no longer

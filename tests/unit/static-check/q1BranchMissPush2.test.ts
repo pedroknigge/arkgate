@@ -76,6 +76,7 @@ import {
 } from '../../../bin/lib/remediation.mjs';
 import {
   printViolation,
+  printWarning,
   printViolationBreakdown,
   summarizeViolations,
   violationEdge,
@@ -564,6 +565,7 @@ describe('remediation + violations + install matrix + ark-shared leftovers', () 
     const summary = summarizeViolations(many);
     expect(summary.edges.length).toBeGreaterThan(0);
     printViolation(many[0]);
+    printWarning({ ruleId: 'CONFIG_NO_LAYERS', message: 'x' });
     printViolationBreakdown(summary, { toStderr: true });
     printViolationBreakdown(summary, { toStderr: false });
     expect(violationEdge(many[0])).toBeTruthy();

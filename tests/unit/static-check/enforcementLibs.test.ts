@@ -59,6 +59,7 @@ import {
   writeBaseline,
   baselineOccurrenceKeys,
   printViolation,
+  printWarning,
   printViolationBreakdown,
   summarizeViolations,
 } from '../../../bin/lib/violations.mjs';
@@ -701,6 +702,12 @@ describe('html-report render + doctor plan runners (shipped)', () => {
     ];
     // Exercise stderr path
     printViolation(violations[0]);
+    printWarning({
+      ruleId: 'ARKORDER_GENERIC_UPDATE',
+      file: 'a.ts',
+      line: 1,
+      message: 'generic update',
+    });
     printViolationBreakdown(summarizeViolations(violations), { toStderr: true });
     printViolationBreakdown(summarizeViolations(violations), { toStderr: false });
     expect(true).toBe(true);
