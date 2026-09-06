@@ -16,14 +16,23 @@ function runScript(args: string[], env: Record<string, string>) {
 }
 
 describe('verify-release-tag policy (pure)', () => {
-  it('defaults to fail-closed (require signed, disallow unsigned)', () => {
+  it('defaults to allow unsigned annotated tags (pre-adoption)', () => {
     const p = resolveSignedTagPolicy({});
-    expect(p.requireSigned).toBe(true);
-    expect(p.allowUnsigned).toBe(false);
+    expect(p.requireSigned).toBe(false);
+    expect(p.allowUnsigned).toBe(true);
   });
 
-  it('allows unsigned only when ARK_ALLOW_UNSIGNED_RELEASE_TAG=true', () => {
-    const p = resolveSignedTagPolicy({ ARK_ALLOW_UNSIGNED_RELEASE_TAG: 'true' });
+  it('requires signed only when ARK_REQUIRE_SIGNED_RELEASE_TAG=true', () => {
+    const p = resolveSignedTagPolicy({ ARK_REQUIRE_SIGNED_RELEASE_TAG: 'true' });
+    expect(p.allowUnsigned).toBe(false);
+    expect(p.requireSigned).toBe(true);
+  });
+
+  it('lets ARK_ALLOW_UNSIGNED_RELEASE_TAG win over require-signed', () => {
+    const p = resolveSignedTagPolicy({
+      ARK_REQUIRE_SIGNED_RELEASE_TAG: 'true',
+      ARK_ALLOW_UNSIGNED_RELEASE_TAG: 'true',
+    });
     expect(p.allowUnsigned).toBe(true);
     expect(p.requireSigned).toBe(false);
   });
@@ -58,44 +67,26 @@ describe('verify-release-tag script (real entry)', () => {
     expect(r.stdout).toContain('version/tag match only');
   });
 
-  it('exits 1 when unsigned forced and allow-unsigned is not set', () => {
-    // Uses local git path when GITHUB_TOKEN unset; force unsigned after needing a real tag.
-    // SKIP_GIT first ensures we don't depend on network — force unsigned only applies after
-    // git path. So we test the policy via pure resolveSignedTagPolicy above + script path:
-    // run without SKIP_GIT would need a real tag. Policy fail is proven by:
-    const r = runScript(['v2.2.0'], {
-      ARK_VERIFY_PACKAGE_VERSION: '2.2.0',
-      ARK_VERIFY_SKIP_GIT: 'true',
-      ARK_ALLOW_UNSIGNED_RELEASE_TAG: 'false',
-    });
-    // skip-git path still succeeds (no signature check) — signature fail tested below via force
-    expect(r.status).toBe(0);
-  });
-
-  it('exits 1 on forced unsigned without ARK_ALLOW_UNSIGNED_RELEASE_TAG', () => {
-    // When SKIP_GIT is false and FORCE_UNSIGNED true, needs annotated tag.
-    // Use current repo tag v2.2.0 if present.
+  it('exits 0 on forced unsigned with the pre-adoption default', () => {
     const r = runScript(['v2.2.0'], {
       ARK_VERIFY_PACKAGE_VERSION: '2.2.0',
       ARK_VERIFY_FORCE_UNSIGNED: 'true',
-      // no ARK_ALLOW_UNSIGNED_RELEASE_TAG
       GITHUB_TOKEN: '',
       GITHUB_REPOSITORY: '',
     });
-    // Fail closed: unsigned forced → exit 1
+    expect(r.status).toBe(0);
+    expect(r.stderr + r.stdout).toMatch(/unsigned annotated|continuing with/i);
+  });
+
+  it('exits 1 on forced unsigned when ARK_REQUIRE_SIGNED_RELEASE_TAG=true', () => {
+    const r = runScript(['v2.2.0'], {
+      ARK_VERIFY_PACKAGE_VERSION: '2.2.0',
+      ARK_VERIFY_FORCE_UNSIGNED: 'true',
+      ARK_REQUIRE_SIGNED_RELEASE_TAG: 'true',
+      GITHUB_TOKEN: '',
+      GITHUB_REPOSITORY: '',
+    });
     expect(r.status).toBe(1);
-    expect(r.stderr + r.stdout).toMatch(/unsigned|Refusing|forced unsigned/i);
-  });
-
-  it('exits 0 on forced unsigned when ARK_ALLOW_UNSIGNED_RELEASE_TAG=true', () => {
-    const r = runScript(['v2.2.0'], {
-      ARK_VERIFY_PACKAGE_VERSION: '2.2.0',
-      ARK_VERIFY_FORCE_UNSIGNED: 'true',
-      ARK_ALLOW_UNSIGNED_RELEASE_TAG: 'true',
-      GITHUB_TOKEN: '',
-      GITHUB_REPOSITORY: '',
-    });
-    expect(r.status).toBe(0);
-    expect(r.stderr + r.stdout).toMatch(/ALLOW_UNSIGNED|continuing because/i);
+    expect(r.stderr + r.stdout).toMatch(/requires a signed tag|forced unsigned/i);
   });
 });

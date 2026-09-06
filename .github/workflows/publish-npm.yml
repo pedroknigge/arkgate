@@ -35,7 +35,8 @@ jobs:
 
       - run: npm ci
 
-      # Release-trust (P0): unsigned tags fail closed.
+      # Thin bar: tag matches package.json and is annotated. Unsigned is allowed.
+      # Set ARK_REQUIRE_SIGNED_RELEASE_TAG=true here only if you want signed-only.
       - name: Verify release tag
         run: node scripts/verify-release-tag.mjs "$RELEASE_TAG"
         env:

@@ -132,7 +132,7 @@ for current truth.
 | Performance | Cold scan is roughly linear and ~5 s at 50k trivial files; “warm” benchmark also uses `--no-cache` | Incremental latency is unknown |
 | Package | ~3.1 MB unpacked; root and runtime bundles overlap; core scanner is not a stable import API | Public surface is inverted |
 | External proof | V03 reproduced 12 MIT-licensed public targets with 93% median governed coverage and no open P0/P1 | Retain the scheduled matrix as field evidence |
-| Supply chain | Protected main, signed tags, provenance, CodeQL/Semgrep, and no open alerts | Preserve this foundation |
+| Supply chain | Protected main, annotated tags, npm provenance, CodeQL/Semgrep, and no open alerts | Preserve this foundation |
 | Change integrity | Final-state checks and single-file prepare-write exist; policy deltas and atomic multi-file preflight are not public adapter surfaces, and no plan-vs-actual convergence exists | `T01`–`T05` move deterministic feedback before the first write without becoming a spec manager |
 
 ### Release blocker register

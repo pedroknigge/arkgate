@@ -11,9 +11,9 @@ name: CI
 #   gallery, OS portability, packed consumer matrices (package.json alone stays code)
 # - code (PR slim default): coverage-only build, 1 packed-TS cell, 1 gallery PM, onboarding
 #   */small only, fail-fast on product matrices, perf only when gate/hook/analysis paths change
-# - full_matrix: push to main, PR labels full-matrix|release, or release-prep branch names
-#   (feat/4.1*, feat/*release*, release/*). Keeps test:confidence (mutation) and complete
-#   packed/gallery/onboarding cells with fail-fast: false.
+# - full_matrix: push to main, or an explicit PR label `full-matrix`. Mutation +
+#   complete packed/gallery/onboarding cells with fail-fast: false. A `release`
+#   label or a release-shaped branch name does not select this path.
 # Docs-only and hygiene intentional skips still report success on required gate jobs.
 on:
   push:
