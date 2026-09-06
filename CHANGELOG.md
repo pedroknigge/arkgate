@@ -24,6 +24,9 @@ in the immutable pre-2.0 archive linked below.
   `K01` / `Z09`.
 
 ### Fixed
+- Short `arkgate-check --help` now names `--changed --base <ref>` as the local /
+  pre-push fast path (issue [#204](https://github.com/pedroknigge/arkgate/issues/204)).
+  Encyclopedia `--help --all` is unchanged.
 - `ark-check` human warnings now print `path:line` the way denies already do
   (ArkOrder / ArkRun advisory findings already carried the location; the
   printer dropped it). Findings with no file say so — they are about the

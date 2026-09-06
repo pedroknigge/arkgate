@@ -161,6 +161,7 @@ export function checkUsage() {
     'arkgate-check (alias ark-check) — the architecture check.',
     '',
     '  arkgate-check --doctor         where you are: one status light, one next action',
+    '  arkgate-check --changed --base <ref>   local / pre-push: checks touched files only',
     '  arkgate-check --strict-merge   CI / merge gate (required GitHub status)',
     '  arkgate-check --sensors        which sensors can ever be enforced (does not run analysis)',
     '',
