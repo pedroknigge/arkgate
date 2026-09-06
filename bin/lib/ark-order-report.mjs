@@ -1,7 +1,7 @@
 /**
  * HTML for the doctor ArkOrder advisory (report parity: data-advisory="arkOrder").
  */
-import { ARKORDER_ONE_BREATH } from './ark-order-doctor.mjs';
+import { ARKORDER_FIRST_CONTACT_NEXT, ARKORDER_ONE_BREATH } from './ark-order-doctor.mjs';
 
 export function formatArkOrderHtml(section, esc) {
   if (!section || typeof section !== 'object' || section.notAScore !== true) return '';
@@ -14,6 +14,7 @@ export function formatArkOrderHtml(section, esc) {
     <p class="dim" style="margin:.15rem 0 .55rem;font-size:.88rem">
       ${ARKORDER_ONE_BREATH}
       Off until you turn it on — Layers stay the same.
+      ${ARKORDER_FIRST_CONTACT_NEXT}
     </p>
     ${note}
   </section>`;

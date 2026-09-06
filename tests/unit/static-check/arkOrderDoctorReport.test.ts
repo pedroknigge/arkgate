@@ -124,10 +124,26 @@ describe('ArkOrder doctor / deny label', () => {
     expect(doctor.raw).toMatch(/xiKeys[=:] ?plan, cycle, tenancy/);
   });
 
+  it('compact doctor tells the one-breath story when the extra is off', () => {
+    const root = copyTree('trees/xi-field-write', configFor('absent'));
+    const doctor = runCheck(root, ['--doctor']);
+    expect(doctor.raw).toMatch(/Layers stop a bad import/);
+    expect(doctor.raw).toMatch(/billing plan/);
+    expect(doctor.raw).toMatch(/seat count/);
+    expect(doctor.raw).toMatch(/valve, not a generic update/);
+    expect(doctor.raw).toContain('examples/arkorder-billing');
+    expect(doctor.raw).toContain('/ark-adopt');
+    expect(doctor.raw).toContain('/ark-order');
+    expect(doctor.raw).not.toMatch(/\[ArkOrder\]\s+ARKORDER_/);
+  });
+
   it('HTML report emits data-advisory="arkOrder" and no score UI', () => {
     const inactive = formatArkOrderHtml(summarizeArkOrderSection({}), (v: string) => v);
     expect(inactive).toContain('data-advisory="arkOrder"');
     expect(inactive).toMatch(/silent/i);
+    expect(inactive).toMatch(/Layers stop a bad import/);
+    expect(inactive).toContain('examples/arkorder-billing');
+    expect(inactive).toContain('/ark-order');
 
     const section = summarizeArkOrderSection({
       arkOrder: {

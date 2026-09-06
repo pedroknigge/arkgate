@@ -7,6 +7,7 @@ import {
   composeMergePlanesHonesty,
 } from '../../../src/domain/extraMergeTeeth';
 import {
+  ARKORDER_FIRST_CONTACT_NEXT,
   ARKORDER_ONE_BREATH,
   ARK_ORDER_DOCTOR_SCHEMA_VERSION,
   formatArkOrderDoctorLines,
@@ -14,6 +15,8 @@ import {
   summarizeArkOrderSection,
 } from '../../../src/domain/arkOrderDoctor';
 import {
+  ARKORDER_FIRST_CONTACT_NEXT as cliNext,
+  ARKORDER_ONE_BREATH as cliBreath,
   formatArkOrderDoctorLines as cliLines,
   projectStatusArkOrder as cliProject,
   summarizeArkOrderSection as cliSummarize,
@@ -135,6 +138,8 @@ describe('ArkOrder doctor section', () => {
       findings: [{ ruleId: 'ARKORDER_XI_FIELD_WRITE' }],
       classification: { governedPercent: 100, populatedLayerCount: 1 },
     };
+    expect(cliBreath).toBe(ARKORDER_ONE_BREATH);
+    expect(cliNext).toBe(ARKORDER_FIRST_CONTACT_NEXT);
     expect(cliSummarize(input)).toEqual(summarizeArkOrderSection(input));
     expect(cliProject({ present: true, mode: 'enforced', residual: 2 })).toEqual(
       projectStatusArkOrder({ present: true, mode: 'enforced', residual: 2 })
@@ -158,7 +163,9 @@ describe('ArkOrder doctor section', () => {
 
   it('human lines cover off, empty residual, unnamed keys, and residual cap', () => {
     expect(formatArkOrderDoctorLines(summarizeArkOrderSection({}))).toEqual([
-      'ArkOrder extra is off — silent on Layers (not a score).',
+      ARKORDER_ONE_BREATH,
+      'Off — Layers stay the same (not a score).',
+      ARKORDER_FIRST_CONTACT_NEXT,
     ]);
     expect(formatArkOrderDoctorLines({ notAScore: false } as never)).toEqual([]);
 
@@ -183,12 +190,13 @@ describe('ArkOrder doctor section', () => {
     expect(capped.join('\n')).toMatch(/\+1 more/);
   });
 
-  it('compact doctor prints the one-breath only when the extra is on', () => {
+  it('compact doctor prints the one-breath even when the extra is off', () => {
     const printed: string[] = [];
     const io = { line: (_mark: string, text: string) => printed.push(text), warn: '!' };
     printCompactExtraDoctorLines({ arkOrder: { active: false, notAScore: true } }, io);
-    expect(printed).toEqual([]);
+    expect(printed).toEqual([ARKORDER_ONE_BREATH, ARKORDER_FIRST_CONTACT_NEXT]);
 
+    printed.length = 0;
     printCompactExtraDoctorLines(
       {
         arkOrder: {

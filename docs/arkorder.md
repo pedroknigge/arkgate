@@ -260,15 +260,17 @@ In-memory `ReleaseStore` is **not** durable. Doctor / status `arkOrder` stays
 
 ## Doctor / start / status
 
-`--doctor` always emits an ArkOrder row (`notAScore`). Absence is a silent
-line. When the extra is on, the first human line is the one-breath:
+`--doctor` always emits an ArkOrder row (`notAScore`). Verdicts stay silent
+when the extra is off (Layers unchanged, not a score). The first human line
+is always the one-breath — including the compact first screen:
 
 **Layers stop a bad import. ArkOrder stops rewriting a big product choice —
 like the billing plan — as if it were a seat count. Change those choices
 through a valve, not a generic update.**
 
 `ark start` leaves extras off (`Optional extras stay off. This start is
-layers only — they stop bad imports.`).
+layers only — they stop bad imports.`) and still prints that one-breath plus
+`Next: examples/arkorder-billing`, then `/ark-adopt` and `/ark-order`.
 `ark status` projects a thin `arkOrder` slice (present / mode / leftover
 count). A deny prints `[ArkOrder]` next to `ARKORDER_*`, the same envelope
 as a bad import.
