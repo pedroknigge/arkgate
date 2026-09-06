@@ -40,6 +40,7 @@ not every historical file:
 | Stable vs experimental package contract | [docs/package-surface.md](docs/package-surface.md) |
 | Config contract and schema | [docs/configuration.md](docs/configuration.md) |
 | Agent, CLI, MCP reference | [docs/agent-guide.md](docs/agent-guide.md) |
+| Skill filter (Contener · Guiar · Ordenar) | [Product voice](docs/product-voice.md) · [Agent guide — skills](docs/agent-guide.md#install-skills-ark-and-ecosystem) · [ADR 0036](docs/adr/0036-skill-catalog-product-capacity.md) |
 | Host enforcement setup | [docs/ai-gates.md](docs/ai-gates.md) |
 | TypeScript compatibility | [docs/typescript-support.md](docs/typescript-support.md) |
 | Brownfield and enthusiast track | [docs/brownfield-adoption.md](docs/brownfield-adoption.md) · [docs/enthusiast/](docs/enthusiast/README.md) |
@@ -51,6 +52,13 @@ not every historical file:
 
 Read the **lane entry** before significant work. After changing a public surface, architecture
 boundary, decision, or plan, update its authority and the docs hub row if needed.
+
+The shipped skill *set* covers Layers + ArkRules + ArkRun + ArkOrder (when / not when /
+handoff). Filter: **Contener · Guiar · Ordenar** — contain the path, guide leftover design
+and extras, protect the few big choices. First-class **`/ark-order`**; leftover `/ark-*`
+names are one-release stubs. ACS05 freeze was opened for that door
+([ADR 0036](docs/adr/0036-skill-catalog-product-capacity.md)); Domain `ARK_SKILL_NAMES`
+still closes the list. Skills never enforce. ξ / Haken stay below the fold.
 
 ### Package index
 
@@ -88,7 +96,7 @@ as-is — because `package.json` later added export `./order` and bins `arkgate-
 | MCP, `ark_manifest`, compatibility `ark://manifest`, write hooks, and registry descriptor | `bin/ark-mcp.mjs` · `server.json` | [MCP reference](docs/agent-guide.md#write-path-gate-mcp) · [AI gates](docs/ai-gates.md) | Real | — |
 | Config and public schemas | `ark.config.json` · `schemas/` · package schema exports | [Configuration](docs/configuration.md) · [Package surface](docs/package-surface.md) | Real | — |
 | ESLint plugin | package export `./eslint` · `src/eslint/index.ts` | [AI gates](docs/ai-gates.md#eslint-editor-feedback--same-contract-as-ci) | Real | — |
-| Agent integration assets | `templates/skills/` · `templates/agent-skills/` · `templates/hooks/` · `templates/tests/` | [Agent guide](docs/agent-guide.md#install-skills-ark-and-ecosystem) · [AI gates](docs/ai-gates.md) | Real | — |
+| Agent integration assets | `templates/skills/` · `templates/agent-skills/` · `templates/hooks/` · `templates/tests/` | [Agent guide](docs/agent-guide.md#install-skills-ark-and-ecosystem) · [AI gates](docs/ai-gates.md) · [ADR 0036](docs/adr/0036-skill-catalog-product-capacity.md) | Real | first-class `/ark-order`; leftover names are one-release stubs; set covers Layers + ArkRules + ArkRun + ArkOrder |
 | Shape playbook, policy packs, and gallery starters | `templates/architecture-playbook.json` · `templates/policy-packs/` · `examples/` | [Enthusiast track](docs/enthusiast/README.md) | Demo | — |
 | GitHub Action | `action.yml` | [Action setup and inputs](docs/ai-gates.md#ci-backstop) · [Package surface](docs/package-surface.md) | Real | — |
 | Experimental ArkRun kernel (`arkgate/runtime`) | package export `./runtime` · `src/runtime/index.ts` · `src/index.ts` | [Package surface](docs/package-surface.md#experimental-opt-in-surfaces) · [Hardening](docs/production-hardening.md) | Partial | durability, not a second package |
@@ -200,7 +208,7 @@ retained shipped rationale live under `docs/plans/`:
 | [enforcement-evidence-and-docs-truth](docs/plans/enforcement-evidence-and-docs-truth/README.md) | Shipped / implemented (Phase EH; `EH01`–`EH08` done; **4.1.1 published**) | Soft-host evidence modeling (Codex field) + mechanical CI/report fixes + deep documentation audit; claims matrix 2026-07-25 |
 | [field-gap-closure](docs/plans/field-gap-closure/README.md) | Closed for 4.1.0 ship window (S0–S7; 15/15 critical assertions) | Field-lab gap closure after 4.1.0; residual unfinished states stay honest; does not close Z09 / RB-11 |
 | [workspace-identity-activation-truth](docs/plans/workspace-identity-activation-truth/README.md) | Shipped in 4.2.0 (`WI01` done; **published**) | Project-bound MCP identity handshake, fail-closed cross-project evidence, honest runtime activation/verdicts, and layer-aware ArkRules inventory |
-| [agent-contract-surface-4.3](docs/plans/agent-contract-surface-4.3/README.md) | Shipped in **4.3.0** (`ACS01`–`ACS08` done; **published**) | Agent Skills packaging, version-matched projection, diagnostic code catalog, unified status JSON, finding refs, maintainer A/B eval — guardrail catalog + scan/process voice; freeze restated; no new skill names, no LLM verdict |
+| [agent-contract-surface-4.3](docs/plans/agent-contract-surface-4.3/README.md) | Shipped in **4.3.0** (`ACS01`–`ACS08` done; **published**) | Agent Skills packaging, version-matched projection, diagnostic code catalog, unified status JSON, finding refs, maintainer A/B eval — guardrail catalog + scan/process voice; ACS05 freeze later opened for `/ark-order` (ADR 0036); Domain still closes the catalog; no LLM verdict |
 | [improvement-compass](docs/plans/improvement-compass/README.md) | Shipped in **4.4.0** (`IC01`–`IC07` done; **published**) | Improvement compass (lenses, not scores) + vibe-coder skill deepen; public docs product-only |
 | [domain-fitness-session-truth](docs/plans/domain-fitness-session-truth/README.md) | Shipped in **4.5.0** (`DF01`–`DF06` done; **published**) | Session control-plane honesty (status compass modes + residual ⊆ doctor); domain budget **and** mandatory split; pure verification ratchet; self-service upgrade residual; session recipe at release; LEVELS 4 hybrid + Scale Stack seams |
 | [deep-module-coach](docs/plans/deep-module-coach/README.md) | Shipped in **4.5.5** (`DC01`–`DC04` done; **published**) | Post-4.5 coach: deep-module vocabulary, hot-path / deepening advisory, consumer glossary hook, two-axis done recipe — process + advisory only |

@@ -15,6 +15,13 @@ in the immutable pre-2.0 archive linked below.
   opened; the catalog stays closed in Domain (`ARK_SKILL_NAMES`). Leftover
   `/ark-fix` / `/ark-loop` stubs keep the Y04 mechanical-edit hygiene outcomes.
   Skills never enforce. Does not close `K01` / `Z09`. No `schemaVersion` bump.
+- Living docs (AGENTS hub, claims matrix, agent-guide skill install, product-voice
+  filter) restate the catalog after `#217`: first-class `/ark-order`, leftover
+  shortcuts as one-release stubs, ACS05 freeze opened, Domain still closes
+  `ARK_SKILL_NAMES`. The skill *set* covers Layers + ArkRules + ArkRun + ArkOrder
+  (Contener · Guiar · Ordenar). Tree **4.8.13** prepared; npm `latest` **4.8.11**.
+  Historical 14/14 100% and last 4.8.3 C-020 stay Planned. Does not close
+  `K01` / `Z09`.
 
 ### Fixed
 - `ark-check` human warnings now print `path:line` the way denies already do

@@ -45,7 +45,12 @@ human copy says **status**.
 **Contener · Guiar · Ordenar** is the skill filter (not a score, not the first
 screen). Contener = import rules and the path. Guiar = leftover design and extras
 that keep work moving. Ordenar = the few big product choices (ArkOrder).
-Skills never enforce.
+The skill *set* must cover Layers + ArkRules + ArkRun + ArkOrder and say when /
+not when / handoff. First-class `/ark-order`; leftover `/ark-*` names are
+one-release stubs. ACS05 freeze was opened for that door
+([ADR 0036](adr/0036-skill-catalog-product-capacity.md)); Domain `ARK_SKILL_NAMES`
+still closes the list. See [agent guide — skills](agent-guide.md#install-skills-ark-and-ecosystem).
+Skills never enforce. ξ / Haken stay below the fold.
 
 ---
 
