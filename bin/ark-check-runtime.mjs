@@ -77,6 +77,7 @@ import {
   writeBaseline,
   printViolation,
   printViolationBreakdown,
+  printWarning,
   CONCENTRATION_MIN_VIOLATIONS,
 } from './lib/violations.mjs';
 import {
@@ -1966,7 +1967,7 @@ async function main() {
     }, null, 2));
   } else {
     for (const warning of warnings) {
-      console.error(`${color.yellow('warning')} ${warning.ruleId} ${warning.message}`);
+      printWarning(warning);
     }
     for (const violation of activeViolations) {
       printViolation(violation);

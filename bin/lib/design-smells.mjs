@@ -493,6 +493,25 @@ export function summarizeDesignFitness(smells, ctx = {}) {
 /** How many smell ids the green-run pointer names before it counts the rest. */
 export const GREEN_PLAN_POINTER_MAX_IDS = 4;
 
+/** When a smell has no evidence path, say so — do not leave the reader hunting. */
+export const SMELL_UNATTRIBUTED =
+  'no file — leftover design, not a specific line';
+
+/**
+ * One named smell with its first evidence path (or an explicit "no file").
+ * The pointer used to print only the id, so "1 design smell (domain-logic-in-ui)"
+ * could not answer "did my change cause this?"
+ */
+export function formatSmellPointerName(id, smells) {
+  const match = (smells || []).find((smell) => smell?.id === id);
+  const evidence = Array.isArray(match?.evidence)
+    ? match.evidence.filter((entry) => typeof entry === 'string' && entry.trim())
+    : [];
+  if (evidence.length === 0) return `${id} (${SMELL_UNATTRIBUTED})`;
+  const extra = evidence.length - 1;
+  return extra > 0 ? `${id} at ${evidence[0]} (+${extra} more)` : `${id} at ${evidence[0]}`;
+}
+
 /**
  * Name `--plan` on a run that passed.
  *
@@ -528,7 +547,8 @@ export function formatGreenPlanPointer(smells, ctx = {}, planCommand = 'ark-chec
   if (ids.length === 0) return null;
   const shown = ids.slice(0, GREEN_PLAN_POINTER_MAX_IDS);
   const hidden = ids.length - shown.length;
-  const named = hidden > 0 ? `${shown.join(', ')}, +${hidden} more` : shown.join(', ');
+  const namedIds = shown.map((id) => formatSmellPointerName(id, smells));
+  const named = hidden > 0 ? `${namedIds.join(', ')}, +${hidden} more` : namedIds.join(', ');
   const plural = ids.length === 1 ? '' : 's';
   const suppressed = ctx.suppressedCount ?? 0;
   const opening =

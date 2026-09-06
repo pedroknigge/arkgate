@@ -67,6 +67,36 @@ export function violationPlaneLabel(ruleId) {
   return '';
 }
 
+/**
+ * Where a warning came from, in the same `path:line` shape as a deny.
+ * Sensors already carry `file` / `line`; the human printer used to drop them.
+ * No file means the finding is about the project rules, not a line you edited.
+ */
+export const WARNING_UNATTRIBUTED =
+  'not a file — this is about the project rules, not a line you just edited';
+
+export function formatWarningAttribution(warning) {
+  const file = typeof warning?.file === 'string' ? warning.file.trim() : '';
+  if (!file) return WARNING_UNATTRIBUTED;
+  const line =
+    Number.isInteger(warning.line) && warning.line > 0 ? warning.line : 1;
+  return `${file}:${line}`;
+}
+
+export function formatWarningLine(warning) {
+  const ruleId = typeof warning?.ruleId === 'string' ? warning.ruleId : 'WARNING';
+  const message = typeof warning?.message === 'string' ? warning.message : '';
+  return `warning ${ruleId} ${formatWarningAttribution(warning)} ${message}`.trimEnd();
+}
+
+export function printWarning(warning) {
+  const ruleId = typeof warning?.ruleId === 'string' ? warning.ruleId : 'WARNING';
+  const message = typeof warning?.message === 'string' ? warning.message : '';
+  console.error(
+    `${color.yellow('warning')} ${ruleId} ${formatWarningAttribution(warning)} ${message}`.trimEnd()
+  );
+}
+
 export function printViolation(violation) {
   const location = `${violation.file}:${violation.line}`;
   const plane = violationPlaneLabel(violation.ruleId);

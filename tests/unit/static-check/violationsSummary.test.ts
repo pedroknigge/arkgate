@@ -11,6 +11,10 @@ import {
   FIX_HINTS,
   baselineKey,
   baselineOccurrenceKeys,
+  formatWarningAttribution,
+  formatWarningLine,
+  printWarning,
+  WARNING_UNATTRIBUTED,
 } from '../../../bin/lib/violations.mjs';
 import { computeCoverage } from '../../../bin/lib/doctor-plan.mjs';
 import path from 'node:path';
@@ -64,6 +68,30 @@ describe('violations.mjs (shipped)', () => {
     );
     expect(summary.typeOnlyCount).toBeGreaterThan(0);
     expect(FIX_HINTS.LAYER_IMPORT_VIOLATION).toMatch(/port/i);
+  });
+
+  it('warning attribution prints path:line when the finding has a file', () => {
+    const warning = {
+      ruleId: 'ARKORDER_GENERIC_UPDATE',
+      file: 'src/main.ts',
+      line: 8,
+      message: 'Generic set() on the order plane rewrites a named product choice.',
+    };
+    expect(formatWarningAttribution(warning)).toBe('src/main.ts:8');
+    expect(formatWarningLine(warning)).toBe(
+      'warning ARKORDER_GENERIC_UPDATE src/main.ts:8 Generic set() on the order plane rewrites a named product choice.'
+    );
+  });
+
+  it('warning attribution says so when the finding is not a file', () => {
+    const warning = {
+      ruleId: 'CONFIG_NO_LAYERS',
+      message: 'No file layers are configured.',
+    };
+    expect(formatWarningAttribution(warning)).toBe(WARNING_UNATTRIBUTED);
+    expect(formatWarningLine(warning)).toContain(WARNING_UNATTRIBUTED);
+    expect(formatWarningLine(warning)).toContain('CONFIG_NO_LAYERS');
+    printWarning(warning);
   });
 
   it('baselineOccurrenceKeys ratchets duplicates', () => {

@@ -399,7 +399,7 @@ describe('green-run --plan pointer', () => {
     );
     expect(line).toBe(
       'Import rules are clean; the design bets are not settled — 2 design smells ' +
-        '(god-module, soft-contract). They never fail this check: npx ark-check --plan'
+        '(god-module at src/god-module.ts, soft-contract at src/soft-contract.ts). They never fail this check: npx ark-check --plan'
     );
   });
 
@@ -449,5 +449,36 @@ describe('green-run --plan pointer', () => {
   it('says "1 design smell", not "1 design smells"', () => {
     const line = formatGreenPlanPointer([smell('god-module')], green, 'x') as string;
     expect(line).toContain('1 design smell (');
+  });
+
+  it('names the evidence path so a consumer can tell if their file is in the smell', () => {
+    const line = formatGreenPlanPointer([smell('domain-logic-in-ui')], green, 'x') as string;
+    expect(line).toContain('domain-logic-in-ui at src/domain-logic-in-ui.ts');
+  });
+
+  it('says when a smell has no file, so the reader stops hunting', () => {
+    const line = formatGreenPlanPointer(
+      [{ id: 'soft-contract', severity: 'warn', message: 'x', evidence: [], fix: 'x' }],
+      green,
+      'x'
+    ) as string;
+    expect(line).toContain('soft-contract (no file — leftover design, not a specific line)');
+  });
+
+  it('counts extra evidence paths instead of printing a wall', () => {
+    const line = formatGreenPlanPointer(
+      [
+        {
+          id: 'god-module',
+          severity: 'warn',
+          message: 'x',
+          evidence: ['src/a.ts', 'src/b.ts', 'src/c.ts'],
+          fix: 'x',
+        },
+      ],
+      green,
+      'x'
+    ) as string;
+    expect(line).toContain('god-module at src/a.ts (+2 more)');
   });
 });

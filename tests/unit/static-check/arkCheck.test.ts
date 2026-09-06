@@ -2233,6 +2233,9 @@ describe('ark-check CLI', () => {
 
     expect(stderr).toContain('Ark check failed with');
     expect(stderr).toContain('CONFIG_NO_LAYERS');
+    expect(stderr).toContain(
+      'not a file — this is about the project rules, not a line you just edited'
+    );
   });
 });
 
