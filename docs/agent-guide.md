@@ -823,7 +823,7 @@ directories (`utils/`, `lib/`) must be classified explicitly via `/ark-adopt`.
 
 ## Supported agent hosts
 
-**Day zero** is the compact path from `ark start` / `ark start --apply` (router + write path + CI plan) — not the full skill pack.
+**Day zero** is the compact path from `ark start` / `ark start --apply` (router + write path + CI plan; merges Ark into an existing project-owned `AGENTS.md` / `.mcp.json`) — not the full skill pack.
 
 Wire write-gate + MCP for the active host; add the full `/ark-*` skill pack only as **expert depth** (`--skills-only` or full install when you want guided autopilot):
 

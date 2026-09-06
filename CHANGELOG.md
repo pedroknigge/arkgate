@@ -5,6 +5,13 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+### Fixed
+- `start --apply` / `--install-agent-gates` now merge the Ark write-path
+  contract into a project-owned `AGENTS.md` and upsert `mcpServers.ark` in
+  existing `.mcp.json` (and host copies) without `--force`. Doctor no longer
+  reports `gatesMissing: ["AGENTS.md", ".mcp.json"]` after the stranger happy
+  path on a repo that already had those files (issue #210).
+
 ### Changed
 - Pre-adoption publish is the thin path: slim CI on prepare PRs (no `release`
   label or branch-name full-matrix), annotated tags (unsigned allowed),

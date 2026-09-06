@@ -37,6 +37,8 @@ import {
   hasCheckArchitectureScript,
   ensureTypecheckScript,
   compactRouterHost,
+  mergeArkMcpJson,
+  MCP_JSON_GATE_FILES,
   writeTemplate,
 } from './gate-files.mjs';
 import {
@@ -571,6 +573,27 @@ export function runInstallAgentGates(args) {
       }
       if (merged === existing) return { relativePath, status: 'skipped' };
       // Upsert ark-write-gate without requiring --force; never wipe sibling named hooks.
+      return writeTemplate(root, relativePath, merged, true);
+    }
+    if (MCP_JSON_GATE_FILES.includes(relativePath)) {
+      const fullPath = path.join(root, relativePath);
+      let existing = '';
+      try {
+        existing = fs.readFileSync(fullPath, 'utf8');
+      } catch {
+        // Missing MCP JSON → write generated ark server.
+      }
+      if (!existing) {
+        return writeTemplate(root, relativePath, content, true);
+      }
+      const merged = mergeArkMcpJson(existing, content);
+      if (merged == null) {
+        return args.force
+          ? writeTemplate(root, relativePath, content, true)
+          : { relativePath, status: 'skipped-non-ark' };
+      }
+      if (merged === existing) return { relativePath, status: 'skipped' };
+      // Upsert mcpServers.ark without requiring --force; never wipe sibling servers.
       return writeTemplate(root, relativePath, merged, true);
     }
     return writeTemplate(

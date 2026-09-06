@@ -306,7 +306,7 @@ describe('ark-check --install-agent-gates', () => {
 
     const skipped = runInstallAgentGates(root);
     expect(skipped.status).toBe(0);
-    // Non-Ark AGENTS.md is never clobbered (kept/skipped-non-ark even without --force).
+    // Non-Ark AGENTS.md is never replaced; missing Ark section is merged (issue #210).
     expect(skipped.stdout).toMatch(/kept\s+AGENTS\.md|skipped\s+AGENTS\.md|merged\s+AGENTS\.md/);
     expect(fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8')).toContain('custom instructions');
 
