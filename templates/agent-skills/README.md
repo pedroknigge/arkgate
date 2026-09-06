@@ -9,7 +9,7 @@ closed `/ark-*` catalog shipped as flat templates for Ark install.
 **Closed catalog** (`ARK_SKILL_NAMES`) — first-class doors plus one-release
 redirect stubs. Add a name only with a live ROADMAP item.
 
-Package version when last generated context: **arkgate@4.8.13**
+Package version when last generated context: **arkgate@4.8.14**
 Schema: agent-skills package contract `1.0`
 
 ## Skills (closed catalog)
