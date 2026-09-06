@@ -37,7 +37,7 @@ Works with Cursor, Claude, Codex, and Grok.
 
 </div>
 
-> **ArkGate 4.8.13** is prepared on this tree; npm `latest` remains **4.8.11**.
+> **ArkGate 4.8.13** is prepared on this tree (tag + GitHub Release exist); npm `latest` remains **4.8.11** until `publish-npm` for `v4.8.13`.
 > Write. Check. Ship. Adopted = required GitHub
 > status running `arkgate-check --strict-merge`, or an explicit `advisory-only` stance.
 > Status is compact (`arkgate-check --doctor`; `--all` for Details). Optional **ArkRun**

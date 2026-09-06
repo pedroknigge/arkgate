@@ -33,9 +33,10 @@ current as-is. C-049 records `writes-via-aggregate`. C-048 gains `xiKeys` +
 
 **2026-09-06 addendum (identity restatement):** C-020 as-is is tree **4.8.13**
 (Status: prepared, not npm-published); npm `latest` **4.8.11**; tag `v4.8.12`
-stands; tag `v4.8.13` exists; `RL813` doing. Code wins. Last 4.8.3 C-020 claim
-kept as C-053 (do not delete). Does not close Z09 / K01. Last freeze “no new
-skill names” is to-be: `#217` added first-class `/ark-order` to the closed catalog.
+stands and is **not** for npm (coverage miss); tag `v4.8.13` exists; catch-up is
+`publish-npm` `tag=v4.8.13` `dry_run=false`; `RL813` doing. Code wins. Last 4.8.3
+C-020 claim kept as C-053 (do not delete). Does not close Z09 / K01. Last freeze
+“no new skill names” is to-be: `#217` added first-class `/ark-order` to the closed catalog.
 
 **2026-09-06 addendum (hub as-is):** `Agents.md` indexes dashboard bins, `arkgate/order`,
 and `docs/plans/field-gap-closure`. C-018 and C-052 restated OK. Last Partial/omit
@@ -141,7 +142,7 @@ Living-claims v0 columns. `anchor.hash` omitted (`—`) unless a content hash wa
 | C-017 | Project TS5/6/7 compilers stay project-owned with fail-closed incomplete analysis | [TypeScript support](../typescript-support.md) | typescript host · packed matrix | `docs/typescript-support.md` | — | — | critical | OK | keep |
 | C-018 | All retained plan seeds are indexed with current shipped status | [Hub plans](../../AGENTS.md#product-plans-library-epic-queue-seeds) | hub plans table indexes `docs/plans/field-gap-closure/` | `Agents.md` | Product plans table | — | normal | OK | keep as-is; last Partial “field-gap-closure absent from hub table” → to-be/historical Planned; do not delete that plan |
 | C-019 | Accepted ADRs are navigable without duplicating their rationale | [ADR index](../adr/README.md) | ADR frontmatter | `docs/adr/README.md` | — | — | normal | OK | keep |
-| C-020 | Tree version identity is **4.8.13** (CHANGELOG Status: prepared, not npm-published); npm `latest` is **4.8.11**; tag `v4.8.12` stands; tag `v4.8.13` exists; `RL813` doing | [CHANGELOG](../../CHANGELOG.md) · [ROADMAP](../../ROADMAP.md) · [Hub releases](../../AGENTS.md) | `package.json` / lock / `src/version.ts` / `server.json` = 4.8.13; CHANGELOG 4.8.13 prepared; ROADMAP npm `latest` 4.8.11; git tags `v4.8.12` `v4.8.13` | `package.json` | `version` | — | critical | OK | keep as-is; last 4.8.3 published/latest wording is C-053 to-be/historical Planned |
+| C-020 | Tree version identity is **4.8.13** (CHANGELOG Status: prepared, not npm-published); npm `latest` is **4.8.11**; tag `v4.8.12` stands and is skipped on npm; tag `v4.8.13` exists; catch-up is `publish-npm` for `v4.8.13`; `RL813` doing | [CHANGELOG](../../CHANGELOG.md) · [ROADMAP](../../ROADMAP.md) · [Hub releases](../../AGENTS.md) | `package.json` / lock / `src/version.ts` / `server.json` = 4.8.13; CHANGELOG 4.8.13 prepared; 4.8.12 tagged not published; ROADMAP npm `latest` 4.8.11; git tags `v4.8.12` `v4.8.13` | `package.json` | `version` | — | critical | OK | keep as-is; last 4.8.3 published/latest wording is C-053 to-be/historical Planned |
 | C-021 | Links in shipped Markdown resolve inside the tarball or use repository URLs | Shipped README/docs | root `files` | `package.json` | `files` | — | normal | OK | rerun on release |
 | C-022 | Nightly evaluation claims distinguish deterministic, opt-in live, and skipped cases | [Eval guide](../../eval/README.md) | nightly workflow · placement-ab | `eval/README.md` | — | — | normal | OK | keep |
 | C-023 | Migration and runtime guidance uses current package boundaries | [Migration guide](../migrate-from-ark-runtime-kernel.md) | manifests | `docs/migrate-from-ark-runtime-kernel.md` | — | — | critical | OK | keep |
@@ -212,9 +213,9 @@ Structural OK/Partial verdicts remain evidence-bound to code and authorities cit
 ## Verification record (2026-09-06 identity restatement)
 
 - Tree identity: `package.json` / `package-lock.json` / `src/version.ts` / `server.json` = **4.8.13**.
-- CHANGELOG `## 4.8.13` Status: prepared; npm `latest` remains **4.8.11**.
-- CHANGELOG `## 4.8.12` Status: prepared; ROADMAP `RL812` done; tag `v4.8.12` stands (`28ac035`).
-- ROADMAP `RL813` doing; tag `v4.8.13` exists (`6ed8c0d`); HEAD described as `v4.8.13-3`.
+- CHANGELOG `## 4.8.13` Status: prepared; npm `latest` remains **4.8.11** until `publish-npm` `tag=v4.8.13` `dry_run=false`.
+- CHANGELOG `## 4.8.12` Status: tagged, not published; ROADMAP `RL812` done; tag `v4.8.12` stands (`28ac035`). Do not ship 4.8.12 to npm.
+- ROADMAP `RL813` doing; tag `v4.8.13` exists (`6ed8c0d`).
 - npm registry corroboration (2026-09-06): `npm view arkgate version` = **4.8.11**.
 - Last matrix C-020 4.8.3 published/latest kept as C-053 to-be/historical Planned.
 - Living-claims columns added; no parallel claims wiki; no `src/` or `ark.config.json` edits.

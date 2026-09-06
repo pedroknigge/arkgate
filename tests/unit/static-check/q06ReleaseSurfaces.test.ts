@@ -192,6 +192,7 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
     expect(read('README.md')).toMatch(/docs\/releases\/4\.6\.6\.md/);
     expect(read('CONTRIBUTING.md')).toMatch(/slim CI/i);
     expect(read('CONTRIBUTING.md')).toMatch(/annotated/i);
+    expect(read('CONTRIBUTING.md')).toMatch(/already exist, do not retag/i);
     expect(read('CONTRIBUTING.md')).toMatch(/Optional \(not gates\)/);
     expect(read('CONTRIBUTING.md')).not.toMatch(/Current release candidate:/);
     expect(read('CONTRIBUTING.md')).not.toMatch(/Prior published:/);
@@ -236,10 +237,11 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
 });
 
 describe('CHANGELOG + release note cover 4.8.12 ArkOrder first-contact patch', () => {
-  it('records the prepared release without claiming publication', () => {
+  it('records the tagged release without claiming publication', () => {
     const changelog = changelogText();
     const section = changelogSection(changelog, '4.8.12', '4.8.11');
-    expect(section).toMatch(/Status:\s*prepared/i);
+    expect(section).toMatch(/Status:\s*tagged, not published/i);
+    expect(section).toMatch(/Do not ship this version to npm/);
     expect(section).toMatch(/npm `latest` remains \*\*4\.8\.11\*\*/);
     expect(section).toMatch(/ArkOrder/);
     expect(section).toMatch(/doctor/);
@@ -264,6 +266,8 @@ describe('CHANGELOG + release note cover 4.8.13 publish-coverage patch', () => {
     const section = changelogSection(changelog, '4.8.13', '4.8.12');
     expect(section).toMatch(/Status:\s*prepared/i);
     expect(section).toMatch(/npm `latest` remains \*\*4\.8\.11\*\*/);
+    expect(section).toMatch(/tag=v4\.8\.13/);
+    expect(section).toMatch(/dry_run=false/);
     expect(section).toMatch(/coverage|branch/i);
     expect(section).toMatch(/ArkOrder/);
     expect(section).toMatch(/v4\.8\.12/);

@@ -143,6 +143,9 @@ gh workflow run publish-npm.yml -f tag=vX.Y.Z -f dry_run=false
 That is the whole bar: slim CI green + version bump + CHANGELOG + annotated tag +
 GitHub Release + `publish-npm` provenance.
 
+If the annotated tag and GitHub Release already exist, do not retag and do not
+bump. Dispatch the same workflow for that tag.
+
 Tree version: `package.json`. What npm `latest` is: `npm view arkgate version`.
 Older notes live under [docs/releases/](docs/releases/).
 
