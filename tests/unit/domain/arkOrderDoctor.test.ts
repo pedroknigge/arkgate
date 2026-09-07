@@ -228,7 +228,9 @@ describe('ArkOrder doctor section', () => {
       { arkRun: { active: true, notAScore: true, residual: { count: 2 } } },
       io
     );
-    expect(printed[0]).toMatch(/ArkRun: on · residual=2/);
+    expect(printed[0]).toMatch(/experimental runtime — in-memory, not Postgres/);
+    expect(printed[1]).toMatch(/ArkRun: on · residual=2/);
+    expect(printed[2]).toMatch(/\/ark-runtime/);
 
     printed.length = 0;
     printCompactExtraDoctorLines(

@@ -11,6 +11,10 @@
 import { composeMergePlanesHonesty, extraMergeTeethAllowed, isArkRunRuleId, } from './extra-merge-teeth.mjs';
 export const ARK_RUN_DOCTOR_SCHEMA_VERSION = '1.0';
 const RESIDUAL_RULE_CAP = 12;
+/** Compact / details — only when `arkRun` is on. Absence stays silent. */
+export const ARKRUN_ONE_BREATH = 'Layers stop a bad import. ArkRun is an optional experimental runtime — in-memory, not Postgres. Data is gone on restart.';
+/** Next step when the extra is on and residual remains. */
+export const ARKRUN_FIRST_CONTACT_NEXT = 'Next: /ark-runtime to wire one candidate.';
 function closedMode(value) {
     return value === 'enforced' || value === 'advisory' ? value : null;
 }
@@ -126,6 +130,7 @@ export function formatArkRunDoctorLines(section) {
     const mode = section.mode ?? 'unknown';
     const teeth = section.extraMergeTeeth === true ? 'armed' : 'not armed';
     const lines = [
+        ARKRUN_ONE_BREATH,
         `mode: ${mode} · extra merge teeth ${teeth} · not a score`,
     ];
     if (section.residual.count > 0) {
@@ -134,6 +139,7 @@ export function formatArkRunDoctorLines(section) {
             ? ` (+${section.residual.count - section.residual.ruleIds.length} more)`
             : '';
         lines.push(`Residual: ${shown}${more}`);
+        lines.push(ARKRUN_FIRST_CONTACT_NEXT);
     }
     else {
         lines.push('Residual: none on this scan (not a score — green extras ≠ finished kernel wiring).');

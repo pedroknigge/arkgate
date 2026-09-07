@@ -8,6 +8,8 @@ import {
   extraMergeTeethAllowed,
 } from '../../../src/domain/extraMergeTeeth';
 import {
+  ARKRUN_FIRST_CONTACT_NEXT,
+  ARKRUN_ONE_BREATH,
   ARK_RUN_DOCTOR_SCHEMA_VERSION,
   formatArkRunDoctorLines,
   projectStatusArkRun,
@@ -18,10 +20,13 @@ import {
   extraMergeTeethAllowed as cliAllowed,
 } from '../../../bin/lib/extra-merge-teeth.mjs';
 import {
+  ARKRUN_FIRST_CONTACT_NEXT as cliNext,
+  ARKRUN_ONE_BREATH as cliBreath,
   formatArkRunDoctorLines as cliLines,
   projectStatusArkRun as cliProject,
   summarizeArkRunSection as cliSummarize,
 } from '../../../bin/lib/ark-run-doctor.mjs';
+import { printCompactExtraDoctorLines } from '../../../bin/lib/doctor-advisories.mjs';
 
 const extra = {
   mode: 'enforced' as const,
@@ -102,7 +107,7 @@ describe('RN08 ArkRun doctor section', () => {
     expect(deferred.mergePlanes.failMergeWhen).toMatch(/teeth floor|governed/i);
   });
 
-  it('human lines never invent a score', () => {
+  it('human lines lead with the one-breath and never invent a score', () => {
     const lines = formatArkRunDoctorLines(
       summarizeArkRunSection({
         arkRun: extra,
@@ -110,9 +115,14 @@ describe('RN08 ArkRun doctor section', () => {
         classification: { governedPercent: 90, populatedLayerCount: 1 },
       })
     );
+    expect(lines[0]).toBe(ARKRUN_ONE_BREATH);
+    expect(lines).toContain(ARKRUN_FIRST_CONTACT_NEXT);
     expect(lines.some((line) => /not a score/i.test(line))).toBe(true);
     expect(lines.join('\n')).toMatch(/ARKRUN_KERNEL_IN_DOMAIN/);
     expect(lines.join('\n')).not.toMatch(/\b\d+\s*\/\s*10\b|Excellent/);
+    expect(ARKRUN_ONE_BREATH).toMatch(/in-memory/i);
+    expect(ARKRUN_ONE_BREATH).toMatch(/not Postgres/i);
+    expect(ARKRUN_ONE_BREATH).not.toMatch(/durable|production runtime|Postgres replica/i);
   });
 
   it('status slice treats missing residual as unknown, not green', () => {
@@ -145,6 +155,8 @@ describe('RN08 ArkRun doctor section', () => {
       findings: [{ ruleId: 'ARKRUN_MISSING_ROOT' }],
       classification: { governedPercent: 100, populatedLayerCount: 1 },
     };
+    expect(cliBreath).toBe(ARKRUN_ONE_BREATH);
+    expect(cliNext).toBe(ARKRUN_FIRST_CONTACT_NEXT);
     expect(cliSummarize(input)).toEqual(summarizeArkRunSection(input));
     expect(cliProject({ present: true, mode: 'enforced', residual: 2 })).toEqual(
       projectStatusArkRun({ present: true, mode: 'enforced', residual: 2 })
@@ -165,5 +177,33 @@ describe('RN08 ArkRun doctor section', () => {
         classification: { governedPercent: 100, populatedLayerCount: 1 },
       }).arkRun
     ).toMatchObject({ present: true, mode: 'advisory', extraMergeTeeth: false, residualCount: 3 });
+  });
+
+  it('compact doctor names ArkRun only when the extra is on', () => {
+    const printed: string[] = [];
+    const io = { line: (_mark: string, text: string) => printed.push(text), warn: '!' };
+
+    printCompactExtraDoctorLines({ arkRun: { active: false, notAScore: true } }, io);
+    expect(printed.join('\n')).not.toMatch(/experimental runtime|not Postgres/i);
+
+    printed.length = 0;
+    printCompactExtraDoctorLines(
+      {
+        arkRun: { active: true, notAScore: true, mode: 'enforced', residual: { count: 2 } },
+      },
+      io
+    );
+    expect(printed[0]).toBe(ARKRUN_ONE_BREATH);
+    expect(printed[1]).toMatch(/ArkRun: enforced · residual=2/);
+    expect(printed[2]).toBe(ARKRUN_FIRST_CONTACT_NEXT);
+
+    printed.length = 0;
+    printCompactExtraDoctorLines(
+      { arkRun: { active: true, notAScore: true, mode: 'advisory', residual: { count: 0 } } },
+      io
+    );
+    expect(printed[0]).toBe(ARKRUN_ONE_BREATH);
+    expect(printed[1]).toMatch(/ArkRun: advisory · residual=0/);
+    expect(printed).not.toContain(ARKRUN_FIRST_CONTACT_NEXT);
   });
 });
