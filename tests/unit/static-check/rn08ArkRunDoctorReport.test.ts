@@ -130,6 +130,8 @@ describe('RN08 ArkRun HTML formatter + status facts', () => {
     const inactive = formatArkRunHtml(summarizeArkRunSection({}), esc);
     expect(inactive).toContain('data-advisory="arkRun"');
     expect(inactive).toMatch(/silent/i);
+    expect(inactive).not.toMatch(/in-memory, not Postgres/);
+    expect(inactive).not.toMatch(/\/ark-runtime/);
     const active = formatArkRunHtml(
       summarizeArkRunSection({
         arkRun: {
@@ -146,6 +148,8 @@ describe('RN08 ArkRun HTML formatter + status facts', () => {
     expect(active).toContain('ARKRUN_DIRECT_NEW');
     expect(active).toMatch(/notAScore|not a score/i);
     expect(active).toMatch(/extra merge teeth armed/i);
+    expect(active).toMatch(/in-memory, not Postgres/);
+    expect(active).toMatch(/\/ark-runtime/);
   });
 
   it('HTML Merge planes: sentence follows mergePlanes, not an ArkRun-only override', () => {

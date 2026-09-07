@@ -23,7 +23,12 @@ import {
   summarizeRulesUnderContract,
 } from './rules-under-contract.mjs';
 import { collectStewardNudge } from './team-parliament-io.mjs';
-import { formatArkRunDoctorLines, summarizeArkRunSection } from './ark-run-doctor.mjs';
+import {
+  ARKRUN_FIRST_CONTACT_NEXT,
+  ARKRUN_ONE_BREATH,
+  formatArkRunDoctorLines,
+  summarizeArkRunSection,
+} from './ark-run-doctor.mjs';
 import {
   ARKORDER_FIRST_CONTACT_NEXT,
   ARKORDER_ONE_BREATH,
@@ -101,7 +106,10 @@ export function printCompactExtraDoctorLines(advisories, io) {
   if (arkRun?.active === true && arkRun.notAScore === true) {
     console.log('');
     const residual = Number(arkRun.residual?.count) || 0;
-    io.line(residual > 0 ? io.warn : ' ', `ArkRun: ${arkRun.mode || 'on'} · residual=${residual} · not a score`);
+    const mark = residual > 0 ? io.warn : ' ';
+    io.line(mark, ARKRUN_ONE_BREATH);
+    io.line(mark, `ArkRun: ${arkRun.mode || 'on'} · residual=${residual} · not a score`);
+    if (residual > 0) io.line(mark, ARKRUN_FIRST_CONTACT_NEXT);
   }
   const arkOrder = advisories?.arkOrder;
   if (arkOrder && arkOrder.notAScore === true) {

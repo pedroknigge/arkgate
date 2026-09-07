@@ -34,8 +34,10 @@ grind (`/ark-autopilot`); wire the order plane (`/ark-order`).
 | **ArkRun extra** (`arkRun` on `ark.config.json`, schema `1.2+`) | Gate contract: kernel usage + complete declarations | A score; Layers / ArkRules replacement; merge teeth while `advisory` |
 | **Kernel** `arkgate/runtime` | Kernel you construct with `createStrictArkKernel` (one instance per call) | A process-wide `getKernel()`; shipped cloud broker SDKs; production durability |
 
-Absence of the extra is **silent** — Layers and ArkRules verdicts stay identical. Doctor / status
-`arkRun` is always `notAScore`. Never invent 0–10 scores or pass/fail from this skill.
+Absence of the extra is **silent** — Layers and ArkRules verdicts stay identical. Compact
+doctor names ArkRun only when the extra is on (experimental, in-memory, not Postgres;
+`/ark-runtime` when residual remains). Doctor / status `arkRun` is always `notAScore`.
+Never invent 0–10 scores or pass/fail from this skill.
 
 ## Improvement compass note
 

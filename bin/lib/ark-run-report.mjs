@@ -1,6 +1,8 @@
 /**
  * HTML for the doctor ArkRun advisory (report parity: data-advisory="arkRun").
  */
+import { ARKRUN_FIRST_CONTACT_NEXT, ARKRUN_ONE_BREATH } from './ark-run-doctor.mjs';
+
 export function formatArkRunHtml(section, esc) {
   if (!section || typeof section !== 'object' || section.notAScore !== true) return '';
   const escape = typeof esc === 'function' ? esc : (v) => String(v);
@@ -17,6 +19,7 @@ export function formatArkRunHtml(section, esc) {
   }
   const residual = section.residual && typeof section.residual === 'object' ? section.residual : { count: 0, ruleIds: [] };
   const ids = Array.isArray(residual.ruleIds) ? residual.ruleIds : [];
+  const next = residual.count > 0 ? ` ${ARKRUN_FIRST_CONTACT_NEXT}` : '';
   const residualHtml =
     residual.count > 0
       ? `<p><span class="tag warn">residual</span> ${ids
@@ -40,8 +43,9 @@ export function formatArkRunHtml(section, esc) {
   <section class="section card" data-advisory="arkRun">
     <h2>ArkRun <span class="muted">(not a score)</span></h2>
     <p class="dim" style="margin:.15rem 0 .55rem;font-size:.88rem">
-      <b>[ArkRun]</b> Kernel usage + declarations — separate from <b>[Layer]</b> imports and <b>[ArkRules]</b> shape.
-      Advisory never flips <code>valid</code>. Enforced extra teeth only when the layer plane is classified.
+      <b>[ArkRun]</b> ${ARKRUN_ONE_BREATH}
+      Kernel usage + declarations — separate from <b>[Layer]</b> imports and <b>[ArkRules]</b> shape.
+      Advisory never flips <code>valid</code>. Enforced extra teeth only when the layer plane is classified.${next}
     </p>
     ${merge}
     <div class="kpis" style="margin-bottom:.55rem">
