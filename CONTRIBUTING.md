@@ -100,6 +100,22 @@ Good first contributions: adoption friction reports, host-install honesty, docs 
 
 Queue: [ROADMAP.md](ROADMAP.md) · issues labeled `good first issue`.
 
+**PR proof (viewable before Ready):** stills and video go in the PR body, not in
+the branch. Never commit screenshots or recordings.
+
+- **Still:** `![caption](https://github.com/user-attachments/assets/…)` — that
+  URL must be the image itself (`image/png` / `image/jpeg`). Any public URL
+  with that content-type also works.
+- **Video:** put `https://github.com/user-attachments/assets/…` alone on its
+  own line. GitHub plays `video/mp4`. A poster image is not a video.
+- **How:** drag-drop into the GitHub PR box, or
+  `gh pr create --attach still.png --attach walkthrough.mp4` /
+  `gh pr edit --attach still.png --attach walkthrough.mp4` (needs a user
+  token; a GitHub App token cannot upload user-attachments).
+- **Not this:** a markdown link to
+  `https://cursor.com/agents/…/artifacts?path=…`. That page is HTML, so GitHub
+  shows a link instead of the picture ([#206](https://github.com/pedroknigge/arkgate/pull/206)).
+
 ---
 
 ## CI (this repo)

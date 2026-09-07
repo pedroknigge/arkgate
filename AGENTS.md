@@ -237,6 +237,13 @@ Before considering repository work complete, verify the public repo is clean:
 2. GitHub Dependabot has no open vulnerability or malware alerts.
 3. There are no open bot PRs, especially Dependabot PRs, left untriaged.
 4. The local working tree is clean and aligned with `origin/main`.
+5. **PR proof is viewable in the body.** Stills:
+   `![alt](https://github.com/user-attachments/assets/…)` — or any URL that
+   is `image/png`. Video: a bare
+   `https://github.com/user-attachments/assets/…` line (plays `video/mp4`).
+   Drag-drop in GitHub or `gh pr edit --attach` (user token). Never paste a
+   Cursor artifacts *page* URL (that returns HTML). Never commit media. See
+   [CONTRIBUTING.md](CONTRIBUTING.md#proposing-changes).
 
 If GitHub cannot be reached, report that the repo-hygiene check is unverified instead
 of assuming it is clean.
