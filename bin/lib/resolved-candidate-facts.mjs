@@ -1266,7 +1266,7 @@ export function resolveCandidateFacts({
     // Only TS/TSX candidates; sensors consume the same shape via facts.classShapes.
     // Extra-plane and ArkRules extractors stay silent when that plane is off (#212).
     if (/\.(tsx?|mts|cts)$/i.test(candidate.path)) {
-      if (arkRulesActive) {
+      if (arkRulesActive || arkRunActive) {
         try {
           classShapes.push(...extractClassShapesFromSource(candidate.path, candidate.content));
         } catch {
