@@ -10,6 +10,17 @@
 export const NORTH_STAR_ONE_LINE =
   'Contener · Guiar · Ordenar — contain the write, guide the next step, order leftover mess.';
 
+/**
+ * Compact doctor / details — only when `arkRules` is on.
+ * Absence stays silent (unlike ArkOrder, which speaks when off).
+ */
+export const ARKRULES_ONE_BREATH =
+  'Layers stop a bad import. ArkRules is optional policies inside one folder.';
+
+/** Next step when the map is on and something still needs a human. */
+export const ARKRULES_FIRST_CONTACT_NEXT =
+  'Next: ark-check --rules-inventory — then /ark-adopt to write one rule, or /ark-autopilot to promote.';
+
 /** Status-light leftover-design qualifier (was “design-weak”). */
 export const LEFTOVER_DESIGN_LABEL = 'leftover design work';
 

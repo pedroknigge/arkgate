@@ -46,7 +46,8 @@ ark start → ark start --apply → ark-check --doctor
 
 `arkgate-check --doctor` shows what's wrong and what to do first. From **4.0.0**, doctor may
 also report **`rulesUnderContract`** (ArkRules counts) and **`packageVersionTruth`** when the
-CLI is ahead of the package.json pin. The compact router from `ark start` is enough for normal
+CLI is ahead of the package.json pin. Compact doctor names ArkRules only when the
+`arkRules` map is on — absence stays silent. The compact router from `ark start` is enough for normal
 feature work. Full `/ark-*` skills are **expert depth** and label residual **`[Layer]`** vs
 **`[ArkRules]`** (except experimental `/ark-runtime`):
 

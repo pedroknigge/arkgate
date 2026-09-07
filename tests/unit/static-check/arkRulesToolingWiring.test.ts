@@ -20,9 +20,13 @@ import {
   needsArkRuleFileHints,
 } from '../../../bin/lib/arkrule-file-hints.mjs';
 import {
+  ARKRULES_FIRST_CONTACT_NEXT,
+  ARKRULES_ONE_BREATH,
+  formatArkRulesDoctorLines,
   formatRulesUnderContractHtml,
   summarizeRulesUnderContract,
 } from '../../../bin/lib/rules-under-contract.mjs';
+import { printCompactExtraDoctorLines } from '../../../bin/lib/doctor-advisories.mjs';
 
 const tempDirs: string[] = [];
 
@@ -606,6 +610,85 @@ export async function save(order: Order) {
     expect(html).toMatch(/Heuristics of module shape/i);
     expect(html).toMatch(/not a claim that business semantics/i);
     expect(html).not.toMatch(/counts — not a score/i);
+  });
+
+  it('formatArkRulesDoctorLines stays silent when the map is off and speaks when on', () => {
+    expect(formatArkRulesDoctorLines(null)).toEqual([]);
+    expect(
+      formatArkRulesDoctorLines({
+        active: false,
+        structureRules: 0,
+        invariants: 0,
+        uncoveredInvariants: 0,
+        notAScore: true,
+        note: 'No arkRules map — intra-layer ArkRules are opt-in.',
+      })
+    ).toEqual([]);
+
+    const loadErr = formatArkRulesDoctorLines({
+      active: true,
+      loadErrors: [{ path: '$.arkRules["DomainModel"]', message: 'missing file' }],
+      notAScore: true,
+    });
+    expect(loadErr[0]).toBe(ARKRULES_ONE_BREATH);
+    expect(loadErr[1]).toMatch(/failed to load/);
+    expect(loadErr[1]).toMatch(/missing file/);
+
+    const advisory = formatArkRulesDoctorLines({
+      active: true,
+      structureRules: 4,
+      invariants: 2,
+      uncoveredInvariants: 0,
+      mergePlanes: {
+        structureSensors: { enforced: 0 },
+        invariants: { enforced: 0 },
+      },
+      notAScore: true,
+    });
+    expect(advisory).toEqual([
+      ARKRULES_ONE_BREATH,
+      'ArkRules: on · structure=4 · invariants=2 · uncovered=0 · advisory only — does not fail the merge · not a score',
+    ]);
+
+    const uncovered = formatArkRulesDoctorLines({
+      active: true,
+      structureRules: 1,
+      invariants: 3,
+      uncoveredInvariants: 2,
+      mergePlanes: {
+        structureSensors: { enforced: 1 },
+        invariants: { enforced: 0 },
+      },
+      notAScore: true,
+    });
+    expect(uncovered[1]).toMatch(/some enforced/);
+    expect(uncovered[2]).toBe(ARKRULES_FIRST_CONTACT_NEXT);
+  });
+
+  it('compact doctor prints ArkRules only when the map is on', () => {
+    const printed: string[] = [];
+    const io = { line: (_mark: string, text: string) => printed.push(text), warn: '!' };
+
+    printCompactExtraDoctorLines({ rulesUnderContract: { active: false, notAScore: true } }, io);
+    expect(printed.join('\n')).not.toMatch(/optional policies inside one folder/);
+
+    printed.length = 0;
+    printCompactExtraDoctorLines(
+      {
+        rulesUnderContract: {
+          active: true,
+          structureRules: 2,
+          invariants: 1,
+          uncoveredInvariants: 1,
+          mergePlanes: { structureSensors: { enforced: 0 }, invariants: { enforced: 0 } },
+          notAScore: true,
+        },
+      },
+      io
+    );
+    expect(printed[0]).toBe(ARKRULES_ONE_BREATH);
+    expect(printed[1]).toMatch(/ArkRules: on · structure=2/);
+    expect(printed[2]).toBe(ARKRULES_FIRST_CONTACT_NEXT);
   });
 
   it('formatRulesUnderContractHtml covers inactive, loadErrors, empty structure, and default esc', () => {
