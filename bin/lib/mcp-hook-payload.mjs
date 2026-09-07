@@ -308,6 +308,35 @@ export function emitHostAllow(output, { antigravityStyle, cursorStyle }) {
   emitCursorAllow(output, cursorStyle);
 }
 
+/** Host-native deny envelopes. Exit 2 is still set by the caller. */
+export function emitHostDeny(output, { antigravityStyle, cursorStyle, grokStyle, message, file }) {
+  const text = String(message || '').endsWith('\n') ? String(message) : `${message}\n`;
+  output.stderr(text);
+  if (antigravityStyle || grokStyle) {
+    output.stdout(`${JSON.stringify({ decision: 'deny', reason: String(message || '').trim() })}\n`);
+  }
+  if (cursorStyle) {
+    output.stdout(
+      JSON.stringify({
+        permission: 'deny',
+        agent_message: String(message || '').trim(),
+        user_message: `ArkGate blocked write to ${file || 'this file'}`,
+      }) + '\n'
+    );
+  }
+}
+
+/** File-local twin of CONFIG_UNCLASSIFIED_FILES — included, no layer, write must not land. */
+export function unclassifiedIncludedWriteDeny(relativePath) {
+  const file = String(relativePath || 'this file');
+  return {
+    ruleId: 'CONFIG_UNCLASSIFIED_FILES',
+    message: `${file} is included but matches no layer, so import rules will not run on it.`,
+    nextAction:
+      'Put it in a layer folder with /ark-place, or extend layer patterns / narrow include.',
+  };
+}
+
 /**
  * Socket-style write-gate deny: two lines first. Pass/fail, no score.
  * Rule id stays on a following line, not the first sentence.

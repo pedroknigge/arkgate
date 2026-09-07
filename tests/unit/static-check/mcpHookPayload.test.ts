@@ -6,10 +6,12 @@ import {
   applyCodexUpdatePatch,
   codexPatchWrites,
   emitHostAllow,
+  emitHostDeny,
   formatWriteGateDeny,
   mapAntigravityToolCall,
   normalizeHookPayload,
   proposedSource,
+  unclassifiedIncludedWriteDeny,
 } from '../../../bin/lib/mcp-hook-payload.mjs';
 
 describe('mcp-hook-payload (extracted)', () => {
@@ -123,5 +125,27 @@ describe('mcp-hook-payload (extracted)', () => {
     lines.length = 0;
     emitHostAllow({ stdout: (chunk) => lines.push(chunk) }, { antigravityStyle: false, cursorStyle: false });
     expect(lines).toEqual([]);
+  });
+
+  it('names an included file with no layer and emits host deny envelopes', () => {
+    const deny = unclassifiedIncludedWriteDeny('src/loose/helper.ts');
+    expect(deny.ruleId).toBe('CONFIG_UNCLASSIFIED_FILES');
+    expect(deny.message).toContain('src/loose/helper.ts');
+    expect(deny.nextAction).toContain('/ark-place');
+
+    const stderr = [];
+    const stdout = [];
+    emitHostDeny(
+      { stderr: (chunk) => stderr.push(chunk), stdout: (chunk) => stdout.push(chunk) },
+      {
+        antigravityStyle: false,
+        cursorStyle: true,
+        grokStyle: false,
+        message: 'blocked src/loose/helper.ts — no layer',
+        file: 'src/loose/helper.ts',
+      }
+    );
+    expect(stderr.join('')).toContain('blocked src/loose/helper.ts');
+    expect(JSON.parse(stdout[0])).toMatchObject({ permission: 'deny' });
   });
 });

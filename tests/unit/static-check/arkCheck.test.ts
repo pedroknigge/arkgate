@@ -27,6 +27,7 @@ function runArkCheck(root: string, extraArgs: string[] = []) {
   }
   return JSON.parse(output) as {
     ok: boolean;
+    error?: string;
     violations: Array<{ ruleId: string }>;
     warnings: Array<{ ruleId: string }>;
   };
@@ -155,12 +156,13 @@ describe('ark-check --init', () => {
     const result = runArkCheck(root, ['--strict-config']);
     expect(result.ok).toBe(true);
 
-    // Files outside every conventional directory still surface the honest warning.
+    // Files outside every conventional directory: include matched, no layer did.
+    // A green here would certify nothing — same refusal as an empty analysis.
     fs.mkdirSync(path.join(root, 'src/lib'), { recursive: true });
     fs.writeFileSync(path.join(root, 'src/lib/util.ts'), 'export const a = 1;\n');
     const withStray = runArkCheck(root, ['--strict-config']);
     expect(withStray.ok).toBe(false);
-    expect(withStray.warnings.some((w) => w.ruleId === 'CONFIG_UNCLASSIFIED_FILES')).toBe(true);
+    expect(withStray.error).toBe('ANALYSIS_COVERS_NO_FILES');
 
     // Code inside a conventional directory is governed immediately: a domain file
     // referencing a persistence intent at a declared site must fail the strict check.

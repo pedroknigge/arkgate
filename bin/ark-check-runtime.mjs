@@ -113,7 +113,7 @@ import { runArchitectureScan } from './lib/architecture-scan.mjs';
 import {
   ANALYSIS_COMPLETENESS,
   analysisIncompleteStatement,
-  emptyAnalysisRefusal,
+  emptyAnalysisRefusal, classifiedCountFromFiles,
 } from './lib/analysis-completeness.mjs';
 import { reportUnavailableAnalysis } from './lib/unavailable-analysis.mjs';
 import { validateHardWriteRequest } from './lib/enforcement-profiles.mjs';
@@ -1209,9 +1209,11 @@ async function main() {
   let governedCache = null;
   const loadGovernedFiles = () => (governedCache ??= collectGovernedFiles(root, loadConfig()));
   const emptyAnalysisRefusalNow = () => {
-    const governedCount = loadGovernedFiles().length;
+    const governedFiles = loadGovernedFiles();
+    const governedCount = governedFiles.length;
     return emptyAnalysisRefusal({
       governedFileCount: governedCount,
+      classifiedFileCount: classifiedCountFromFiles(governedFiles, loadConfig().layers, layerForFile, root),
       // Probed only when nothing is governed, and never through the contract's own
       // exclude: the config under suspicion must not get to answer the question about
       // itself (`exclude: ["**"]` would otherwise read as greenfield and pass).
@@ -1407,7 +1409,7 @@ async function main() {
   }
   const manifest = readManifest(root, args.manifest);
   const rules = manifest?.architecture?.rules ?? config.rules;
-  if (verdictPath && !args.changed) {
+  if (verdictPath && !args.changed && !isMutatingCliCommand(args)) {
     const refusal = emptyAnalysisRefusalNow();
     if (refusal) {
       reportEmptyAnalysis(refusal);
