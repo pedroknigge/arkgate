@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-09-06 (Engineering: `SK216` **doing** — skill catalog 100% product capacity, issue #216; `RL813` **prepared** — Patch **4.8.13** publish-coverage; `RL812` **done** — tag `v4.8.12` cut, publish-npm failed branch coverage; Patch **4.8.12** ArkOrder first-contact **prepared** (tag stands); `AO17` **done**; `RL811` **done**; Patch **4.8.11** nested `--config` + Shape dogfood **done** — 4.8.11 published on npm `latest`, MCP Registry, and website; does not close `Z09` / `K01`; no schemaVersion bump; Release `RL810` **done** — 4.8.10 published; Patch **4.8.10** Amarilla first-aggregate sensors `HINT01`–`IN01` **done**; Release `RL89` **done** — 4.8.9 published; Patch `AH01`/`CS01`/`CI01`/`UP01`/`PX01`/`INT01` **done** and Amarilla ArkOrder `AO10`–`AO16` **done**; Release `RL88` **done** — 4.8.8 published; Phase **LD** `LD01`–`LD06` **done** (4.8.7 published); Patch `ST02` **done** — unlabeled public story; Patch `ST01` **done** — beginner-clear STAR openings; Patch `AO09` **done** — ArkOrder recomputable-status honesty; Phase **LV** ArkOrder valved loop `LV01`–`LV09` **done** (4.8.6 published); Phase **XP** ArkOrder x ArkRun convergence **done** (`XP01`-`XP08`); Patch **4.8.5** `AGY01`+XP **done** — published; Patch **4.8.5** `AGY01` **done** — Antigravity skill refresh (`--antigravity-home` + default tools + dogfood `.agents/skills`); published; Patch **4.8.4** **done** — three false greens closed (coverage certifying tests no runner runs, an empty analysis passing), `--path-drift`, `--sensors`/`--promote`, peer isolation, git install without a build allowlist entry, and honest `--plan`; Phase OR `OR01`–`OR08` **done**; `K01` remains parked; Z09 still parked; npm `latest` is **4.8.11**)
+- **Status date:** 2026-09-06 (Engineering: `RL814` **doing** — Patch **4.8.14** catch npm to main; `SK216` **doing** — skill catalog 100% product capacity, issue #216; `RL813` **done** — Patch **4.8.13** on npm `latest`; `RL812` **done** — tag `v4.8.12` cut, publish-npm failed branch coverage; Patch **4.8.12** ArkOrder first-contact **prepared** (tag stands); `AO17` **done**; `RL811` **done**; Patch **4.8.11** nested `--config` + Shape dogfood **done** — 4.8.11 published on npm `latest`, MCP Registry, and website; does not close `Z09` / `K01`; no schemaVersion bump; Release `RL810` **done** — 4.8.10 published; Patch **4.8.10** Amarilla first-aggregate sensors `HINT01`–`IN01` **done**; Release `RL89` **done** — 4.8.9 published; Patch `AH01`/`CS01`/`CI01`/`UP01`/`PX01`/`INT01` **done** and Amarilla ArkOrder `AO10`–`AO16` **done**; Release `RL88` **done** — 4.8.8 published; Phase **LD** `LD01`–`LD06` **done** (4.8.7 published); Patch `ST02` **done** — unlabeled public story; Patch `ST01` **done** — beginner-clear STAR openings; Patch `AO09` **done** — ArkOrder recomputable-status honesty; Phase **LV** ArkOrder valved loop `LV01`–`LV09` **done** (4.8.6 published); Phase **XP** ArkOrder x ArkRun convergence **done** (`XP01`-`XP08`); Patch **4.8.5** `AGY01`+XP **done** — published; Patch **4.8.5** `AGY01` **done** — Antigravity skill refresh (`--antigravity-home` + default tools + dogfood `.agents/skills`); published; Patch **4.8.4** **done** — three false greens closed (coverage certifying tests no runner runs, an empty analysis passing), `--path-drift`, `--sensors`/`--promote`, peer isolation, git install without a build allowlist entry, and honest `--plan`; Phase OR `OR01`–`OR08` **done**; `K01` remains parked; Z09 still parked; npm `latest` is **4.8.11**)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -439,7 +439,17 @@ branch floor. No `docs/releases/4.8.13.md`. Does not close `Z09` / `K01`.
 
 | Order | ID | Status | Size | Depends on | Outcome |
 |---:|---|---|---:|---|---|
-| 271 | `RL813` | `doing` | S | RL812 | Prepare **4.8.13** (remaining ArkOrder doctor/deny branches so the 81% floor holds). Tag `v4.8.13` and GitHub Release exist. Catch-up is one Actions dispatch: `gh workflow run publish-npm.yml -f tag=v4.8.13 -f dry_run=false`. Do not retag. Skip 4.8.12 on npm. Does not close `Z09` / `K01` |
+| 271 | `RL813` | `done` | S | RL812 | Prepare **4.8.13** (remaining ArkOrder doctor/deny branches so the 81% floor holds). Tag `v4.8.13` and GitHub Release exist. Published on npm `latest`. Skip 4.8.12 on npm. Does not close `Z09` / `K01` |
+
+### Release 4.8.14 — catch npm to main
+
+`v4.8.13` is on npm `latest`. This thin patch ships first-class `/ark-order`
+and the other `main` ships after that tag. No `docs/releases/4.8.14.md`.
+Does not close `Z09` / `K01`.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 273 | `RL814` | `doing` | S | RL813 | Prepare **4.8.14** (first-class `/ark-order` #217 and post-`v4.8.13` ships). After merge: annotated tag `v4.8.14` + GitHub Release + `gh workflow run publish-npm.yml -f tag=v4.8.14 -f dry_run=false`. Does not close `Z09` / `K01` |
 
 ### Patch — skill catalog 100% product capacity (issue #216)
 
@@ -481,10 +491,10 @@ Plan: [docs/plans/alive-in-six-months/README.md](docs/plans/alive-in-six-months/
 | 183 | `AL05` | `parked` | S | required-status possible + 3 partners | Field enrollment. Does **not** close Z09 |
 | 184 | `AL06` | `done` | S | AL04 | Compact first-screen vs Details independently invocable; first-screen honesty stays |
 
-Engineering doing: `RL813`. Patch 4.8.13 **prepared** (tag + GH Release exist; waiting on `publish-npm` for `v4.8.13`). `RL812` **done** (tag `v4.8.12` cut; publish failed coverage; skip on npm). Patch 4.8.12 **tagged, not published**. `AO17` **done**. `RL811` **done** (4.8.11 published). `RL810` **done** (4.8.10 published). `RL89` **done** (4.8.9 published). `AH01`/`CS01`/`CI01`/`UP01`/`PX01`/`INT01` **done**. Amarilla ArkOrder `AO10`–`AO16` **done**. `RL88` **done** (4.8.8 published). Phase **LD** `LD01`–`LD06` **done** (4.8.7 published). `ST02`, `ST01`, and `AO09` **done**. Phase **LV** `LV01`–`LV09` **done** (4.8.6 published). `AGY01` **done** (4.8.5 published). `OR01`–`OR07` **done**. `WH01` **done** (ADR 0026). `PK01` **done**.
+Engineering doing: `RL814`. Patch 4.8.14 **prepared**. `RL813` **done** (4.8.13 on npm `latest`). `RL812` **done** (tag `v4.8.12` cut; publish failed coverage; skip on npm). Patch 4.8.12 **tagged, not published**. `AO17` **done**. `RL811` **done** (4.8.11 published). `RL810` **done** (4.8.10 published). `RL89` **done** (4.8.9 published). `AH01`/`CS01`/`CI01`/`UP01`/`PX01`/`INT01` **done**. Amarilla ArkOrder `AO10`–`AO16` **done**. `RL88` **done** (4.8.8 published). Phase **LD** `LD01`–`LD06` **done** (4.8.7 published). `ST02`, `ST01`, and `AO09` **done**. Phase **LV** `LV01`–`LV09` **done** (4.8.6 published). `AGY01` **done** (4.8.5 published). `OR01`–`OR07` **done**. `WH01` **done** (ADR 0026). `PK01` **done**.
 `K01` **parked** (4.7.6 primitives only).
 Phase DX (`DX01`–`DX03`) **done** and present in published `arkgate@4.8.0+` (4.7.6 predates them).
-Phase HS (`HS01`–`HS05`) **done**. Remaining first-contact copy **4.7.3** published. Write. Check. Ship. patch **4.7.5** published. **4.8.11** is on npm `latest`. 4.8.13 is prepared (waiting on `publish-npm` for `v4.8.13`). Tag `v4.8.12` stands; skip that version on npm.
+Phase HS (`HS01`–`HS05`) **done**. Remaining first-contact copy **4.7.3** published. Write. Check. Ship. patch **4.7.5** published. **4.8.11** is on npm `latest`. 4.8.13 is published. 4.8.14 is prepared. Tag `v4.8.12` stands; skip that version on npm.
 `RN16` **done** (public docs + 4.7.0 published). `RN17` **done** (`@arkgate/runtime@0.1.0-experimental.0` on npm `experimental`).
 `RN15` **done** (deepen `/ark-runtime` `/ark-place` `/ark-adopt`; no new skill names).
 `RN14` **done** (skip corpus: extra absent = green; enforced = fail `new` / peer import / homemade bus).

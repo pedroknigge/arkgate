@@ -73,7 +73,7 @@ These are **not** the day-to-day product path. They stay in the repo for evidenc
 | Field adoption kit (scaffolding, not closed) | [field/](field/) |
 | Runtime hardening (experimental) | [production-hardening.md](production-hardening.md) |
 
-Prepared: [CHANGELOG](../CHANGELOG.md) (`arkgate@4.8.13`; tag + GitHub Release exist; not on npm until `publish-npm` for `v4.8.13`).
+Prepared: [CHANGELOG](../CHANGELOG.md) (`arkgate@4.8.14`; not published until `publish-npm` for `v4.8.14`).
 Current published: [releases/4.8.11.md](releases/4.8.11.md) (`arkgate@4.8.11` on npm `latest`; does not close `K01`).
 Prior published: [releases/4.8.10.md](releases/4.8.10.md) (`arkgate@4.8.10`).
 Prior published: [releases/4.8.9.md](releases/4.8.9.md) (`arkgate@4.8.9`).

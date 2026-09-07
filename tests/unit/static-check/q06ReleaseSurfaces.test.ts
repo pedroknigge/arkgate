@@ -10,7 +10,7 @@ import { version } from '../../../src/version.ts';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 /** Tree package identity. */
-const CURRENT = '4.8.13';
+const CURRENT = '4.8.14';
 /** Version confirmed on npm `latest`. */
 const PUBLISHED_LATEST = '4.8.11';
 
@@ -138,7 +138,7 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
 
   it('keeps 4.8.11 published on npm latest and 4.8.10 as prior', () => {
     expect(PUBLISHED_LATEST).toBe('4.8.11');
-    expect(CURRENT).toBe('4.8.13');
+    expect(CURRENT).toBe('4.8.14');
     expect(read('docs/releases/4.8.9.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.8.9.md')).toMatch(/arkgate@4\.8\.9/);
     expect(read('docs/releases/4.8.9.md')).not.toMatch(/\*\*Status:\*\*\s*prepared/i);
@@ -196,7 +196,7 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
     expect(read('CONTRIBUTING.md')).toMatch(/Optional \(not gates\)/);
     expect(read('CONTRIBUTING.md')).not.toMatch(/Current release candidate:/);
     expect(read('CONTRIBUTING.md')).not.toMatch(/Prior published:/);
-    expect(read('docs/README.md')).toMatch(/Prepared:.*4\.8\.13/s);
+    expect(read('docs/README.md')).toMatch(/Prepared:.*4\.8\.14/s);
     expect(read('docs/README.md')).toMatch(/Current published:.*4\.8\.11/s);
     expect(read('docs/README.md')).toMatch(/Prior published:.*4\.8\.10/s);
     expect(read('docs/README.md')).toMatch(/Prior:.*4\.6\.2/s);
@@ -279,7 +279,34 @@ describe('CHANGELOG + release note cover 4.8.13 publish-coverage patch', () => {
     expect(section).not.toMatch(/Status:\s*unreleased/i);
     expect(fs.existsSync(path.join(REPO, 'docs/releases/4.8.13.md'))).toBe(false);
     expect(read('ROADMAP.md')).toMatch(/\| 270 \| `RL812` \| `done`/);
-    expect(read('ROADMAP.md')).toMatch(/\| 271 \| `RL813` \| `doing`/);
+    expect(read('ROADMAP.md')).toMatch(/\| 271 \| `RL813` \| `done`/);
+  });
+});
+
+describe('CHANGELOG + release note cover 4.8.14 main-catch-up patch', () => {
+  it('records the prepared release without claiming publication', () => {
+    const changelog = changelogText();
+    const section = changelogSection(changelog, '4.8.14', '4.8.13');
+    expect(section).toMatch(/Status:\s*prepared/i);
+    expect(section).toMatch(/npm `latest` remains \*\*4\.8\.13\*\*/);
+    expect(section).toMatch(/tag=v4\.8\.14/);
+    expect(section).toMatch(/dry_run=false/);
+    expect(section).toMatch(/\/ark-order/);
+    expect(section).toMatch(/#217|#216/);
+    expect(section).toMatch(/--changed/);
+    expect(section).toMatch(/Contener · Guiar · Ordenar/);
+    expect(section).toMatch(/billing/i);
+    expect(section).toMatch(/one-breath/i);
+    expect(section).toMatch(/#225|leftover/i);
+    expect(section).toMatch(/No required config migration/i);
+    expect(section).toMatch(/Does not close\s*`K01`\s*\/\s*`Z09`/);
+    expect(section).toMatch(/does \*\*not\*\* turn `arkOrder` on/);
+    expect(section).not.toMatch(/Status:\s*published/i);
+    expect(section).not.toMatch(/No package version bump/);
+    expect(section).not.toMatch(/Status:\s*unreleased/i);
+    expect(fs.existsSync(path.join(REPO, 'docs/releases/4.8.14.md'))).toBe(false);
+    expect(read('ROADMAP.md')).toMatch(/\| 271 \| `RL813` \| `done`/);
+    expect(read('ROADMAP.md')).toMatch(/\| 273 \| `RL814` \| `doing`/);
   });
 });
 

@@ -5,57 +5,73 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
-### Changed
-- First-contact leftovers after the north-star / billing / one-breath ships:
-  gallery index and the hexagonal demo open in ordinary English; `arkgate-check
-  --help` leads with the deny; the write-gate fallback and the two newcomer
-  deny codes (`LAYER_IMPORT_VIOLATION`, `ARKORDER_UNVALVED_RELEASE`) drop ξ /
-  “architecture contract” from the first line. No new command, schema, or
-  skill. Does not close `K01` / `Z09`.
-- Doctor / start first-contact always tell the ArkOrder one-breath (what it
-  is, when to use it, next step) even when the extra is off. Reuses
-  `/ark-order` and `examples/arkorder-billing`. Verdicts stay silent (not a
-  score; Layers unchanged). No new skill, flag, or schema. Does not close
-  `K01` / `Z09`.
-- First-contact now names **Contener · Guiar · Ordenar** in ordinary English
-  (contain the write, guide the next step, order leftover mess). README, doctor
-  one-light, CLI help, host projections, and first-class skills share the same
-  breath. Write. Check. Ship. stays the deny. No new command, schema, or skill.
-  Does not close `K01` / `Z09`.
-- Billing gallery is the undeniable ArkOrder proof path: site/docs
-  (`docs/use.md`, docs hub, enthusiast) →
-  [examples/README.md](https://github.com/pedroknigge/arkgate/blob/main/examples/README.md)
-  → [examples/arkorder-billing](https://github.com/pedroknigge/arkgate/tree/main/examples/arkorder-billing)
-  (first freeze `release()`, later `proposeRelease` then `apply`). Still GitHub-only;
-  not added to the npm tarball or `GALLERY_STARTERS`. No new skill names.
-  Does not close `K01` / `Z09`.
+## 4.8.14 — 2026-09-06
+
+**Patch** over **4.8.13**. Catch npm `latest` up to `main`: first-class
+`/ark-order` (#217 / #216) and the other ships that landed after tag
+`v4.8.13`. **Write. Check. Ship.** **No required config migration.** No
+`schemaVersion` bump. Does not close `K01` / `Z09`. This mother
+`ark.config.json` still does **not** turn `arkOrder` on.
+
+**Status: prepared** (npm `latest` remains **4.8.13** until Actions `publish-npm`
+runs with `tag=v4.8.14` and `dry_run=false`).
+
+### Added
 - Skill catalog covers 100% of product capacity (issue [#216](https://github.com/pedroknigge/arkgate/issues/216) /
-  [ADR 0036](docs/adr/0036-skill-catalog-product-capacity.md)). First-class
-  `/ark-order` mirrors `/ark-runtime` for ArkOrder. Leftover
+  [ADR 0036](docs/adr/0036-skill-catalog-product-capacity.md) / [#217](https://github.com/pedroknigge/arkgate/pull/217)).
+  First-class `/ark-order` mirrors `/ark-runtime` for ArkOrder. Leftover
   `/ark-architect` / `/ark-contract` / `/ark-fix` / `/ark-loop` / `/ark-think`
   stay as one-release redirect stubs. Remaining doors speak Contener · Guiar ·
   Ordenar and name the sibling for each job. ACS05 “no new skill names” freeze
   opened; the catalog stays closed in Domain (`ARK_SKILL_NAMES`). Leftover
   `/ark-fix` / `/ark-loop` stubs keep the Y04 mechanical-edit hygiene outcomes.
-  Skills never enforce. Does not close `K01` / `Z09`. No `schemaVersion` bump.
+  Skills never enforce.
+
+### Changed
+- First-contact leftovers after the north-star / billing / one-breath ships
+  ([#225](https://github.com/pedroknigge/arkgate/pull/225)): gallery index and
+  the hexagonal demo open in ordinary English; `arkgate-check --help` leads with
+  the deny; the write-gate fallback and the two newcomer deny codes
+  (`LAYER_IMPORT_VIOLATION`, `ARKORDER_UNVALVED_RELEASE`) drop ξ /
+  “architecture contract” from the first line.
+- Doctor / start first-contact always tell the ArkOrder one-breath (what it
+  is, when to use it, next step) even when the extra is off ([#224](https://github.com/pedroknigge/arkgate/pull/224)).
+  Reuses `/ark-order` and `examples/arkorder-billing`. Verdicts stay silent (not a
+  score; Layers unchanged).
+- First-contact now names **Contener · Guiar · Ordenar** in ordinary English
+  (contain the write, guide the next step, order leftover mess)
+  ([#222](https://github.com/pedroknigge/arkgate/pull/222)). README, doctor
+  one-light, CLI help, host projections, and first-class skills share the same
+  breath. Write. Check. Ship. stays the deny.
+- Billing gallery is the undeniable ArkOrder proof path
+  ([#223](https://github.com/pedroknigge/arkgate/pull/223)): site/docs
+  (`docs/use.md`, docs hub, enthusiast) →
+  [examples/README.md](https://github.com/pedroknigge/arkgate/blob/main/examples/README.md)
+  → [examples/arkorder-billing](https://github.com/pedroknigge/arkgate/tree/main/examples/arkorder-billing)
+  (first freeze `release()`, later `proposeRelease` then `apply`). Still GitHub-only;
+  not added to the npm tarball or `GALLERY_STARTERS`.
 - Living docs (AGENTS hub, claims matrix, agent-guide skill install, product-voice
   filter) restate the catalog after `#217`: first-class `/ark-order`, leftover
   shortcuts as one-release stubs, ACS05 freeze opened, Domain still closes
   `ARK_SKILL_NAMES`. The skill *set* covers Layers + ArkRules + ArkRun + ArkOrder
-  (Contener · Guiar · Ordenar). Tree **4.8.13** prepared; npm `latest` **4.8.11**.
-  Historical 14/14 100% and last 4.8.3 C-020 stay Planned. Does not close
-  `K01` / `Z09`.
+  (Contener · Guiar · Ordenar). Historical 14/14 100% and last 4.8.3 C-020 stay
+  Planned.
+- Pre-adoption publish is the thin path: slim CI on prepare PRs (no `release`
+  label or branch-name full-matrix), annotated tags (unsigned allowed),
+  CHANGELOG + `publish-npm` provenance. MCP registry, site, companion republish,
+  and `docs/releases/` notes stay optional.
 
 ### Fixed
 - `--changed` no longer builds facts for the whole include tree (issue
-  [#205](https://github.com/pedroknigge/arkgate/issues/205)). The check now
+  [#205](https://github.com/pedroknigge/arkgate/issues/205) /
+  [#221](https://github.com/pedroknigge/arkgate/pull/221)). The check now
   resolves touched sources plus their import closure, skips the unused
   tsconfig file walk, and does not list every governed file just to filter
   the diff. File-local ArkRules sensors stay on the touched set. Full-tree
   `ark-check` is unchanged. Dual gate (write + PR) stays the merge line.
-  Does not bump the package version.
 - Short `arkgate-check --help` now names `--changed --base <ref>` as the local /
-  pre-push fast path (issue [#204](https://github.com/pedroknigge/arkgate/issues/204)).
+  pre-push fast path (issue [#204](https://github.com/pedroknigge/arkgate/issues/204) /
+  [#220](https://github.com/pedroknigge/arkgate/pull/220)).
   Encyclopedia `--help --all` is unchanged.
 - `ark-check` human warnings now print `path:line` the way denies already do
   (ArkOrder / ArkRun advisory findings already carried the location; the
@@ -67,12 +83,6 @@ in the immutable pre-2.0 archive linked below.
   existing `.mcp.json` (and host copies) without `--force`. Doctor no longer
   reports `gatesMissing: ["AGENTS.md", ".mcp.json"]` after the stranger happy
   path on a repo that already had those files (issue #210).
-
-### Changed
-- Pre-adoption publish is the thin path: slim CI on prepare PRs (no `release`
-  label or branch-name full-matrix), annotated tags (unsigned allowed),
-  CHANGELOG + `publish-npm` provenance. MCP registry, site, companion republish,
-  and `docs/releases/` notes stay optional.
 
 ## 4.8.13 — 2026-09-06
 
