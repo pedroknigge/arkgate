@@ -100,6 +100,21 @@ Good first contributions: adoption friction reports, host-install honesty, docs 
 
 Queue: [ROADMAP.md](ROADMAP.md) · issues labeled `good first issue`.
 
+**PR proof (viewable before Ready):** stills and video go in the PR body, not in
+the branch. Never commit screenshots or recordings.
+
+- **Still:** GitHub markdown `![caption](https://…)` only when that URL is the
+  image itself (`image/png` / `image/jpeg`). In Cursor Cloud, drop the file in
+  `/opt/cursor/artifacts/` and put
+  `<img alt="caption" src="/opt/cursor/artifacts/name.png" />` in the PR body —
+  the host rewrites it to a public URL GitHub can render.
+- **Video:** `<video src="/opt/cursor/artifacts/name.mp4" controls></video>`
+  (or a GitHub user-attachment `.mp4`). It must play as `video/mp4`, not a
+  poster image.
+- **Not this:** a markdown link to
+  `https://cursor.com/agents/…/artifacts?path=…`. That page is HTML, so GitHub
+  shows a link instead of the picture ([#206](https://github.com/pedroknigge/arkgate/pull/206)).
+
 ---
 
 ## CI (this repo)
