@@ -104,10 +104,85 @@ function mergeLayerPatterns(config, layerName, patterns, extras = {}) {
   }
 }
 
+/** Next-flavored start captions — applied only when Next is actually detected. */
+export const NEXT_LAYER_DESCRIPTIONS = Object.freeze({
+  ApplicationOrchestration:
+    'Use cases and services that coordinate the domain through ports. Next App Router API (`app/api/**`) and Pages API (`pages/api/**`) are orchestration shells, not UI.',
+  PresentationAdapters:
+    'Entrypoints — UI, framework app/pages dirs, controllers. Next `app/api` is Application, not this layer. Never bare lib/** (data clients are Persistence).',
+});
+
+/** Library / package-monorepo captions — no framework storefront. */
+export const LIBRARY_LAYER_DESCRIPTIONS = Object.freeze({
+  ApplicationOrchestration:
+    'Use cases and the package public surface that coordinate the domain. No I/O of its own.',
+  PresentationAdapters:
+    'Optional CLIs, docs, or demo UIs — not the published library core.',
+});
+
+function setLayerDescription(config, layerName, description) {
+  const layer = config.layers?.find((entry) => entry.name === layerName);
+  if (!layer || typeof description !== 'string' || description.length === 0) return;
+  layer.description = description;
+}
+
+/** packages/* (or similar) of published libraries — no app/cli units, no web framework. */
+export function isLibraryPackageMonorepo(signals) {
+  if (!signals || signals.nextFramework || signals.nestFramework || signals.expressLike) {
+    return false;
+  }
+  const units = Array.isArray(signals.repoUnits) ? signals.repoUnits : [];
+  const productive = units.filter(
+    (unit) => unit.root !== '.' && !['docs', 'example', 'test'].includes(unit.role)
+  );
+  if (productive.length === 0) return false;
+  return (
+    productive.some((unit) => unit.role === 'library') &&
+    !productive.some((unit) => unit.role === 'application' || unit.role === 'cli')
+  );
+}
+
+function applyFrameworkLayerCaptions(config, signals) {
+  const nextish = Boolean(
+    signals.nextFramework || (signals.ui && signals.toolHints?.includes('next'))
+  );
+  if (nextish) {
+    setLayerDescription(
+      config,
+      'ApplicationOrchestration',
+      NEXT_LAYER_DESCRIPTIONS.ApplicationOrchestration
+    );
+    setLayerDescription(
+      config,
+      'PresentationAdapters',
+      NEXT_LAYER_DESCRIPTIONS.PresentationAdapters
+    );
+    return;
+  }
+  if (
+    (signals.libraryOnly && !signals.nestFramework && !signals.expressLike) ||
+    isLibraryPackageMonorepo(signals)
+  ) {
+    setLayerDescription(
+      config,
+      'ApplicationOrchestration',
+      LIBRARY_LAYER_DESCRIPTIONS.ApplicationOrchestration
+    );
+    setLayerDescription(
+      config,
+      'PresentationAdapters',
+      LIBRARY_LAYER_DESCRIPTIONS.PresentationAdapters
+    );
+  }
+}
+
 /**
  * Framework-aware layout overlays. Detection uses collectRepoShapeSignals (deps + filenames).
- * Pure additive: never removes existing preset patterns. Goal: Nest/Next/express starters
- * reach meaningful governed% under hexagonal/layered without a hand-written adopt pass.
+ * Pure additive for patterns: never removes existing preset globs. Goal: Nest/Next/express
+ * starters reach meaningful governed% under hexagonal/layered without a hand-written adopt pass.
+ * Layer captions are the one replace: Next-flavored copy only when Next is present;
+ * library-native copy on library-only / library-package monorepos. Generic preset
+ * captions stay when neither applies.
  */
 export function applyFrameworkLayoutOverlays(config, root) {
   if (!config || !root) return config;
@@ -427,6 +502,7 @@ export function applyFrameworkLayoutOverlays(config, root) {
       : 'library';
   }
 
+  applyFrameworkLayerCaptions(next, signals);
   return withArkConfigMetadata(next);
 }
 

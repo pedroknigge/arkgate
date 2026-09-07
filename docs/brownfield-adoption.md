@@ -48,7 +48,10 @@ regenerate it unasked.
 
 Without this split, broad `**/app/**` Presentation patterns push every API handler into UI and
 create a Presentation→Persistence tsunami. Specificity still wins: more-specific Application
-globs beat Presentation. Adopt writes `.ark/golden-pattern.json` (load-bearing for `/ark-place`).
+globs beat Presentation. **Captions** (what doctor prints next to the layer name) mention Next
+App Router / Pages API / `app/api` only when Next is actually present — a library
+`packages/*` monorepo keeps library-native language. Adopt writes `.ark/golden-pattern.json`
+(load-bearing for `/ark-place`).
 `ark_place` requires `filePath` (fail-closed — never invents `components/*.tsx` or defaults to Presentation).
 ArkRules stay **opt-in** (not forced on by start/adopt).
 

@@ -248,6 +248,9 @@ Ark protects the **boundary around** a framework, not its internals. Nest/DI pub
    If `src/contexts` or `src/bounded-contexts` exists, prefer `ddd-bounded-contexts`.
    **Next.js:** `app/api/**` / `pages/api/**` (and route-group `app/(…)/api/**`) default to
    **ApplicationOrchestration**, not Presentation — do not reclassify API shells as UI.
+   Write Next-flavored `layers[].description` only when Next is actually present
+   (`next` dependency, `next.config.*`, or `app/page` / `pages/*` routes). Library and
+   package monorepos keep framework-free captions — `ark start` already does this.
    User wants the ArkRun extra → write **advisory** `arkRun` (schema `1.2+`, real
    `kernelRoots` preferred — `compositionRoots` alias, existing `managedLayers`) **in this turn**.
    User wants the ArkOrder extra → write **advisory** `arkOrder` (schema `1.3+`, real
