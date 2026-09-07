@@ -297,9 +297,12 @@ steps under `plan.typeOnlyGroup` when volume is high.
 
 ### Next.js API shell (framework overlay / presets)
 
-When Next is detected (or `ui-surface` / monorepo patterns apply), **`app/api/**` and
-`pages/api/**` classify as Application orchestration**, not Presentation. UI routes stay
-Presentation. More-specific Application globs win over broad `**/app/**` Presentation patterns.
+When Next is detected, **`app/api/**` and `pages/api/**` classify as Application
+orchestration**, not Presentation. UI routes stay Presentation. More-specific Application
+globs win over broad `**/app/**` Presentation patterns. Reserved `app/api` globs may still
+appear on `ui-surface` / monorepo presets so a later Next route classifies correctly;
+**layer captions** mention Next App Router / Pages API / `app/api` only when Next is
+actually present. Library and package-monorepo start keep library-native captions.
 See [brownfield adoption](brownfield-adoption.md#nextjs-honesty-default-overlays--ui-surface--monorepo).
 
 ### ArkRules dual plane (when `arkRules` is present)

@@ -505,6 +505,7 @@ describe('LD05 layer description skill deepen (no /ark-describe)', () => {
     expect(body).toMatch(/app context|app-context/);
     expect(body).toMatch(/compact starter/i);
     expect(body).toMatch(/Do \*\*not\*\* invent captions|Do not invent captions/);
+    expect(body).toMatch(/Write Next-flavored `layers\[\]\.description` only when Next is actually present/);
     expect(body).toMatch(/Do (?:\*\*not\*\*|not) invent `\/ark-describe`/);
     expect(body).not.toMatch(/(?:^|[^*n])Invent `\/ark-describe`/);
   });

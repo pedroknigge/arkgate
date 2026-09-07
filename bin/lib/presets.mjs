@@ -670,8 +670,7 @@ export const ARCHITECTURE_PRESETS = {
           },
           {
             name: 'ApplicationOrchestration',
-            description:
-              'Use cases and services that coordinate the domain through ports. Next App Router API (`app/api/**`) and Pages API (`pages/api/**`) are orchestration shells, not UI.',
+            description: 'Use cases and services that coordinate the domain through ports.',
             patterns: [
               '**/application/**',
               '**/use-cases/**',
@@ -687,7 +686,7 @@ export const ARCHITECTURE_PRESETS = {
           {
             name: 'PresentationAdapters',
             description:
-              'Entrypoints — UI, framework app/pages dirs, controllers. Next `app/api` is Application, not this layer. Never bare lib/** (data clients are Persistence).',
+              'Entrypoints — UI, pages, controllers when present. Never bare lib/** (data clients are Persistence).',
             patterns: [
               '**/app/**',
               '**/pages/**',
@@ -760,7 +759,7 @@ export const ARCHITECTURE_PRESETS = {
           {
             name: 'ApplicationOrchestration',
             description:
-              'Server actions, features, Next API routes (`app/api/**` / `pages/api/**`), and non-UI lib orchestration (when present).',
+              'Server actions, features, and non-UI lib orchestration (when present).',
             patterns: [
               'src/features/**',
               'src/server/**',

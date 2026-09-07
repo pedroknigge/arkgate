@@ -6,6 +6,10 @@ in the immutable pre-2.0 archive linked below.
 ## Unreleased
 
 ### Fixed
+- Library / package-monorepo `arkgate start` no longer writes Next App Router /
+  Pages API / `app/api` layer captions when the tree has no Next
+  (issue [#213](https://github.com/pedroknigge/arkgate/issues/213)). Next-flavored
+  doctor copy still appears when Next is detected. Same start command; no new flag.
 - Cold `--doctor` no longer treats a full governed list as a `--changed` scope
   (issue [#212](https://github.com/pedroknigge/arkgate/issues/212)). Full-tree
   status uses the unbounded facts path; import-closure + a second
