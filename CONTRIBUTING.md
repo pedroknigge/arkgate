@@ -30,7 +30,7 @@ npx arkgate-check --root . --config ark.config.json --strict
 npm run check:architecture    # dogfood
 npm run check:layer-match
 npm run check:cli-pure
-npm run check:agent-skills    # Agent Skills layout vs flat templates + dogfood .agents/.grok skill links
+npm run check:agent-skills    # Agent Skills layout + 100% product coverage (four planes + north star)
 ```
 
 After editing pure Domain algorithms, regenerate CLI artifacts:
