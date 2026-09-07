@@ -93,6 +93,9 @@ describe('canonical public host support matrix', () => {
         'repair-reinjection-guaranteed': false,
       },
     });
+    expect(HOST_SUPPORT_MATRIX.cursor.nativeFailClosed).toBe('required');
+    expect(HOST_SUPPORT_MATRIX.opencode.nativeFailClosed).toBe('none');
+    expect(HOST_SUPPORT_MATRIX.claude.nativeFailClosed).toBe('unsupported');
     expect(getHostSupportProfile(' CODEX ')).toBe(HOST_SUPPORT_MATRIX.codex);
     expect(getHostSupportProfile('antigravity')).toBe(HOST_SUPPORT_MATRIX.antigravity);
     expect(getHostSupportProfile('unknown')).toBeNull();

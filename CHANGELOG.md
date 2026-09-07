@@ -5,6 +5,15 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+### Changed
+- Write-gate host parity: Cursor hard-write evidence now requires the host-native
+  `failClosed: true` flag (same idea as a file permission — if the checker cannot
+  run, the write must not land). A Write/StrReplace hook without that flag is
+  fail-open: doctor, `--require-write-hook`, and honesty JSON say so and do not
+  claim a hard block. Hosts without a native flag stay as before (deny when the
+  hook runs; hook-crash behavior is host-owned). Soft hosts stay advisory.
+  Required CI is still the shared merge line. No new skill, schema, or host.
+
 ### Fixed
 - Library / package-monorepo `arkgate start` no longer writes Next App Router /
   Pages API / `app/api` layer captions when the tree has no Next

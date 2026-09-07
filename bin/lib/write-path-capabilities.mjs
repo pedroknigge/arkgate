@@ -313,14 +313,20 @@ function cursorHookEvidence(root) {
     hooks = [];
   }
   const hardHooks = hooks.filter((entry) => entry.invocation.binArgs.includes('--hook'));
+  // Cursor failClosed is the host-native FS analog: if the checker cannot run, deny.
+  // A Write|StrReplace Ark hook without failClosed:true is configured but fail-open.
+  const failClosedHooks = hardHooks.filter((entry) => entry.hook?.failClosed === true);
   const required = requiredWriteOperations(relativePath);
-  const hard = required.every((operation) =>
+  const configuredArk = required.every((operation) =>
     hardHooks.some((entry) => entry.operations.includes(operation))
+  );
+  const hard = required.every((operation) =>
+    failClosedHooks.some((entry) => entry.operations.includes(operation))
   );
   const repair =
     hard &&
     required.every((operation) =>
-      hardHooks.some(
+      failClosedHooks.some(
         ({ hook, invocation, operations }) =>
           operations.includes(operation) &&
           (invocation.binArgs.includes('--hook-repair') ||
@@ -332,6 +338,7 @@ function cursorHookEvidence(root) {
   return {
     hard: hard ? [relativePath] : [],
     repair: repair ? [relativePath] : [],
+    failOpen: configuredArk && !hard,
   };
 }
 
@@ -424,7 +431,7 @@ function codexMcpEvidence(root) {
   return registered ? [relativeEvidencePath(root, file)] : [];
 }
 
-function hostRecord(hard, advisory, repair, merge) {
+function hostRecord(hard, advisory, repair, merge, extras = {}) {
   const evidence = {
     'hard-write': unique(hard),
     'advisory-write': unique(advisory),
@@ -434,9 +441,11 @@ function hostRecord(hard, advisory, repair, merge) {
   return {
     configured:
       evidence['hard-write'].length > 0 ||
-      evidence['advisory-write'].length > 0,
+      evidence['advisory-write'].length > 0 ||
+      extras.nativeFailClosed === false,
     capabilities: capabilityMap(evidence),
     evidence,
+    nativeFailClosed: extras.nativeFailClosed ?? null,
   };
 }
 
@@ -480,7 +489,11 @@ export function detectWritePathInventory(root) {
       // reinjection is not package-guaranteed — keep inventory repair-payload false
       // (envelope honesty lives on support.repair-envelope-emitted).
       [],
-      merge
+      merge,
+      {
+        nativeFailClosed:
+          cursorHook.hard.length > 0 ? true : cursorHook.failOpen ? false : null,
+      }
     ),
     // Current Codex CLI and local ChatGPT Desktop/App Server synchronously run
     // PreToolUse for apply_patch. Disk evidence remains unverified until a fresh
@@ -542,6 +555,8 @@ export function buildWritePathCapabilityModel(root, explicitHost, attempt) {
   };
   model.enforcementState = buildEnforcementState(root, { ...model, ci });
   model.enforcementLadder.ciMerge.requiredStatus = model.enforcementState.ciMerge.required;
+  model.nativeFailClosed = activeRecord?.nativeFailClosed ?? null;
+  model.nativeFailClosedPolicy = getHostSupportProfile(activeHost)?.nativeFailClosed ?? 'unsupported';
   // Ladder/state agreement stamp for pin-absent consumers (configured ≠ installed).
   if (pkg.installed !== true) {
     model.packagePinHonesty = {

@@ -306,6 +306,8 @@ export function collectStatusFacts(options = {}) {
   const softWriteHost = Boolean(matrix && matrix.capabilities?.['hard-write'] !== true);
   const writePathHonesty = buildWritePathHonesty(hostKey, hardWriteActive, {
     packageInstalled: writePath?.enforcementState?.localWrite?.installed !== false,
+    nativeFailClosed: writePath?.nativeFailClosed,
+    nativeFailClosedPolicy: writePath?.nativeFailClosedPolicy,
   });
 
   const latestPath = path.join(reportsDir(resolvedRoot), 'latest.json');
