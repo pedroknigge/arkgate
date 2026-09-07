@@ -1209,9 +1209,16 @@ async function main() {
   let governedCache = null;
   const loadGovernedFiles = () => (governedCache ??= collectGovernedFiles(root, loadConfig()));
   const emptyAnalysisRefusalNow = () => {
-    const governedCount = loadGovernedFiles().length;
+    const governedFiles = loadGovernedFiles();
+    const governedCount = governedFiles.length;
+    const config = governedCount > 0 ? loadConfig() : null;
+    const classifiedCount =
+      governedCount === 0
+        ? 0
+        : governedFiles.filter((abs) => layerForFile(root, abs, config.layers)).length;
     return emptyAnalysisRefusal({
       governedFileCount: governedCount,
+      classifiedFileCount: classifiedCount,
       // Probed only when nothing is governed, and never through the contract's own
       // exclude: the config under suspicion must not get to answer the question about
       // itself (`exclude: ["**"]` would otherwise read as greenfield and pass).

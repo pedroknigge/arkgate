@@ -75,7 +75,17 @@ describe('emptyAnalysisRefusal (pure)', () => {
     expect(
       emptyAnalysisRefusal({
         governedFileCount: 1,
+        classifiedFileCount: 1,
         ungovernedSourceCount: 40,
+        root: '/repo',
+        configPath: '/repo/ark.config.json',
+      })
+    ).toBe(null);
+    // Partial unclassified is a warning, not this refusal.
+    expect(
+      emptyAnalysisRefusal({
+        governedFileCount: 4,
+        classifiedFileCount: 3,
         root: '/repo',
         configPath: '/repo/ark.config.json',
       })
@@ -176,6 +186,35 @@ describe('emptyAnalysisRefusal (pure)', () => {
         'include and layer patterns in . Every rule is vacuously satisfied on an empty set, so a ' +
         'pass here would certify nothing.'
     );
+  });
+
+  it('refuses when include matched files but no layer classified them', () => {
+    const refusal = emptyAnalysisRefusal({
+      governedFileCount: 3,
+      classifiedFileCount: 0,
+      ungovernedSourceCount: 3,
+      root: '/repo',
+      configPath: '/repo/ark.config.json',
+    });
+    expect(refusal?.ruleId).toBe(EMPTY_ANALYSIS_RULE_ID);
+    expect(refusal?.message).toBe(
+      'Analysis covered 0 files: 3 included file(s) exist under /repo but none matched a ' +
+        'layer pattern in /repo/ark.config.json. Every rule is vacuously satisfied on an empty ' +
+        'set, so a pass here would certify nothing.'
+    );
+    expect(refusal?.nextAction).toContain('/ark-place');
+    expect(refusal?.nextAction).toContain('--coverage');
+  });
+
+  it('omitted classifiedFileCount keeps the historical include-only meaning', () => {
+    expect(
+      emptyAnalysisRefusal({
+        governedFileCount: 2,
+        ungovernedSourceCount: 10,
+        root: '/repo',
+        configPath: '/repo/ark.config.json',
+      })
+    ).toBe(null);
   });
 
   it('reports zero rather than a missing count when the caller passes no numbers or paths', () => {
@@ -327,6 +366,47 @@ describe('ark-check refuses an empty analysis', () => {
     expect(strictOut).toContain(EMPTY_ANALYSIS_RULE_ID);
     // The old wrong reason: gates missing in the directory holding the config copy.
     expect(strictOut).not.toMatch(/Ark gates are not installed/);
+  });
+
+  it('exits 1 when include matches files that no layer classifies', () => {
+    const root = mk();
+    fs.mkdirSync(path.join(root, 'src', 'loose'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src', 'loose', 'helper.ts'), 'export const helper = 1;\n');
+    fs.writeFileSync(
+      path.join(root, 'ark.config.json'),
+      JSON.stringify({
+        schemaVersion: '1.0',
+        include: ['src'],
+        layers: [{ name: 'DomainModel', patterns: ['src/domain/**'] }],
+        rules: [],
+      })
+    );
+    const res = run(['--root', root, '--config', 'ark.config.json'], root);
+    const out = `${res.stdout || ''}${res.stderr || ''}`;
+    expect(res.status, out).toBe(1);
+    expect(out).toContain(EMPTY_ANALYSIS_RULE_ID);
+    expect(out).toContain('none matched a layer pattern');
+    expect(out).not.toMatch(/Ark check passed/);
+  });
+
+  it('report modes still diagnose include-without-layer instead of refusing', () => {
+    const root = mk();
+    fs.mkdirSync(path.join(root, 'src', 'loose'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src', 'loose', 'helper.ts'), 'export const helper = 1;\n');
+    fs.writeFileSync(
+      path.join(root, 'ark.config.json'),
+      JSON.stringify({
+        schemaVersion: '1.0',
+        include: ['src'],
+        layers: [{ name: 'DomainModel', patterns: ['src/domain/**'] }],
+        rules: [],
+      })
+    );
+    const res = run(['--root', root, '--config', 'ark.config.json', '--coverage'], root);
+    const out = `${res.stdout || ''}${res.stderr || ''}`;
+    expect(res.status, out.slice(-600)).toBe(0);
+    expect(out).not.toContain(EMPTY_ANALYSIS_RULE_ID);
+    expect(out).toMatch(/unclassified/i);
   });
 
   it('a governed contract does not trip the refusal', () => {

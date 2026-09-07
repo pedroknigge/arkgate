@@ -22,6 +22,9 @@ right house. Skills never enforce — CLI / hooks / CI do.
 
 - `filePath` is known before the call. Description alone is not a path.
 - Golden pattern is load-bearing when present. Adopt generates it.
+- An included file that matches no layer is not a pass. The write gate denies it
+  (`CONFIG_UNCLASSIFIED_FILES`). Place it in a layer folder, or send include/layer
+  drift to `/ark-adopt`. Do not write into a loose include gap.
 - Do not default a repository to Presentation.
 - When the matched layer has `layers[].description`, print that caption next to the
   layer name and globs. Omit when absent — do not invent a caption or `/ark-describe`.

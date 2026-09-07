@@ -21,6 +21,8 @@ has honest houses. Skills never enforce — CLI / hooks / CI do.
 ## Checklist
 
 - Existing tree: propose **SharedKernel** (types/constants) + **CompositionRoot** (wiring) + `src/**/domain/**`. Never dump bare `src/lib/**` into Application.
+- Every `include` path must land in a layer. Include that classifies no file is the
+  same as an empty check — not a pass. Fix globs here; do not leave a loose gap.
 - Generate `.ark/golden-pattern.json` (load-bearing for `/ark-place`).
 - Future houses: mark unused layer globs `reserved` / `allowEmpty` so `--strict-config` does not fail.
 - When the product map or glossary names a house, write `layers[].description` as

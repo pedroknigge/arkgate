@@ -60,8 +60,14 @@ export const EMPTY_ANALYSIS_RULE_ID = 'ANALYSIS_COVERS_NO_FILES';
  * `countUngovernedSourceFiles` in scan-files.mjs. Feeding it a count that honours
  * `config.exclude` reopens the false green through `exclude: ["**"]`.
  *
+ * `classifiedFileCount` is optional. When omitted, included files are treated as
+ * classified (the historical meaning of `governedFileCount`). When provided and
+ * zero while include still matched files, this is the same vacuous green: import
+ * rules cannot run on unclassified source. Partial unclassified stays a warning.
+ *
  * @param {{
  *   governedFileCount?: number,
+ *   classifiedFileCount?: number,
  *   ungovernedSourceCount?: number,
  *   ungovernedSourceCap?: number,
  *   root?: string,
@@ -72,8 +78,29 @@ export const EMPTY_ANALYSIS_RULE_ID = 'ANALYSIS_COVERS_NO_FILES';
  * @returns {{ ruleId: string, message: string, nextAction: string } | null}
  */
 export function emptyAnalysisRefusal(input = {}) {
-  const count = Number(input.governedFileCount);
-  if (!Number.isFinite(count) || count !== 0) return null;
+  const included = Number(input.governedFileCount);
+  if (!Number.isFinite(included)) return null;
+
+  const classifiedRaw = input.classifiedFileCount;
+  const classifiedProvided =
+    classifiedRaw !== undefined && classifiedRaw !== null && Number.isFinite(Number(classifiedRaw));
+  const classified = classifiedProvided ? Number(classifiedRaw) : included;
+
+  if (included > 0 && classified === 0) {
+    const root = String(input.root ?? '');
+    const configPath = String(input.configPath ?? '');
+    const message =
+      `Analysis covered 0 files: ${included} included file(s) exist under ${root} but none ` +
+      `matched a layer pattern in ${configPath}. Every rule is vacuously satisfied on an empty ` +
+      'set, so a pass here would certify nothing.';
+    const nextAction =
+      `Extend layer patterns or narrow include in ${configPath} so every included file has a ` +
+      'layer. `npx arkgate-check --root . --coverage` lists unclassified files, and `/ark-place` ' +
+      'picks a folder. `--plan` and `--doctor` report this without refusing.';
+    return { ruleId: EMPTY_ANALYSIS_RULE_ID, message, nextAction };
+  }
+
+  if (included !== 0) return null;
 
   const ungoverned = Math.max(0, Number(input.ungovernedSourceCount) || 0);
   const cap = Math.max(0, Number(input.ungovernedSourceCap) || 0);

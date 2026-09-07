@@ -1862,6 +1862,77 @@ describe('ark-mcp --hook (PreToolUse gate)', () => {
   });
 });
 
+describe('ark-mcp --hook unclassified included write', () => {
+  let root: string;
+
+  beforeAll(() => {
+    prepareMcpRuntime();
+    root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-hook-unclassified-'));
+    fs.mkdirSync(path.join(root, 'src/domain'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'src/loose'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src/domain/order.ts'), 'export const order = 1;\n');
+    fs.writeFileSync(
+      path.join(root, 'ark.config.json'),
+      JSON.stringify({
+        include: ['src'],
+        layers: [{ name: 'DomainModel', patterns: ['src/domain/**'] }],
+        rules: [],
+      })
+    );
+  });
+
+  it('denies a Write into include that matches no layer', () => {
+    const result = runHook(root, {
+      tool_name: 'Write',
+      tool_input: {
+        file_path: path.join(root, 'src/loose/helper.ts'),
+        content: 'export const helper = 1;\n',
+      },
+    });
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain('CONFIG_UNCLASSIFIED_FILES');
+    expect(result.stderr).toContain('/ark-place');
+    expect(result.stderr).toMatch(/included but matches no layer/);
+  });
+
+  it('still allows a classified Write with no import violation', () => {
+    const result = runHook(root, {
+      tool_name: 'Write',
+      tool_input: {
+        file_path: path.join(root, 'src/domain/ok.ts'),
+        content: 'export const ok = 1;\n',
+      },
+    });
+    expect(result.status).toBe(0);
+  });
+
+  it('denies an ApplyPatch that adds an included file with no layer', () => {
+    const result = runHook(root, {
+      tool_name: 'apply_patch',
+      tool_input: {
+        patch: `*** Begin Patch
+*** Add File: src/loose/from-patch.ts
++export const fromPatch = 1;
+*** End Patch`,
+      },
+    });
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain('CONFIG_UNCLASSIFIED_FILES');
+  });
+
+  it('does not treat a file outside include as unclassified-included', () => {
+    const result = runHook(root, {
+      tool_name: 'Write',
+      tool_input: {
+        file_path: path.join(root, 'scripts/tool.ts'),
+        content: 'export const tool = 1;\n',
+      },
+    });
+    expect(result.status).toBe(0);
+    expect(result.stderr).not.toContain('CONFIG_UNCLASSIFIED_FILES');
+  });
+});
+
 // The write gate resolves a file's layer with the same `layerForFile` as ark-check, so
 // `exclude` must behave identically here: an excluded subtree is ungoverned and its
 // forbiddenGlobals do not apply — the two enforcement paths never diverge.

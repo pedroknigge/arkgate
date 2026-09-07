@@ -20,6 +20,12 @@ in the immutable pre-2.0 archive linked below.
   Required CI is still the shared merge line. No new skill, schema, or host.
 
 ### Fixed
+- An `include` that matches files but classifies none of them no longer prints
+  a green check. `ANALYSIS_COVERS_NO_FILES` already said include **and** layer;
+  the refusal now counts classified files, not only the include walk. The write
+  hook denies those same files (`CONFIG_UNCLASSIFIED_FILES`) so write and
+  `--strict-merge` agree. Partial unclassified stays a warning on a plain check.
+  `--plan` / `--coverage` / `--doctor` still diagnose. No new flag or schema.
 - Library / package-monorepo `arkgate start` no longer writes Next App Router /
   Pages API / `app/api` layer captions when the tree has no Next
   (issue [#213](https://github.com/pedroknigge/arkgate/issues/213)). Next-flavored

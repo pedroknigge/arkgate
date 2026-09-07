@@ -82,7 +82,9 @@ import {
   codexPatchWrites,
   proposedSource,
   emitHostAllow,
+  emitHostDeny,
   formatWriteGateDeny,
+  unclassifiedIncludedWriteDeny,
 } from './lib/mcp-hook-payload.mjs';
 import {
   canonicalizeCandidateChanges,
@@ -255,6 +257,13 @@ function resolveContainedProjectPath(root, maybePath, label) {
 function inferLayer(filePath, config, root) {
   if (!filePath) return undefined;
   return layerForFile(root, filePath, config.layers);
+}
+
+/** Pattern match only — layer.exclude is an intentional ungoverned hole, not a miss. */
+function layerPatternClaimsFile(filePath, config, root) {
+  if (!filePath) return false;
+  const layers = (config.layers ?? []).map((layer) => ({ ...layer, exclude: [] }));
+  return Boolean(layerForFile(root, filePath, layers));
 }
 
 async function loadArk() {
@@ -472,6 +481,31 @@ function runHookPayload(payload, gate, config, args, ts, attemptContext, output 
     const governedWrites = canonicalSourceWrites.filter((change) =>
       isCandidateSourceInScope(config, change.path)
     );
+    const layerlessWrites = governedWrites.filter(
+      (change) =>
+        change.delete !== true &&
+        !inferLayer(change.path, config, args.root) &&
+        !layerPatternClaimsFile(change.path, config, args.root)
+    );
+    if (layerlessWrites.length > 0) {
+      const first = layerlessWrites[0];
+      const deny = unclassifiedIncludedWriteDeny(first.path);
+      const message = formatWriteGateDeny({
+        file: first.path,
+        reason: deny.message,
+        ruleId: deny.ruleId,
+        nextAction: deny.nextAction,
+      });
+      emitHostDeny(output, {
+        antigravityStyle,
+        cursorStyle,
+        grokStyle,
+        message,
+        file: first.path,
+      });
+      output.status(2);
+      return;
+    }
     const changes = governedWrites.map(({ path: relativePath, content, delete: deleted }) =>
       deleted ? { path: relativePath, delete: true } : { path: relativePath, content }
     );
@@ -608,6 +642,28 @@ function runHookPayload(payload, gate, config, args, ts, attemptContext, output 
   }
 
   const layer = inferLayer(filePath, config, args.root);
+  if (
+    !layer &&
+    !layerPatternClaimsFile(filePath, config, args.root) &&
+    isCandidateSourceInScope(config, normalizedRel)
+  ) {
+    const deny = unclassifiedIncludedWriteDeny(normalizedRel);
+    const message = formatWriteGateDeny({
+      file: normalizedRel,
+      reason: deny.message,
+      ruleId: deny.ruleId,
+      nextAction: deny.nextAction,
+    });
+    emitHostDeny(output, {
+      antigravityStyle,
+      cursorStyle,
+      grokStyle,
+      message,
+      file: normalizedRel,
+    });
+    output.status(2);
+    return;
+  }
   const validateOnce = (src) =>
     validateSnippetAnalysis({
       gate,
