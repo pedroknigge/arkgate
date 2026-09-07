@@ -113,7 +113,7 @@ describe('RN03 resolver ArkRun facts', () => {
     expect(result.valid).toBe(true);
   });
 
-  it('extracts kernel calls without composition-root hits when arkRun is absent', async () => {
+  it('stays silent on ArkRun facts when arkRun is absent', async () => {
     const root = projectRoot();
     const config = writeConfig(root);
     const loaded = await loadTypeScript(root);
@@ -124,7 +124,9 @@ describe('RN03 resolver ArkRun facts', () => {
       config: contract.config,
       ts: loaded.ts,
     });
-    expect(facts.arkRunKernelCalls.some((call) => call.kind === 'factory')).toBe(true);
+    expect(facts.arkRunKernelCalls).toEqual([]);
+    expect(facts.arkRunDeclarations).toEqual([]);
+    expect(facts.arkRunManagedNews).toEqual([]);
     expect(facts.arkRunCompositionRootHits).toEqual([]);
     const withExtra = writeConfig(root, {
       arkRun: {
@@ -135,9 +137,15 @@ describe('RN03 resolver ArkRun facts', () => {
     });
     const without = analyzeResolvedProject({ contract, facts });
     const extraContract = loadContract(withExtra);
+    const extraFacts = resolveCandidateFacts({
+      root,
+      config: extraContract.config,
+      ts: loaded.ts,
+    });
+    expect(extraFacts.arkRunKernelCalls.some((call) => call.kind === 'factory')).toBe(true);
     const advisory = analyzeResolvedProject({
       contract: extraContract,
-      facts: resolveCandidateFacts({ root, config: extraContract.config, ts: loaded.ts }),
+      facts: extraFacts,
     });
     expect(advisory.valid).toBe(without.valid);
     expect(advisory.ir.violations.map((v) => v.ruleId)).toEqual(

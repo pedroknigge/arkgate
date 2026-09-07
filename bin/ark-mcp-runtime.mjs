@@ -952,7 +952,9 @@ function createResidentDoctorSession(args, config, ts) {
     config,
     manifest: args.projectManifest,
     rules,
-    files: before.files,
+    // Resident doctor is a full-tree snapshot. Do not pass the governed list
+    // as a --changed envelope (#212).
+    files: [],
     ts,
     args,
   });
