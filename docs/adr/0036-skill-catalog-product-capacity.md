@@ -36,8 +36,10 @@ unreachable.
    Skills never enforce.
 4. Remaining first-class doors speak **Contener · Guiar · Ordenar** and name
    the sibling for each job.
-5. Standing check: `tests/unit/static-check/skillCatalogCapacity.test.ts`
-   plus `npm run check:agent-skills`.
+5. Standing check: Domain `validateSkillProductCapacity` (bodies + optional
+   hubs) via `npm run check:agent-skills` and
+   `tests/unit/static-check/skillCatalogCapacity.test.ts`. Layout 1:1 is not
+   enough — a missing product plane fails closed.
 
 ## Consequences
 

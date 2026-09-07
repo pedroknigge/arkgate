@@ -15,6 +15,8 @@ import {
   ARK_SKILL_STUB_REDIRECTS,
   ARK_SKILL_NORTH_STAR,
   ARK_SKILL_CAPACITY,
+  ARK_SKILL_REQUIRED_SURFACES,
+  ARK_SKILL_CAPACITY_DEDICATED_DOORS,
   FLAT_SKILL_TEMPLATES_RELATIVE_ROOT,
   arkSkillStubRedirect,
   isFirstClassArkSkillName,
@@ -31,6 +33,7 @@ import {
   skillDescriptionVersionPrefix,
   validateAgentSkillDocument,
   validateAgentSkillsPackage,
+  validateSkillProductCapacity,
 } from '../../../src/domain/agentSkillsPackage';
 import {
   ARK_SKILL_NAMES as CLI_NAMES,
@@ -39,10 +42,12 @@ import {
   isValidAgentSkillName as cliIsValidName,
   parseSkillDocument as cliParse,
   validateAgentSkillsPackage as cliValidatePackage,
+  validateSkillProductCapacity as cliValidateCapacity,
 } from '../../../bin/lib/agent-skills-package.mjs';
 import {
   ARK_SKILL_NAMES as GATE_NAMES,
   validateAgentSkillsPackage as gateValidatePackage,
+  validateSkillProductCapacity as gateValidateCapacity,
 } from '../../../src/gate';
 
 const require = createRequire(import.meta.url);
@@ -261,6 +266,8 @@ description: Skill ${name}.
     }));
     expect(cliValidatePackage(entries).ok).toBe(true);
     expect(gateValidatePackage(entries).ok).toBe(true);
+    expect(typeof cliValidateCapacity).toBe('function');
+    expect(typeof gateValidateCapacity).toBe('function');
   });
 
   it('npm package files array ships templates/ (includes agent-skills layout)', () => {
@@ -289,5 +296,62 @@ description: Skill ${name}.
       expect(isFirstClassArkSkillName(stub)).toBe(false);
     }
     expect(arkSkillStubRedirect('ark-order')).toBeNull();
+    expect([...ARK_SKILL_REQUIRED_SURFACES]).toEqual(Object.keys(ARK_SKILL_CAPACITY));
+    expect(ARK_SKILL_CAPACITY_DEDICATED_DOORS.ArkOrder).toBe('ark-order');
+    expect(ARK_SKILL_CAPACITY_DEDICATED_DOORS.ArkRun).toBe('ark-runtime');
+  });
+
+  it('product-capacity validator fails closed when a plane drops out of skill bodies', () => {
+    const coveringBody = `---
+name: ark-order
+description: Wire ArkOrder.
+---
+
+# /ark-order
+**Contener · Guiar · Ordenar.**
+## When / not when
+**When:** wire ArkOrder.
+Not when extras are off.
+Handoff: \`/ark-adopt\`
+Layers ArkRules ArkRun ArkOrder
+`;
+    const skills: Record<string, string> = {};
+    for (const name of ARK_SKILL_NAMES) {
+      skills[name] = coveringBody.replaceAll('ark-order', name);
+    }
+    for (const name of ARK_FIRST_CLASS_SKILL_NAMES) {
+      skills[name] = coveringBody.replace(/^name: ark-order$/m, `name: ${name}`);
+    }
+    const ok = validateSkillProductCapacity({
+      skills,
+      hubs: {
+        'AGENTS.md': '/ark-order\nContener · Guiar · Ordenar',
+      },
+    });
+    expect(ok.ok).toBe(true);
+
+    const stripped = { ...skills, 'ark-order': coveringBody.replaceAll('ArkOrder', 'Gone') };
+    const missing = validateSkillProductCapacity({ skills: stripped });
+    expect(missing.ok).toBe(false);
+    expect(missing.issues.some((i) => i.code === 'CAPACITY_DEDICATED_DOOR')).toBe(true);
+    expect(missing.issues.some((i) => i.message.includes('ArkOrder'))).toBe(true);
+
+    const noHub = validateSkillProductCapacity({
+      skills,
+      hubs: { 'AGENTS.md': 'skills only, no order door' },
+    });
+    expect(noHub.ok).toBe(false);
+    expect(noHub.issues.some((i) => i.code === 'CAPACITY_HUB_GAP')).toBe(true);
+    expect(noHub.issues.some((i) => i.message.includes('/ark-order'))).toBe(true);
+
+    const noRouting = {
+      ...skills,
+      'ark-place': '---\nname: ark-place\ndescription: Place.\n---\n\n# body\nLayers only.\n',
+    };
+    const routing = validateSkillProductCapacity({ skills: noRouting });
+    expect(routing.ok).toBe(false);
+    expect(routing.issues.some((i) => i.code === 'CAPACITY_ROUTING_GAP' && i.skillName === 'ark-place')).toBe(
+      true
+    );
   });
 });

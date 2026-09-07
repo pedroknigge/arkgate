@@ -6,6 +6,11 @@ in the immutable pre-2.0 archive linked below.
 ## Unreleased
 
 ### Changed
+- PR / CI skill gate: `npm run check:agent-skills` now fails closed when a
+  product plane (Layers, ArkRules, ArkRun, ArkOrder) or Contener · Guiar ·
+  Ordenar drops out of first-class skill bodies or living hubs. Reuses
+  `ARK_SKILL_CAPACITY` via Domain `validateSkillProductCapacity` — no new
+  schema or skill. Deny copy stays plain. Skills never enforce.
 - Write-gate host parity: Cursor hard-write evidence now requires the host-native
   `failClosed: true` flag (same idea as a file permission — if the checker cannot
   run, the write must not land). A Write/StrReplace hook without that flag is

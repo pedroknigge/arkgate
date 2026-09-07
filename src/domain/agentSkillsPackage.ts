@@ -76,7 +76,9 @@ export type ArkSkillStubName = keyof typeof ARK_SKILL_STUB_REDIRECTS;
 
 /**
  * Product surface → first-class doors that exercise it.
- * Standing check: every surface has at least one first-class door.
+ * Standing check: every surface has at least one first-class door whose
+ * body mentions that surface. Table keys must match
+ * {@link ARK_SKILL_REQUIRED_SURFACES}.
  */
 export const ARK_SKILL_CAPACITY = Object.freeze({
   Layers: ['ark-adopt', 'ark-place', 'ark-explore', 'ark-autopilot', 'ark-coverage', 'ark-explain'],
@@ -89,6 +91,34 @@ export const ARK_SKILL_CAPACITY = Object.freeze({
 } as const);
 
 export type ArkSkillCapacitySurface = keyof typeof ARK_SKILL_CAPACITY;
+
+/**
+ * Closed product + north-star surfaces the skill *set* must exercise.
+ * Independent of {@link ARK_SKILL_CAPACITY} so deleting a table key fails closed.
+ */
+export const ARK_SKILL_REQUIRED_SURFACES = Object.freeze([
+  'Layers',
+  'ArkRules',
+  'ArkRun',
+  'ArkOrder',
+  'Contener',
+  'Guiar',
+  'Ordenar',
+] as const);
+
+export type ArkSkillRequiredSurface = (typeof ARK_SKILL_REQUIRED_SURFACES)[number];
+
+/** Named first-class door that must stay on these surfaces (no leftover substitute). */
+export const ARK_SKILL_CAPACITY_DEDICATED_DOORS = Object.freeze({
+  ArkRun: 'ark-runtime',
+  ArkOrder: 'ark-order',
+  Ordenar: 'ark-order',
+} as const);
+
+export type ArkSkillCapacityDedicatedSurface = keyof typeof ARK_SKILL_CAPACITY_DEDICATED_DOORS;
+
+const NORTH_STAR_PHRASE = 'Contener · Guiar · Ordenar';
+const FORBIDDEN_ORDER_FREEZE = 'Do not invent `/ark-order`';
 
 /**
  * Closed shipped catalog (first-class + one-release stubs).
@@ -409,6 +439,223 @@ export function validateAgentSkillsPackage(
     expectedCount: ARK_SKILL_NAME_COUNT,
     presentCount: names.length,
   };
+}
+
+export type SkillProductCapacityIssueCode =
+  | 'CAPACITY_SURFACE_MISSING'
+  | 'CAPACITY_SURFACE_UNMAPPED'
+  | 'CAPACITY_DOOR_NOT_FIRST_CLASS'
+  | 'CAPACITY_BODY_GAP'
+  | 'CAPACITY_DEDICATED_DOOR'
+  | 'CAPACITY_ROUTING_GAP'
+  | 'CAPACITY_HUB_GAP';
+
+export type SkillProductCapacityIssue = {
+  code: SkillProductCapacityIssueCode;
+  message: string;
+  surface?: string;
+  skillName?: string;
+  hub?: string;
+};
+
+export type ValidateSkillProductCapacityInput = {
+  /** Skill name → full markdown (flat template or Agent Skills SKILL.md). */
+  skills: Readonly<Record<string, string>>;
+  /** Optional living hubs (AGENTS.md, product-voice, agent-guide, …). */
+  hubs?: Readonly<Record<string, string>>;
+};
+
+export type ValidateSkillProductCapacityResult = {
+  ok: boolean;
+  issues: SkillProductCapacityIssue[];
+};
+
+function pushCapacityIssue(
+  issues: SkillProductCapacityIssue[],
+  issue: SkillProductCapacityIssue
+): void {
+  issues.push(issue);
+}
+
+function skillMentionsSurface(body: string, surface: string): boolean {
+  return body.includes(surface);
+}
+
+/**
+ * Observe skill bodies (and optional hubs) against the closed product surfaces.
+ * Inventory/layout stay on {@link validateAgentSkillsPackage}. This is the
+ * fail-closed tooth so a plane cannot silently drop out of the skill set.
+ */
+export function validateSkillProductCapacity(
+  input: ValidateSkillProductCapacityInput
+): ValidateSkillProductCapacityResult {
+  const issues: SkillProductCapacityIssue[] = [];
+  const skills = input.skills ?? {};
+  const tableKeys = Object.keys(ARK_SKILL_CAPACITY);
+
+  for (const surface of ARK_SKILL_REQUIRED_SURFACES) {
+    if (!tableKeys.includes(surface)) {
+      pushCapacityIssue(issues, {
+        code: 'CAPACITY_SURFACE_MISSING',
+        surface,
+        message:
+          `The capacity table dropped ${surface}. Skills must keep covering ` +
+          `Layers, ArkRules, ArkRun, ArkOrder plus Contener · Guiar · Ordenar. ` +
+          `Put ${surface} back on ARK_SKILL_CAPACITY.`,
+      });
+    }
+  }
+
+  for (const key of tableKeys) {
+    if (!(ARK_SKILL_REQUIRED_SURFACES as readonly string[]).includes(key)) {
+      pushCapacityIssue(issues, {
+        code: 'CAPACITY_SURFACE_UNMAPPED',
+        surface: key,
+        message:
+          `The capacity table lists ${key}, which is not a product surface. ` +
+          `Keep the table to Layers, ArkRules, ArkRun, ArkOrder and Contener · Guiar · Ordenar.`,
+      });
+    }
+  }
+
+  for (const surface of ARK_SKILL_REQUIRED_SURFACES) {
+    const doors = ARK_SKILL_CAPACITY[surface as ArkSkillCapacitySurface] as
+      | readonly string[]
+      | undefined;
+    if (!doors || doors.length === 0) continue;
+
+    for (const door of doors) {
+      if (!isFirstClassArkSkillName(door)) {
+        pushCapacityIssue(issues, {
+          code: 'CAPACITY_DOOR_NOT_FIRST_CLASS',
+          surface,
+          skillName: door,
+          message:
+            `/${door} is listed for ${surface} but is not a first-class door. ` +
+            `Leftover names are shortcuts. Point ${surface} at a first-class skill.`,
+        });
+      }
+    }
+
+    const covering = doors.filter((door) => {
+      const body = skills[door];
+      return typeof body === 'string' && skillMentionsSurface(body, surface);
+    });
+    if (covering.length === 0) {
+      const hint =
+        surface === 'ArkOrder' || surface === 'Ordenar'
+          ? ' — usually /ark-order'
+          : surface === 'ArkRun'
+            ? ' — usually /ark-runtime'
+            : '';
+      pushCapacityIssue(issues, {
+        code: 'CAPACITY_BODY_GAP',
+        surface,
+        message:
+          `Skills no longer cover ${surface}. The product has four parts ` +
+          `(Layers, ArkRules, ArkRun, ArkOrder) plus Contener · Guiar · Ordenar. ` +
+          `Put ${surface} back in a first-class skill${hint} so agents still know when to use it.`,
+      });
+    }
+  }
+
+  for (const [surface, door] of Object.entries(ARK_SKILL_CAPACITY_DEDICATED_DOORS)) {
+    const doors = ARK_SKILL_CAPACITY[surface as ArkSkillCapacitySurface] as
+      | readonly string[]
+      | undefined;
+    if (!doors?.includes(door) || !isFirstClassArkSkillName(door)) {
+      pushCapacityIssue(issues, {
+        code: 'CAPACITY_DEDICATED_DOOR',
+        surface,
+        skillName: door,
+        message:
+          `/${door} is the first-class door for ${surface}. Keep it on that surface. ` +
+          `Leftover names like /ark-think are shortcuts, not a replacement.`,
+      });
+      continue;
+    }
+    const body = skills[door];
+    if (typeof body !== 'string' || !skillMentionsSurface(body, surface)) {
+      pushCapacityIssue(issues, {
+        code: 'CAPACITY_DEDICATED_DOOR',
+        surface,
+        skillName: door,
+        message:
+          `/${door} no longer talks about ${surface}. That door is how agents reach ` +
+          `this part of the product. Put ${surface} back in the skill body.`,
+      });
+    }
+  }
+
+  for (const name of ARK_FIRST_CLASS_SKILL_NAMES) {
+    const body = skills[name];
+    if (typeof body !== 'string') {
+      pushCapacityIssue(issues, {
+        code: 'CAPACITY_ROUTING_GAP',
+        skillName: name,
+        message:
+          `/${name} is a first-class door but has no skill body in this check. ` +
+          `Ship the template so agents know when to use it.`,
+      });
+      continue;
+    }
+    const hasNorthStar = body.includes(NORTH_STAR_PHRASE);
+    const hasWhen = /When \/ not when|\*\*When:\*\*/.test(body);
+    const hasNotWhen = /Not when|Do \*\*not\*\* use|Prefer instead/.test(body);
+    const hasHandoff = /Handoff|hand off|`\/ark-/i.test(body);
+    if (!hasNorthStar || !hasWhen || !hasNotWhen || !hasHandoff) {
+      pushCapacityIssue(issues, {
+        code: 'CAPACITY_ROUTING_GAP',
+        skillName: name,
+        message:
+          `/${name} is missing when / not when / handoff or Contener · Guiar · Ordenar. ` +
+          `First-class skills must say when to use them and which sibling to call next.`,
+      });
+    }
+    if (body.includes(FORBIDDEN_ORDER_FREEZE)) {
+      pushCapacityIssue(issues, {
+        code: 'CAPACITY_ROUTING_GAP',
+        skillName: name,
+        message:
+          `/${name} still says not to invent /ark-order. That freeze is outdated — ` +
+          `/ark-order is a first-class door.`,
+      });
+    }
+  }
+
+  const hubs = input.hubs ?? {};
+  for (const [hub, text] of Object.entries(hubs)) {
+    const body = String(text ?? '');
+    if (!body.includes('/ark-order')) {
+      pushCapacityIssue(issues, {
+        code: 'CAPACITY_HUB_GAP',
+        hub,
+        message:
+          `${hub} no longer names /ark-order. Host instructions must stay at 100% of ` +
+          `the product. Add /ark-order back, or you left the order plane behind.`,
+      });
+    }
+    if (!body.includes(NORTH_STAR_PHRASE)) {
+      pushCapacityIssue(issues, {
+        code: 'CAPACITY_HUB_GAP',
+        hub,
+        message:
+          `${hub} no longer says Contener · Guiar · Ordenar. Keep that filter in the ` +
+          `living docs so agents pick the right sibling.`,
+      });
+    }
+    if (body.includes(FORBIDDEN_ORDER_FREEZE)) {
+      pushCapacityIssue(issues, {
+        code: 'CAPACITY_HUB_GAP',
+        hub,
+        message:
+          `${hub} still says not to invent /ark-order. That freeze is outdated — ` +
+          `/ark-order is a first-class door.`,
+      });
+    }
+  }
+
+  return { ok: issues.length === 0, issues };
 }
 
 /**

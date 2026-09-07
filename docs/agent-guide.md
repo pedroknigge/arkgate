@@ -883,7 +883,7 @@ Filter: **Contener · Guiar · Ordenar** — contain the write, guide the next s
 **Canonical authoring source:** flat `templates/skills/<name>.md` (Ark install reads these).
 
 **Agent Skills package root** (generated, 1:1 content): `templates/agent-skills/<name>/SKILL.md`
-— ships in the npm tarball under `templates/`. Drift guard: `npm run check:agent-skills`.
+— ships in the npm tarball under `templates/`. Drift guard: `npm run check:agent-skills` (layout 1:1 **and** 100% product coverage).
 
 ```bash
 # Ark — expert skill pack (preferred when you also want gates)

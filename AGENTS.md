@@ -168,7 +168,7 @@ or `dist/` except `ark-mcp` loading the built library. Shared CLI logic lives in
 | `src/domain/agentProjectionMerge.ts` | `bin/lib/agent-projection-merge.mjs` | (same `cli-pure` scripts); Shape split child |
 | `src/domain/agentProjection.ts` | `bin/lib/agent-projection.mjs` | (same `cli-pure` scripts); facade re-exports |
 | `src/domain/teamParliament.ts` | `bin/lib/team-parliament.mjs` | (same `cli-pure` scripts); TW team lock |
-| `src/domain/agentSkillsPackage.ts` | `bin/lib/agent-skills-package.mjs` | (same `cli-pure` scripts); layout via `generate:agent-skills` / `check:agent-skills` |
+| `src/domain/agentSkillsPackage.ts` | `bin/lib/agent-skills-package.mjs` | (same `cli-pure` scripts); layout + product-capacity via `generate:agent-skills` / `check:agent-skills` |
 | `src/domain/resolvedCandidateFactsSchema.ts` | `schemas/ark.resolved-candidate-facts.schema.json` | (same `cli-pure` scripts) |
 | `src/domain/arkRunFacts.ts` | `bin/lib/ark-run-facts.mjs` | (same `cli-pure` scripts); RN03 kernel call / managed `new` facts |
 | `src/domain/extraMergeTeeth.ts` | `bin/lib/extra-merge-teeth.mjs` | (same `cli-pure` scripts); RN07 extra-plane teeth floor |

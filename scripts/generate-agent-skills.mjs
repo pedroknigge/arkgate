@@ -28,7 +28,16 @@ import {
   FLAT_SKILL_TEMPLATES_RELATIVE_ROOT,
   normalizeSkillContent,
   validateAgentSkillsPackage,
+  validateSkillProductCapacity,
 } from '../bin/lib/agent-skills-package.mjs';
+
+/** Living hubs that must stay at 100% product (same set as the standing test). */
+const CAPACITY_HUB_PATHS = [
+  'AGENTS.md',
+  'docs/agent-guide.md',
+  'docs/audit/claims-matrix.md',
+  'docs/product-voice.md',
+];
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..');
@@ -257,7 +266,8 @@ function main() {
   }
 
   const linkDrift = ensureDogfoodSkillLinks(check);
-  if (check && (drift || linkDrift)) {
+  const capacityDrift = checkProductCapacity(check);
+  if (check && (drift || linkDrift || capacityDrift)) {
     process.exitCode = 1;
     return;
   }
@@ -297,6 +307,38 @@ function readRelativeLink(linkPath) {
   } catch {
     return null;
   }
+}
+
+function checkProductCapacity(check) {
+  if (!check) return false;
+  const skills = {};
+  for (const name of ARK_SKILL_NAMES) {
+    skills[name] = readUtf8(path.join(flatDir, `${name}.md`));
+  }
+  const hubs = {};
+  for (const rel of CAPACITY_HUB_PATHS) {
+    const hubPath = path.join(root, rel);
+    if (!fs.existsSync(hubPath)) {
+      console.error(
+        `✖ Missing ${rel}. Living docs must stay at 100% of the product (Layers, ArkRules, ArkRun, ArkOrder).`
+      );
+      return true;
+    }
+    hubs[rel] = readUtf8(hubPath);
+  }
+  const result = validateSkillProductCapacity({ skills, hubs });
+  if (!result.ok) {
+    console.error('✖ Skills no longer cover 100% of the product:');
+    for (const issue of result.issues) {
+      console.error(`  - [${issue.code}] ${issue.message}`);
+    }
+    console.error('  Next: put the missing plane back in a first-class skill (usually /ark-order or /ark-runtime). Skills never enforce.');
+    return true;
+  }
+  console.log(
+    '✔ Skill set covers Layers + ArkRules + ArkRun + ArkOrder and Contener · Guiar · Ordenar.'
+  );
+  return false;
 }
 
 function ensureDogfoodSkillLinks(check) {
