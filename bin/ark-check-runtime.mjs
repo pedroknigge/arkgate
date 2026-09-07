@@ -1473,7 +1473,10 @@ async function main() {
     config,
     manifest,
     rules,
-    files,
+    // Full-tree callers already have the governed list. Passing it as `files`
+    // used to trigger the --changed scoped path (import-closure + a second
+    // resolveModuleName pass) on every doctor/check (#212). Empty = unbounded.
+    files: args.changed ? files : [],
     ts,
     args,
   });

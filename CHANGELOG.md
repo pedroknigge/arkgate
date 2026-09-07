@@ -6,6 +6,12 @@ in the immutable pre-2.0 archive linked below.
 ## Unreleased
 
 ### Fixed
+- Cold `--doctor` no longer treats a full governed list as a `--changed` scope
+  (issue [#212](https://github.com/pedroknigge/arkgate/issues/212)). Full-tree
+  status uses the unbounded facts path; import-closure + a second
+  `resolveModuleName` pass stay on `--changed` only. Extra-plane extractors
+  (ArkRun / ArkOrder / class-shape) stay silent when that plane is off. Same
+  compact first screen. No new flag or cache.
 - Fresh `arkgate start --apply` (and every other path that stamps a new
   `ark.config.json`) now writes `$schema` at `arkgate@4` on unpkg, not the stale
   `@2` pin (issue [#211](https://github.com/pedroknigge/arkgate/issues/211)).

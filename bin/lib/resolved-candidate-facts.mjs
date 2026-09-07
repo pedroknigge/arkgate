@@ -1168,9 +1168,17 @@ export function resolveCandidateFacts({
   const arkOrderXiFieldWrites = [];
   const arkOrderIngestWritesXi = [];
   const arkOrderReleaseKeyCounts = [];
-  const xiKeys = [...(config.arkOrder?.xiKeys ?? [])];
-  const compositionRootPatterns = [...(config.arkRun?.compositionRoots ?? [])];
-  const planeRootPatterns = [...(config.arkOrder?.planeRoots ?? [])];
+  const arkRunActive = config.arkRun != null && typeof config.arkRun === 'object';
+  const arkOrderActive = config.arkOrder != null && typeof config.arkOrder === 'object';
+  const arkRulesActive =
+    config.arkRules != null &&
+    typeof config.arkRules === 'object' &&
+    Object.keys(config.arkRules).length > 0;
+  const xiKeys = arkOrderActive ? [...(config.arkOrder?.xiKeys ?? [])] : [];
+  const compositionRootPatterns = arkRunActive
+    ? [...(config.arkRun?.compositionRoots ?? [])]
+    : [];
+  const planeRootPatterns = arkOrderActive ? [...(config.arkOrder?.planeRoots ?? [])] : [];
 
   const seedPathSet = new Set(candidateFiles.map((file) => file.path));
   const ingest = (candidate, fullExtract) => {
@@ -1256,60 +1264,67 @@ export function resolveCandidateFacts({
     );
     // Class-shape extraction is text-conservative (false negatives over false positives).
     // Only TS/TSX candidates; sensors consume the same shape via facts.classShapes.
+    // Extra-plane and ArkRules extractors stay silent when that plane is off (#212).
     if (/\.(tsx?|mts|cts)$/i.test(candidate.path)) {
-      try {
-        classShapes.push(...extractClassShapesFromSource(candidate.path, candidate.content));
-      } catch {
-        // Never fail the resolver for shape extraction; sensors stay silent on this file.
+      if (arkRulesActive) {
+        try {
+          classShapes.push(...extractClassShapesFromSource(candidate.path, candidate.content));
+        } catch {
+          // Never fail the resolver for shape extraction; sensors stay silent on this file.
+        }
       }
-      try {
-        arkRunKernelCalls.push(
-          ...extractArkRunKernelCallsFromSource(candidate.path, candidate.content)
-        );
-      } catch {
-        // Never fail the resolver for ArkRun call extraction.
+      if (arkRunActive) {
+        try {
+          arkRunKernelCalls.push(
+            ...extractArkRunKernelCallsFromSource(candidate.path, candidate.content)
+          );
+        } catch {
+          // Never fail the resolver for ArkRun call extraction.
+        }
+        try {
+          arkRunDeclarations.push(
+            ...extractArkRunDeclarationsFromSource(candidate.path, candidate.content)
+          );
+        } catch {
+          // Never fail the resolver for ArkRun declaration extraction.
+        }
       }
-      try {
-        arkRunDeclarations.push(
-          ...extractArkRunDeclarationsFromSource(candidate.path, candidate.content)
-        );
-      } catch {
-        // Never fail the resolver for ArkRun declaration extraction.
-      }
-      try {
-        arkOrderPlaneCalls.push(
-          ...extractArkOrderPlaneCallsFromSource(candidate.path, candidate.content)
-        );
-      } catch {
-        // Never fail the resolver for ArkOrder factory extraction.
-      }
-      try {
-        arkOrderGenericUpdates.push(
-          ...extractArkOrderGenericUpdatesFromSource(candidate.path, candidate.content)
-        );
-      } catch {
-        // Never fail the resolver for ArkOrder generic-update extraction.
-      }
-      try {
-        arkOrderXiFieldWrites.push(
-          ...extractArkOrderXiFieldWritesFromSource(candidate.path, candidate.content, xiKeys)
-        );
-      } catch {
-        // Never fail the resolver for ArkOrder xi-field-write extraction.
-      }
-      try {
-        arkOrderIngestWritesXi.push(
-          ...extractArkOrderIngestWritesXiFromSource(candidate.path, candidate.content)
-        );
-      } catch {
-        // Never fail the resolver for ArkOrder ingest-writes-ξ extraction.
-      }
-      try {
-        arkOrderReleaseKeyCounts.push(
-          ...extractArkOrderReleaseKeyCountsFromSource(candidate.path, candidate.content)
-        );
-      } catch {
-        // Never fail the resolver for ArkOrder release key-count extraction.
+      if (arkOrderActive) {
+        try {
+          arkOrderPlaneCalls.push(
+            ...extractArkOrderPlaneCallsFromSource(candidate.path, candidate.content)
+          );
+        } catch {
+          // Never fail the resolver for ArkOrder factory extraction.
+        }
+        try {
+          arkOrderGenericUpdates.push(
+            ...extractArkOrderGenericUpdatesFromSource(candidate.path, candidate.content)
+          );
+        } catch {
+          // Never fail the resolver for ArkOrder generic-update extraction.
+        }
+        try {
+          arkOrderXiFieldWrites.push(
+            ...extractArkOrderXiFieldWritesFromSource(candidate.path, candidate.content, xiKeys)
+          );
+        } catch {
+          // Never fail the resolver for ArkOrder xi-field-write extraction.
+        }
+        try {
+          arkOrderIngestWritesXi.push(
+            ...extractArkOrderIngestWritesXiFromSource(candidate.path, candidate.content)
+          );
+        } catch {
+          // Never fail the resolver for ArkOrder ingest-writes-ξ extraction.
+        }
+        try {
+          arkOrderReleaseKeyCounts.push(
+            ...extractArkOrderReleaseKeyCountsFromSource(candidate.path, candidate.content)
+          );
+        } catch {
+          // Never fail the resolver for ArkOrder release key-count extraction.
+        }
       }
     }
   };
@@ -1355,18 +1370,20 @@ export function resolveCandidateFacts({
     ? candidateFiles.filter((file) => seedPathSet.has(file.path))
     : candidateFiles;
   const admittedTypeNames = new Set(classShapes.map((shape) => shape.className));
-  for (const candidate of extractCandidates) {
-    if (!/\.(tsx?|mts|cts)$/i.test(candidate.path)) continue;
-    try {
-      arkRunManagedNews.push(
-        ...extractArkRunManagedNewsFromSource(
-          candidate.path,
-          candidate.content,
-          admittedTypeNames
-        )
-      );
-    } catch {
-      // Never fail the resolver for managed-new extraction.
+  if (arkRunActive) {
+    for (const candidate of extractCandidates) {
+      if (!/\.(tsx?|mts|cts)$/i.test(candidate.path)) continue;
+      try {
+        arkRunManagedNews.push(
+          ...extractArkRunManagedNewsFromSource(
+            candidate.path,
+            candidate.content,
+            admittedTypeNames
+          )
+        );
+      } catch {
+        // Never fail the resolver for managed-new extraction.
+      }
     }
   }
 

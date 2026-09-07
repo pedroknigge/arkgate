@@ -17,6 +17,7 @@ import {
   loadInvariantCoverageInputs,
 } from './invariant-coverage-io.mjs';
 import { loadArkRuleFileHints } from './arkrule-file-hints.mjs';
+import { collectGovernedFiles } from './scan-files.mjs';
 
 const HINT_CACHE_CAP = 16;
 /** Process-local hint map keyed by scoped path + content hash. Not a second engine. */
@@ -40,15 +41,34 @@ function normalizeScanRelPath(root, filePath) {
   return relative;
 }
 
-/** Empty / missing `files` stays unbounded (full governed set). */
-function fileLocalScope(root, files) {
+/**
+ * Empty / missing `files` stays unbounded (full governed set).
+ * A complete governed list is also unbounded — doctor and check always pass
+ * that list, and treating it as `--changed` paid import-closure + a second
+ * `resolveModuleName` pass on every full-tree run (#212).
+ */
+function fileLocalScope(root, files, config, { changed = false } = {}) {
   if (!Array.isArray(files) || files.length === 0) return null;
   const scoped = new Set();
   for (const file of files) {
     const rel = normalizeScanRelPath(root, file);
     if (rel) scoped.add(rel);
   }
-  return scoped.size > 0 ? scoped : null;
+  if (scoped.size === 0) return null;
+  // `--changed` is already a bounded envelope — do not re-walk the include tree (#205).
+  if (!changed && config && coversGovernedSet(root, scoped, config)) return null;
+  return scoped;
+}
+
+function coversGovernedSet(root, scoped, config) {
+  const governed = collectGovernedFiles(root, config);
+  if (governed.length === 0) return false;
+  if (scoped.size < governed.length) return false;
+  for (const absolute of governed) {
+    const rel = normalizeScanRelPath(root, absolute);
+    if (rel && !scoped.has(rel)) return false;
+  }
+  return true;
 }
 
 function filterHintPreload(fileContents, scoped) {
@@ -126,7 +146,9 @@ export function resolveArchitectureSnapshot({
     { ...config, rules: rules ?? config.rules },
     manifest
   );
-  const scoped = fileLocalScope(root, files);
+  const scoped = fileLocalScope(root, files, effectiveConfig, {
+    changed: args?.changed === true,
+  });
   const facts = resolveCandidateFacts({
     root,
     config: effectiveConfig,
