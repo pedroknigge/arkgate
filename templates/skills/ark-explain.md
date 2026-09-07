@@ -87,7 +87,8 @@ ArkGate has **always-on Layers** plus opt-in extras. The user chooses extras; yo
 - HTML/plain tour: section **Layers** and section **Rules under contract (ArkRules)** —
   when `arkRules` is active the showcase lists **per-layer counts**, **structure sensors**
   (id / sensor / mode), **uncovered** invariants (call them out), and a **covered sample**.
-  Inactive map stays a short opt-in note. Counts are never a score.
+  Compact doctor names ArkRules only when the map is on; absence stays silent.
+  Inactive HTML map stays a short opt-in note. Counts are never a score.
 - Spoken tour: name 2–4 real invariant IDs and one structure sensor from this repo’s
   `arkrules/*` (open the files — do not invent). Residual candidates → `--rules-inventory`.
 - **Teach the product model (required when arkRules is active):**

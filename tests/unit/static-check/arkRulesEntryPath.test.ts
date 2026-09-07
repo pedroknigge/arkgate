@@ -40,6 +40,17 @@ describe('ArkRules entry path via ark-check CLI', () => {
     expect(r.stdout + r.stderr).toMatch(/passed|✔/i);
   });
 
+  it('compact doctor stays silent when arkRules is absent', () => {
+    const root = path.join(FIX, 'no-rules');
+    const r = spawnSync(process.execPath, [CLI, '--root', root, '--config', 'ark.config.json', '--doctor'], {
+      encoding: 'utf8',
+      cwd: REPO,
+    });
+    expect(r.status, r.stderr + r.stdout).toBe(0);
+    expect(r.stdout + r.stderr).not.toMatch(/optional policies inside one folder/);
+    expect(r.stdout + r.stderr).not.toMatch(/ArkRules: on ·/);
+  });
+
   it('fails closed when referenced arkrules file is missing', () => {
     const r = runCheck('missing-ref');
     expect(r.status, r.stdout + r.stderr).not.toBe(0);

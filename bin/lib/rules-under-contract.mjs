@@ -16,6 +16,9 @@ import {
   composeMergePlanesHonesty,
   demoteExtraPlaneTeethUnderClassificationFloor,
 } from './extra-merge-teeth.mjs';
+import { ARKRULES_FIRST_CONTACT_NEXT, ARKRULES_ONE_BREATH } from './product-copy.mjs';
+
+export { ARKRULES_FIRST_CONTACT_NEXT, ARKRULES_ONE_BREATH };
 
 /**
  * Cap long catalogs in doctor JSON (and HTML, which consumes the same summary).
@@ -229,6 +232,48 @@ export function summarizeRulesUnderContract(root, config, facts, classification)
       note: error instanceof Error ? error.message : String(error),
     };
   }
+}
+
+/**
+ * Compact / details doctor lines. Empty when the map is off — absence is silent.
+ * @param {ReturnType<typeof summarizeRulesUnderContract>|null|undefined} section
+ * @returns {string[]}
+ */
+export function formatArkRulesDoctorLines(section) {
+  if (!section || typeof section !== 'object') return [];
+  if (section.active !== true) return [];
+
+  if (Array.isArray(section.loadErrors) && section.loadErrors.length > 0) {
+    const first = section.loadErrors[0];
+    const detail =
+      typeof first?.message === 'string' && first.message.length > 0
+        ? first.message
+        : 'Fix the path in arkRules.';
+    return [
+      ARKRULES_ONE_BREATH,
+      `ArkRules: the rules file failed to load — a full check will refuse. ${detail}`,
+    ];
+  }
+
+  const structure = Number(section.structureRules) || 0;
+  const invariants = Number(section.invariants) || 0;
+  const uncovered = Number(section.uncoveredInvariants) || 0;
+  const enforced =
+    (Number(section.mergePlanes?.structureSensors?.enforced) || 0) +
+    (Number(section.mergePlanes?.invariants?.enforced) || 0);
+  const teeth =
+    enforced > 0
+      ? 'some enforced'
+      : 'advisory only — does not fail the merge';
+  const lines = [
+    ARKRULES_ONE_BREATH,
+    `ArkRules: on · structure=${structure} · invariants=${invariants} · uncovered=${uncovered} · ${teeth} · not a score`,
+  ];
+  if (uncovered > 0) lines.push(ARKRULES_FIRST_CONTACT_NEXT);
+  else if (typeof section.note === 'string' && /failed/i.test(section.note)) {
+    lines.push(`ArkRules: ${section.note}`);
+  }
+  return lines;
 }
 
 /**

@@ -229,6 +229,17 @@ describe('ArkOrder doctor section', () => {
       io
     );
     expect(printed[0]).toMatch(/ArkRun: on · residual=2/);
+
+    printed.length = 0;
+    printCompactExtraDoctorLines(
+      {
+        rulesUnderContract: { active: false, notAScore: true },
+        arkOrder: { active: false, notAScore: true },
+      },
+      io
+    );
+    expect(printed.join('\n')).not.toMatch(/optional policies inside one folder/);
+    expect(printed.join('\n')).toMatch(/Layers stop a bad import/);
   });
 
   it('filters residual ids, ignores junk keys, and floors status residual', () => {

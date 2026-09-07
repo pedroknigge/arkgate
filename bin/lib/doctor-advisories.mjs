@@ -18,7 +18,10 @@ import {
 } from './reshape-decisions.mjs';
 import { printParseHealthSection, summarizeParseHealth } from './parse-health.mjs';
 import { detectGraphBlindSpots, printGraphBlindSection } from './graph-blind.mjs';
-import { summarizeRulesUnderContract } from './rules-under-contract.mjs';
+import {
+  formatArkRulesDoctorLines,
+  summarizeRulesUnderContract,
+} from './rules-under-contract.mjs';
 import { collectStewardNudge } from './team-parliament-io.mjs';
 import { formatArkRunDoctorLines, summarizeArkRunSection } from './ark-run-doctor.mjs';
 import {
@@ -80,7 +83,20 @@ export function attachExtraDoctorSections(rulesUnderContract, config, classifica
   return { arkRun, arkOrder, mergePlanes };
 }
 
+function arkRulesDoctorMark(section, warn) {
+  if (Array.isArray(section?.loadErrors) && section.loadErrors.length > 0) return warn;
+  if ((Number(section?.uncoveredInvariants) || 0) > 0) return warn;
+  return ' ';
+}
+
 export function printCompactExtraDoctorLines(advisories, io) {
+  const rulesUnderContract = advisories?.rulesUnderContract;
+  const arkRulesLines = formatArkRulesDoctorLines(rulesUnderContract);
+  if (arkRulesLines.length > 0) {
+    console.log('');
+    const mark = arkRulesDoctorMark(rulesUnderContract, io.warn);
+    for (const text of arkRulesLines) io.line(mark, text);
+  }
   const arkRun = advisories?.arkRun;
   if (arkRun?.active === true && arkRun.notAScore === true) {
     console.log('');
@@ -178,6 +194,14 @@ export function printDoctorAdvisories(advisories, io) {
     console.log(io.color.bold('Stewards'));
     io.line(io.warn, nudge.ask);
     if (nudge.nextAction) io.line(' ', io.color.dim(`Next: ${nudge.nextAction}`));
+  }
+  const rulesUnderContract = advisories.rulesUnderContract;
+  const arkRulesLines = formatArkRulesDoctorLines(rulesUnderContract);
+  if (arkRulesLines.length > 0) {
+    console.log('');
+    console.log(io.color.bold('ArkRules (not a score)'));
+    const mark = arkRulesDoctorMark(rulesUnderContract, io.warn);
+    for (const text of arkRulesLines) io.line(mark, text);
   }
   const arkRun = advisories.arkRun;
   if (arkRun && arkRun.notAScore === true) {

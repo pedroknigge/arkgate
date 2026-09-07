@@ -6,6 +6,10 @@ in the immutable pre-2.0 archive linked below.
 ## Unreleased
 
 ### Changed
+- Compact `--doctor` names ArkRules only when the `arkRules` map is on
+  (one breath + counts, not a score). Absence stays silent. Reuses
+  `rulesUnderContract` — no new schema, flag, or skill. `--doctor --all`
+  prints the same lines under **ArkRules (not a score)**.
 - PR / CI skill gate: `npm run check:agent-skills` now fails closed when a
   product plane (Layers, ArkRules, ArkRun, ArkOrder) or Contener · Guiar ·
   Ordenar drops out of first-class skill bodies or living hubs. Reuses
