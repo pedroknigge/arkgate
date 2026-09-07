@@ -687,10 +687,12 @@ facts about the user's code, and three said **green** over nothing.
 | 8 | `coverage.coverageRoots` + `INVARIANT_COVERAGE_OUTSIDE_ROOTS` — coverage stops certifying tests no runner runs | done |
 | 9 | a green run names the design bets it is not checking (`--plan`) | done |
 
-Parked for the next patch: an `include` that classifies no file still passes green;
-`docs/arkorder.md` does not exist; ArkRules cannot express a configuration invariant
-(a value pinned in a file), which is why four rules live as vitest ratchets; the local
-gate is not a superset of the required CI job.
+Parked for the next patch: `docs/arkorder.md` existence is historical (XP01 shipped
+the page); ArkRules cannot express a configuration invariant (a value pinned in a
+file), which is why four rules live as vitest ratchets. Unclassified-include vacuous
+green and write/CI disagree on those files closed by `UC01`. Remaining dual-gate
+residual: a tree with *some* classified files still greens a plain `ark-check` while
+`--strict-merge` fails on `CONFIG_UNCLASSIFIED_FILES` (intentional brownfield warning).
 
 ### Patch 4.8.3 — writes through an aggregate
 

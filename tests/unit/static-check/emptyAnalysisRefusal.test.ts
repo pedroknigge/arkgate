@@ -16,6 +16,7 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   EMPTY_ANALYSIS_RULE_ID,
+  classifiedCountFromFiles,
   emptyAnalysisRefusal,
 } from '../../../bin/lib/analysis-completeness.mjs';
 
@@ -204,6 +205,15 @@ describe('emptyAnalysisRefusal (pure)', () => {
     );
     expect(refusal?.nextAction).toContain('/ark-place');
     expect(refusal?.nextAction).toContain('--coverage');
+  });
+
+  it('classifiedCountFromFiles is silent when no layers are declared', () => {
+    expect(
+      classifiedCountFromFiles(['/repo/src/a.ts'], [], () => 'DomainModel', '/repo')
+    ).toBe(undefined);
+    expect(
+      classifiedCountFromFiles(['/repo/src/a.ts'], [{ name: 'DomainModel' }], () => 'DomainModel', '/repo')
+    ).toBe(1);
   });
 
   it('omitted classifiedFileCount keeps the historical include-only meaning', () => {

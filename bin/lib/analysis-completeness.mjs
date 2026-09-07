@@ -63,7 +63,8 @@ export const EMPTY_ANALYSIS_RULE_ID = 'ANALYSIS_COVERS_NO_FILES';
  * `classifiedFileCount` is optional. When omitted, included files are treated as
  * classified (the historical meaning of `governedFileCount`). When provided and
  * zero while include still matched files, this is the same vacuous green: import
- * rules cannot run on unclassified source. Partial unclassified stays a warning.
+ * rules cannot run on unclassified source. Omit the count when `layers` is empty
+ * so `CONFIG_NO_LAYERS` stays the next step. Partial unclassified stays a warning.
  *
  * @param {{
  *   governedFileCount?: number,
@@ -138,4 +139,12 @@ export function emptyAnalysisRefusal(input = {}) {
     'without refusing, and `--adopt-contract --write` proposes an include that matches this tree.';
 
   return { ruleId: EMPTY_ANALYSIS_RULE_ID, message, nextAction };
+}
+
+/** Path-only classified count. `undefined` when no layers — caller keeps the include-only meaning. */
+export function classifiedCountFromFiles(files, layers, layerForFile, root) {
+  if (!Array.isArray(layers) || layers.length === 0 || typeof layerForFile !== 'function') {
+    return undefined;
+  }
+  return files.filter((abs) => layerForFile(root, abs, layers)).length;
 }
