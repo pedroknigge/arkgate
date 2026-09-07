@@ -48,7 +48,7 @@ export type {
 /** Current published ark.config.json schema version (ADR 0027: 1.3 adds optional arkOrder). */
 export const ARK_CONFIG_SCHEMA_VERSION: ArkConfigSchemaVersion = '1.3';
 export const ARK_CONFIG_SCHEMA_URL =
-  'https://unpkg.com/arkgate@2/schemas/ark.config.schema.json';
+  'https://unpkg.com/arkgate@4/schemas/ark.config.schema.json';
 
 const DEFAULT_LAYER_NAMES = [
   'DomainModel',

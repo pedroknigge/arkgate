@@ -11,7 +11,7 @@
 import { ARK_ORDER_SCHEMA_DEF, ARK_RUN_SCHEMA_DEF, defaultedArkOrder, defaultedArkRun, validateArkOrderExtra, validateArkRunExtra, } from './config-extras.mjs';
 /** Current published ark.config.json schema version (ADR 0027: 1.3 adds optional arkOrder). */
 export const ARK_CONFIG_SCHEMA_VERSION = '1.3';
-export const ARK_CONFIG_SCHEMA_URL = 'https://unpkg.com/arkgate@2/schemas/ark.config.schema.json';
+export const ARK_CONFIG_SCHEMA_URL = 'https://unpkg.com/arkgate@4/schemas/ark.config.schema.json';
 const DEFAULT_LAYER_NAMES = [
     'DomainModel',
     'ApplicationOrchestration',

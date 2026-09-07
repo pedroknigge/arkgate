@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://unpkg.com/arkgate@2/schemas/ark.config.schema.json",
+  "$id": "https://unpkg.com/arkgate@4/schemas/ark.config.schema.json",
   "title": "ArkGate architecture contract",
   "description": "Versioned contract consumed identically by ArkGate CLI, MCP, and ESLint surfaces.",
   "type": "object",
@@ -16,7 +16,7 @@
     "$schema": {
       "type": "string",
       "minLength": 1,
-      "default": "https://unpkg.com/arkgate@2/schemas/ark.config.schema.json",
+      "default": "https://unpkg.com/arkgate@4/schemas/ark.config.schema.json",
       "description": "Editor-facing URL or local path for this JSON Schema."
     },
     "schemaVersion": {
