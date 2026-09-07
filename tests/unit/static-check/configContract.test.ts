@@ -599,7 +599,20 @@ describe('C01 config contract', () => {
     });
     expect(result.config.$schema).toContain('node_modules/arkgate');
     expect(result.config.schemaVersion).toBe(ARK_CONFIG_SCHEMA_VERSION);
-    expect(ARK_CONFIG_SCHEMA_URL).toContain('arkgate@2');
+  });
+
+  it('stamps a new ark.config $schema on the current major line, not arkgate@2 (#211)', () => {
+    expect(ARK_CONFIG_SCHEMA_URL).toBe(
+      'https://unpkg.com/arkgate@4/schemas/ark.config.schema.json'
+    );
+    expect(ARK_CONFIG_SCHEMA_URL).not.toContain('arkgate@2');
+    expect(withArkConfigMetadata({ include: ['src'] }).$schema).toBe(ARK_CONFIG_SCHEMA_URL);
+    expect(
+      loadArkConfigContract({
+        ...VALID_MINIMAL_CONFIG,
+        $schema: 'https://unpkg.com/arkgate@2/schemas/ark.config.schema.json',
+      }).config.$schema
+    ).toContain('arkgate@2');
   });
 
   it('rejects an unknown top-level key with its JSON path', () => {

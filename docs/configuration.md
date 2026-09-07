@@ -9,7 +9,7 @@ The CLI, MCP server, and ESLint plugin all use the same parser, migration, defau
 
 ```json
 {
-  "$schema": "https://unpkg.com/arkgate@2/schemas/ark.config.schema.json",
+  "$schema": "https://unpkg.com/arkgate@4/schemas/ark.config.schema.json",
   "schemaVersion": "1.3",
   "include": ["src"],
   "layers": [],

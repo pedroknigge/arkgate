@@ -5,6 +5,13 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+### Fixed
+- Fresh `arkgate start --apply` (and every other path that stamps a new
+  `ark.config.json`) now writes `$schema` at `arkgate@4` on unpkg, not the stale
+  `@2` pin (issue [#211](https://github.com/pedroknigge/arkgate/issues/211)).
+  Existing configs keep whatever URL they already have. Editor completion
+  matches the 4.x line you just installed.
+
 ## 4.8.14 — 2026-09-06
 
 **Patch** over **4.8.13**. Catch npm `latest` up to `main`: first-class
