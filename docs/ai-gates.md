@@ -28,7 +28,7 @@ overview: [develop.md](develop.md) · hub: [README.md](README.md).
 | **Claude Code** | Hard PreToolUse for listed ops when installed + trusted + (for `hard:true`) runtime-observed | Required `arkgate-check --strict-merge` status |
 | **Grok Build** | Hard PreToolUse for listed ops when installed + trusted + (for `hard:true`) runtime-observed | Required `arkgate-check --strict-merge` status |
 | **Google Antigravity** | Hard PreToolUse for listed write tools when installed + trusted + (for `hard:true`) runtime-observed | Required `arkgate-check --strict-merge` status |
-| **Cursor** | Hard preToolUse for Write/StrReplace when installed + trusted + runtime-observed | Required CI status (same check) |
+| **Cursor** | Hard preToolUse for Write/StrReplace when installed + trusted + `failClosed` + runtime-observed | Required CI status (same check) |
 | **OpenAI Codex** | Hard PreToolUse for complete local `apply_patch` in CLI/Desktop when installed + trusted + runtime-observed | Required CI status (same check) |
 | **OpenCode** | **Advisory / best-effort** (MCP + optional experimental plugin) — **not** a hard boundary | Required CI status (same check) |
 
@@ -329,8 +329,10 @@ Cursor supports MCP servers (`.cursor/mcp.json`) and project hooks (`.cursor/hoo
 }
 ```
 
-When that hook is installed and trusted, Cursor **hard-blocks** agent `Write` / `StrReplace`
-for governed TypeScript sources (exit 2 or `permission: "deny"`). Repair envelopes may emit;
+When that hook is installed and trusted **and** `failClosed` is `true`, Cursor **hard-blocks**
+agent `Write` / `StrReplace` for governed TypeScript sources (exit 2 or `permission: "deny"`).
+A hook without `failClosed` is fail-open: if the checker cannot run, the write still lands
+(same idea as a file permission — no checker, no write). Repair envelopes may emit;
 Cursor does **not** guarantee Write `updated_input` reinjection — the agent must fix and retry
 from `agent_message`. Shell, Tab, and human edits still rely on CI.
 

@@ -78,6 +78,39 @@ describe('Cursor hard write path (4.5.7)', () => {
     expect(ark.failClosed).toBe(true);
   });
 
+  it('does not claim hard-write when failClosed is missing or false', () => {
+    const root = tmpRoot();
+    fs.mkdirSync(path.join(root, '.cursor'), { recursive: true });
+    const failOpen = {
+      version: 1,
+      hooks: {
+        preToolUse: [
+          {
+            command:
+              'npx arkgate-mcp --hook --hook-repair --root . --root-env CURSOR_PROJECT_DIR --config ark.config.json',
+            matcher: 'Write|StrReplace',
+          },
+        ],
+      },
+    };
+    fs.writeFileSync(path.join(root, '.cursor', 'hooks.json'), `${JSON.stringify(failOpen, null, 2)}\n`);
+    const missing = detectWritePathCapabilities(root, 'cursor');
+    expect(missing.capabilities['hard-write']).toBe(false);
+    expect(missing.capabilityEvidence['hard-write']).toEqual([]);
+    expect(missing.nativeFailClosed).toBe(false);
+    expect(missing.nativeFailClosedPolicy).toBe('required');
+    expect(missing.gap?.id).toBe('write-path-fail-open');
+    expect(missing.gap?.message).toMatch(/fail-open/i);
+    expect(missing.gap?.message).toMatch(/file permission|no checker/i);
+
+    failOpen.hooks.preToolUse[0].failClosed = false;
+    fs.writeFileSync(path.join(root, '.cursor', 'hooks.json'), `${JSON.stringify(failOpen, null, 2)}\n`);
+    const explicit = detectWritePathCapabilities(root, 'cursor');
+    expect(explicit.capabilities['hard-write']).toBe(false);
+    expect(explicit.nativeFailClosed).toBe(false);
+    expect(explicit.gap?.id).toBe('write-path-fail-open');
+  });
+
   it('detects hard-write evidence from .cursor/hooks.json', () => {
     const root = tmpRoot();
     fs.mkdirSync(path.join(root, '.cursor'), { recursive: true });
@@ -95,6 +128,8 @@ describe('Cursor hard write path (4.5.7)', () => {
     // EH07: inventory repair-payload stays false; envelope honesty is on support.
     expect(model.capabilities['repair-payload']).toBe(false);
     expect(model.capabilityEvidence['repair-payload']).toEqual([]);
+    expect(model.nativeFailClosed).toBe(true);
+    expect(model.nativeFailClosedPolicy).toBe('required');
     expect(model.mode).toBe('reject-only');
     expect(model.gap?.id).toBe('write-path-reject-only');
     expect(model.gap?.message).toMatch(/without a repair payload/i);

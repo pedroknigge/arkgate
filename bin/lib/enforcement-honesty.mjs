@@ -180,6 +180,8 @@ export function buildBaselineHonesty(input = {}) {
  *   packagePinAbsent?: boolean,
  *   selfHost?: boolean,
  *   motherCli?: boolean,
+ *   nativeFailClosed?: boolean | null,
+ *   nativeFailClosedPolicy?: 'required' | 'unsupported' | 'none',
  * }} [extras]
  */
 export function buildWritePathHonesty(activeHost, hardWriteActive = false, extras = {}) {
@@ -202,7 +204,21 @@ export function buildWritePathHonesty(activeHost, hardWriteActive = false, extra
   const hardAllowed = packageInstalled && !pinAbsentForUser;
   const effectiveHard =
     Boolean(hardWriteActive) && hardCapable && !softWriteHost && hardAllowed;
-  const message = doctorWritePathHonestyMessage(host, effectiveHard);
+  const nativeFailClosedPolicy =
+    extras.nativeFailClosedPolicy === 'required' ||
+    extras.nativeFailClosedPolicy === 'none' ||
+    extras.nativeFailClosedPolicy === 'unsupported'
+      ? extras.nativeFailClosedPolicy
+      : HOST_SUPPORT_MATRIX[host]?.nativeFailClosed ?? (hardCapable ? 'unsupported' : 'none');
+  const nativeFailClosed =
+    extras.nativeFailClosed === true ? true : extras.nativeFailClosed === false ? false : null;
+  const failOpen = nativeFailClosedPolicy === 'required' && nativeFailClosed === false;
+  const honestyMessage = doctorWritePathHonestyMessage(host, effectiveHard);
+  const failOpenMessage =
+    `${HOST_SUPPORT_MATRIX[host]?.label ?? 'This host'}: the write hook is fail-open. ` +
+    'If the checker cannot run, the write still lands. Set failClosed: true on the write hook — ' +
+    'same idea as a file permission: no checker, no write. Required CI is the shared merge line.';
+  const message = failOpen ? failOpenMessage : honestyMessage;
 
   /** @type {Record<string, unknown>} */
   const out = {
@@ -212,6 +228,8 @@ export function buildWritePathHonesty(activeHost, hardWriteActive = false, extra
     hardWriteSupported: hardCapable,
     hardWriteActive: effectiveHard,
     hardWriteUnverified: hardCapable && !effectiveHard,
+    nativeFailClosed,
+    nativeFailClosedPolicy,
     hardMergeBoundary:
       'required-github-status-context (CLI: arkgate-check --strict-merge / ark-check --strict-merge)',
     packageInstalled,
@@ -385,6 +403,16 @@ export function buildProductHonesty(input = {}) {
     });
   }
 
+  if (write?.nativeFailClosed === false && write?.nativeFailClosedPolicy === 'required') {
+    reasons.push({
+      id: 'native-fail-open',
+      bucket: 'environment',
+      message:
+        write.message ||
+        'The write hook is fail-open. If the checker cannot run, the write still lands. Set failClosed: true on the write hook.',
+    });
+  }
+
   const adopted =
     typeof input.adopted === 'string'
       ? input.adopted
@@ -442,7 +470,7 @@ export function buildProductHonesty(input = {}) {
   }
 
   // EH05: environment residual deny-list (future reason ids stay architecture debt by default).
-  const ENVIRONMENT_REASON_IDS = new Set(['soft-write-host']);
+  const ENVIRONMENT_REASON_IDS = new Set(['soft-write-host', 'native-fail-open']);
 
   const environmentResiduals = reasons.filter((r) => ENVIRONMENT_REASON_IDS.has(r.id));
   const architectureReasons = reasons.filter((r) => !ENVIRONMENT_REASON_IDS.has(r.id));
@@ -457,6 +485,8 @@ export function buildProductHonesty(input = {}) {
 
   const softWriteOnly =
     !unfinished && environmentResiduals.some((r) => r.id === 'soft-write-host');
+  const failOpenOnly =
+    !unfinished && environmentResiduals.some((r) => r.id === 'native-fail-open');
   const hostLabel = (() => {
     const h = typeof write?.activeHost === 'string' ? write.activeHost.trim().toLowerCase() : '';
     if (h === 'codex') return 'Codex';
@@ -493,6 +523,10 @@ export function buildProductHonesty(input = {}) {
       'This tree acked advisory-only in .ark/adoption-stance.json. That is not a required GitHub merge status.';
   } else if (softWriteOnly) {
     primaryMessage = `${hostLabel} local writes stay advisory/bypassable; architecture contract on this slice is ready. Hard merge boundary is a required GitHub status context running arkgate-check --strict-merge (alias ark-check --strict-merge).`;
+  } else if (failOpenOnly) {
+    primaryMessage =
+      write?.message ||
+      `${hostLabel} write hook is fail-open — if the checker cannot run, the write still lands. Set failClosed: true. Required CI is the shared merge line.`;
   } else if (wholeTreeGoverned) {
     primaryMessage =
       'No residual honesty blockers on this slice — still not a numeric architecture score; re-doctor after material change.';
@@ -509,6 +543,10 @@ export function buildProductHonesty(input = {}) {
     headline = wholeTreeGoverned
       ? `Architecture contract ready; ${hostLabel} local writes are advisory`
       : `Contract residual clear; ${hostLabel} local writes are advisory`;
+  } else if (!unfinished && failOpenOnly) {
+    headline = wholeTreeGoverned
+      ? `Architecture contract ready; ${hostLabel} write hook is fail-open`
+      : `Contract residual clear; ${hostLabel} write hook is fail-open`;
   } else if (!unfinished && adopted === 'advisory-only-acked') {
     headline = 'Advisory-only adoption — merge status is not required';
   } else if (!unfinished) {
@@ -536,6 +574,9 @@ export function buildProductHonesty(input = {}) {
     primaryNextAction =
       input.stewardNudge?.nextAction ||
       '/ark-adopt (ask, then update stewards[] — do not invent names)';
+  } else if (!primaryNextAction && failOpenOnly) {
+    primaryNextAction =
+      'Set failClosed: true on the write hook, then re-run doctor. Required CI is the shared merge line.';
   } else if (!primaryNextAction && softWriteOnly) {
     primaryNextAction =
       'Confirm the GitHub required status context name runs arkgate-check --strict-merge (or ark-check --strict-merge). Soft-write hosts stay advisory at local write; the required status is the hard merge boundary.';
@@ -613,6 +654,8 @@ export function computeDoctorEnforcementHonesty({
   adoptionStance,
   emptyStewards,
   stewardNudge,
+  nativeFailClosed,
+  nativeFailClosedPolicy,
 } = {}) {
   const coverageHonesty = buildCoverageHonesty({
     percent: governedPercent,
@@ -632,6 +675,8 @@ export function computeDoctorEnforcementHonesty({
     packagePinAbsent: packageVersionTruth?.code === 'PACKAGE_PIN_ABSENT',
     selfHost,
     motherCli,
+    nativeFailClosed,
+    nativeFailClosedPolicy,
   });
   // Prefer explicit blocking count; fall back to activeViolations only when callers
   // already pass blocking-only totals (legacy tests). Type-only must not invent debt.

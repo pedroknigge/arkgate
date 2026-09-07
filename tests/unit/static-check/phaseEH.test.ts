@@ -149,6 +149,24 @@ describe('EH05 product honesty soft-write reclassification', () => {
     expect(honesty.notAScore).toBe(true);
   });
 
+  it('fail-open Cursor hook is environment residual, not architecture unfinished', () => {
+    const honesty = buildProductHonesty({
+      coverageHonesty: buildCoverageHonesty({ percent: 100, totalFiles: 20 }),
+      baselineHonesty: buildBaselineHonesty({ exists: false }),
+      writePathHonesty: buildWritePathHonesty('cursor', false, { nativeFailClosed: false }),
+      operatingMode: 'enforce',
+      activeBlockingViolations: 0,
+    });
+    expect(honesty.unfinished).toBe(false);
+    expect(honesty.finished).toBe(true);
+    expect(honesty.reasonIds).toContain('native-fail-open');
+    expect(honesty.environmentResidualIds).toContain('native-fail-open');
+    expect(honesty.architectureReasonIds).not.toContain('native-fail-open');
+    expect(honesty.headline).toMatch(/fail-open/i);
+    expect(honesty.primaryNextAction).toMatch(/failClosed: true/i);
+    expect(honesty.notAScore).toBe(true);
+  });
+
   it('soft-write + blocking debt still unfinished', () => {
     const honesty = buildProductHonesty({
       coverageHonesty: buildCoverageHonesty({ percent: 100, totalFiles: 20 }),

@@ -146,6 +146,7 @@ export function printDoctorCompactHuman(view) {
     listedMissing.length > 0 ||
     Boolean(writePath.gap) ||
     writePathHonesty?.softWriteHost === true ||
+    writePathHonesty?.nativeFailClosed === false ||
     Boolean(skippableCi);
   if (hostRed) {
     console.log('');
@@ -153,7 +154,9 @@ export function printDoctorCompactHuman(view) {
     if (writePath.activeHost) line(' ', `Active host: ${writePath.activeHost}`);
     if (listedMissing.length > 0) line(bad, `Missing gates: ${listedMissing.join(', ')}`);
     if (skippableCi) line(warn, skippableCi);
-    else if (listedMissing.length === 0 && (writePath.gap || writePathHonesty?.softWriteHost)) {
+    else if (writePathHonesty?.nativeFailClosed === false) {
+      line(warn, writePathHonesty.message || 'Write hook is fail-open — if the checker cannot run, the write still lands.');
+    } else if (listedMissing.length === 0 && (writePath.gap || writePathHonesty?.softWriteHost)) {
       line(warn, 'Local writes are advisory; required CI is the merge boundary.');
     }
   }

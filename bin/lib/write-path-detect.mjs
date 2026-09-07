@@ -54,7 +54,17 @@ export function buildUnknownHostSessionNote(inventory, capabilities = {}) {
 
 export function detectWritePathCapabilities(root, explicitHost, attempt) {
   const model = buildWritePathCapabilityModel(root, explicitHost, attempt);
-  const { activeHost, support, capabilities, capabilityEvidence, enforcementLadder, enforcementState, inventory } = model;
+  const {
+    activeHost,
+    support,
+    capabilities,
+    capabilityEvidence,
+    enforcementLadder,
+    enforcementState,
+    inventory,
+    nativeFailClosed,
+    nativeFailClosedPolicy,
+  } = model;
   const hardWrite = capabilities['hard-write'];
   const advisoryWrite = capabilities['advisory-write'];
   const repairPayload = capabilities['repair-payload'];
@@ -74,7 +84,20 @@ export function detectWritePathCapabilities(root, explicitHost, attempt) {
   const inventoryHasWriteBoundary =
     Boolean(inventory?.capabilities?.['hard-write']) ||
     Boolean(inventory?.capabilities?.['advisory-write']);
-  if (mode === 'none') {
+  if (nativeFailClosed === false) {
+    const hookPath = support?.hookPath || 'the write hook';
+    const label = support?.label || activeHost;
+    gap = {
+      id: 'write-path-fail-open',
+      severity: 'warn',
+      host: activeHost,
+      message:
+        `${label}: the write hook is fail-open. If the checker cannot run, the write still lands. ` +
+        `Set failClosed: true on ${hookPath} — same idea as a file permission: no checker, no write. ` +
+        'Required CI is the shared merge line.',
+      fix: arkCommand(root, 'ark-check', `--install-agent-gates --tools ${tools} --force`),
+    };
+  } else if (mode === 'none') {
     if (activeHost === 'unknown' && inventoryHasWriteBoundary) {
       gap = null;
     } else {
@@ -150,6 +173,8 @@ export function detectWritePathCapabilities(root, explicitHost, attempt) {
     inventory,
     // Configured inventory (on-disk hosts) vs this-invocation projection (activeHost).
     ...(sessionNote ? { sessionNote } : {}),
+    nativeFailClosed: nativeFailClosed ?? null,
+    nativeFailClosedPolicy: nativeFailClosedPolicy ?? 'unsupported',
     // Compatibility projection for existing doctor/API consumers.
     mode,
     prepareWrite: advisoryWrite,

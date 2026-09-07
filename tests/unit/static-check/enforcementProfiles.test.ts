@@ -141,6 +141,36 @@ describe('enforcement profile policy', () => {
     }
   });
 
+  it('treats a Cursor hook without failClosed as missing hard-write evidence', () => {
+    const root = mk();
+    try {
+      fs.mkdirSync(path.join(root, '.cursor'), { recursive: true });
+      fs.writeFileSync(
+        path.join(root, '.cursor', 'hooks.json'),
+        JSON.stringify({
+          version: 1,
+          hooks: {
+            preToolUse: [
+              {
+                command: 'npx arkgate-mcp --hook --root . --config ark.config.json',
+                matcher: 'Write|StrReplace',
+              },
+            ],
+          },
+        })
+      );
+      expect(hasHardWriteHook(root, 'cursor')).toBe(false);
+      expect(validateHardWriteRequest({ root, host: 'cursor', tools: 'cursor' })).toEqual({
+        ok: false,
+        error:
+          '.cursor/hooks.json already exists without an Ark hard-write hook and would be preserved. ' +
+          'Use --force to replace that host file, or omit --require-write-hook for merge-only enforcement.',
+      });
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it('fails closed on a preserved incompatible hook unless force is explicit', () => {
     const root = mk();
     try {

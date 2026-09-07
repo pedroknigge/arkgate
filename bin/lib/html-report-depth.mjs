@@ -127,6 +127,8 @@ export function buildReportDepthPayload(
     selfHost:
       packageVersionTruth?.selfHost === true ||
       packageVersionTruth?.code === 'PACKAGE_PIN_SELF_HOST',
+    nativeFailClosed: writePath?.nativeFailClosed,
+    nativeFailClosedPolicy: writePath?.nativeFailClosedPolicy,
   });
   const classification = {
     governedPercent: coverage?.governed?.percent ?? null,

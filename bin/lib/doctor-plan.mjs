@@ -671,6 +671,8 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
       selfHost:
         packageVersionTruth?.selfHost === true ||
         packageVersionTruth?.code === 'PACKAGE_PIN_SELF_HOST',
+      nativeFailClosed: writePath.nativeFailClosed,
+      nativeFailClosedPolicy: writePath.nativeFailClosedPolicy,
       adopted,
       ciMergeBoundary,
       github: githubForBoundary,
@@ -827,6 +829,8 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
               mcpPresent: writePath.mcpPresent,
               evidence: writePath.evidence,
               honesty: writePathHonesty,
+              nativeFailClosed: writePath.nativeFailClosed ?? null,
+              nativeFailClosedPolicy: writePath.nativeFailClosedPolicy ?? 'unsupported',
               ...(writePath.sessionNote ? { sessionNote: writePath.sessionNote } : {}),
               ...(writePath.gap
                 ? {

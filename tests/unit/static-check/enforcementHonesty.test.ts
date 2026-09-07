@@ -176,6 +176,14 @@ describe('buildWritePathHonesty', () => {
     }
   });
 
+  it('soft/hard classification includes nativeFailClosed policy from the matrix', () => {
+    expect(HOST_SUPPORT_MATRIX.cursor.nativeFailClosed).toBe('required');
+    expect(HOST_SUPPORT_MATRIX.opencode.nativeFailClosed).toBe('none');
+    for (const host of ['claude', 'grok', 'antigravity', 'codex'] as const) {
+      expect(HOST_SUPPORT_MATRIX[host].nativeFailClosed).toBe('unsupported');
+    }
+  });
+
   it('computeDoctorEnforcementHonesty bundles all three surfaces', () => {
     const bundle = computeDoctorEnforcementHonesty({
       governedPercent: 35,
@@ -194,6 +202,18 @@ describe('buildWritePathHonesty', () => {
     expect(bundle.writePathHonesty.softWriteHost).toBe(true);
     expect(bundle.productHonesty.unfinished).toBe(true);
     expect(bundle.productHonesty.notAScore).toBe(true);
+  });
+
+  it('names a fail-open Cursor hook without claiming hard write', () => {
+    const honesty = buildWritePathHonesty('cursor', false, { nativeFailClosed: false });
+    expect(honesty.softWriteHost).toBe(false);
+    expect(honesty.hardWriteSupported).toBe(true);
+    expect(honesty.hardWriteActive).toBe(false);
+    expect(honesty.nativeFailClosed).toBe(false);
+    expect(honesty.nativeFailClosedPolicy).toBe('required');
+    expect(honesty.message).toMatch(/fail-open/i);
+    expect(honesty.message).toMatch(/failClosed: true/i);
+    expect(honesty.message).toMatch(/file permission|no checker/i);
   });
 
   it('never claims hard write when package pin is absent', () => {
