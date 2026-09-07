@@ -158,18 +158,26 @@ describe('start library layer copy (#213)', () => {
     expect(configBlob).not.toMatch(NEXT_COPY);
     expect(configBlob).toContain(LIBRARY_LAYER_DESCRIPTIONS.ApplicationOrchestration);
 
-    const doctor = runArk(ARK_CHECK, ['--root', root, '--doctor', '--json'], root);
-    expect(doctor.status, `${doctor.stdout}\n${doctor.stderr}`).toBe(0);
-    const payload = JSON.parse(doctor.stdout) as {
+    const doctorJson = runArk(ARK_CHECK, ['--root', root, '--doctor', '--json'], root);
+    expect(doctorJson.status, `${doctorJson.stdout}\n${doctorJson.stderr}`).toBe(0);
+    const payload = JSON.parse(doctorJson.stdout) as {
       doctor?: { layers?: Array<{ name: string; description?: string }> };
       coverage?: { layers?: Array<{ name: string; description?: string }> };
     };
-    const doctorBlob = [
+    const captionBlob = [
       layerDescriptions({ layers: payload.doctor?.layers }),
       layerDescriptions({ layers: payload.coverage?.layers }),
-      doctor.stdout,
     ].join('\n');
-    expect(doctorBlob).not.toMatch(NEXT_COPY);
+    expect(captionBlob).not.toMatch(NEXT_COPY);
+    expect(captionBlob).toContain(LIBRARY_LAYER_DESCRIPTIONS.ApplicationOrchestration);
+
+    const doctorHuman = runArk(ARK_CHECK, ['--root', root, '--doctor'], root);
+    expect(doctorHuman.status, `${doctorHuman.stdout}\n${doctorHuman.stderr}`).toBe(0);
+    const coverageLines = `${doctorHuman.stdout}\n${doctorHuman.stderr}`
+      .split('\n')
+      .filter((line) => /ApplicationOrchestration|PresentationAdapters/.test(line))
+      .join('\n');
+    expect(coverageLines).not.toMatch(NEXT_COPY);
   }, 120_000);
 
   it('start --apply on a Next app still writes Next-flavored guidance', () => {
