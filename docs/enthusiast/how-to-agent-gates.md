@@ -49,6 +49,11 @@ server with an explicit project root, compact Codex must contain valid project c
 SessionStart/PreToolUse Ark hooks, and CI must execute a fail-closed Ark command. Included but
 unclassified source files therefore remain red.
 
+If gates are required and the tree has no short decision note yet (`docs/adr/` or
+`docs/decisions/`), `--require-gates` and doctor point at that path. Soft hint —
+not a fail, and silent when `--require-gates` is off. Not every change needs a
+note; use one when you loosen a rule or add a real gate.
+
 Doctor JSON includes `writePath.mode` plus `enforcementLadder`: support, installation, observed
 evidence, covered operations, bypassability, and CI honesty. MCP registration stays advisory.
 

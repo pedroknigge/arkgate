@@ -6,6 +6,11 @@ in the immutable pre-2.0 archive linked below.
 ## Unreleased
 
 ### Added
+- Soft ADR / decision-note presence when `--require-gates` (or
+  `--strict` / `--strict-merge` / doctor adopted-strict) is on and the tree
+  has no `docs/adr/` or `docs/decisions/` note yet. Doctor residual + a
+  friendly next step. Not a fail. Silent when require-gates is off. No new
+  skill, schema, or config key. Policy weaken still uses `--policy-ack`.
 - Optional `layers[].owners` on each layer (GitHub handle or email, same
   identity as `stewards`) and optional `requireLayerOwners`. Absence is
   silent. When the require flag is on, doctor names the first house without

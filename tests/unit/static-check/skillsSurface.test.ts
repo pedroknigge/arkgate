@@ -549,6 +549,15 @@ describe('LD05 layer description skill deepen (no /ark-describe)', () => {
     expect(body).toMatch(/No `?\/ark-owners`/);
   });
 
+  it('ark-adopt points required-gates trees at a short decision note without a new skill', () => {
+    const body = readSkill('ark-adopt');
+    expect(body).toContain('## Decision notes (process)');
+    expect(body).toContain('--require-gates');
+    expect(body).toContain('docs/adr/');
+    expect(body).toMatch(/Not every change|not on every file/i);
+    expect(body).toMatch(/No `?\/ark-adr`|Do \*\*not\*\* invent `\/ark-adr`/);
+  });
+
   it('ark-place prints owners next to layer name and globs when present', () => {
     const body = readSkill('ark-place');
     expect(body).toContain('## Layer owners (process)');

@@ -48,6 +48,7 @@ import {
   detectWritePathCapabilities,
 } from './lib/agent-gates.mjs';
 import { ciNotFailClosed } from './lib/gate-files.mjs';
+import { printAdrPresenceHint } from './lib/adr-presence.mjs';
 import { syncBaselineIntoCheckSurfaces } from './lib/field-install.mjs';
 import {
   detectEnforcement,
@@ -1352,6 +1353,7 @@ async function main() {
               ? `AGENTS.md, compact host registration (${compactHost})`
               : REQUIRED_GATE_FILES.join(', '))
         );
+        printAdrPresenceHint(args.root, (line) => console.log(line));
       }
       if (writeRequest?.host) {
         console.log(`Ark hard-write hook present for ${writeRequest.host}.`);
@@ -1540,6 +1542,7 @@ async function main() {
       safety, designDelta,
       ts, parseHealth, completeness,
       all: args.all === true,
+      requireGates: args.requireGates === true,
     });
     if (designDelta) process.exitCode = !designDelta.complete ? 2 : designDelta.valid ? 0 : 1; return;
   }

@@ -22,6 +22,9 @@ one bounded decision needs 2–3 enforceable options.
 ## Checklist
 
 - Doctor #1: if ENFORCE + empty plan A and gates are already installed → **Shape** (`/ark-explore` then `/ark-autopilot`). Do not say install-agent-gates.
+- When `--require-gates` / adopted-strict is on and doctor JSON has `adrPresence`,
+  the next step is a short note under `docs/adr/` (or `docs/decisions/`). Soft.
+  Not every change. Off when require-gates is off. No `/ark-adr`.
 - Distinguish **missing** skills vs **stale** catalog. Installed ≠ stale.
 - Hook green is not tree green (scripted edits bypass PreToolUse).
 - Bug / false green / false red / missing doc / improvable behavior **in ArkGate itself** → draft one upstream GitHub issue (`pedroknigge/arkgate` or the installed package `repository.url`), **ask the human to confirm send**, then `gh issue create`. Never auto-file. Never file ArkGate defects on the consumer product repo.
