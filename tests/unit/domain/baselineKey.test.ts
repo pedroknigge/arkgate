@@ -88,7 +88,9 @@ describe('baselineKey (src/domain — pure, no CLI spawn)', () => {
 
   it('covers STRUCTURE freeze target + non-freezable SCOPE_EMPTY on Domain and CLI', () => {
     expect(NON_FREEZABLE_BASELINE_RULE_IDS).toContain('ARKRULE_SCOPE_EMPTY');
+    expect(NON_FREEZABLE_BASELINE_RULE_IDS).toContain('INVARIANT_CATALOG_EMPTY');
     expect(nonFreezableFromCli).toContain('ARKRULE_SCOPE_EMPTY');
+    expect(nonFreezableFromCli).toContain('INVARIANT_CATALOG_EMPTY');
     expect(structureFreezeTarget({ target: 'orchestration-only' })).toBe('orchestration-only');
     expect(structureTargetFromCli({ target: 'orchestration-only' })).toBe('orchestration-only');
     expect(structureFreezeTarget({ sensor: 'thin-adapter' })).toBe('thin-adapter');
@@ -134,6 +136,8 @@ describe('baselineKey (src/domain — pure, no CLI spawn)', () => {
     expect(isFreezableFromCli({ freezable: false })).toBe(false);
     expect(isFreezableBaselineViolation({ ruleId: 'ARKRULE_SCOPE_EMPTY' })).toBe(false);
     expect(isFreezableFromCli({ ruleId: 'ARKRULE_SCOPE_EMPTY' })).toBe(false);
+    expect(isFreezableBaselineViolation({ ruleId: 'INVARIANT_CATALOG_EMPTY' })).toBe(false);
+    expect(isFreezableFromCli({ ruleId: 'INVARIANT_CATALOG_EMPTY' })).toBe(false);
     expect(isFreezableBaselineViolation({ ruleId: 'ARKRULE_STRUCTURE' })).toBe(true);
     expect(isFreezableFromCli({ ruleId: 'ARKRULE_STRUCTURE' })).toBe(true);
     expect(isFreezableBaselineViolation({})).toBe(true);

@@ -5,6 +5,13 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+### Added
+- Doctor residual when `arkRules` is on, Domain has code, and `invariants[]` is
+  empty (`INVARIANT_CATALOG_EMPTY`). Points at the file to fill. Advisory unless
+  a domain structure rule is already enforced — then `--strict-merge` can refuse.
+  No `arkRules` map, or no Domain files, stays silent. Domain starters ship two
+  short phrase templates so the shape is visible. No new skill, schema, or flag.
+
 ### Changed
 - Compact `--doctor` names ArkRules only when the `arkRules` map is on
   (one breath + counts, not a score). Absence stays silent. Reuses

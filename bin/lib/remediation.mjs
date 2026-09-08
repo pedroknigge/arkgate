@@ -216,6 +216,10 @@ export function deterministicNextAction(violation) {
             return 'Add metadata.source to the publish call, then run Ark again.';
         case 'INVARIANT_COVERAGE_OUTSIDE_ROOTS':
             return `Move the covering test under a declared coverage root, or add its root to coverage.coverageRoots in ark.config.json, then run Ark again.`;
+        case 'INVARIANT_CATALOG_EMPTY':
+            return typeof violation.file === 'string' && violation.file.length > 0
+                ? `Add 1–2 short phrases to invariants[] in ${violation.file}, then run ark-check --doctor. Starters show the shape.`
+                : 'Add 1–2 short phrases to invariants[] in arkrules/<Domain>.json, then run ark-check --doctor. Starters show the shape.';
         case 'ARKRULE_STRUCTURE':
         case 'ARKRULE_INVARIANT':
         case 'INVARIANT_UNCOVERED':

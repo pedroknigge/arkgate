@@ -31,6 +31,7 @@ import { structureFreezeTarget } from '../domain/baselineKey';
 import {
   buildArkRuleFileHints,
   collectEmptyAppliesToFindings,
+  collectEmptyInvariantCatalogFindings,
   evaluateArkRuleSensors,
   type ArkRuleSensorViolation,
 } from '../domain/arkRuleSensors';
@@ -55,6 +56,7 @@ function toArkRuleEngineViolation(
 ): ArchitectureEngineViolation {
   const isStructure = finding.ruleId === 'ARKRULE_STRUCTURE';
   const isScopeEmpty = finding.ruleId === 'ARKRULE_SCOPE_EMPTY';
+  const isEmptyCatalog = finding.ruleId === 'INVARIANT_CATALOG_EMPTY';
   return {
     ruleId: finding.ruleId,
     file: finding.file,
@@ -73,9 +75,32 @@ function toArkRuleEngineViolation(
           }),
         }
       : {}),
-    ...(isScopeEmpty ? { freezable: false } : {}),
+    ...(isScopeEmpty || isEmptyCatalog ? { freezable: false } : {}),
     nextAction,
   };
+}
+
+function arkRulesMapIsOn(config: { arkRules?: unknown }): boolean {
+  const map = config.arkRules;
+  return Boolean(
+    map && typeof map === 'object' && !Array.isArray(map) && Object.keys(map).length > 0
+  );
+}
+
+function arkRuleFindingNextAction(finding: ArkRuleSensorViolation, advisory: boolean): string {
+  if (finding.ruleId === 'INVARIANT_CATALOG_EMPTY') {
+    return advisory
+      ? `Add 1–2 short phrases to invariants[] in ${finding.arkruleSource} so Domain has policies the code must preserve (advisory — does not fail the merge until a domain structure rule is enforced).`
+      : `Add 1–2 short phrases to invariants[] in ${finding.arkruleSource} so Domain has policies the code must preserve. Empty catalog fails --strict-merge because a domain structure rule is already enforced.`;
+  }
+  if (finding.ruleId === 'ARKRULE_SCOPE_EMPTY') {
+    return advisory
+      ? `Review appliesTo for ${finding.arkruleId} in ${finding.arkruleSource} (zero-match scope; advisory). Empty scope is not freezable; promote only after the folder exists.`
+      : `Fix appliesTo globs for ${finding.arkruleId} in ${finding.arkruleSource} so they match governed files, or remove the rule. ARKRULE_SCOPE_EMPTY is a config diagnostic and is not freezable (even with --force). Land the rule as advisory until the folder exists, then promote.`;
+  }
+  return advisory
+    ? `Review ArkRule ${finding.arkruleId} in ${finding.arkruleSource} (advisory).`
+    : `Fix the structure or invariant for ${finding.arkruleId} (declared in ${finding.arkruleSource}), then preflight again.`;
 }
 
 function matchesAny(file: string, patterns: readonly string[]): boolean {
@@ -460,36 +485,31 @@ export function analyzeCanonicalResolvedProject(
       ? buildArkRuleFileHints(input.coverageInputs.fileContents)
       : {};
   const fileHints = { ...derivedHints, ...(input.fileHints ?? {}) };
+  const resolveLayer = (path: string) =>
+    layerByFile.get(path) ?? layerForRelativePath(path, input.contract.config.layers);
   const arkRuleFindings = [
     ...evaluateArkRuleSensors({
       arkRules,
       classShapes: input.contract.classShapes ?? facts.classShapes ?? [],
       files: filePaths,
-      layerForFile: (path) =>
-        layerByFile.get(path) ?? layerForRelativePath(path, input.contract.config.layers),
+      layerForFile: resolveLayer,
       fileHints,
     }),
     ...collectEmptyAppliesToFindings(arkRules, filePaths),
+    ...collectEmptyInvariantCatalogFindings({
+      arkRulesActive: arkRulesMapIsOn(input.contract.config),
+      arkRules,
+      layers: input.contract.config.layers ?? [],
+      files: filePaths.map((path) => ({ path, layer: resolveLayer(path) })),
+    }),
   ];
   const arkRuleViolations: ArchitectureEngineViolation[] = arkRuleFindings
     .filter((finding) => finding.failsStrict)
-    .map((finding) =>
-      toArkRuleEngineViolation(
-        finding,
-        finding.ruleId === 'ARKRULE_SCOPE_EMPTY'
-          ? `Fix appliesTo globs for ${finding.arkruleId} in ${finding.arkruleSource} so they match governed files, or remove the rule. ARKRULE_SCOPE_EMPTY is a config diagnostic and is not freezable (even with --force). Land the rule as advisory until the folder exists, then promote.`
-          : `Fix the structure or invariant for ${finding.arkruleId} (declared in ${finding.arkruleSource}), then preflight again.`
-      )
-    );
+    .map((finding) => toArkRuleEngineViolation(finding, arkRuleFindingNextAction(finding, false)));
   const arkRuleWarnings: ArchitectureEngineViolation[] = arkRuleFindings
     .filter((finding) => !finding.failsStrict)
     .map((finding) => ({
-      ...toArkRuleEngineViolation(
-        finding,
-        finding.ruleId === 'ARKRULE_SCOPE_EMPTY'
-          ? `Review appliesTo for ${finding.arkruleId} in ${finding.arkruleSource} (zero-match scope; advisory). Empty scope is not freezable; promote only after the folder exists.`
-          : `Review ArkRule ${finding.arkruleId} in ${finding.arkruleSource} (advisory).`
-      ),
+      ...toArkRuleEngineViolation(finding, arkRuleFindingNextAction(finding, true)),
       failsStrict: false,
     }));
 

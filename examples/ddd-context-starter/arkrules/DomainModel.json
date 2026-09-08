@@ -28,5 +28,18 @@
       "description": "Prefer rich domain types over data-only bags (advisory only)."
     }
   ],
-  "invariants": []
+  "invariants": [
+    {
+      "id": "INV-ALWAYS-VALID",
+      "description": "A domain object is never stored in an invalid state",
+      "mode": "advisory",
+      "coverage": { "test": false }
+    },
+    {
+      "id": "INV-ONE-DECISION",
+      "description": "Each business fact has one place that decides it",
+      "mode": "advisory",
+      "coverage": { "test": false }
+    }
+  ]
 }

@@ -260,7 +260,9 @@ function mapViolations(byId, violations) {
             });
             continue;
         }
-        if (upper.startsWith('ARKRULE_') || upper === 'INVARIANT_UNCOVERED') {
+        if (upper.startsWith('ARKRULE_') ||
+            upper === 'INVARIANT_UNCOVERED' ||
+            upper === 'INVARIANT_CATALOG_EMPTY') {
             attach('encapsulation', 'ArkRules structure / invariant residual inside a layer.', {
                 kind: 'skill',
                 ref: '/ark-autopilot',

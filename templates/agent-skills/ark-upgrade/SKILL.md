@@ -143,7 +143,7 @@ ArkGate has **always-on Layers** plus opt-in extras. The user chooses extras; yo
 2. Never call an import-edge violation an “invariant” or an aggregate sensor a “layer deny.”
 3. Absence of `arkRules` is **valid** — do not force ArkRules unless the user wants them or residual inventory clearly wants a pilot.
 4. After upgrade, leftover architecture work is **`/ark-autopilot`** (never invent `mechanical-safe`).
-5. CLI helpers: `ark-check --rules-inventory --json`, doctor JSON `rulesUnderContract`, sensors emit `ARKRULE_*` / `INVARIANT_UNCOVERED` with `evidence.arkruleId`.
+5. CLI helpers: `ark-check --rules-inventory --json`, doctor JSON `rulesUnderContract`, sensors emit `ARKRULE_*` / `INVARIANT_UNCOVERED` / `INVARIANT_CATALOG_EMPTY` with `evidence.arkruleId`.
 6. Schema `1.3` extras stay off unless already on. Pin teaches `arkgate/runtime` and `arkgate/order` (same tarball), not a second install. Wire after upgrade via `/ark-runtime` / `/ark-order`. Do not invent `/ark-run`.
 
 

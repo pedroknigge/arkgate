@@ -237,6 +237,14 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
     'Raise coverage.maxFiles in ark.config.json (this cap also bounds structural-hint preload; --doctor names the coupling) so hinted/governed counts match, then re-run with --strict-config. An enforced hint sensor that cannot see its scope fails strict.'
   ),
   entry(
+    'INVARIANT_CATALOG_EMPTY',
+    'arkrules',
+    'Domain invariant catalog is empty',
+    'ArkRules is on and a Domain-role layer has code, but invariants[] has no phrases the code must preserve. Empty looks like “done” until someone fills the catalog.',
+    'Add 1–2 short phrases to invariants[] in arkrules/<Domain>.json (or the mapped file). Starters show the shape. Advisory unless a domain structure rule is already enforced — then --strict-merge can refuse. Do not freeze this finding.',
+    { oftenAdvisory: true }
+  ),
+  entry(
     'INVARIANT_UNCOVERED',
     'arkrules',
     'Invariant without coverage evidence',

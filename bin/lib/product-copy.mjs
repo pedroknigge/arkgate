@@ -21,6 +21,10 @@ export const ARKRULES_ONE_BREATH =
 export const ARKRULES_FIRST_CONTACT_NEXT =
   'Next: ark-check --rules-inventory — then /ark-adopt to write one rule, or /ark-autopilot to promote.';
 
+/** Next step when Domain has code but invariants[] is empty. */
+export const ARKRULES_EMPTY_CATALOG_NEXT =
+  'Next: add 1–2 short phrases to invariants[] in the Domain rules file, then ark-check --doctor.';
+
 /** Status-light leftover-design qualifier (was “design-weak”). */
 export const LEFTOVER_DESIGN_LABEL = 'leftover design work';
 

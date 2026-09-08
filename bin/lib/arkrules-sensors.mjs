@@ -378,6 +378,87 @@ export function collectEmptyAppliesToFindings(arkRules, files) {
         a.arkruleId.localeCompare(b.arkruleId) ||
         a.message.localeCompare(b.message));
 }
+/** Intent prefixes are short tokens (`Domain.`, `Application.`). Bound the scan. */
+const INTENT_PREFIX_SCAN_LIMIT = 64;
+/**
+ * Strip trailing `.` without a regex. `\.+$` on config strings is CodeQL
+ * js/polynomial-redos (backtracking on long runs of `.`). Linear walk is enough.
+ */
+function stripTrailingDots(value) {
+    let end = value.length;
+    while (end > 0 && value.charCodeAt(end - 1) === 46) {
+        end -= 1;
+    }
+    return end === value.length ? value : value.slice(0, end);
+}
+function normalizeIntentPrefix(prefix) {
+    const trimmed = prefix.trim();
+    const bounded = trimmed.length > INTENT_PREFIX_SCAN_LIMIT
+        ? trimmed.slice(0, INTENT_PREFIX_SCAN_LIMIT)
+        : trimmed;
+    return stripTrailingDots(bounded);
+}
+function layerNameLooksDomain(layer) {
+    const lower = layer.toLowerCase();
+    return (lower.includes('domain') ||
+        lower.includes('entity') ||
+        lower.includes('aggregate') ||
+        lower.includes('model'));
+}
+function ownsDomainIntent(intentPrefixes) {
+    return intentPrefixes.some((prefix) => {
+        const normalized = normalizeIntentPrefix(prefix);
+        return normalized === 'Domain' || normalized.startsWith('Domain.');
+    });
+}
+/** Domain-role house: name or intentPrefixes. Keep aligned with rulesInventory. */
+export function isDomainRoleLayerName(layer, intentPrefixes = []) {
+    return layerNameLooksDomain(layer) || ownsDomainIntent(intentPrefixes);
+}
+/**
+ * §2 catalog residual — ArkRules is on, Domain has code, invariants[] is empty.
+ * Advisory by default. failsStrict only when a domain structure rule is already
+ * enforced (the project opted into ArkRules merge teeth). Not freezable.
+ */
+export function collectEmptyInvariantCatalogFindings(input) {
+    if (input.arkRulesActive !== true)
+        return [];
+    const domainLayers = (input.layers ?? [])
+        .filter((layer) => isDomainRoleLayerName(layer.name, layer.intentPrefixes ?? []))
+        .map((layer) => layer.name);
+    if (domainLayers.length === 0)
+        return [];
+    const domainSet = new Set(domainLayers);
+    const domainPopulated = (input.files ?? []).some((file) => {
+        const layer = typeof file.layer === 'string' ? file.layer : '';
+        return layer.length > 0 && domainSet.has(layer);
+    });
+    if (!domainPopulated)
+        return [];
+    const domainInvariants = (input.arkRules.invariants ?? []).filter((inv) => domainSet.has(inv.provenance.layer));
+    if (domainInvariants.length > 0)
+        return [];
+    const fillLayer = domainLayers.find((name) => input.arkRules.byLayer?.[name]) ?? domainLayers[0];
+    const fillPath = input.arkRules.byLayer?.[fillLayer]?.sourceFile ?? `arkrules/${fillLayer}.json`;
+    const optedIntoTeeth = (input.arkRules.structure ?? []).some((rule) => rule.mode === 'enforced' &&
+        domainSet.has(rule.provenance.layer) &&
+        !isTier2(rule.sensor));
+    return [
+        {
+            ruleId: 'INVARIANT_CATALOG_EMPTY',
+            code: 'invariant-catalog-empty',
+            message: `ArkRules is on and ${fillLayer} has code, but invariants[] is empty — there are no phrases the code must preserve. Add 1–2 short phrases in ${fillPath}.`,
+            file: fillPath,
+            line: 1,
+            fromLayer: fillLayer,
+            arkruleId: 'invariant-catalog',
+            arkruleSource: fillPath,
+            severity: optedIntoTeeth ? 'error' : 'warning',
+            sensor: 'invariant-coverage',
+            failsStrict: optedIntoTeeth,
+        },
+    ];
+}
 /** IO / ORM import evidence. postgres and drizzle-orm include package subpaths. Keep in lockstep with arkOrderFacts. */
 const IO_IMPORT_HINT_RE = /\bfrom\s+['"](?:@?prisma\/client|@supabase\/|drizzle-orm(?:\/[^'"]+)?|postgres(?:\/[^'"]+)?|typeorm|knex|mongodb|pg|mysql2|mongoose|better-sqlite3|ioredis|redis|kysely|sequelize)['"]|require\(\s*['"](?:@?prisma\/client|pg|postgres(?:\/[^'"]+)?|drizzle-orm(?:\/[^'"]+)?|knex|typeorm|mongoose)/;
 /**

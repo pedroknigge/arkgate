@@ -79,7 +79,7 @@ ArkGate has **always-on Layers** plus opt-in extras. The user chooses extras; yo
 2. Never call an import-edge violation an “invariant” or an aggregate sensor a “layer deny.”
 3. Absence of `arkRules` is **valid** — do not force ArkRules unless the user wants them or residual inventory clearly wants a pilot.
 4. Editing `arkrules/*` or applying structure fixes is **`/ark-adopt`** / **`/ark-autopilot`** (never invent `mechanical-safe`).
-5. CLI helpers: `ark-check --rules-inventory --json`, doctor JSON `rulesUnderContract`, sensors emit `ARKRULE_*` / `INVARIANT_UNCOVERED` with `evidence.arkruleId`.
+5. CLI helpers: `ark-check --rules-inventory --json`, doctor JSON `rulesUnderContract`, sensors emit `ARKRULE_*` / `INVARIANT_UNCOVERED` / `INVARIANT_CATALOG_EMPTY` with `evidence.arkruleId`.
 6. Extras silent when off. Doctor `arkRun` / `arkOrder` is `notAScore`. Do not force extras. Wire one kernel candidate via `/ark-runtime`; one order-plane candidate via `/ark-order`. Do not invent `/ark-run`.
 
 
@@ -88,6 +88,7 @@ ArkGate has **always-on Layers** plus opt-in extras. The user chooses extras; yo
   when `arkRules` is active the showcase lists **per-layer counts**, **structure sensors**
   (id / sensor / mode), **uncovered** invariants (call them out), and a **covered sample**.
   Compact doctor names ArkRules only when the map is on; absence stays silent.
+  Empty `invariants[]` on a populated Domain is residual (`INVARIANT_CATALOG_EMPTY`), not “all covered”.
   Inactive HTML map stays a short opt-in note. Counts are never a score.
 - Spoken tour: name 2–4 real invariant IDs and one structure sensor from this repo’s
   `arkrules/*` (open the files — do not invent). Residual candidates → `--rules-inventory`.
