@@ -48,7 +48,6 @@ import {
   detectWritePathCapabilities,
 } from './lib/agent-gates.mjs';
 import { ciNotFailClosed } from './lib/gate-files.mjs';
-import { printAdrPresenceHint } from './lib/adr-presence.mjs';
 import { syncBaselineIntoCheckSurfaces } from './lib/field-install.mjs';
 import {
   detectEnforcement,
@@ -68,6 +67,7 @@ import {
   runCoverage,
   runPlan,
   runDoctor,
+  printAdrPresenceHint,
 } from './lib/doctor-plan.mjs';
 import { runRatchetCores } from './lib/core-ratchet.mjs';
 import {
@@ -1541,8 +1541,7 @@ async function main() {
       configWalkedUp: args.configWalkedUp === true,
       safety, designDelta,
       ts, parseHealth, completeness,
-      all: args.all === true,
-      requireGates: args.requireGates === true,
+      all: args.all === true, requireGates: args.requireGates === true,
     });
     if (designDelta) process.exitCode = !designDelta.complete ? 2 : designDelta.valid ? 0 : 1; return;
   }

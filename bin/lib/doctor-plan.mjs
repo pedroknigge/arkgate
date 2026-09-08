@@ -16,7 +16,8 @@ import { detectAgentHomeGaps } from './agent-homes.mjs';
 import { collectDoctorNextActions } from './doctor-next-actions.mjs';
 import { printDoctorCompactHuman, printDoctorDetailsHuman } from './doctor-human.mjs';
 import { collectLayerOwnerResidual, layerGuidanceLine, placementDescriptionFields } from './layer-description.mjs';
-import { collectAdrPresenceResidual } from './adr-presence.mjs';
+import { collectAdrPresenceResidual, printAdrPresenceHint } from './adr-presence.mjs';
+export { printAdrPresenceHint };
 export { printDoctorCompactHuman, printDoctorDetailsHuman };
 export { summarizeRulesUnderContract };
 
