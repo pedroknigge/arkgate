@@ -694,6 +694,15 @@
           "type": "string",
           "minLength": 1
         },
+        "trustBoundary": {
+          "type": "string",
+          "enum": [
+            "public",
+            "auth",
+            "admin",
+            "internal"
+          ]
+        },
         "forbiddenGlobals": {
           "type": "array",
           "items": {

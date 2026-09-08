@@ -25,7 +25,7 @@ import { capabilityBadgesFor, renderAdvisorySections } from './html-report-advis
 import { renderEvolutionSection } from './html-report-evolution.mjs';
 import { arkGitignoreAppendDecision } from './ark-gitignore.mjs';
 import { captureGitSnapshot } from './report-snapshot-context.mjs';
-import { layerDescriptionCaption } from './layer-description.mjs';
+import { layerDescriptionCaption, layerTrustBoundary } from './layer-description.mjs';
 
 export { arkGitignoreAppendDecision, gitignoreCoversArkState, gitignoreHasArkNegationException } from './ark-gitignore.mjs';
 
@@ -423,8 +423,10 @@ export function renderBeginnerHtmlReport({ root, config, violations, ok, version
   const placementRows = layers
     .map((layer) => {
       const purpose = layerDescriptionCaption(layer) || 'See ark.config.json';
+      const trust = layerTrustBoundary(layer);
+      const purposeCell = trust ? `${esc(purpose)} <span class="tag">trust: ${esc(trust)}</span>` : esc(purpose);
       const folders = (layer.patterns || []).join(', ') || '—';
-      return `<tr><td><strong>${esc(layer.name)}</strong></td><td>${esc(purpose)}</td><td><code>${esc(folders)}</code></td></tr>`;
+      return `<tr><td><strong>${esc(layer.name)}</strong></td><td>${purposeCell}</td><td><code>${esc(folders)}</code></td></tr>`;
     })
     .join('\n');
 
@@ -776,6 +778,9 @@ export function renderHtmlReport({
           ? `<span class="tag">${layer.intentPrefixes.map(esc).join(' ')}</span>`
           : '',
         layer.optional ? '<span class="tag dim-tag">optional</span>' : '',
+        layerTrustBoundary(layer)
+          ? `<span class="tag">trust: ${esc(layerTrustBoundary(layer))}</span>`
+          : '',
       ].join(' ');
       const example = exampleByLayer?.get?.(layer.name);
       const files = counts.get(layer.name) || 0;

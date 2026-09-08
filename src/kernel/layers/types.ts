@@ -20,6 +20,7 @@ export interface ArchitectureLayer {
    */
   match?: (name: string) => boolean;
   description?: string;
+  trustBoundary?: 'public' | 'auth' | 'admin' | 'internal';
   order?: number;
 }
 

@@ -485,6 +485,17 @@ not close `Z09` / `K01`.
 |---:|---|---|---:|---|---|
 | 276 | `HR01` | `done` | S | — | Hook `classifyProbe` reuses `layerForRelativePath` + ark-check specifier extensions; explicit file beats `src/lib/**`. LEXICAL copy names `ark-check` as authority. #237 |
 
+### Patch — optional layer trust-boundary tags
+
+Reuse the `layers[].description` metadata pipe. Add optional closed
+`layers[].trustBoundary` (`public` | `auth` | `admin` | `internal`). Soft
+guidance when present; absence silent. No import-rule matrix. No
+`schemaVersion` bump. No new skill. Does not close `Z09` / `K01`.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 277 | `TB01` | `done` | S | — | Optional `layers[].trustBoundary`; schema + policyHash strip + place/doctor/skills projection; invalid enum fails; absence silent |
+
 ### Patch — skill catalog 100% product capacity (issue #216)
 
 Pedro bar: the shipped skill *set* exercises Layers + ArkRules + ArkRun + ArkOrder

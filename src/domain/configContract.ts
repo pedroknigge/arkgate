@@ -37,6 +37,7 @@ export type {
   ArkConfigCyclePolicy,
   ArkConfigIssue,
   ArkConfigLayer,
+  ArkConfigLayerTrustBoundary,
   ArkConfigLoadResult,
   ArkConfigMigratedFrom,
   ArkConfigMigrationResult,
@@ -47,6 +48,8 @@ export type {
 
 /** Current published ark.config.json schema version (ADR 0027: 1.3 adds optional arkOrder). */
 export const ARK_CONFIG_SCHEMA_VERSION: ArkConfigSchemaVersion = '1.3';
+/** Closed layer trust tags. Optional; absence is silent. Not a schemaVersion bump. */
+export const LAYER_TRUST_BOUNDARIES = ['public', 'auth', 'admin', 'internal'] as const;
 export const ARK_CONFIG_SCHEMA_URL =
   'https://unpkg.com/arkgate@4/schemas/ark.config.schema.json';
 
@@ -176,6 +179,7 @@ export const ARK_CONFIG_SCHEMA = {
         exclude: stringArraySchema,
         intentPrefixes: stringArraySchema,
         description: { type: 'string', minLength: 1 },
+        trustBoundary: { type: 'string', enum: [...LAYER_TRUST_BOUNDARIES] },
         forbiddenGlobals: stringArraySchema,
         capabilities: {
           type: 'object',

@@ -179,6 +179,29 @@ Layer fields:
 ```
 
 That sentence is product copy. Not “Rich domain model, business rules, and domain events.”
+- **`layers[].trustBoundary`** (optional) — who this folder is for: `public` |
+  `auth` | `admin` | `internal`. Anyone, signed-in users, operators, or only
+  other code. `/ark-place` prints `trust: public` next to the layer name;
+  doctor, coverage, and the HTML report show the same tag. Changing the tag
+  does **not** change `policyHash` (same strip as `stewards` and
+  `layers[].description`) and does **not** need a weakening ack. Absence is
+  silent: never fails `--strict-config`, never invents a doctor residual, never
+  flips `valid`. A wrong value (`"trusted"`, empty string) fails the schema.
+  Compact starters may omit it. `/ark-adopt` writes it when the product map
+  already names that door; it does not invent tags. No `/ark-trust`. This is
+  **not** host/CI TLS and does **not** add import-rule teeth.
+
+```json
+"layers": [
+  {
+    "name": "Presentation",
+    "patterns": ["src/app/**"],
+    "description": "Storefront checkout — what shoppers see.",
+    "trustBoundary": "public"
+  }
+]
+```
+
 - `intentPrefixes`, `forbiddenGlobals`, `mayImportInfrastructure`, `optional`
 - `reserved` / `allowEmpty` — future houses whose globs match nothing yet. `--strict-config` does not fail; `CONFIG_LAYER_PATTERN_NO_MATCHES` (typo warning) is skipped. A typo warning fires only when the glob is not reserved.
 - `capabilities: { deny: [...] }` — opt-in effect walls over the seven capability ids
@@ -421,7 +444,7 @@ changing either contract changes its hash and invalidates the acknowledgement.
 
 Optional `stewards` lists **GitHub handles or emails** who may **loosen** the contract or
 **grow** the baseline (`pedroknigge` or `pedroknigge@users.noreply.github.com` — not
-`Pedro Knigge`). The field is metadata — it does not change the policy hash. `layers[].description` is stripped the same way (caption-only edits do not change `policyHash` and do not need a weakening ack; `contractHash` still fingerprints the raw config). The lock
+`Pedro Knigge`). The field is metadata — it does not change the policy hash. `layers[].description` and `layers[].trustBoundary` are stripped the same way (caption-only or tag-only edits do not change `policyHash` and do not need a weakening ack; `contractHash` still fingerprints the raw config). The lock
 matches `--author`, then `GITHUB_ACTOR` / `ARK_STEWARD`, then `GIT_AUTHOR_EMAIL`. A
 noreply GitHub mail and the handle are the same person. Git `user.name` is not identity.
 

@@ -155,6 +155,15 @@ const INVALID_CONTRACT_CASES = [
     message: 'must be a boolean',
   },
   {
+    name: 'an unsupported layer trustBoundary',
+    input: {
+      ...VALID_MINIMAL_CONFIG,
+      layers: [{ name: 'DomainModel', patterns: ['src/domain/**'], trustBoundary: 'trusted' }],
+    },
+    path: '$.layers[0].trustBoundary',
+    message: 'must be one of',
+  },
+  {
     name: 'an unsupported cycle policy',
     input: { ...VALID_MINIMAL_CONFIG, cyclePolicy: 'sometimes' },
     path: '$.cyclePolicy',

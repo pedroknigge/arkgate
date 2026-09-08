@@ -1989,6 +1989,7 @@ export async function runArkMcp({ hookInput } = {}) {
         'Returns layer, mayImport / mustNotImport, forbiddenGlobals, and goldenPattern ' +
         '(load-bearing for NEW code when .ark/golden-pattern.json exists — adopt generates it). ' +
         'When the matched layer has layers[].description, the JSON includes description; the field is omitted when absent. ' +
+        'When the matched layer has layers[].trustBoundary (public|auth|admin|internal), the JSON includes trustBoundary; omitted when absent. ' +
         'Call BEFORE writing a new file. ' +
         'Prefer ark_prepare_write when you already have the source snippet (place+validate+autoPatch in one call).',
       inputSchema: {
@@ -2015,7 +2016,8 @@ export async function runArkMcp({ hookInput } = {}) {
         'Also returns the versioned new/worsened designDelta for the proposed full file. ' +
         'Composes ark_place + write-gate — call BEFORE Write/Edit when you have the snippet. ' +
         'When the matched layer has layers[].description, the JSON includes description; the field is omitted when absent. ' +
-        'Returns { filePath, layer, description?, valid, violations?, autoPatch?, judgmentBrief?, contentHash, ... }.',
+        'When the matched layer has layers[].trustBoundary (public|auth|admin|internal), the JSON includes trustBoundary; omitted when absent. ' +
+        'Returns { filePath, layer, description?, trustBoundary?, valid, violations?, autoPatch?, judgmentBrief?, contentHash, ... }.',
       inputSchema: {
         type: 'object',
         properties: {

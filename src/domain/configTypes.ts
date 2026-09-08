@@ -15,6 +15,9 @@ export type ArkConfigLayerCapabilities = {
   deny?: string[];
 };
 
+/** Who this folder is for. Metadata — not import-rule teeth. Absence is silent. */
+export type ArkConfigLayerTrustBoundary = 'public' | 'auth' | 'admin' | 'internal';
+
 export type ArkConfigLayer = {
   name: string;
   patterns: string[];
@@ -25,6 +28,11 @@ export type ArkConfigLayer = {
    * Metadata — excluded from policy hash. Absence is silent.
    */
   description?: string;
+  /**
+   * Who this folder is for: public | auth | admin | internal.
+   * Metadata — excluded from policy hash. Absence is silent. Not host/CI TLS.
+   */
+  trustBoundary?: ArkConfigLayerTrustBoundary;
   forbiddenGlobals?: string[];
   /** ADR 0009 D2 — opt-in effect-capability walls; absence changes no verdict. */
   capabilities?: ArkConfigLayerCapabilities;
