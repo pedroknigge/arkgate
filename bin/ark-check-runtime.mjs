@@ -1352,8 +1352,7 @@ async function main() {
             (compactHost
               ? `AGENTS.md, compact host registration (${compactHost})`
               : REQUIRED_GATE_FILES.join(', '))
-        );
-        printAdrPresenceHint(args.root, (line) => console.log(line));
+        ); printAdrPresenceHint(args.root, (line) => console.log(line));
       }
       if (writeRequest?.host) {
         console.log(`Ark hard-write hook present for ${writeRequest.host}.`);
