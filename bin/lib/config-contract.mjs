@@ -9,10 +9,39 @@
  */
 
 import { ARK_ORDER_SCHEMA_DEF, ARK_RUN_SCHEMA_DEF, defaultedArkOrder, defaultedArkRun, validateArkOrderExtra, validateArkRunExtra, } from './config-extras.mjs';
+import { canonicalStewardId } from './team-parliament.mjs';
 /** Current published ark.config.json schema version (ADR 0027: 1.3 adds optional arkOrder). */
 export const ARK_CONFIG_SCHEMA_VERSION = '1.3';
 /** Closed layer trust tags. Optional; absence is silent. Not a schemaVersion bump. */
 export const LAYER_TRUST_BOUNDARIES = ['public', 'auth', 'admin', 'internal'];
+/** Future house: empty globs are expected; missing owners stay silent even when required. */
+export function isFutureHouseLayer(layer) {
+    return layer?.optional === true || layer?.reserved === true || layer?.allowEmpty === true;
+}
+/**
+ * Present `layers[].owners` as non-empty strings. Absence / empty / wrong type → undefined.
+ */
+export function layerOwnersList(layer) {
+    const raw = layer && typeof layer === 'object' ? layer.owners : undefined;
+    if (!Array.isArray(raw) || raw.length === 0)
+        return undefined;
+    const ids = raw.filter((entry) => typeof entry === 'string' && entry.length > 0);
+    return ids.length > 0 ? ids : undefined;
+}
+/**
+ * Layer names that must name owners when `requireLayerOwners` is on.
+ * Empty when the require flag is absent or false.
+ */
+export function layersMissingRequiredOwners(config) {
+    if (config?.requireLayerOwners !== true || !Array.isArray(config.layers))
+        return [];
+    return config.layers
+        .filter((layer) => !isFutureHouseLayer(layer) && !layerOwnersList(layer))
+        .map((layer) => layer.name);
+}
+export function missingLayerOwnersNextAction(layerName) {
+    return `Add a GitHub handle or email to ${layerName}'s owners in ark.config.json (/ark-adopt).`;
+}
 export const ARK_CONFIG_SCHEMA_URL = 'https://unpkg.com/arkgate@4/schemas/ark.config.schema.json';
 const DEFAULT_LAYER_NAMES = [
     'DomainModel',
@@ -123,6 +152,11 @@ export const ARK_CONFIG_SCHEMA = {
         arkOrder: { $ref: '#/$defs/arkOrder' },
         /** Team parliament — GitHub handles or emails who may loosen the law (not part of policy hash). */
         stewards: { ...stringArraySchema, default: [] },
+        /**
+         * When true, every non-reserved layer must name owners. Absence/false is
+         * silent. Policy teeth — stays in policyHash. Owners stay metadata.
+         */
+        requireLayerOwners: { type: 'boolean' },
     },
     $defs: {
         layer: {
@@ -136,6 +170,7 @@ export const ARK_CONFIG_SCHEMA = {
                 intentPrefixes: stringArraySchema,
                 description: { type: 'string', minLength: 1 },
                 trustBoundary: { type: 'string', enum: [...LAYER_TRUST_BOUNDARIES] },
+                owners: { ...stringArraySchema, minItems: 1 },
                 forbiddenGlobals: stringArraySchema,
                 capabilities: {
                     type: 'object',
@@ -354,6 +389,30 @@ function validateNode(value, schema, path, root, issues) {
         }
     }
 }
+function validateLayerOwners(candidate, issues) {
+    const layers = candidate.layers;
+    if (!Array.isArray(layers))
+        return;
+    layers.forEach((layer, index) => {
+        if (!layer || typeof layer !== 'object' || Array.isArray(layer))
+            return;
+        if (!('owners' in layer))
+            return;
+        const owners = layer.owners;
+        if (!Array.isArray(owners))
+            return;
+        owners.forEach((entry, ownerIndex) => {
+            if (typeof entry !== 'string')
+                return;
+            if (!canonicalStewardId(entry)) {
+                issues.push({
+                    path: `$.layers[${index}].owners[${ownerIndex}]`,
+                    message: 'must be a GitHub handle or email (not a display name)',
+                });
+            }
+        });
+    });
+}
 function defaultedConfig(input) {
     const result = {
         ...input,
@@ -459,6 +518,7 @@ export function loadArkConfigContract(input, source = 'ark.config.json') {
     validateNode(candidate, ARK_CONFIG_SCHEMA, '$', ARK_CONFIG_SCHEMA, issues);
     validateArkRunExtra(candidate, issues);
     validateArkOrderExtra(candidate, issues);
+    validateLayerOwners(candidate, issues);
     if (issues.length > 0)
         throw new ArkConfigValidationError(source, issues);
     return { config: candidate, migratedFrom };

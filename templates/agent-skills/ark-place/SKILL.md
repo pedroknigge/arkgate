@@ -30,6 +30,10 @@ right house. Skills never enforce — CLI / hooks / CI do.
   layer name and globs. Omit when absent — do not invent a caption or `/ark-describe`.
 - When the matched layer has `layers[].trustBoundary`, print `trust: <tag>` next
   to the layer name and globs. Omit when absent — do not invent a tag or `/ark-trust`.
+- When the matched layer has `layers[].owners`, print `owner: @handle` next
+  to the layer name and globs. Omit when absent — do not invent a person or `/ark-owners`.
+  When `requireLayerOwners` is on and the house has no owners, send that gap to
+  `/ark-adopt` before writing.
 - When `arkRun` is on: scaffold through the kernel (no `new` of managed types; declare
   `uses` / `reactsTo` / `raises` / `sends`; factory only in `arkRun.kernelRoots`,
   `compositionRoots` alias). Extra off → do not introduce the kernel. Enable it
@@ -81,6 +85,14 @@ When the matched layer has `layers[].trustBoundary` (`public` | `auth` |
 Omit it when the field is absent. Do **not** invent a tag or `/ark-trust`.
 The tag is guidance, not an import-rule deny.
 
+## Layer owners (process)
+
+When the matched layer has `layers[].owners`, print `owner: @handle` (or
+`owner: name@host`) next to the layer name and globs. Omit when absent.
+Do **not** invent a person or `/ark-owners`. When `requireLayerOwners` is
+on and this house has no owners, do not write — hand off `/ark-adopt` to
+name who owns the folder.
+
 ## Deep modules (process)
 
 - Place so new code stays **deep**: one small public surface per concern; hide implementation details.
@@ -104,8 +116,9 @@ and — if they asked to build it — scaffold it there correctly.
 **No artifact given?** If the skill is invoked with nothing to place, don't error
 and don't guess — the artifact is the one thing only the user knows. Read the
 contract (step 1) and print the placement map from it: one row per declared layer
-with layer name, globs, `layers[].description` when present, and
-`layers[].trustBoundary` when present (omit either when absent),
+with layer name, globs, `layers[].description` when present,
+`layers[].trustBoundary` when present, and `layers[].owners` when present
+(omit any when absent),
 what belongs there, its directory, and which layers it may/may not import,
 plus the not-yet-adopted `suggestedLayers` as a footnote. Then ask what they want
 to place. That map is derived entirely from the repo, so producing it is real work,
@@ -195,6 +208,8 @@ the same files or weaken the gate.
    `layers[].description`, print that caption next to the layer name and globs;
    omit it when absent. When the matched layer has `layers[].trustBoundary`,
    print `trust: <tag>` next to the layer name and globs; omit it when absent.
+   When the matched layer has `layers[].owners`, print `owner: @handle`; omit
+   when absent.
    When present, also honor optional
    **`goldenPattern`** (from `.ark/golden-pattern.json`) for **NEW code only** —
    advisory layout norm; never overrides the gate and never clears design-weak.
@@ -231,6 +246,7 @@ the same files or weaken the gate.
    which layers it may/may not import (from `rules`). When present, print
    `layers[].description` next to the layer name and globs; omit when absent.
    Print `layers[].trustBoundary` as `trust: <tag>` when present; omit when absent.
+   Print `layers[].owners` as `owner: @handle` when present; omit when absent.
 4. **If the layer isn't adopted yet** (suggested but no directory): write the
    layer into `ark.config.json` (session-0 honesty — same as `/ark-adopt` for
    that glob) **then** write the file. Don't silently drop the code into a

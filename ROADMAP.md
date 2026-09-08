@@ -496,6 +496,18 @@ guidance when present; absence silent. No import-rule matrix. No
 |---:|---|---|---:|---|---|
 | 277 | `TB01` | `done` | S | — | Optional `layers[].trustBoundary`; schema + policyHash strip + place/doctor/skills projection; invalid enum fails; absence silent |
 
+### Patch — layer owners required (module ownership metadata)
+
+Reuse the `layers[].description` / `trustBoundary` metadata pipe. Optional
+`layers[].owners` (GitHub handle or email). Silent when absent. Opt-in
+`requireLayerOwners` asks for owners on live houses: doctor next step,
+`--strict-config`, write-gate deny. No `schemaVersion` bump. No new skill.
+Does not close `Z09` / `K01`.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 278 | `LO01` | `doing` | S | TB01 | Optional `layers[].owners` + `requireLayerOwners`; schema + policyHash strip + doctor/deny/skills; invalid identity fails; absence silent unless required |
+
 ### Patch — skill catalog 100% product capacity (issue #216)
 
 Pedro bar: the shipped skill *set* exercises Layers + ArkRules + ArkRun + ArkOrder

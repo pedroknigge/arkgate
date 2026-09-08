@@ -33,6 +33,12 @@ export type ArkConfigLayer = {
    * Metadata — excluded from policy hash. Absence is silent. Not host/CI TLS.
    */
   trustBoundary?: ArkConfigLayerTrustBoundary;
+  /**
+   * Who owns this house: GitHub handles or emails (same identity as stewards).
+   * Metadata — excluded from policy hash. Absence is silent unless
+   * `requireLayerOwners` is true. Not import-rule teeth.
+   */
+  owners?: string[];
   forbiddenGlobals?: string[];
   /** ADR 0009 D2 — opt-in effect-capability walls; absence changes no verdict. */
   capabilities?: ArkConfigLayerCapabilities;
@@ -175,6 +181,12 @@ export type ArkConfig = {
    * Metadata — excluded from policy hash. Absence means no steward lock (policy-ack still applies).
    */
   stewards?: string[];
+  /**
+   * When true, every non-reserved layer must name `owners`. Absence/false is
+   * silent. This flag is policy teeth (stays in policyHash). Owners themselves
+   * stay metadata.
+   */
+  requireLayerOwners?: boolean;
 };
 
 export type ArkConfigIssue = {

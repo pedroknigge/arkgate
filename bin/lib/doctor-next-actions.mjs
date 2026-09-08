@@ -34,6 +34,9 @@ export function collectDoctorNextActions(ctx) {
   ) {
     actions.push(nudge.nextAction);
   }
+  if (ctx.layerOwners?.required && ctx.layerOwners.nextAction) {
+    actions.push(ctx.layerOwners.nextAction);
+  }
   const enforceEmptyPlan =
     ctx.operatingMode === 'enforce' && planAEmpty && gatesInstalled && !notAdopted;
   if (enforceEmptyPlan) {

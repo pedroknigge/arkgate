@@ -98,6 +98,7 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 | [`CONFIG_RULE_UNKNOWN_TO_LAYER`](#CONFIG_RULE_UNKNOWN_TO_LAYER) | config | Rule unknown to layer |
 | [`CONFIG_AMBIGUOUS_LAYERS`](#CONFIG_AMBIGUOUS_LAYERS) | config | Ambiguous layer classification |
 | [`CONFIG_UNCLASSIFIED_FILES`](#CONFIG_UNCLASSIFIED_FILES) | config | Unclassified included files |
+| [`CONFIG_LAYER_MISSING_OWNER`](#CONFIG_LAYER_MISSING_OWNER) | config | Layer missing owner |
 | [`ARK_UNKNOWN`](#ARK_UNKNOWN) | meta | Unknown diagnostic |
 
 ## Layer and dependency graph
@@ -859,6 +860,15 @@ never opting out of knowing.
 
 - **Why:** Included source files match no layer pattern; import rules will not enforce on them.
 - **Fix:** Extend layer patterns or narrow include so every governed file is classified.
+
+<a id="CONFIG_LAYER_MISSING_OWNER"></a>
+
+### `CONFIG_LAYER_MISSING_OWNER`
+
+**Layer missing owner**
+
+- **Why:** `requireLayerOwners` is on and this layer has no owners. Writes to that house fail closed, like a folder with no name on the door.
+- **Fix:** Add a GitHub handle or email to that layer’s owners in ark.config.json (`/ark-adopt`), then re-run. Reserved/allowEmpty houses may stay unnamed.
 
 ## Meta
 

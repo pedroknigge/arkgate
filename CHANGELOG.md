@@ -6,6 +6,13 @@ in the immutable pre-2.0 archive linked below.
 ## Unreleased
 
 ### Added
+- Optional `layers[].owners` on each layer (GitHub handle or email, same
+  identity as `stewards`) and optional `requireLayerOwners`. Absence is
+  silent. When the require flag is on, doctor names the first house without
+  an owner, `--strict-config` refuses, and the write gate denies a write into
+  that house. Owners are stripped from `policyHash`; the require flag stays
+  in the hash. Invalid identity fails the schema. No new skill or
+  `schemaVersion` bump. Compact starters may omit.
 - Optional `layers[].trustBoundary` on each layer: `public` | `auth` | `admin` |
   `internal`. Who this folder is for. Schema validates the closed list; a wrong
   value fails. Absence is silent — never a doctor residual, never

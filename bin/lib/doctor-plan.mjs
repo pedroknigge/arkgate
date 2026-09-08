@@ -15,7 +15,7 @@ import { describePackageVersionDualTruth } from './field-install.mjs';
 import { detectAgentHomeGaps } from './agent-homes.mjs';
 import { collectDoctorNextActions } from './doctor-next-actions.mjs';
 import { printDoctorCompactHuman, printDoctorDetailsHuman } from './doctor-human.mjs';
-import { layerGuidanceLine, placementDescriptionFields } from './layer-description.mjs';
+import { collectLayerOwnerResidual, layerGuidanceLine, placementDescriptionFields } from './layer-description.mjs';
 export { printDoctorCompactHuman, printDoctorDetailsHuman };
 export { summarizeRulesUnderContract };
 
@@ -617,6 +617,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     options.facts ?? options.architectureFacts,
     activeViolations
   );
+  const layerOwners = collectLayerOwnerResidual(config);
   const rulesUnderContract = doctorAdvisories.rulesUnderContract;
   const arkRun = doctorAdvisories.arkRun;
   // Single residual expression (nextPilot || extractionCard) — HTML report uses the same.
@@ -766,6 +767,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
             governed: cov.governed,
             coverageHonesty,
             layers: cov.layers,
+            ...(layerOwners ? { layerOwners } : {}),
             emptyLayers: cov.emptyLayers,
             layersWithoutRules: cov.layersWithoutRules,
             ungovernedDirs: cov.suggestions.length,
@@ -907,12 +909,14 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     operatingMode,
     adopted,
     stewardNudge: doctorAdvisories.stewardNudge,
+    layerOwners,
   });
   const humanView = {
     root,
     analysisComplete,
     completeness,
     doctorAdvisories,
+    layerOwners,
     operatingMode,
     designFitness,
     adopted,

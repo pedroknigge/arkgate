@@ -85,6 +85,7 @@ import {
   emitHostDeny,
   formatWriteGateDeny,
   unclassifiedIncludedWriteDeny,
+  requiredOwnerWriteDeny,
 } from './lib/mcp-hook-payload.mjs';
 import {
   canonicalizeCandidateChanges,
@@ -506,6 +507,30 @@ function runHookPayload(payload, gate, config, args, ts, attemptContext, output 
       output.status(2);
       return;
     }
+    const unownedWrite = governedWrites.find((change) => {
+      if (change.delete === true) return false;
+      const house = inferLayer(change.path, config, args.root);
+      return Boolean(requiredOwnerWriteDeny(config, house, change.path));
+    });
+    if (unownedWrite) {
+      const house = inferLayer(unownedWrite.path, config, args.root);
+      const deny = requiredOwnerWriteDeny(config, house, unownedWrite.path);
+      const message = formatWriteGateDeny({
+        file: unownedWrite.path,
+        reason: deny.message,
+        ruleId: deny.ruleId,
+        nextAction: deny.nextAction,
+      });
+      emitHostDeny(output, {
+        antigravityStyle,
+        cursorStyle,
+        grokStyle,
+        message,
+        file: unownedWrite.path,
+      });
+      output.status(2);
+      return;
+    }
     const changes = governedWrites.map(({ path: relativePath, content, delete: deleted }) =>
       deleted ? { path: relativePath, delete: true } : { path: relativePath, content }
     );
@@ -653,6 +678,24 @@ function runHookPayload(payload, gate, config, args, ts, attemptContext, output 
       reason: deny.message,
       ruleId: deny.ruleId,
       nextAction: deny.nextAction,
+    });
+    emitHostDeny(output, {
+      antigravityStyle,
+      cursorStyle,
+      grokStyle,
+      message,
+      file: normalizedRel,
+    });
+    output.status(2);
+    return;
+  }
+  const ownerDeny = requiredOwnerWriteDeny(config, layer, normalizedRel);
+  if (ownerDeny) {
+    const message = formatWriteGateDeny({
+      file: normalizedRel,
+      reason: ownerDeny.message,
+      ruleId: ownerDeny.ruleId,
+      nextAction: ownerDeny.nextAction,
     });
     emitHostDeny(output, {
       antigravityStyle,
@@ -1990,6 +2033,7 @@ export async function runArkMcp({ hookInput } = {}) {
         '(load-bearing for NEW code when .ark/golden-pattern.json exists — adopt generates it). ' +
         'When the matched layer has layers[].description, the JSON includes description; the field is omitted when absent. ' +
         'When the matched layer has layers[].trustBoundary (public|auth|admin|internal), the JSON includes trustBoundary; omitted when absent. ' +
+        'When the matched layer has layers[].owners, the JSON includes owners; omitted when absent. ' +
         'Call BEFORE writing a new file. ' +
         'Prefer ark_prepare_write when you already have the source snippet (place+validate+autoPatch in one call).',
       inputSchema: {
@@ -2017,7 +2061,8 @@ export async function runArkMcp({ hookInput } = {}) {
         'Composes ark_place + write-gate — call BEFORE Write/Edit when you have the snippet. ' +
         'When the matched layer has layers[].description, the JSON includes description; the field is omitted when absent. ' +
         'When the matched layer has layers[].trustBoundary (public|auth|admin|internal), the JSON includes trustBoundary; omitted when absent. ' +
-        'Returns { filePath, layer, description?, trustBoundary?, valid, violations?, autoPatch?, judgmentBrief?, contentHash, ... }.',
+        'When the matched layer has layers[].owners, the JSON includes owners; omitted when absent. ' +
+        'Returns { filePath, layer, description?, trustBoundary?, owners?, valid, violations?, autoPatch?, judgmentBrief?, contentHash, ... }.',
       inputSchema: {
         type: 'object',
         properties: {

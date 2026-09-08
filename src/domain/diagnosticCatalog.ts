@@ -655,6 +655,13 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
     'Extend layer patterns or narrow include so every governed file is classified.',
     { oftenAdvisory: true }
   ),
+  entry(
+    'CONFIG_LAYER_MISSING_OWNER',
+    'config',
+    'Layer missing owner',
+    'requireLayerOwners is on and this layer has no owners. Writes to that house fail closed, like a folder with no name on the door.',
+    'Add a GitHub handle or email to that layer’s owners in ark.config.json (/ark-adopt), then re-run. Reserved/allowEmpty houses may stay unnamed. Turn the flag off only if you no longer want owners required.'
+  ),
 
   // ── literal path drift ───────────────────────────────────────────────────
   entry(

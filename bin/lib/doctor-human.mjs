@@ -170,7 +170,7 @@ export function printDoctorCompactHuman(view) {
     line(warn, nudge.ask);
   }
 
-  printCompactExtraDoctorLines(doctorAdvisories, { line, warn });
+  printCompactExtraDoctorLines({ ...doctorAdvisories, layerOwners: view.layerOwners }, { line, warn });
 
   if (violations.length === 0) {
     if (!analysisComplete) {
