@@ -179,13 +179,14 @@ ArkGate has **always-on Layers** plus opt-in extras. The user chooses extras; yo
 2. Never call an import-edge violation an “invariant” or an aggregate sensor a “layer deny.”
 3. Absence of `arkRules` is **valid** — do not force ArkRules unless the user wants them or residual inventory clearly wants a pilot.
 4. Editing `arkrules/*` or applying structure fixes is **`/ark-adopt`** / **`/ark-autopilot`** — explore does not write (never invent `mechanical-safe`).
-5. CLI helpers: `ark-check --rules-inventory --json`, doctor JSON `rulesUnderContract`, sensors emit `ARKRULE_*` / `INVARIANT_UNCOVERED` with `evidence.arkruleId`.
+5. CLI helpers: `ark-check --rules-inventory --json`, doctor JSON `rulesUnderContract`, sensors emit `ARKRULE_*` / `INVARIANT_UNCOVERED` / `INVARIANT_CATALOG_EMPTY` with `evidence.arkruleId`.
 6. Never write `arkRun` or `arkOrder` from this skill. When extras are present, label residual **`[ArkRun]`** / **`[ArkOrder]`**. Wire one kernel candidate via `/ark-runtime`; one order-plane candidate via `/ark-order`. Do not invent `/ark-run`.
 
 
 ### Explore + ArkRules
 - Always run sensors for **both** planes when present: coverage/doctor **and** `--rules-inventory` if `arkRules` exists or brownfield may hide spaghetti rules.
 - Ranked table kinds may include `arkrules-opportunity` and `invariant-gap`.
+- Empty `invariants[]` on a populated Domain while `arkRules` is on is residual (`INVARIANT_CATALOG_EMPTY`), not done. Point at `arkrules/<Domain>.json`.
 - Dual-plan **B** may include: place advisory structure rules, extract one inventory candidate to Domain + `arkrules` entry, promote one covered invariant.
 - Field path: note whether starters emit `arkrules/*`.
 

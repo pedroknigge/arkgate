@@ -4,6 +4,7 @@
  * Summary includes per-layer + structure/invariant detail so showcase HTML /ark-explain
  * can teach what is under contract, not only aggregate numbers.
  */
+import path from 'node:path';
 import { loadEffectiveArkRulesFromDisk } from './effective-contract-load.mjs';
 import { evaluateInvariantCoverage } from './invariant-coverage.mjs';
 import {
@@ -16,9 +17,15 @@ import {
   composeMergePlanesHonesty,
   demoteExtraPlaneTeethUnderClassificationFloor,
 } from './extra-merge-teeth.mjs';
-import { ARKRULES_FIRST_CONTACT_NEXT, ARKRULES_ONE_BREATH } from './product-copy.mjs';
+import { collectEmptyInvariantCatalogFindings } from './arkrules-sensors.mjs';
+import { layerForRelativePath } from '../ark-layer-match.mjs';
+import {
+  ARKRULES_EMPTY_CATALOG_NEXT,
+  ARKRULES_FIRST_CONTACT_NEXT,
+  ARKRULES_ONE_BREATH,
+} from './product-copy.mjs';
 
-export { ARKRULES_FIRST_CONTACT_NEXT, ARKRULES_ONE_BREATH };
+export { ARKRULES_EMPTY_CATALOG_NEXT, ARKRULES_FIRST_CONTACT_NEXT, ARKRULES_ONE_BREATH };
 
 /**
  * Cap long catalogs in doctor JSON (and HTML, which consumes the same summary).
@@ -29,6 +36,18 @@ const STRUCTURE_CATALOG_MAX = 40;
 const UNCOVERED_CATALOG_MAX = 30;
 
 export { EXTRA_MERGE_TEETH_GOVERNED_FLOOR };
+
+/** Doctor walk often hands absolute paths; layer globs are project-relative. */
+function projectRelativePath(root, filePath) {
+  const posix = String(filePath).replace(/\\/g, '/');
+  if (path.isAbsolute(posix) && typeof root === 'string' && root.length > 0) {
+    const relative = path.relative(root, posix).replace(/\\/g, '/');
+    if (relative && !relative.startsWith('..') && !path.isAbsolute(relative)) {
+      return relative;
+    }
+  }
+  return posix.replace(/^\.\//, '');
+}
 
 /**
  * P1M / extraMergeTeeth: under the classification floor, demote enforced ArkRules
@@ -189,6 +208,25 @@ export function summarizeRulesUnderContract(root, config, facts, classification)
     const invariantAdvisory = invariants - invariantEnforced;
     const coveredInvariants = coverage.coverage.filter((c) => c.covered).length;
     const uncoveredInvariants = coverage.coverage.filter((c) => !c.covered).length;
+    const catalogFiles = Array.isArray(facts?.files)
+      ? facts.files
+          .map((entry) => {
+            const raw = typeof entry?.path === 'string' ? entry.path : '';
+            if (!raw) return null;
+            const relative = projectRelativePath(root, raw);
+            return {
+              path: relative,
+              layer: layerForRelativePath(relative, config.layers ?? []),
+            };
+          })
+          .filter(Boolean)
+      : [];
+    const emptyCatalogFinding = collectEmptyInvariantCatalogFindings({
+      arkRulesActive: true,
+      arkRules: loaded.arkRules,
+      layers: config.layers ?? [],
+      files: catalogFiles,
+    })[0];
     const mergePlanes = composeMergePlanesHonesty({
       classification,
       arkRules: {
@@ -224,6 +262,14 @@ export function summarizeRulesUnderContract(root, config, facts, classification)
       mergePlanes,
       notAScore: true,
       note: 'ArkRules plane (intra-layer) — counts and catalog, never a score. Green with uncovered residual must say so. Structure sensors are heuristics; invariants are catalog+coverage evidence, not a business runtime.',
+      ...(emptyCatalogFinding
+        ? {
+            emptyInvariantCatalog: true,
+            catalogFillPath: emptyCatalogFinding.arkruleSource,
+            catalogFillLayer: emptyCatalogFinding.fromLayer,
+            catalogFailsStrict: emptyCatalogFinding.failsStrict === true,
+          }
+        : { emptyInvariantCatalog: false }),
     };
   } catch (error) {
     return {
@@ -269,7 +315,20 @@ export function formatArkRulesDoctorLines(section) {
     ARKRULES_ONE_BREATH,
     `ArkRules: on · structure=${structure} · invariants=${invariants} · uncovered=${uncovered} · ${teeth} · not a score`,
   ];
-  if (uncovered > 0) lines.push(ARKRULES_FIRST_CONTACT_NEXT);
+  if (section.emptyInvariantCatalog === true) {
+    const fill =
+      typeof section.catalogFillPath === 'string' && section.catalogFillPath.length > 0
+        ? section.catalogFillPath
+        : 'arkrules/<Domain>.json';
+    const layer =
+      typeof section.catalogFillLayer === 'string' && section.catalogFillLayer.length > 0
+        ? section.catalogFillLayer
+        : 'Domain';
+    lines.push(
+      `ArkRules: ${layer} has code, but invariants[] is empty — add 1–2 short phrases in ${fill}.`
+    );
+    lines.push(ARKRULES_EMPTY_CATALOG_NEXT);
+  } else if (uncovered > 0) lines.push(ARKRULES_FIRST_CONTACT_NEXT);
   else if (typeof section.note === 'string' && /failed/i.test(section.note)) {
     lines.push(`ArkRules: ${section.note}`);
   }
@@ -392,12 +451,23 @@ export function formatRulesUnderContractHtml(section, esc) {
     uncoveredOverflow > 0
       ? `<p class="muted">…(+${uncoveredOverflow} more uncovered)</p>`
       : '';
+  const emptyCatalogBlock =
+    section.emptyInvariantCatalog === true
+      ? `<p class="tag warn" style="margin-top:.55rem">Domain has code, but <code>invariants[]</code> is empty — that is not done.
+        Add 1–2 short phrases in <code>${escape(section.catalogFillPath || 'arkrules/<Domain>.json')}</code>.
+        ${
+          section.catalogFailsStrict === true
+            ? 'A domain structure rule is already enforced, so <code>--strict-merge</code> can refuse.'
+            : 'Advisory — does not fail the merge until a domain structure rule is enforced.'
+        }</p>`
+      : '';
   const uncoveredBlock =
+    emptyCatalogBlock ||
     // Aggregate total (not the truncated array length) decides "all covered".
-    Number(section.uncoveredInvariants) === 0 && uncovered.length === 0
+    (Number(section.uncoveredInvariants) === 0 && uncovered.length === 0
       ? `<p class="clean-body" style="margin-top:.55rem">All catalogued invariants have coverage evidence (test/symbol scan) — residual inventory may still suggest new candidates via <code>--rules-inventory</code>.</p>`
       : `<h3 style="margin-top:.9rem;font-size:.95rem">Uncovered invariants</h3>
-      <ul class="senior-list">${uncoveredItems}</ul>${uncoveredMore}`;
+      <ul class="senior-list">${uncoveredItems}</ul>${uncoveredMore}`);
 
   const coveredItems = coveredSample
     .map(

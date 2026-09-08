@@ -20,13 +20,17 @@ import {
   needsArkRuleFileHints,
 } from '../../../bin/lib/arkrule-file-hints.mjs';
 import {
+  ARKRULES_EMPTY_CATALOG_NEXT,
   ARKRULES_FIRST_CONTACT_NEXT,
   ARKRULES_ONE_BREATH,
   formatArkRulesDoctorLines,
   formatRulesUnderContractHtml,
   summarizeRulesUnderContract,
 } from '../../../bin/lib/rules-under-contract.mjs';
-import { printCompactExtraDoctorLines } from '../../../bin/lib/doctor-advisories.mjs';
+import {
+  computeDoctorAdvisories,
+  printCompactExtraDoctorLines,
+} from '../../../bin/lib/doctor-advisories.mjs';
 
 const tempDirs: string[] = [];
 
@@ -663,6 +667,83 @@ export async function save(order: Order) {
     });
     expect(uncovered[1]).toMatch(/some enforced/);
     expect(uncovered[2]).toBe(ARKRULES_FIRST_CONTACT_NEXT);
+
+    const emptyCatalog = formatArkRulesDoctorLines({
+      active: true,
+      structureRules: 4,
+      invariants: 0,
+      uncoveredInvariants: 0,
+      emptyInvariantCatalog: true,
+      catalogFillPath: 'arkrules/DomainModel.json',
+      catalogFillLayer: 'DomainModel',
+      catalogFailsStrict: false,
+      mergePlanes: {
+        structureSensors: { enforced: 0 },
+        invariants: { enforced: 0 },
+      },
+      notAScore: true,
+    });
+    expect(emptyCatalog[1]).toMatch(/invariants=0/);
+    expect(emptyCatalog[2]).toMatch(/arkrules\/DomainModel\.json/);
+    expect(emptyCatalog[3]).toBe(ARKRULES_EMPTY_CATALOG_NEXT);
+  });
+
+  it('summarizeRulesUnderContract flags empty domain catalog only when Domain has files', () => {
+    const root = makeRoot();
+    fs.mkdirSync(path.join(root, 'arkrules'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'src', 'domain'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'arkrules', 'DomainModel.json'),
+      JSON.stringify({
+        schemaVersion: '1.0',
+        layer: 'DomainModel',
+        structure: [],
+        invariants: [],
+      })
+    );
+    const config = {
+      schemaVersion: '1.1',
+      arkRules: { DomainModel: 'arkrules/DomainModel.json' },
+      layers: [{ name: 'DomainModel', patterns: ['src/domain/**'] }],
+      rules: [],
+    };
+    const silentNoFiles = summarizeRulesUnderContract(root, config, { files: [] });
+    expect(silentNoFiles.emptyInvariantCatalog).toBe(false);
+
+    const silentNoMap = summarizeRulesUnderContract(
+      root,
+      { ...config, arkRules: undefined },
+      { files: [{ path: 'src/domain/order.ts' }] }
+    );
+    expect(silentNoMap.active).toBe(false);
+    expect(silentNoMap.emptyInvariantCatalog).toBeUndefined();
+
+    const residual = summarizeRulesUnderContract(root, config, {
+      files: [{ path: 'src/domain/order.ts' }],
+    });
+    expect(residual.emptyInvariantCatalog).toBe(true);
+    expect(residual.catalogFillPath).toBe('arkrules/DomainModel.json');
+    expect(residual.catalogFailsStrict).toBe(false);
+    const fromAbs = summarizeRulesUnderContract(root, config, {
+      files: [{ path: path.join(root, 'src/domain/order.ts') }],
+    });
+    expect(fromAbs.emptyInvariantCatalog).toBe(true);
+
+    const html = formatRulesUnderContractHtml(residual, (v) => String(v));
+    expect(html).toMatch(/invariants\[\]<\/code> is empty/);
+    expect(html).not.toMatch(/All catalogued invariants have coverage evidence/);
+
+    const advisories = computeDoctorAdvisories(
+      root,
+      config,
+      { layers: [{ name: 'DomainModel', files: 1 }] },
+      [],
+      ['src/domain/order.ts'],
+      undefined,
+      undefined,
+      { files: [] }
+    );
+    expect(advisories.rulesUnderContract.emptyInvariantCatalog).toBe(true);
   });
 
   it('compact doctor prints ArkRules only when the map is on', () => {

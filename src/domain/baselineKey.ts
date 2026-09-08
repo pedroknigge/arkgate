@@ -30,7 +30,10 @@ export type BaselineKeyViolation = {
 };
 
 /** Config diagnostics that are never code debt. Not a schema key. */
-export const NON_FREEZABLE_BASELINE_RULE_IDS = ['ARKRULE_SCOPE_EMPTY'] as const;
+export const NON_FREEZABLE_BASELINE_RULE_IDS = [
+  'ARKRULE_SCOPE_EMPTY',
+  'INVARIANT_CATALOG_EMPTY',
+] as const;
 
 /**
  * STRUCTURE freeze `target`: sensor id, plus `:symbol` when a method/class is known.

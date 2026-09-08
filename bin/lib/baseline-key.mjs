@@ -9,7 +9,10 @@
  */
 
 /** Config diagnostics that are never code debt. Not a schema key. */
-export const NON_FREEZABLE_BASELINE_RULE_IDS = ['ARKRULE_SCOPE_EMPTY'];
+export const NON_FREEZABLE_BASELINE_RULE_IDS = [
+    'ARKRULE_SCOPE_EMPTY',
+    'INVARIANT_CATALOG_EMPTY',
+];
 /**
  * STRUCTURE freeze `target`: sensor id, plus `:symbol` when a method/class is known.
  * V1 empty-target keys (`ARKRULE_STRUCTURE|file|layer||`) stay exact-match only —

@@ -153,7 +153,7 @@ ArkGate has **always-on Layers** plus opt-in extras. The user chooses extras; yo
 2. Never call an import-edge violation an “invariant” or an aggregate sensor a “layer deny.”
 3. Absence of `arkRules` is **valid** — do not force ArkRules unless the user wants them or residual inventory clearly wants a pilot.
 4. Editing `arkrules/*` or promoting modes is **this skill** (session 0) or **`/ark-autopilot`** later; never invent `mechanical-safe`.
-5. CLI helpers: `ark-check --rules-inventory --json`, doctor JSON `rulesUnderContract`, sensors emit `ARKRULE_*` / `INVARIANT_UNCOVERED` with `evidence.arkruleId`.
+5. CLI helpers: `ark-check --rules-inventory --json`, doctor JSON `rulesUnderContract`, sensors emit `ARKRULE_*` / `INVARIANT_UNCOVERED` / `INVARIANT_CATALOG_EMPTY` with `evidence.arkruleId`.
 6. Absence of `arkRun` is **valid**. Write it only when the user wants the extra. Skills never enforce.
 7. Absence of `arkOrder` is **valid**. Write it only when the user wants the extra. After the extra is honest: handoff **`/ark-order`** to wire one candidate. Skills never enforce.
 
@@ -161,6 +161,7 @@ ArkGate has **always-on Layers** plus opt-in extras. The user chooses extras; yo
 ### Adopt + ArkRules
 - After classify: emit or refresh `arkRules` for matched layers (exact names; generic mold for unknowns).
 - Mine rules → inventory + write advisory invariants/structure into `arkrules/<Layer>.json` **in this turn**.
+- Empty `invariants[]` on a populated Domain while `arkRules` is on is residual (`INVARIANT_CATALOG_EMPTY`), not done. Fill 1–2 short phrases. Advisory until a domain structure rule is `enforced`.
 - Application / Features templates include advisory `writes-via-aggregate`: driver import + write token in a use case is the skip. Do not copy `Externals/` / `admission.ts` folder religion.
 - Freeze baseline is **[Layer]** debt; inventory residual is **[ArkRules]** — report both.
 

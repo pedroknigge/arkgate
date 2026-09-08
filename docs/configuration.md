@@ -362,6 +362,9 @@ invariants, and a covered sample when the map is active.
 a hash-bound policy weakening. Empty `appliesTo: []` fails closed; zero-match globs emit
 `ARKRULE_SCOPE_EMPTY` (advisory warn / enforced fail). Enforced + proven uncovered →
 `INVARIANT_UNCOVERED` with `failsStrict` (partial evidence stays honest, never fake-green).
+When `arkRules` is on and a Domain-role layer has code, empty `invariants[]` is doctor residual
+`INVARIANT_CATALOG_EMPTY` (not “done”). Advisory unless a domain structure rule is already
+`enforced` — then `--strict-merge` can refuse. Absence of `arkRules` stays silent.
 
 **What they do not do:** prove business semantics end-to-end; replace Layers import edges;
 make “green” mean elegant Shape. Promoting structure to enforced can force rename-to-pass

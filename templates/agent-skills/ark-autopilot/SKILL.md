@@ -131,7 +131,7 @@ ArkGate has **always-on Layers** plus opt-in extras. The user chooses extras; yo
 2. Never call an import-edge violation an “invariant” or an aggregate sensor a “layer deny.”
 3. Absence of `arkRules` is **valid** — do not force ArkRules unless the user wants them or residual inventory clearly wants a pilot.
 4. Editing `arkrules/*` or promoting modes and fixing structure sensors is **this skill** (judgment, never invent `mechanical-safe`).
-5. CLI helpers: `ark-check --rules-inventory --json`, doctor JSON `rulesUnderContract`, sensors emit `ARKRULE_*` / `INVARIANT_UNCOVERED` with `evidence.arkruleId`.
+5. CLI helpers: `ark-check --rules-inventory --json`, doctor JSON `rulesUnderContract`, sensors emit `ARKRULE_*` / `INVARIANT_UNCOVERED` / `INVARIANT_CATALOG_EMPTY` with `evidence.arkruleId`.
 6. Absence of extras is **valid**. Extra skip clusters grind **here** after the extra is on. Evaluate one bus → `/ark-runtime`; evaluate one order-plane candidate → `/ark-order`. Do not invent `/ark-run`. Skills never enforce.
 
 

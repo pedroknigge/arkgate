@@ -42,7 +42,12 @@ export function buildDoctorImprovementCompass(input = {}) {
     if (id.includes('PEER_ISOLATION')) peerIsolationCount += 1;
     if (id === 'CAPABILITY_VIOLATION') pureOrCapabilityResidual += 1;
     if (id === 'FORBIDDEN_GLOBAL' || id.startsWith('FORBIDDEN_')) forbiddenGlobalResidual += 1;
-    if (id.startsWith('ARKRULE_') || id === 'INVARIANT_UNCOVERED') arkRulesStructureResidual += 1;
+    if (
+      id.startsWith('ARKRULE_') ||
+      id === 'INVARIANT_UNCOVERED' ||
+      id === 'INVARIANT_CATALOG_EMPTY'
+    )
+      arkRulesStructureResidual += 1;
   }
 
   const pcFindings = input.physicalCohesion?.findings;

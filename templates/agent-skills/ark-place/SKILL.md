@@ -137,7 +137,7 @@ ArkGate has **always-on Layers** plus opt-in extras. The user chooses extras; yo
 2. Never call an import-edge violation an “invariant” or an aggregate sensor a “layer deny.”
 3. Absence of `arkRules` is **valid** — do not force ArkRules unless the user wants them or residual inventory clearly wants a pilot.
 4. Missing layer home: add it via **`/ark-adopt`** in this session if needed, then write the file; never invent `mechanical-safe`.
-5. CLI helpers: `ark-check --rules-inventory --json`, doctor JSON `rulesUnderContract`, sensors emit `ARKRULE_*` / `INVARIANT_UNCOVERED` with `evidence.arkruleId`.
+5. CLI helpers: `ark-check --rules-inventory --json`, doctor JSON `rulesUnderContract`, sensors emit `ARKRULE_*` / `INVARIANT_UNCOVERED` / `INVARIANT_CATALOG_EMPTY` with `evidence.arkruleId`.
 6. Absence of `arkRun` is **valid**. Do not introduce the kernel speculatively. Skills never enforce this extra.
 7. Absence of `arkOrder` is **valid**. When on: Domain stays plane-free; first freeze ξ with `release()`; later ξ is `proposeRelease` then `apply`; never `update`/`patch`/`set` the pattern. Import `createOrderPlane` from `arkgate/order` (same npm package). Evaluate / wire one candidate via **`/ark-order`**.
 

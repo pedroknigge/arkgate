@@ -222,6 +222,63 @@ export class Order {
     expect(uncovered?.message).toMatch(/Scan discarded 5 naming no catalogued invariant/);
   });
 
+  it('emits advisory INVARIANT_CATALOG_EMPTY when the map is on and Domain is empty of phrases', () => {
+    const arkRules = structureRules([
+      { id: 'fac', sensor: 'always-valid-factory', mode: 'advisory' },
+    ]);
+    const cfg = {
+      ...BASE_CONFIG,
+      arkRules: { DomainModel: 'arkrules/DomainModel.json' },
+    };
+    const result = analyzeCanonicalResolvedProject({
+      contract: loadContract(cfg as never, 'ark.config.json', { arkRules }),
+      facts: minimalFacts(cfg),
+    });
+    const warning = result.ir.warnings?.find((v) => v.ruleId === 'INVARIANT_CATALOG_EMPTY');
+    expect(warning?.file).toBe('arkrules/DomainModel.json');
+    expect(warning?.freezable).toBe(false);
+    expect(result.ir.violations.some((v) => v.ruleId === 'INVARIANT_CATALOG_EMPTY')).toBe(
+      false
+    );
+    expect(result.valid).toBe(true);
+  });
+
+  it('fails strict on empty catalog only when a domain structure rule is enforced', () => {
+    const arkRules = structureRules([
+      { id: 'fac', sensor: 'always-valid-factory', mode: 'enforced' },
+    ]);
+    const cfg = {
+      ...BASE_CONFIG,
+      arkRules: { DomainModel: 'arkrules/DomainModel.json' },
+    };
+    const result = analyzeCanonicalResolvedProject({
+      contract: loadContract(cfg as never, 'ark.config.json', { arkRules }),
+      facts: minimalFacts(cfg, {
+        classShapes: extractClassShapesFromSource(
+          'src/domain/order.ts',
+          `export class Order { private constructor() {} static create() { return new Order(); } }`
+        ),
+      }),
+    });
+    const hit = result.ir.violations.find((v) => v.ruleId === 'INVARIANT_CATALOG_EMPTY');
+    expect(hit?.failsStrict).not.toBe(false);
+    expect(hit?.freezable).toBe(false);
+    expect(result.valid).toBe(false);
+  });
+
+  it('does not emit INVARIANT_CATALOG_EMPTY without an arkRules map', () => {
+    const arkRules = structureRules([]);
+    const result = analyzeCanonicalResolvedProject({
+      contract: loadContract(BASE_CONFIG as never, 'ark.config.json', { arkRules }),
+      facts: minimalFacts(BASE_CONFIG),
+    });
+    expect(
+      [...(result.ir.violations ?? []), ...(result.ir.warnings ?? [])].some(
+        (v) => v.ruleId === 'INVARIANT_CATALOG_EMPTY'
+      )
+    ).toBe(false);
+  });
+
   it('fires orchestration-only / thin-adapter when fileHints are supplied on the gate path', () => {
     const appFile = loadArkRulesContract({
       schemaVersion: '1.0',

@@ -44,6 +44,7 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 | [`ARKRULE_INVARIANT`](#ARKRULE_INVARIANT) | arkrules | ArkRule invariant failed |
 | [`ARKRULE_SCOPE_EMPTY`](#ARKRULE_SCOPE_EMPTY) | arkrules | ArkRule appliesTo matched zero files |
 | [`ARKRULE_HINT_BUDGET_EXHAUSTED`](#ARKRULE_HINT_BUDGET_EXHAUSTED) | arkrules | Structural-hint budget exhausted |
+| [`INVARIANT_CATALOG_EMPTY`](#INVARIANT_CATALOG_EMPTY) | arkrules | Domain invariant catalog is empty |
 | [`INVARIANT_UNCOVERED`](#INVARIANT_UNCOVERED) | arkrules | Invariant without coverage evidence |
 | [`INVARIANT_COVERAGE_OUTSIDE_ROOTS`](#INVARIANT_COVERAGE_OUTSIDE_ROOTS) | arkrules | Covering test outside the declared coverage roots |
 | [`ARKRUN_MISSING_ROOT`](#ARKRUN_MISSING_ROOT) | arkrun | No kernel factory in composition roots |
@@ -288,6 +289,15 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 
 - **Why:** `orchestration-only`, `thin-adapter`, and `writes-via-aggregate` only evaluate files the hint loader preloaded. When eligible governed files exceed that budget (`coverage.maxFiles`, default `400` — there is no `arkrules.hintBudget`), those sensors never saw the rest of their scope. Enforced + unreviewed is not green. The finding names exact hinted/governed counts and per-sensor reviewed N/M of scope.
 - **Fix:** Raise `coverage.maxFiles` in ark.config.json (this cap also bounds structural-hint preload; `--doctor` names the coupling) so hinted/governed counts match, then re-run with `--strict-config`. An enforced hint sensor that cannot see its scope fails strict.
+
+<a id="INVARIANT_CATALOG_EMPTY"></a>
+
+### `INVARIANT_CATALOG_EMPTY`
+
+**Domain invariant catalog is empty** · often advisory
+
+- **Why:** ArkRules is on and a Domain-role layer has code, but `invariants[]` has no phrases the code must preserve. Empty looks like “done” until someone fills the catalog.
+- **Fix:** Add 1–2 short phrases to `invariants[]` in `arkrules/<Domain>.json` (or the mapped file). Starters show the shape. Advisory unless a domain structure rule is already enforced — then `--strict-merge` can refuse. Do not freeze this finding.
 
 <a id="INVARIANT_UNCOVERED"></a>
 

@@ -90,6 +90,7 @@ export function attachExtraDoctorSections(rulesUnderContract, config, classifica
 
 function arkRulesDoctorMark(section, warn) {
   if (Array.isArray(section?.loadErrors) && section.loadErrors.length > 0) return warn;
+  if (section?.emptyInvariantCatalog === true) return warn;
   if ((Number(section?.uncoveredInvariants) || 0) > 0) return warn;
   return ' ';
 }
@@ -151,16 +152,36 @@ export function computeDoctorAdvisories(root, config, cov, rules, files, ts, par
     root,
     decisionMemory
   );
-  // Prefer architecture facts paths when available; coverage I/O still walks test roots.
+  // Prefer architecture facts paths when available; still union the doctor walk
+  // so an empty-catalog residual can see Domain files the facts subset missed.
+  const normalizeDoctorFile = (entry) => {
+    const raw =
+      typeof entry === 'string'
+        ? entry
+        : typeof entry?.path === 'string'
+          ? entry.path
+          : '';
+    const path = raw.replace(/\\/g, '/').replace(/^\.\//, '');
+    return path ? { path } : null;
+  };
+  const walkFiles = Array.isArray(files) ? files.map(normalizeDoctorFile).filter(Boolean) : [];
+  const factFiles = Array.isArray(facts?.files)
+    ? facts.files.map(normalizeDoctorFile).filter(Boolean)
+    : [];
+  const seen = new Set();
+  const mergedFiles = [];
+  for (const entry of [...factFiles, ...walkFiles]) {
+    if (seen.has(entry.path)) continue;
+    seen.add(entry.path);
+    mergedFiles.push(entry);
+  }
   const factPaths =
-    facts ??
-    (Array.isArray(files)
+    facts || walkFiles.length > 0
       ? {
-          files: files.map((f) => ({
-            path: typeof f === 'string' ? f.replace(/\\/g, '/').replace(/^\.\//, '') : f?.path,
-          })).filter((f) => f.path),
+          ...(facts && typeof facts === 'object' ? facts : {}),
+          files: mergedFiles,
         }
-      : undefined);
+      : undefined;
   const classification = classificationFromCoverage(cov);
   const rulesUnderContract = summarizeRulesUnderContract(root, config, factPaths, classification);
   const { arkRun, arkOrder } = attachExtraDoctorSections(

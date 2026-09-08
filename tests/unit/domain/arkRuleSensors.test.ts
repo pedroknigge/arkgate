@@ -7,6 +7,7 @@ import {
   DOMAIN_INVARIANT_WORDS,
   buildArkRuleFileHints,
   collectEmptyAppliesToFindings,
+  collectEmptyInvariantCatalogFindings,
   deriveArkRuleFileHints,
   evaluateArkRuleSensors,
   extractClassShapesFromSource,
@@ -15,6 +16,7 @@ import { extractArkOrderXiFieldWritesFromSource } from '../../../src/domain/arkO
 import {
   buildArkRuleFileHints as buildCliArkRuleFileHints,
   collectEmptyAppliesToFindings as collectCliEmptyAppliesToFindings,
+  collectEmptyInvariantCatalogFindings as collectCliEmptyInvariantCatalogFindings,
   evaluateArkRuleSensors as evaluateCliArkRuleSensors,
   extractClassShapesFromSource as extractCliClassShapesFromSource,
 } from '../../../bin/lib/arkrules-sensors.mjs';
@@ -839,5 +841,86 @@ export async function POST(order: Order) {
     expect(collectCliEmptyAppliesToFindings(arkRules, input.files)).toEqual(
       collectEmptyAppliesToFindings(arkRules, input.files)
     );
+  });
+});
+
+describe('INVARIANT_CATALOG_EMPTY residual', () => {
+  const layers = [
+    { name: 'DomainModel', intentPrefixes: ['Domain.'] },
+    { name: 'ApplicationOrchestration', intentPrefixes: ['Application.'] },
+  ];
+  const domainFile = { path: 'src/domain/order.ts', layer: 'DomainModel' };
+  const appFile = { path: 'src/application/place.ts', layer: 'ApplicationOrchestration' };
+
+  function catalogInput(
+    extras: Partial<Parameters<typeof collectEmptyInvariantCatalogFindings>[0]> = {}
+  ) {
+    return {
+      arkRulesActive: true,
+      arkRules: effective([]),
+      layers,
+      files: [domainFile],
+      ...extras,
+    };
+  }
+
+  it('fires when arkRules is on, Domain has code, and invariants[] is empty', () => {
+    const findings = collectEmptyInvariantCatalogFindings(catalogInput());
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.ruleId).toBe('INVARIANT_CATALOG_EMPTY');
+    expect(findings[0]?.file).toBe('arkrules/DomainModel.json');
+    expect(findings[0]?.failsStrict).toBe(false);
+    expect(findings[0]?.message).toMatch(/1–2 short phrases/);
+    expect(
+      collectCliEmptyInvariantCatalogFindings(catalogInput())
+    ).toEqual(findings);
+  });
+
+  it('does not fire when arkRules is off', () => {
+    expect(
+      collectEmptyInvariantCatalogFindings(catalogInput({ arkRulesActive: false }))
+    ).toEqual([]);
+  });
+
+  it('does not fire when Domain has no files', () => {
+    expect(
+      collectEmptyInvariantCatalogFindings(catalogInput({ files: [appFile] }))
+    ).toEqual([]);
+  });
+
+  it('does not fire when a domain invariant is present', () => {
+    const file = loadArkRulesContract({
+      schemaVersion: '1.0',
+      layer: 'DomainModel',
+      invariants: [
+        {
+          id: 'INV-ALWAYS-VALID',
+          description: 'A domain object is never stored in an invalid state',
+          coverage: { test: false },
+        },
+      ],
+    }).config;
+    const arkRules = buildEffectiveArkRules([
+      { layer: 'DomainModel', sourceFile: 'arkrules/DomainModel.json', file },
+    ]);
+    expect(
+      collectEmptyInvariantCatalogFindings(catalogInput({ arkRules }))
+    ).toEqual([]);
+  });
+
+  it('failsStrict only when a domain structure rule is already enforced', () => {
+    const advisory = collectEmptyInvariantCatalogFindings(
+      catalogInput({ arkRules: effective([{ id: 'fac', sensor: 'always-valid-factory' }]) })
+    );
+    expect(advisory[0]?.failsStrict).toBe(false);
+    const enforced = collectEmptyInvariantCatalogFindings(
+      catalogInput({
+        arkRules: effective([
+          { id: 'fac', sensor: 'always-valid-factory', mode: 'enforced' },
+        ]),
+      })
+    );
+    expect(enforced[0]?.failsStrict).toBe(true);
+    expect(enforced[0]?.severity).toBe('error');
   });
 });
