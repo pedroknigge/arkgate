@@ -63,6 +63,7 @@ export function createArchitectureProfileFromArkConfig(
       prefixes: layer.intentPrefixes ?? [],
       description: layer.description,
       trustBoundary: layer.trustBoundary,
+      owners: layer.owners,
       order: index + 1,
     })),
     rules: config.rules ?? [],

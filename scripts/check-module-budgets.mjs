@@ -62,7 +62,8 @@ const BUDGETS = [
   // S3 SPA + adopt/migrate patterns (vite-vercel-spa, P0A retrofit) — was 920 (loc ~1130).
   { path: 'bin/lib/presets.mjs', max: 1160 },
   // RN02 arkRun extra on schema 1.2; OR04 arkOrder extra on 1.3 lives in config-extras.
-  { path: 'bin/lib/config-contract.mjs', max: 520 },
+  // LO01 layer owners + requireLayerOwners helpers — was 520 (loc 553).
+  { path: 'bin/lib/config-contract.mjs', max: 560 },
   { path: 'bin/lib/config-extras.mjs', max: 220 },
   { path: 'bin/lib/weakest-link.mjs', max: 500 },
   { path: 'bin/lib/enforcement-profiles.mjs', max: 150 },

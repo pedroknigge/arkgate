@@ -5,6 +5,10 @@
  * never change.
  */
 import { globToRegExp, layerForRelativePath, patternSpecificity } from '../domain/layerMatch';
+import {
+  layersMissingRequiredOwners,
+  missingLayerOwnersNextAction,
+} from '../domain/configContract';
 import type {
   ArchitectureEngineViolation,
   CollectAnalysisConfigWarningsInput,
@@ -207,6 +211,21 @@ export function collectAnalysisConfigWarnings(
         'CONFIG_UNCLASSIFIED_FILES',
         `${unclassified.length} included source file(s) are not matched by any configured layer; ark-check will not enforce import rules for those source files.`,
         { count: unclassified.length, samples: unclassified.slice(0, 5) }
+      )
+    );
+  }
+
+  const missingOwners = layersMissingRequiredOwners(config);
+  if (missingOwners.length > 0) {
+    const named = missingOwners[0] ?? 'this layer';
+    warnings.push(
+      configWarning(
+        'CONFIG_LAYER_MISSING_OWNER',
+        `${named} has no owner. Add a GitHub handle or email to layers[].owners so this house has a name on the door.`,
+        {
+          layers: missingOwners,
+          nextAction: missingLayerOwnersNextAction(named),
+        }
       )
     );
   }

@@ -180,12 +180,17 @@ export function resolveEffectiveContract(
   };
 }
 
-/** Layer captions and trust tags are metadata and must not change policy identity. */
+/** Layer captions, trust tags, and owners are metadata and must not change policy identity. */
 export function omitLayerDescriptions(config: ArkConfig): ArkConfig {
   return {
     ...config,
     layers: config.layers.map((layer) => {
-      const { description: _description, trustBoundary: _trustBoundary, ...rest } = layer;
+      const {
+        description: _description,
+        trustBoundary: _trustBoundary,
+        owners: _owners,
+        ...rest
+      } = layer;
       return rest;
     }),
   };
@@ -194,8 +199,9 @@ export function omitLayerDescriptions(config: ArkConfig): ArkConfig {
 /**
  * Canonical payload for policyHash: root config + sorted effective ArkRules.
  * Absence of arkRules yields the same payload shape with empty structure/invariants.
- * `stewards`, `layers[].description`, and `layers[].trustBoundary` are metadata —
- * not import-rule teeth.
+ * `stewards`, `layers[].description`, `layers[].trustBoundary`, and
+ * `layers[].owners` are metadata — not import-rule teeth.
+ * `requireLayerOwners` stays in the hash (it is the require switch).
  */
 export function effectiveContractPolicyPayload(contract: EffectiveContract): unknown {
   const { stewards: _stewards, ...configForHash } = omitLayerDescriptions(contract.config);

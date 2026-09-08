@@ -9,6 +9,7 @@
 import type {
   ArkConfig,
   ArkConfigIssue,
+  ArkConfigLayer,
   ArkConfigLoadResult,
   ArkConfigMigratedFrom,
   ArkConfigMigrationResult,
@@ -25,6 +26,7 @@ import {
   validateArkOrderExtra,
   validateArkRunExtra,
 } from './configExtras';
+import { canonicalStewardId } from './teamParliament';
 
 export type {
   ArkConfig,
@@ -50,6 +52,42 @@ export type {
 export const ARK_CONFIG_SCHEMA_VERSION: ArkConfigSchemaVersion = '1.3';
 /** Closed layer trust tags. Optional; absence is silent. Not a schemaVersion bump. */
 export const LAYER_TRUST_BOUNDARIES = ['public', 'auth', 'admin', 'internal'] as const;
+
+/** Future house: empty globs are expected; missing owners stay silent even when required. */
+export function isFutureHouseLayer(
+  layer: Pick<ArkConfigLayer, 'optional' | 'reserved' | 'allowEmpty'> | null | undefined
+): boolean {
+  return layer?.optional === true || layer?.reserved === true || layer?.allowEmpty === true;
+}
+
+/**
+ * Present `layers[].owners` as non-empty strings. Absence / empty / wrong type → undefined.
+ */
+export function layerOwnersList(
+  layer: { owners?: unknown } | null | undefined
+): string[] | undefined {
+  const raw = layer && typeof layer === 'object' ? layer.owners : undefined;
+  if (!Array.isArray(raw) || raw.length === 0) return undefined;
+  const ids = raw.filter((entry): entry is string => typeof entry === 'string' && entry.length > 0);
+  return ids.length > 0 ? ids : undefined;
+}
+
+/**
+ * Layer names that must name owners when `requireLayerOwners` is on.
+ * Empty when the require flag is absent or false.
+ */
+export function layersMissingRequiredOwners(
+  config: Pick<ArkConfig, 'requireLayerOwners' | 'layers'> | null | undefined
+): string[] {
+  if (config?.requireLayerOwners !== true || !Array.isArray(config.layers)) return [];
+  return config.layers
+    .filter((layer) => !isFutureHouseLayer(layer) && !layerOwnersList(layer))
+    .map((layer) => layer.name);
+}
+
+export function missingLayerOwnersNextAction(layerName: string): string {
+  return `Add a GitHub handle or email to ${layerName}'s owners in ark.config.json (/ark-adopt).`;
+}
 export const ARK_CONFIG_SCHEMA_URL =
   'https://unpkg.com/arkgate@4/schemas/ark.config.schema.json';
 
@@ -167,6 +205,11 @@ export const ARK_CONFIG_SCHEMA = {
     arkOrder: { $ref: '#/$defs/arkOrder' },
     /** Team parliament — GitHub handles or emails who may loosen the law (not part of policy hash). */
     stewards: { ...stringArraySchema, default: [] },
+    /**
+     * When true, every non-reserved layer must name owners. Absence/false is
+     * silent. Policy teeth — stays in policyHash. Owners stay metadata.
+     */
+    requireLayerOwners: { type: 'boolean' },
   },
   $defs: {
     layer: {
@@ -180,6 +223,7 @@ export const ARK_CONFIG_SCHEMA = {
         intentPrefixes: stringArraySchema,
         description: { type: 'string', minLength: 1 },
         trustBoundary: { type: 'string', enum: [...LAYER_TRUST_BOUNDARIES] },
+        owners: { ...stringArraySchema, minItems: 1 },
         forbiddenGlobals: stringArraySchema,
         capabilities: {
           type: 'object',
@@ -422,6 +466,26 @@ function validateNode(
   }
 }
 
+function validateLayerOwners(candidate: Record<string, unknown>, issues: ArkConfigIssue[]): void {
+  const layers = candidate.layers;
+  if (!Array.isArray(layers)) return;
+  layers.forEach((layer, index) => {
+    if (!layer || typeof layer !== 'object' || Array.isArray(layer)) return;
+    if (!('owners' in layer)) return;
+    const owners = (layer as { owners?: unknown }).owners;
+    if (!Array.isArray(owners)) return;
+    owners.forEach((entry, ownerIndex) => {
+      if (typeof entry !== 'string') return;
+      if (!canonicalStewardId(entry)) {
+        issues.push({
+          path: `$.layers[${index}].owners[${ownerIndex}]`,
+          message: 'must be a GitHub handle or email (not a display name)',
+        });
+      }
+    });
+  });
+}
+
 function defaultedConfig(input: Record<string, unknown>): Record<string, unknown> {
   const result: Record<string, unknown> = {
     ...input,
@@ -548,6 +612,7 @@ export function loadArkConfigContract(
   );
   validateArkRunExtra(candidate, issues);
   validateArkOrderExtra(candidate, issues);
+  validateLayerOwners(candidate, issues);
   if (issues.length > 0) throw new ArkConfigValidationError(source, issues);
 
   return { config: candidate as ArkConfig, migratedFrom };

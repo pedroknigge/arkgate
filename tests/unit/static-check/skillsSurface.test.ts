@@ -537,4 +537,24 @@ describe('LD05 layer description skill deepen (no /ark-describe)', () => {
     expect(body).toMatch(/omit.{0,40}absent|when.{0,20}absent/i);
     expect(body).toMatch(/Do \*\*not\*\* invent a tag or `\/ark-trust`/);
   });
+
+  it('ark-adopt writes layers[].owners from the product map without inventing people', () => {
+    const body = readSkill('ark-adopt');
+    expect(body).toContain('## Layer owners (process)');
+    expect(body).toContain('layers[].owners');
+    expect(body).toContain('requireLayerOwners');
+    expect(body).toMatch(/GitHub handle or email/);
+    expect(body).toMatch(/Do \*\*not\*\* invent people|Do not invent people/);
+    expect(body).toMatch(/Absence is silent/);
+    expect(body).toMatch(/No `?\/ark-owners`/);
+  });
+
+  it('ark-place prints owners next to layer name and globs when present', () => {
+    const body = readSkill('ark-place');
+    expect(body).toContain('## Layer owners (process)');
+    expect(body).toContain('layers[].owners');
+    expect(body).toMatch(/owner: @handle/);
+    expect(body).toMatch(/omit.{0,40}absent|when.{0,20}absent/i);
+    expect(body).toMatch(/Do \*\*not\*\* invent a person or `\/ark-owners`/);
+  });
 });

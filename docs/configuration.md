@@ -190,6 +190,21 @@ That sentence is product copy. Not “Rich domain model, business rules, and dom
   Compact starters may omit it. `/ark-adopt` writes it when the product map
   already names that door; it does not invent tags. No `/ark-trust`. This is
   **not** host/CI TLS and does **not** add import-rule teeth.
+- **`layers[].owners`** (optional) — who owns this folder: GitHub handles or
+  emails (same identity as `stewards`). `/ark-place` prints `owner: @handle`
+  next to the layer name; doctor, coverage, and the HTML report show the same
+  names. Changing the list does **not** change `policyHash` and does **not**
+  need a weakening ack. Absence is silent unless **`requireLayerOwners`** is
+  `true`. A display name (`Pedro Knigge`), empty array, or empty string fails
+  the schema. Compact starters may omit it. `/ark-adopt` writes it when the
+  product map already names who owns the house; it does not invent people.
+  No `/ark-owners`. This is **not** import-rule teeth.
+- **`requireLayerOwners`** (optional) — when `true`, every live (non-reserved)
+  layer must name `owners`. Doctor names the first missing house and the next
+  step. `--strict-config` / `--strict-merge` refuse. The write gate denies a
+  write into an unowned house (same idea as a folder with no name on the door).
+  Absence or `false` is silent. This flag **is** policy teeth (it stays in
+  `policyHash`). Flip it on after you have named owners incrementally.
 
 ```json
 "layers": [
@@ -197,7 +212,8 @@ That sentence is product copy. Not “Rich domain model, business rules, and dom
     "name": "Presentation",
     "patterns": ["src/app/**"],
     "description": "Storefront checkout — what shoppers see.",
-    "trustBoundary": "public"
+    "trustBoundary": "public",
+    "owners": ["pedroknigge"]
   }
 ]
 ```
@@ -444,7 +460,7 @@ changing either contract changes its hash and invalidates the acknowledgement.
 
 Optional `stewards` lists **GitHub handles or emails** who may **loosen** the contract or
 **grow** the baseline (`pedroknigge` or `pedroknigge@users.noreply.github.com` — not
-`Pedro Knigge`). The field is metadata — it does not change the policy hash. `layers[].description` and `layers[].trustBoundary` are stripped the same way (caption-only or tag-only edits do not change `policyHash` and do not need a weakening ack; `contractHash` still fingerprints the raw config). The lock
+`Pedro Knigge`). The field is metadata — it does not change the policy hash. `layers[].description`, `layers[].trustBoundary`, and `layers[].owners` are stripped the same way (caption-only, tag-only, or owner-list edits do not change `policyHash` and do not need a weakening ack; `contractHash` still fingerprints the raw config). `requireLayerOwners` stays in the hash. The lock
 matches `--author`, then `GITHUB_ACTOR` / `ARK_STEWARD`, then `GIT_AUTHOR_EMAIL`. A
 noreply GitHub mail and the handle are the same person. Git `user.name` is not identity.
 

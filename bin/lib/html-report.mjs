@@ -25,7 +25,7 @@ import { capabilityBadgesFor, renderAdvisorySections } from './html-report-advis
 import { renderEvolutionSection } from './html-report-evolution.mjs';
 import { arkGitignoreAppendDecision } from './ark-gitignore.mjs';
 import { captureGitSnapshot } from './report-snapshot-context.mjs';
-import { layerDescriptionCaption, layerTrustBoundary } from './layer-description.mjs';
+import { layerDescriptionCaption, layerGuidanceLine, layerOwners, layerTrustBoundary } from './layer-description.mjs';
 
 export { arkGitignoreAppendDecision, gitignoreCoversArkState, gitignoreHasArkNegationException } from './ark-gitignore.mjs';
 
@@ -423,8 +423,11 @@ export function renderBeginnerHtmlReport({ root, config, violations, ok, version
   const placementRows = layers
     .map((layer) => {
       const purpose = layerDescriptionCaption(layer) || 'See ark.config.json';
-      const trust = layerTrustBoundary(layer);
-      const purposeCell = trust ? `${esc(purpose)} <span class="tag">trust: ${esc(trust)}</span>` : esc(purpose);
+      const guidance = layerGuidanceLine(layer);
+      const extra = guidance && guidance !== purpose ? guidance.slice(purpose.length).replace(/^ · /, '') : '';
+      const purposeCell = extra
+        ? `${esc(purpose)} <span class="tag">${esc(extra)}</span>`
+        : esc(purpose);
       const folders = (layer.patterns || []).join(', ') || '—';
       return `<tr><td><strong>${esc(layer.name)}</strong></td><td>${purposeCell}</td><td><code>${esc(folders)}</code></td></tr>`;
     })
@@ -780,6 +783,9 @@ export function renderHtmlReport({
         layer.optional ? '<span class="tag dim-tag">optional</span>' : '',
         layerTrustBoundary(layer)
           ? `<span class="tag">trust: ${esc(layerTrustBoundary(layer))}</span>`
+          : '',
+        layerOwners(layer)
+          ? `<span class="tag">owner: ${esc(layerOwners(layer).map((id) => (id.includes('@') ? id : `@${id}`)).join(', '))}</span>`
           : '',
       ].join(' ');
       const example = exampleByLayer?.get?.(layer.name);

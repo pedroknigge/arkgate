@@ -96,6 +96,12 @@ function arkRulesDoctorMark(section, warn) {
 }
 
 export function printCompactExtraDoctorLines(advisories, io) {
+  const owners = advisories?.layerOwners;
+  if (owners?.required && owners.ask) {
+    console.log('');
+    io.line(io.warn, owners.ask);
+    if (owners.nextAction) io.line(' ', `Next: ${owners.nextAction}`);
+  }
   const rulesUnderContract = advisories?.rulesUnderContract;
   const arkRulesLines = formatArkRulesDoctorLines(rulesUnderContract);
   if (arkRulesLines.length > 0) {

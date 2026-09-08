@@ -337,6 +337,33 @@ export function unclassifiedIncludedWriteDeny(relativePath) {
   };
 }
 
+/** File-local twin of CONFIG_LAYER_MISSING_OWNER — required owners, this house has none. */
+export function unownedLayerWriteDeny(relativePath, layerName) {
+  const file = String(relativePath || 'this file');
+  const house = String(layerName || 'this layer');
+  return {
+    ruleId: 'CONFIG_LAYER_MISSING_OWNER',
+    message: `${file} is in ${house}, and that folder has no owner.`,
+    nextAction: `Add a GitHub handle or email to ${house}'s owners in ark.config.json (/ark-adopt).`,
+  };
+}
+
+/**
+ * Fail-closed write when requireLayerOwners is on and this house has no owners.
+ * Silent when the flag is off, the layer is reserved, or owners are present.
+ */
+export function requiredOwnerWriteDeny(config, layerName, relativePath) {
+  if (config?.requireLayerOwners !== true || !layerName) return null;
+  const layer = (config.layers ?? []).find((entry) => entry?.name === layerName);
+  if (!layer) return null;
+  if (layer.optional === true || layer.reserved === true || layer.allowEmpty === true) return null;
+  const owners = Array.isArray(layer.owners)
+    ? layer.owners.filter((entry) => typeof entry === 'string' && entry.length > 0)
+    : [];
+  if (owners.length > 0) return null;
+  return unownedLayerWriteDeny(relativePath, layerName);
+}
+
 /**
  * Socket-style write-gate deny: two lines first. Pass/fail, no score.
  * Rule id stays on a following line, not the first sentence.
