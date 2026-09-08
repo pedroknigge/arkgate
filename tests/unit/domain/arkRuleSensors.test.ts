@@ -8,6 +8,7 @@ import {
   buildArkRuleFileHints,
   collectEmptyAppliesToFindings,
   collectEmptyInvariantCatalogFindings,
+  isDomainRoleLayerName,
   deriveArkRuleFileHints,
   evaluateArkRuleSensors,
   extractClassShapesFromSource,
@@ -906,6 +907,15 @@ describe('INVARIANT_CATALOG_EMPTY residual', () => {
     expect(
       collectEmptyInvariantCatalogFindings(catalogInput({ arkRules }))
     ).toEqual([]);
+  });
+
+  it('treats trailing-dot Domain prefixes as Domain without a regex', () => {
+    expect(isDomainRoleLayerName('ApplicationOrchestration', ['Domain...'])).toBe(true);
+    expect(isDomainRoleLayerName('ApplicationOrchestration', ['Domain.'])).toBe(true);
+    expect(isDomainRoleLayerName('ApplicationOrchestration', ['.'.repeat(200)])).toBe(false);
+    expect(isDomainRoleLayerName('ApplicationOrchestration', ['Application.'])).toBe(false);
+    expect(isDomainRoleLayerName('ReportingReadModels')).toBe(true);
+    expect(isDomainRoleLayerName('SharedKernel')).toBe(false);
   });
 
   it('failsStrict only when a domain structure rule is already enforced', () => {

@@ -564,9 +564,43 @@ export function collectEmptyAppliesToFindings(
   );
 }
 
+/** Intent prefixes are short tokens (`Domain.`, `Application.`). Bound the scan. */
+const INTENT_PREFIX_SCAN_LIMIT = 64;
+
+/**
+ * Strip trailing `.` without a regex. `\.+$` on config strings is CodeQL
+ * js/polynomial-redos (backtracking on long runs of `.`). Linear walk is enough.
+ */
+function stripTrailingDots(value: string): string {
+  let end = value.length;
+  while (end > 0 && value.charCodeAt(end - 1) === 46) {
+    end -= 1;
+  }
+  return end === value.length ? value : value.slice(0, end);
+}
+
+function normalizeIntentPrefix(prefix: string): string {
+  const trimmed = prefix.trim();
+  const bounded =
+    trimmed.length > INTENT_PREFIX_SCAN_LIMIT
+      ? trimmed.slice(0, INTENT_PREFIX_SCAN_LIMIT)
+      : trimmed;
+  return stripTrailingDots(bounded);
+}
+
+function layerNameLooksDomain(layer: string): boolean {
+  const lower = layer.toLowerCase();
+  return (
+    lower.includes('domain') ||
+    lower.includes('entity') ||
+    lower.includes('aggregate') ||
+    lower.includes('model')
+  );
+}
+
 function ownsDomainIntent(intentPrefixes: readonly string[]): boolean {
   return intentPrefixes.some((prefix) => {
-    const normalized = prefix.trim().replace(/\.+$/, '');
+    const normalized = normalizeIntentPrefix(prefix);
     return normalized === 'Domain' || normalized.startsWith('Domain.');
   });
 }
@@ -576,7 +610,7 @@ export function isDomainRoleLayerName(
   layer: string,
   intentPrefixes: readonly string[] = []
 ): boolean {
-  return /domain|entity|aggregate|model/i.test(layer) || ownsDomainIntent(intentPrefixes);
+  return layerNameLooksDomain(layer) || ownsDomainIntent(intentPrefixes);
 }
 
 export type EmptyInvariantCatalogInput = {
