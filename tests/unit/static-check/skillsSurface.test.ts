@@ -518,4 +518,23 @@ describe('LD05 layer description skill deepen (no /ark-describe)', () => {
     expect(body).toMatch(/omit.{0,40}absent|when.{0,20}absent/i);
     expect(body).toMatch(/Do \*\*not\*\* invent[\s\S]{0,40}`\/ark-describe`|do not invent a caption or `\/ark-describe`/);
   });
+
+  it('ark-adopt writes layers[].trustBoundary from the product map without inventing tags', () => {
+    const body = readSkill('ark-adopt');
+    expect(body).toContain('## Layer trust (process)');
+    expect(body).toContain('layers[].trustBoundary');
+    expect(body).toMatch(/public.*auth.*admin.*internal/s);
+    expect(body).toMatch(/Do \*\*not\*\* invent tags|Do not invent tags/);
+    expect(body).toMatch(/Absence is silent/);
+    expect(body).toMatch(/No `?\/ark-trust`/);
+  });
+
+  it('ark-place prints the trust tag next to layer name and globs when present', () => {
+    const body = readSkill('ark-place');
+    expect(body).toContain('## Layer trust (process)');
+    expect(body).toContain('layers[].trustBoundary');
+    expect(body).toMatch(/trust: <tag>/);
+    expect(body).toMatch(/omit.{0,40}absent|when.{0,20}absent/i);
+    expect(body).toMatch(/Do \*\*not\*\* invent a tag or `\/ark-trust`/);
+  });
 });

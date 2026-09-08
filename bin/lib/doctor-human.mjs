@@ -14,6 +14,7 @@ import { analysisIncompleteStatement } from './analysis-completeness.mjs';
 import { skillGapsForActiveHost, detectCodexHomeGap, codexConcernIsActive } from './agent-gates.mjs';
 import { agentHomeConcernIsActive } from './agent-homes.mjs';
 import { REQUIRED_GATE_WORKFLOW } from './gate-files.mjs';
+import { layerGuidanceLine } from './layer-description.mjs';
 
 function displayedMissingGates(gatesMissing, view) {
   const list = Array.isArray(gatesMissing) ? gatesMissing : [];
@@ -139,7 +140,8 @@ export function printDoctorCompactHuman(view) {
         : warn;
   line(govMark, `Governed: ${cov.governed.percent}% (${cov.governed.classifiedFiles}/${cov.governed.totalFiles} files)`);
   for (const row of cov.layers ?? []) {
-    if (row.description) line(' ', `${row.name} — ${row.description}`);
+    const guidance = layerGuidanceLine(row);
+    if (guidance) line(' ', `${row.name} — ${guidance}`);
   }
 
   const hostRed =
@@ -252,11 +254,11 @@ export function printDoctorDetailsHuman(view) {
     );
   }
   if (cov.suggestions.length === 0 && cov.emptyLayers.length === 0) line(ok, 'Every layer classifies files; no empty layers');
-  const captioned = (cov.layers ?? []).filter((row) => row.description);
+  const captioned = (cov.layers ?? []).filter((row) => layerGuidanceLine(row));
   if (captioned.length > 0) {
     console.log('');
     console.log(color.bold('Layers'));
-    for (const row of captioned) line(' ', `${row.name} — ${row.description}`);
+    for (const row of captioned) line(' ', `${row.name} — ${layerGuidanceLine(row)}`);
   }
 
   if (packageVersionTruth?.dualTruth) {

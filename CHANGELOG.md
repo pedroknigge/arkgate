@@ -6,6 +6,13 @@ in the immutable pre-2.0 archive linked below.
 ## Unreleased
 
 ### Added
+- Optional `layers[].trustBoundary` on each layer: `public` | `auth` | `admin` |
+  `internal`. Who this folder is for. Schema validates the closed list; a wrong
+  value fails. Absence is silent — never a doctor residual, never
+  `--strict-config`, never a score. Place / prepare-write / MCP / doctor /
+  coverage / HTML show `trust: public` when present. Stripped from `policyHash`
+  like `stewards` and `layers[].description`. No import-rule matrix. Not host/CI
+  TLS. No new skill or `schemaVersion` bump. Compact starters may omit.
 - Doctor residual when `arkRules` is on, Domain has code, and `invariants[]` is
   empty (`INVARIANT_CATALOG_EMPTY`). Points at the file to fill. Advisory unless
   a domain structure rule is already enforced — then `--strict-merge` can refuse.

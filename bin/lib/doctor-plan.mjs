@@ -15,7 +15,7 @@ import { describePackageVersionDualTruth } from './field-install.mjs';
 import { detectAgentHomeGaps } from './agent-homes.mjs';
 import { collectDoctorNextActions } from './doctor-next-actions.mjs';
 import { printDoctorCompactHuman, printDoctorDetailsHuman } from './doctor-human.mjs';
-import { placementDescriptionFields } from './layer-description.mjs';
+import { layerGuidanceLine, placementDescriptionFields } from './layer-description.mjs';
 export { printDoctorCompactHuman, printDoctorDetailsHuman };
 export { summarizeRulesUnderContract };
 
@@ -173,7 +173,8 @@ export function runCoverage(root, config, files, rules, asJson) {
   console.log(`  ${pad('Layer')}  Files`);
   for (const row of layerRows) {
     const flag = row.files === 0 ? '   (pattern matches nothing)' : '';
-    const caption = row.description ? `  ${row.description}` : '';
+    const guidance = layerGuidanceLine(row);
+    const caption = guidance ? `  ${guidance}` : '';
     console.log(`  ${pad(row.name)}  ${String(row.files).padStart(5)}${flag}${caption}`);
   }
   console.log(`  ${pad('(unclassified)')}  ${String(unclassified.length).padStart(5)}`);

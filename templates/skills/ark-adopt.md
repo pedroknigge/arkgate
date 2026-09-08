@@ -28,6 +28,9 @@ has honest houses. Skills never enforce — CLI / hooks / CI do.
 - When the product map or glossary names a house, write `layers[].description` as
   app-context copy (what this folder is *in the product*). Compact starter may omit.
   Do not invent captions. Do not invent `/ark-describe`.
+- When the product map names who a folder is for, write `layers[].trustBoundary`
+  (`public` | `auth` | `admin` | `internal`). Compact starter may omit. Do not
+  invent tags. Absence is silent. No `/ark-trust`.
 - CLI-first: if `arkgate-check` already resolved the root, do not wait on MCP.
 - Do not add `arkRun` or `arkOrder` unless the user wants that extra. When they do, write
   **advisory** extra in this turn (`arkRun` schema `1.2+`; `arkOrder` schema `1.3+`).
@@ -107,6 +110,15 @@ When the **product map** (anti-wrapper) or **glossary** names a house, write
 received."), not architecture jargon. Compact starter / `ark start` may omit the
 field. Absence is silent — never fail `--strict-config` for a missing caption.
 Do **not** invent captions. Do not invent `/ark-describe`.
+
+## Layer trust (process)
+
+Optional `layers[].trustBoundary`: `public` | `auth` | `admin` | `internal`.
+Marks who this folder is for (anyone, signed-in users, operators, or only
+other code). Write it when the product map already names that door. Compact
+starter / `ark start` may omit it. Absence is silent — never fail
+`--strict-config`, never invent a doctor residual. Do **not** invent tags.
+This is not host/CI TLS and does not add import-rule teeth. No `/ark-trust`.
 
 ## When / not when
 
@@ -261,6 +273,8 @@ Ark protects the **boundary around** a framework, not its internals. Nest/DI pub
    to a compact starter. Do not promote to enforced as the session-0 default.
    When the product map or glossary names a house, write `layers[].description` on that
    layer (app-context sentence). Compact starter may omit. Do not invent captions.
+   When the product map names who a folder is for, write `layers[].trustBoundary`
+   (`public` | `auth` | `admin` | `internal`). Do not invent tags.
 2. **Check + diagnose** — `summary.concentrated` / dominant edge → fix contract first, don’t freeze.
    Cross-slice / cross-context `peerIsolation` hits are judgment: extract shared or events.
    The denial names its reason. `unclassifiable path` in bulk means shared code lives outside
@@ -274,6 +288,7 @@ Ark protects the **boundary around** a framework, not its internals. Nest/DI pub
 3. **Classify ungoverned** — use coverage `suggestions` **plus** dirs you discovered by reading;
    add layers/patterns **here** (write `ark.config.json`). When adding a layer the product map
    or glossary already names, write `layers[].description` on it (do not invent filler).
+   Write `layers[].trustBoundary` only when the product map already names that door.
 4. **Mine business rules → manifiesto** (model job — this is why the skill exists):
    - Scan for loose domain: validators, pricing/policy functions, `can*`/`calculate*`, magic business constants, publish/intent strings, logic in UI/hooks that belongs in Domain.
    - **ArkRules inventory (AR13):** run `ark-check --rules-inventory --json` for deterministic candidates
@@ -313,6 +328,7 @@ proposals applied or deferred, **phase**, **top Shape / design-weak opportunitie
 - Claim in-memory kernel stores are production durability.
 - Invent `/ark-run`. Use `/ark-order` after this door turns the extra on.
 - Invent `layers[].description` filler or a `/ark-describe` skill.
+- Invent `layers[].trustBoundary` tags or a `/ark-trust` skill.
 - Claim Enforce while governed% is low, cores empty with I/O in Application, or core bags ungoverned.
 - End adopt with only “baseline written” when design-weak residual is visible in files you opened.
 
