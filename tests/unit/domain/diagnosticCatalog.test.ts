@@ -296,6 +296,16 @@ describe('RN05 ArkRun catalog ↔ remediation parity', () => {
     expect(catalogFixForRuleId('ARKRUN_MISSING_ROOT')).toContain('@arkgate/runtime is deprecated');
     expect(catalogFixForRuleId('ARKRUN_KERNEL_IN_DOMAIN')).toContain('arkgate/runtime');
   });
+
+  it('LEXICAL_EVIDENCE_INCOMPLETE is provisional and names ark-check as authority', () => {
+    const why = catalogWhyForRuleId('LEXICAL_EVIDENCE_INCOMPLETE') ?? '';
+    const fix = catalogFixForRuleId('LEXICAL_EVIDENCE_INCOMPLETE') ?? '';
+    expect(why.toLowerCase()).toContain('provisional');
+    expect(why).toMatch(/ark-check/i);
+    expect(why).not.toMatch(/write hook is already the verdict/i);
+    expect(fix).toMatch(/npx arkgate-check/);
+    expect(fix).not.toMatch(/treat the hook deny as final/i);
+  });
 });
 
 describe('diagnosticCatalog ↔ docs anchors', () => {

@@ -4,7 +4,46 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { layerForFile } from '../ark-layer-match.mjs';
+import {
+  layerForRelativePath,
+  matchingLayersForRelativePath,
+} from '../ark-layer-match.mjs';
+
+/**
+ * Same candidate list as ark-check `resolveSpecifier` (src/kernel/moduleGraph.ts).
+ * The write hook must feed `layerForRelativePath` a path with the extension
+ * ark-check already sees on disk — otherwise an explicit `money.ts` pattern
+ * loses to a broader `src/lib/**` bag.
+ */
+const SPECIFIER_SUFFIXES = Object.freeze([
+  '',
+  '.ts',
+  '.tsx',
+  '.mts',
+  '.cts',
+  '/index.ts',
+  '/index.tsx',
+]);
+
+const SOURCE_EXT = /\.(?:[cm]?[jt]sx?)$/i;
+
+function posixRel(value) {
+  return String(value).split(/[/\\]/).join('/');
+}
+
+function specifierRelCandidates(rel) {
+  const base = posixRel(rel);
+  if (SOURCE_EXT.test(base)) return [base];
+  return SPECIFIER_SUFFIXES.map((suffix) => `${base}${suffix}`);
+}
+
+function isOnDiskFile(root, rel) {
+  try {
+    return fs.statSync(path.join(root, rel)).isFile();
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Read tsconfig path aliases via the TypeScript config parser (JSONC + extends).
@@ -86,16 +125,38 @@ function filePathToRel(filePath, root) {
   return relative.split(path.sep).join('/');
 }
 
+/**
+ * Classify a specifier-relative path with the same specificity scorer as ark-check.
+ * Prefer an on-disk candidate; otherwise pick the candidate whose winning
+ * `layerForRelativePath` pattern scores highest (explicit file beats `src/lib/**`).
+ */
 function classifyProbe(root, rel, layers) {
-  let probe = rel;
-  try {
-    if (fs.statSync(path.join(root, rel)).isDirectory()) probe = `${rel}/index.ts`;
-  } catch {
-    /* not on disk */
+  const candidates = specifierRelCandidates(rel);
+  const existing = candidates.find((candidate) => isOnDiskFile(root, candidate));
+  if (existing) {
+    return {
+      relPath: existing,
+      layer: layerForRelativePath(existing, layers),
+      onDisk: true,
+    };
   }
-  return (
-    layerForFile(root, probe, layers) || layerForFile(root, `${rel}/index.ts`, layers)
-  );
+  let bestRel = posixRel(rel);
+  let bestLayer;
+  let bestScore = -1;
+  for (const candidate of candidates) {
+    const layer = layerForRelativePath(candidate, layers);
+    if (!layer) continue;
+    const hit = matchingLayersForRelativePath(candidate, layers).find(
+      (row) => row.layer === layer
+    );
+    const score = hit?.score ?? -1;
+    if (score > bestScore) {
+      bestScore = score;
+      bestLayer = layer;
+      bestRel = candidate;
+    }
+  }
+  return { relPath: bestRel, layer: bestLayer, onDisk: false };
 }
 
 /**
@@ -114,7 +175,7 @@ export function createImportTargetResolver(ts, root, config) {
     if (path.isAbsolute(specifierOrFilePath)) {
       const relPath = filePathToRel(specifierOrFilePath, root);
       if (!relPath) return undefined;
-      return { relPath, layer: classifyProbe(root, relPath, layers) };
+      return classifyProbe(root, relPath, layers);
     }
 
     // Relative or path-alias import
@@ -130,7 +191,7 @@ export function createImportTargetResolver(ts, root, config) {
         tsAliases
       );
       if (!rel) return undefined;
-      return { relPath: rel, layer: classifyProbe(root, rel, layers) };
+      return classifyProbe(root, rel, layers);
     }
 
     // Try as import alias / bare package first
@@ -141,13 +202,13 @@ export function createImportTargetResolver(ts, root, config) {
       tsAliases
     );
     if (asImport) {
-      return { relPath: asImport, layer: classifyProbe(root, asImport, layers) };
+      return classifyProbe(root, asImport, layers);
     }
 
     // Repo-relative source file path (not an import specifier)
     const asFile = filePathToRel(specifierOrFilePath, root);
     if (asFile) {
-      return { relPath: asFile, layer: classifyProbe(root, asFile, layers) };
+      return classifyProbe(root, asFile, layers);
     }
 
     return undefined;
