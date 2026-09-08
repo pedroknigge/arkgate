@@ -126,6 +126,11 @@ violations relative to the file's current on-disk state, so files with pre-exist
 (baselined) violations stay editable — they just can't get worse. New files block on
 every violation.
 
+The hook classifies import targets with the same `layerForRelativePath` specificity as
+`ark-check` (an explicit file pattern beats a broader glob such as `src/lib/**`).
+`LEXICAL_EVIDENCE_INCOMPLETE` means the single-file check is provisional — `ark-check`
+on the tree is the authority. Do not move files solely because the hook named a layer.
+
 ### Opt-in resident hook pilot (Z07)
 
 Set `ARK_RESIDENT_HOOK=1` on both `ark-mcp` and its hook command. The pilot reuses the

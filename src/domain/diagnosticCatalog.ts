@@ -473,8 +473,8 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
     'LEXICAL_EVIDENCE_INCOMPLETE',
     'analysis',
     'Lexical evidence incomplete',
-    'Single-file validation cannot prove project module resolution. The write hook is already the verdict.',
-    'Re-run `npx arkgate-check --root . --config ark.config.json`, or treat the hook deny as final. Do not call ark_prepare_change from a hook deny.'
+    'This check only saw one file, so it cannot fully prove how the import resolves. The result is provisional — `ark-check` on the project is the authority.',
+    'Run `npx arkgate-check --root . --config ark.config.json` to confirm. Do not call ark_prepare_change from a hook deny.'
   ),
   entry(
     'ANALYSIS_COVERS_NO_FILES',

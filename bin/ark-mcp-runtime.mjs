@@ -769,6 +769,10 @@ function runHookPayload(payload, gate, config, args, ts, attemptContext, output 
     ruleId: firstDiagnostic?.ruleId,
     nextAction: firstDiagnostic?.nextAction,
     extraLines: [
+      ...((result.completenessReasons ?? [])
+        .filter((reason) => reason.code === 'LEXICAL_EVIDENCE_INCOMPLETE')
+        .map((reason) => reason.message)
+        .filter(Boolean)),
       ...adapterResult.diagnostics.slice(1).map(
         (diagnostic) =>
           `[${diagnostic.ruleId}] ${diagnostic.message}${diagnostic.location.line ? ` (line ${diagnostic.location.line})` : ''}`

@@ -168,14 +168,15 @@ describe('P1 ANALYSIS_PARSE_INCOMPLETE includes the real TS diagnostic', () => {
 });
 
 describe('P1 LEXICAL hook deny does not send agents to ark_prepare_change MCP', () => {
-  it('snippet-analysis nextAction is CLI / hook-is-verdict', () => {
+  it('snippet-analysis nextAction is CLI / ark-check is authority', () => {
     const src = fs.readFileSync(
       path.resolve('bin/lib/snippet-analysis.mjs'),
       'utf8'
     );
     expect(src).toMatch(/LEXICAL_EVIDENCE_INCOMPLETE/);
+    expect(src).toMatch(/getDiagnosticCatalogEntry|npx arkgate-check/);
     expect(src).toMatch(/Do not call ark_prepare_change from a hook deny/);
-    expect(src).toMatch(/npx arkgate-check/);
+    expect(src).not.toMatch(/write hook is already the verdict/);
   });
 });
 

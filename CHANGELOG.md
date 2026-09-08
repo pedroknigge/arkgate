@@ -31,6 +31,14 @@ in the immutable pre-2.0 archive linked below.
   Required CI is still the shared merge line. No new skill, schema, or host.
 
 ### Fixed
+- Write hook and `ark-check` now agree on overlapping layer globs: the hook
+  probes the same specifier extensions as `ark-check` and classifies with
+  `layerForRelativePath` (explicit `money.ts` beats `src/lib/**`). Field
+  case: Persistence importing `@/lib/finance/money` is allowed when the
+  contract says DomainModel, not denied as ApplicationOrchestration
+  (issue [#237](https://github.com/pedroknigge/arkgate/issues/237)).
+  `LEXICAL_EVIDENCE_INCOMPLETE` no longer calls the hook the final verdict —
+  `ark-check` is the authority. No new schema, flag, or skill.
 - An `include` that matches files but classifies none of them no longer prints
   a green check. `ANALYSIS_COVERS_NO_FILES` already said include **and** layer;
   the refusal now counts classified files, not only the include walk. The write

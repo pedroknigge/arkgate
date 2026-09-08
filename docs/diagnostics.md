@@ -599,8 +599,8 @@ Haken slaving: few slow keys (ξ) determine derived fast state. Field ingest nev
 
 **Lexical evidence incomplete**
 
-- **Why:** Single-file validation cannot prove project module resolution. The write hook is already the verdict.
-- **Fix:** Re-run `npx arkgate-check --root . --config ark.config.json`, or treat the hook deny as final. Do not call `ark_prepare_change` from a hook deny.
+- **Why:** This check only saw one file, so it cannot fully prove how the import resolves. The result is provisional — `ark-check` on the project is the authority.
+- **Fix:** Run `npx arkgate-check --root . --config ark.config.json` to confirm. Do not call `ark_prepare_change` from a hook deny.
 
 <a id="ANALYSIS_COVERS_NO_FILES"></a>
 

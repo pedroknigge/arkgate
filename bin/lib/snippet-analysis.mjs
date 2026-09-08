@@ -2,6 +2,19 @@
 import { layerForRelativePath } from '../ark-layer-match.mjs';
 import { ANALYSIS_COMPLETENESS } from './analysis-completeness.mjs';
 import { evaluateArkRunEditorSensorsFromSource } from './ark-run-sensors.mjs';
+import { getDiagnosticCatalogEntry } from './diagnostic-catalog.mjs';
+
+function lexicalEvidenceIncompleteMessage(file) {
+  const entry = getDiagnosticCatalogEntry('LEXICAL_EVIDENCE_INCOMPLETE');
+  const text = [entry?.why, entry?.fix].filter(Boolean).join(' ');
+  return {
+    code: 'LEXICAL_EVIDENCE_INCOMPLETE',
+    message:
+      text ||
+      'This check only saw one file, so it cannot fully prove how the import resolves. The result is provisional — `ark-check` on the project is the authority. Run `npx arkgate-check --root . --config ark.config.json` to confirm. Do not call ark_prepare_change from a hook deny.',
+    ...(file ? { file } : {}),
+  };
+}
 
 export function flattenTsParseDiagnostics(ts, diagnostics, sourceFile) {
   if (!Array.isArray(diagnostics) || !ts) return [];
@@ -156,14 +169,7 @@ export function validateSnippetAnalysis({ gate, ts, source, context = {} }) {
       valid: false,
       lexicalValid: base.valid,
       completeness: ANALYSIS_COMPLETENESS.partial,
-      completenessReasons: [
-        {
-          code: 'LEXICAL_EVIDENCE_INCOMPLETE',
-          message:
-            'Single-file validation cannot prove project module resolution. The write hook is already the verdict, or re-run `npx arkgate-check --root . --config ark.config.json`. Do not call ark_prepare_change from a hook deny.',
-          ...(file ? { file } : {}),
-        },
-      ],
+      completenessReasons: [lexicalEvidenceIncompleteMessage(file)],
     };
   } catch {
     return {
