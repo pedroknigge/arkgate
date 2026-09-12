@@ -97,6 +97,70 @@ describe('team parliament I/O', () => {
     expect(halted.teamParliament).toMatchObject({ reasonId: 'local-needs-base', deny: false });
   });
 
+  it('LC01 --local with a base reuses --changed (cheap, teamBase, bad/invalid ref)', () => {
+    const root = mkRepo();
+    const cheap = runTeamPreflight({
+      root,
+      args: { local: true, changed: true, against: 'HEAD' },
+      config: {},
+      policyDelta: null,
+      teamBase: undefined,
+    });
+    expect(cheap.halt?.exitCode).toBe(0);
+    expect(cheap.halt?.cheap).toBe(true);
+    expect(cheap.teamParliament?.reasonId).not.toBe('local-needs-base');
+
+    const viaTeamBase = runTeamPreflight({
+      root,
+      args: { local: true, changed: true },
+      config: {},
+      policyDelta: null,
+      teamBase: 'HEAD',
+    });
+    expect(viaTeamBase.halt?.cheap).toBe(true);
+    expect(viaTeamBase.teamParliament?.baseRef).toBe('HEAD');
+
+    const unresolved = runTeamPreflight({
+      root,
+      args: { local: true, changed: true, against: 'definitely-not-a-ref' },
+      config: {},
+      policyDelta: null,
+      teamBase: undefined,
+    });
+    expect(unresolved.halt?.exitCode).toBe(2);
+    expect(unresolved.teamParliament?.changedPathError).toMatch(/Cannot resolve git ref/);
+
+    const invalid = runTeamPreflight({
+      root,
+      args: { local: true, changed: true, against: '../escape' },
+      config: {},
+      policyDelta: null,
+      teamBase: undefined,
+    });
+    expect(invalid.halt?.exitCode).toBe(2);
+    expect(invalid.teamParliament?.changedPathError).toMatch(/Invalid or missing git base ref/);
+
+    const bound = bindTeamBaseRefs({ local: true, changed: true, base: 'HEAD' }, root);
+    expect(bound.teamBase).toBe('HEAD');
+    expect(bound.args.against).toBe('HEAD');
+    expect(bound.args.policyBaseRef).toBe('HEAD');
+
+    expect(teamCheckRequested({ contractDiff: true }, {})).toBe(true);
+    expect(teamCheckRequested({ against: 'HEAD' }, {})).toBe(true);
+    expect(teamCheckRequested({ persona: 'contributor' }, {})).toBe(true);
+    expect(teamCheckRequested({ contractSession: true }, {})).toBe(true);
+
+    const noLocalNoBase = runTeamPreflight({
+      root,
+      args: { updateBaseline: true },
+      config: {},
+      policyDelta: null,
+      teamBase: undefined,
+    });
+    expect(noLocalNoBase.halt).toBeNull();
+    expect(noLocalNoBase.teamParliament?.baseRef).toBeUndefined();
+  });
+
   it('does not treat plain --strict-merge as an explicit policy-base ref', () => {
     const root = mkRepo();
     const { args, teamBase } = bindTeamBaseRefs({ strictMerge: true }, root);
