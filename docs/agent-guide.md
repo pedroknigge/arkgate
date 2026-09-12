@@ -332,7 +332,8 @@ Filter: **Contener · Guiar · Ordenar** — contain the write, guide the next s
 
 **Team parliament:** adopt is a **contract session** (law-only). Feature work must not edit
 `ark.config.json` / `arkrules/*` / `.ark-baseline.json`. Prefer
-`ark-check --changed --base <merge-ref>` in local gates. `--contract-diff` + `--author`
+`ark-check --local --base <merge-ref>` (or `--changed --base`) in local gates.
+`--strict-merge` stays the CI merge line. `--contract-diff` + `--author`
 when `stewards` is set (`--author` is a GitHub handle or email, not git `user.name`).
 `ark status --vs <ref>` prints pin / contract / baseline drift.
 

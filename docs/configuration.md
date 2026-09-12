@@ -487,6 +487,7 @@ type than product source:
 
 | Check | What it does |
 |-------|----------------|
+| `ark-check --local --base origin/dev` | Opt-in local / multi-worktree cheap check. Same engine as `--changed`. Refused with `--strict-merge`. `ARK_CHECK_LOCAL=1` is the same unless CI or a full-tree report mode is on. |
 | `ark-check --changed --base origin/dev` | Layer check on touched sources only. A CSS/i18n PR pays almost nothing. |
 | `ark-check --against origin/dev` | New violation keys vs **that ref's** baseline (not only HEAD). |
 | `ark-check --contract-diff --base origin/dev` | Classifies tighten / loosen / reclassify / baseline-grow. |
@@ -495,8 +496,10 @@ type than product source:
 | `ark status --vs origin/dev` | One line: pin / contract / baseline drift vs that ref. |
 
 Write-gate ApplyPatch denies a batch that mixes law files with product source. Humans who
-never hit PreToolUse are unchanged. Local `pnpm` gates should call `--changed --base`, not
-only full-tree `--strict-merge`.
+never hit PreToolUse are unchanged. Local `pnpm` gates should call `--local --base` or
+`--changed --base`, not only full-tree `--strict-merge`. Write hooks stay on the lexical
+snippet path — they do not run a full-tree check. Analysis is per `--root` (each git
+worktree has its own root); there is no machine-wide analysis lock.
 
 `--changed` resolves the touched sources plus their import closure — not the whole
 include tree. File-local ArkRules sensors (class shape, orchestration-only, thin-adapter,

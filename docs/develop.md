@@ -166,6 +166,7 @@ npx arkgate agents-md --write       # embed/refresh projection markers
 npx arkgate preflight --changes changes.json --json
 npx arkgate upgrade --json          # managed content preview
 npx arkgate upgrade --apply
+npx arkgate-check --local --base origin/dev
 npx arkgate-check --changed --base origin/dev
 npx arkgate-check --against origin/dev
 npx arkgate status --vs origin/dev

@@ -14,7 +14,55 @@ export function resolveDesignDeltaBaseRef(root, explicit, env = process.env) {
   return discoverLocalBaseRef(root) || undefined;
 }
 
-export function parseArgs(argv) {
+/** Opt-in local / multi-worktree cheap check. Ignored values: empty, 0, false, no, off. */
+export function envFlagOn(value) {
+  return /^(1|true|yes)$/i.test(String(value ?? '').trim());
+}
+
+export const LOCAL_STRICT_MERGE_MESSAGE =
+  '--local cannot be combined with --strict-merge: CI stays the full fail-closed check. Use --local (or ARK_CHECK_LOCAL=1) only on the local / pre-push path.';
+
+export const LOCAL_TREE_MODE_MESSAGE =
+  '--local cannot be combined with report modes that need the whole tree (--doctor, --coverage, --plan, --report, --promote). Use --local --base <ref> for the cheap local check.';
+
+export function localCheckEnvelope(args, root) {
+  if (!args?.local) return {};
+  return {
+    local: true,
+    scope: 'changed',
+    analysisRoot: path.resolve(root),
+  };
+}
+
+/**
+ * `--local` / `ARK_CHECK_LOCAL=1` reuse `--changed`. Env is ignored under
+ * `--strict-merge` and under full-tree report modes so CI / doctor stay whole-tree.
+ */
+export function applyLocalCheckMode(args, env = process.env) {
+  const explicit = args.local === true;
+  const fromEnv = envFlagOn(env.ARK_CHECK_LOCAL);
+  if (!explicit && !fromEnv) return args;
+  const treeModes = [
+    args.doctor && '--doctor',
+    args.coverage && '--coverage',
+    args.plan && '--plan',
+    args.report && '--report',
+    args.promote && '--promote',
+  ].filter(Boolean);
+  if (args.strictMerge) {
+    if (explicit) throw new Error(LOCAL_STRICT_MERGE_MESSAGE);
+    return args;
+  }
+  if (treeModes.length > 0) {
+    if (explicit) throw new Error(LOCAL_TREE_MODE_MESSAGE);
+    return args;
+  }
+  args.local = true;
+  args.changed = true;
+  return args;
+}
+
+export function parseArgs(argv, env = process.env) {
   const args = {
     root: process.cwd(),
     config: 'ark.config.json',
@@ -39,6 +87,7 @@ export function parseArgs(argv) {
     contractSession: false,
     contractDiff: false,
     changed: false,
+    local: false,
     against: undefined,
     base: undefined,
     persona: undefined,
@@ -180,6 +229,7 @@ export function parseArgs(argv) {
     else if (arg === '--contract-session') args.contractSession = true;
     else if (arg === '--contract-diff') args.contractDiff = true;
     else if (arg === '--changed') args.changed = true;
+    else if (arg === '--local') args.local = true;
     else if (arg === '--against') args.against = requireValue(arg, i++);
     else if (arg === '--base') args.base = requireValue(arg, i++);
     else if (arg === '--persona') args.persona = requireValue(arg, i++);
@@ -238,5 +288,5 @@ export function parseArgs(argv) {
       );
     }
   }
-  return args;
+  return applyLocalCheckMode(args, env);
 }

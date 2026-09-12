@@ -19,6 +19,7 @@ import {
   readJsonMaybe,
   resolveTeamAuthor,
   safeGitRef,
+  runTeamPreflight,
   teamCheckRequested,
   teamStewardsFromConfig,
   ungovernedDumpMessage,
@@ -81,6 +82,139 @@ describe('team parliament I/O', () => {
     expect(teamCheckRequested({ strictMerge: true }, { stewards: ['pedroknigge'] })).toBe(true);
     expect(teamCheckRequested({ changed: true }, {})).toBe(true);
     expect(teamCheckRequested({ updateBaseline: true }, {})).toBe(true);
+  });
+
+  it('LC01 --local without a resolvable base exits 2 (local-needs-base)', () => {
+    const halted = runTeamPreflight({
+      root: '/tmp',
+      args: { local: true, changed: true },
+      config: {},
+      policyDelta: null,
+      teamBase: undefined,
+    });
+    expect(halted.halt?.exitCode).toBe(2);
+    expect(halted.halt?.message).toMatch(/--local needs a git merge base/);
+    expect(halted.teamParliament).toMatchObject({ reasonId: 'local-needs-base', deny: false });
+  });
+
+  it('LC01 --local with a base reuses --changed (cheap, teamBase, bad/invalid ref)', () => {
+    const root = mkRepo();
+    const cheap = runTeamPreflight({
+      root,
+      args: { local: true, changed: true, against: 'HEAD' },
+      config: {},
+      policyDelta: null,
+      teamBase: undefined,
+    });
+    expect(cheap.halt?.exitCode).toBe(0);
+    expect(cheap.halt?.cheap).toBe(true);
+    expect(cheap.teamParliament?.reasonId).not.toBe('local-needs-base');
+
+    const viaTeamBase = runTeamPreflight({
+      root,
+      args: { local: true, changed: true },
+      config: {},
+      policyDelta: null,
+      teamBase: 'HEAD',
+    });
+    expect(viaTeamBase.halt?.cheap).toBe(true);
+    expect(viaTeamBase.teamParliament?.baseRef).toBe('HEAD');
+
+    const unresolved = runTeamPreflight({
+      root,
+      args: { local: true, changed: true, against: 'definitely-not-a-ref' },
+      config: {},
+      policyDelta: null,
+      teamBase: undefined,
+    });
+    expect(unresolved.halt?.exitCode).toBe(2);
+    expect(unresolved.teamParliament?.changedPathError).toMatch(/Cannot resolve git ref/);
+
+    const invalid = runTeamPreflight({
+      root,
+      args: { local: true, changed: true, against: '../escape' },
+      config: {},
+      policyDelta: null,
+      teamBase: undefined,
+    });
+    expect(invalid.halt?.exitCode).toBe(2);
+    expect(invalid.teamParliament?.changedPathError).toMatch(/Invalid or missing git base ref/);
+
+    const bound = bindTeamBaseRefs({ local: true, changed: true, base: 'HEAD' }, root);
+    expect(bound.teamBase).toBe('HEAD');
+    expect(bound.args.against).toBe('HEAD');
+    expect(bound.args.policyBaseRef).toBe('HEAD');
+
+    expect(teamCheckRequested({ contractDiff: true }, {})).toBe(true);
+    expect(teamCheckRequested({ against: 'HEAD' }, {})).toBe(true);
+    expect(teamCheckRequested({ persona: 'contributor' }, {})).toBe(true);
+    expect(teamCheckRequested({ contractSession: true }, {})).toBe(true);
+
+    const noLocalNoBase = runTeamPreflight({
+      root,
+      args: { updateBaseline: true },
+      config: {},
+      policyDelta: null,
+      teamBase: undefined,
+    });
+    expect(noLocalNoBase.halt).toBeNull();
+    expect(noLocalNoBase.teamParliament?.baseRef).toBeUndefined();
+  });
+
+  it('runTeamPreflight covers skip, weakening, dirty local, and mixed-law deny', () => {
+    const skipped = runTeamPreflight({
+      root: '/tmp',
+      args: {},
+      config: {},
+      policyDelta: null,
+      teamBase: null,
+    });
+    expect(skipped.halt).toBeNull();
+    expect(skipped.teamParliament).toBeNull();
+
+    const weakened = runTeamPreflight({
+      root: '/tmp',
+      args: { changed: true },
+      config: {},
+      policyDelta: { classification: 'weakening' },
+      teamBase: 'HEAD',
+    });
+    expect(weakened.halt?.exitCode).toBe(1);
+    expect(weakened.teamParliament).toMatchObject({ reasonId: 'steward-only-loosen' });
+
+    const judged = runTeamPreflight({
+      root: '/tmp',
+      args: { changed: true },
+      config: {},
+      policyDelta: { classification: 'judgment-required' },
+      teamBase: 'HEAD',
+    });
+    expect(judged.halt?.exitCode).toBe(1);
+    expect(judged.teamParliament).toMatchObject({ reasonId: 'steward-only-loosen' });
+
+    const root = mkRepo();
+    fs.mkdirSync(path.join(root, 'src'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src/app.ts'), 'export const app = 1;\n');
+    const dirty = runTeamPreflight({
+      root,
+      args: { local: true, changed: true, against: 'HEAD' },
+      config: {},
+      policyDelta: { classification: 'additive' },
+      teamBase: 'HEAD',
+    });
+    expect(dirty.halt).toBeNull();
+    expect(dirty.changedPaths.some((p) => p.endsWith('src/app.ts') || p === 'src/app.ts')).toBe(true);
+
+    fs.writeFileSync(path.join(root, '.ark-baseline.json'), '{}\n');
+    const mixed = runTeamPreflight({
+      root,
+      args: { local: true, changed: true, against: 'HEAD', baseline: '.ark-baseline.json' },
+      config: {},
+      policyDelta: { classification: 'additive' },
+      teamBase: 'HEAD',
+    });
+    expect(mixed.halt?.exitCode).toBe(1);
+    expect(mixed.teamParliament).toMatchObject({ reasonId: 'mixed-law-and-product' });
   });
 
   it('does not treat plain --strict-merge as an explicit policy-base ref', () => {
