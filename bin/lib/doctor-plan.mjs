@@ -19,6 +19,7 @@ import { collectLayerOwnerResidual, layerGuidanceLine, placementDescriptionField
 import { collectAdrPresenceResidual, printAdrPresenceHint } from './adr-presence.mjs';
 import { collectStatesTransitionsResidual } from './states-transitions-presence.mjs';
 import { collectStatusTransitionCatalogResidual } from './status-transition-catalog.mjs';
+import { collectNoDomainFrontendResidual } from './no-domain-frontend.mjs';
 export { printAdrPresenceHint };
 export { printDoctorCompactHuman, printDoctorDetailsHuman };
 export { summarizeRulesUnderContract };
@@ -647,12 +648,8 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     demanded: options.requireGates === true || adopted === 'required-merge',
   });
   const statesTransitions = collectStatesTransitionsResidual({ root });
-  const statusTransitionCatalog = collectStatusTransitionCatalogResidual({
-    root,
-    config,
-    files,
-    statesTransitions,
-  });
+  const statusTransitionCatalog = collectStatusTransitionCatalogResidual({ root, config, files, statesTransitions });
+  const noDomainFrontend = collectNoDomainFrontendResidual({ config, coverage: cov, designSmells });
   const { coverageHonesty, baselineHonesty, writePathHonesty, productHonesty } =
     computeDoctorEnforcementHonesty({
       governedPercent: cov.governed.percent,
@@ -785,7 +782,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
             ...(layerOwners ? { layerOwners } : {}),
             ...(adrPresence ? { adrPresence } : {}),
             ...(statesTransitions ? { statesTransitions } : {}),
-            ...(statusTransitionCatalog ? { statusTransitionCatalog } : {}),
+            ...(statusTransitionCatalog ? { statusTransitionCatalog } : {}), ...(noDomainFrontend ? { noDomainFrontend } : {}),
             emptyLayers: cov.emptyLayers,
             layersWithoutRules: cov.layersWithoutRules,
             ungovernedDirs: cov.suggestions.length,
@@ -930,7 +927,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     layerOwners,
     adrPresence,
     statesTransitions,
-    statusTransitionCatalog,
+    statusTransitionCatalog, noDomainFrontend,
   });
   const humanView = {
     root,
@@ -940,7 +937,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     layerOwners,
     adrPresence,
     statesTransitions,
-    statusTransitionCatalog,
+    statusTransitionCatalog, noDomainFrontend,
     operatingMode,
     designFitness,
     adopted,

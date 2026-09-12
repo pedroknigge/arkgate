@@ -16,6 +16,8 @@ imports, one small change at a time. Skills never enforce — CLI / hooks / CI d
 
 1. Read `arkgate-check --doctor` (do #1).
 2. Fix import-rule debt; if leftover design remains, apply **one** small refactor.
+   When doctor JSON has `noDomainFrontend`, that refactor is one pure rule into
+   Domain — not another UI helper. Soft. Silent when Domain already has files.
 3. Re-run doctor. Never weaken `ark.config.json`.
 
 **This is the apply door.** Invoking it **is** the approval. Run `arkgate-check --doctor` for the next step.

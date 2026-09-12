@@ -570,6 +570,18 @@ describe('LD05 layer description skill deepen (no /ark-describe)', () => {
     expect(explore).toMatch(/No `?\/ark-states`/);
   });
 
+  it('ark-explore, ark-place, and ark-adopt point at noDomainFrontend without a new skill', () => {
+    const explore = readSkill('ark-explore');
+    expect(explore).toContain('noDomainFrontend');
+    expect(explore).toMatch(/No `?\/ark-domain`/);
+    const place = readSkill('ark-place');
+    expect(place).toContain('noDomainFrontend');
+    expect(place).toMatch(/Domain rule/);
+    const adopt = readSkill('ark-adopt');
+    expect(adopt).toContain('noDomainFrontend');
+    expect(adopt).toMatch(/empty Domain house/);
+  });
+
   it('ark-place prints owners next to layer name and globs when present', () => {
     const body = readSkill('ark-place');
     expect(body).toContain('## Layer owners (process)');

@@ -26,6 +26,9 @@ right house. Skills never enforce — CLI / hooks / CI do.
   (`CONFIG_UNCLASSIFIED_FILES`). Place it in a layer folder, or send include/layer
   drift to `/ark-adopt`. Do not write into a loose include gap.
 - Do not default a repository to Presentation.
+- When doctor JSON has `noDomainFrontend`, the new file is a Domain rule — not
+  another UI helper. Soft. Silent when Domain already has files or there is no
+  frontend. No `/ark-domain`.
 - When the matched layer has `layers[].description`, print that caption next to the
   layer name and globs. Omit when absent — do not invent a caption or `/ark-describe`.
 - When the matched layer has `layers[].trustBoundary`, print `trust: <tag>` next
