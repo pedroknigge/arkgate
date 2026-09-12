@@ -166,9 +166,53 @@ function collectInlineFieldUnions(text) {
   return found;
 }
 
+function isIdentBoundary(text, index) {
+  if (index < 0 || index >= text.length) return true;
+  return !/[A-Za-z0-9_-]/.test(text[index]);
+}
+
+function collectUnquotedTransitions(text, allowed) {
+  const pairs = [];
+  const arrows = [' → ', ' -> ', '→', '->'];
+  const states = [...allowed].sort((a, b) => b.length - a.length);
+  for (const fromState of states) {
+    let from = 0;
+    while (from < text.length) {
+      const idx = text.indexOf(fromState, from);
+      if (idx < 0) break;
+      if (!isIdentBoundary(text, idx - 1) || !isIdentBoundary(text, idx + fromState.length)) {
+        from = idx + fromState.length;
+        continue;
+      }
+      let rest = idx + fromState.length;
+      while (rest < text.length && /\s/.test(text[rest])) rest += 1;
+      let matched = null;
+      for (const arrow of arrows) {
+        if (text.startsWith(arrow, rest)) {
+          matched = arrow;
+          break;
+        }
+      }
+      if (!matched) {
+        from = idx + fromState.length;
+        continue;
+      }
+      rest += matched.length;
+      while (rest < text.length && /\s/.test(text[rest])) rest += 1;
+      const toState = states.find(
+        (candidate) =>
+          text.startsWith(candidate, rest) && isIdentBoundary(text, rest + candidate.length)
+      );
+      if (toState && toState !== fromState) pairs.push(`${fromState} → ${toState}`);
+      from = idx + fromState.length;
+    }
+  }
+  return unique(pairs);
+}
+
 function collectQuotedTransitions(text, allowed) {
   if (allowed.size === 0) return [];
-  const pairs = [];
+  const pairs = collectUnquotedTransitions(text, allowed);
   const arrows = [' → ', ' -> ', '→', '->'];
   for (const quote of ["'", '"']) {
     let from = 0;
