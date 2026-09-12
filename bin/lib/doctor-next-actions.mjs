@@ -48,7 +48,9 @@ export function collectDoctorNextActions(ctx) {
   if (ctx.adrPresence?.missing && ctx.adrPresence.nextAction) {
     actions.push(ctx.adrPresence.nextAction);
   }
-  if (ctx.statesTransitions?.nextAction) {
+  if (ctx.statusTransitionCatalog?.nextAction) {
+    actions.push(ctx.statusTransitionCatalog.nextAction);
+  } else if (ctx.statesTransitions?.nextAction) {
     actions.push(ctx.statesTransitions.nextAction);
   }
   if (!ctx.analysisComplete) actions.push('restore complete analysis, then rerun ark-check --doctor');

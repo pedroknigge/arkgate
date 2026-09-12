@@ -25,9 +25,11 @@ one bounded decision needs 2–3 enforceable options.
 - When `--require-gates` / adopted-strict is on and doctor JSON has `adrPresence`,
   the next step is a short note under `docs/adr/` (or `docs/decisions/`). Soft.
   Not every change. Off when require-gates is off. No `/ark-adr`.
-- When doctor JSON has `statesTransitions`, the next step is a short
-  states → transitions table (or one link) on the domain doc already in play.
-  Soft. Silent when that doc is absent. No `/ark-states`. Do not invent states.
+- When doctor JSON has `statesTransitions` or `statusTransitionCatalog`, the
+  next step is a short states → transitions table (or one link) on the domain
+  doc already in play. Use catalog names when present. Soft. Silent when that
+  doc is absent or Domain has no status vocabulary. No `/ark-states`. Do not
+  invent states.
 - Distinguish **missing** skills vs **stale** catalog. Installed ≠ stale.
 - Hook green is not tree green (scripted edits bypass PreToolUse).
 - Bug / false green / false red / missing doc / improvable behavior **in ArkGate itself** → draft one upstream GitHub issue (`pedroknigge/arkgate` or the installed package `repository.url`), **ask the human to confirm send**, then `gh issue create`. Never auto-file. Never file ArkGate defects on the consumer product repo.
