@@ -39,6 +39,10 @@ has honest houses. Skills never enforce — CLI / hooks / CI do.
   required GitHub check) and there is no `docs/adr/` (or `docs/decisions/`),
   leave a short decision note there — only if they loosen a rule or add a real
   gate. Not every change. Doctor residual is soft. No `/ark-adr`.
+- When a product-domain doc is already in play (`docs/domain.md` or a sibling)
+  and doctor JSON has `statesTransitions`, add a short states → transitions
+  table (or one link) there. Names from the code. No flag soup. Soft residual.
+  Silent when that doc is absent. No `/ark-states`.
 - CLI-first: if `arkgate-check` already resolved the root, do not wait on MCP.
 - Do not add `arkRun` or `arkOrder` unless the user wants that extra. When they do, write
   **advisory** extra in this turn (`arkRun` schema `1.2+`; `arkOrder` schema `1.3+`).
@@ -146,6 +150,16 @@ under `docs/adr/` or `docs/decisions/`. Write a note when you loosen a rule or
 add a real gate — not on every file. Absence is silent unless that demand is
 on. The hint does not fail the check. Do **not** invent `/ark-adr`. Policy
 weaken still uses `--policy-ack`; this is only a place to write the why.
+
+## States and transitions (process)
+
+When a product-domain / domain-model doc is already on disk (`docs/domain.md`,
+`docs/data-model.md`, or a dedicated `docs/states.md`) and there is no short
+states → transitions table (or one link), doctor may ask for one. Write the
+table on that home — entity · states · allowed from → to. Names from the
+code or the captain. Do **not** invent states or flag soup. Absence of the
+domain doc stays silent. The hint does not fail the check. Do **not** invent
+`/ark-states`. Do not walk the tree to invent a roster.
 
 ## When / not when
 
@@ -363,6 +377,7 @@ proposals applied or deferred, **phase**, **top Shape / design-weak opportunitie
 - Invent `layers[].trustBoundary` tags or a `/ark-trust` skill.
 - Invent `layers[].owners` names or a `/ark-owners` skill.
 - Invent `/ark-adr` or require a decision note on every change.
+- Invent `/ark-states` or invent entity states / flag soup.
 - Claim Enforce while governed% is low, cores empty with I/O in Application, or core bags ungoverned.
 - End adopt with only “baseline written” when design-weak residual is visible in files you opened.
 

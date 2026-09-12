@@ -558,6 +558,17 @@ describe('LD05 layer description skill deepen (no /ark-describe)', () => {
     expect(body).toMatch(/No `?\/ark-adr`|Do \*\*not\*\* invent `\/ark-adr`/);
   });
 
+  it('ark-adopt and ark-explore point at a states/transitions table without a new skill', () => {
+    const adopt = readSkill('ark-adopt');
+    expect(adopt).toContain('## States and transitions (process)');
+    expect(adopt).toContain('docs/domain.md');
+    expect(adopt).toMatch(/flag soup/i);
+    expect(adopt).toMatch(/No `?\/ark-states`|Do \*\*not\*\* invent `\/ark-states`/);
+    const explore = readSkill('ark-explore');
+    expect(explore).toContain('statesTransitions');
+    expect(explore).toMatch(/No `?\/ark-states`/);
+  });
+
   it('ark-place prints owners next to layer name and globs when present', () => {
     const body = readSkill('ark-place');
     expect(body).toContain('## Layer owners (process)');

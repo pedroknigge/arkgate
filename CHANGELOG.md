@@ -6,6 +6,10 @@ in the immutable pre-2.0 archive linked below.
 ## Unreleased
 
 ### Added
+- Doctor residual when a product-domain doc is already in play
+  (`docs/domain.md` or a sibling) and there is no states → transitions table
+  (or one link) yet. Friendly next step. Not a fail. Silent when that doc is
+  absent. No new skill, schema, or status-field sensor.
 - Soft ADR / decision-note presence when `--require-gates` (or
   `--strict` / `--strict-merge` / doctor adopted-strict) is on and the tree
   has no `docs/adr/` or `docs/decisions/` note yet. Doctor residual + a

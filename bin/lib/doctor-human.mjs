@@ -171,7 +171,12 @@ export function printDoctorCompactHuman(view) {
   }
 
   printCompactExtraDoctorLines(
-    { ...doctorAdvisories, layerOwners: view.layerOwners, adrPresence: view.adrPresence },
+    {
+      ...doctorAdvisories,
+      layerOwners: view.layerOwners,
+      adrPresence: view.adrPresence,
+      statesTransitions: view.statesTransitions,
+    },
     { line, warn }
   );
 
