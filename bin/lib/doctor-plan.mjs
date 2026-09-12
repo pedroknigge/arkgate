@@ -18,6 +18,7 @@ import { printDoctorCompactHuman, printDoctorDetailsHuman } from './doctor-human
 import { collectLayerOwnerResidual, layerGuidanceLine, placementDescriptionFields } from './layer-description.mjs';
 import { collectAdrPresenceResidual, printAdrPresenceHint } from './adr-presence.mjs';
 import { collectStatesTransitionsResidual } from './states-transitions-presence.mjs';
+import { collectStatusTransitionCatalogResidual } from './status-transition-catalog.mjs';
 export { printAdrPresenceHint };
 export { printDoctorCompactHuman, printDoctorDetailsHuman };
 export { summarizeRulesUnderContract };
@@ -646,6 +647,12 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     demanded: options.requireGates === true || adopted === 'required-merge',
   });
   const statesTransitions = collectStatesTransitionsResidual({ root });
+  const statusTransitionCatalog = collectStatusTransitionCatalogResidual({
+    root,
+    config,
+    files,
+    statesTransitions,
+  });
   const { coverageHonesty, baselineHonesty, writePathHonesty, productHonesty } =
     computeDoctorEnforcementHonesty({
       governedPercent: cov.governed.percent,
@@ -778,6 +785,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
             ...(layerOwners ? { layerOwners } : {}),
             ...(adrPresence ? { adrPresence } : {}),
             ...(statesTransitions ? { statesTransitions } : {}),
+            ...(statusTransitionCatalog ? { statusTransitionCatalog } : {}),
             emptyLayers: cov.emptyLayers,
             layersWithoutRules: cov.layersWithoutRules,
             ungovernedDirs: cov.suggestions.length,
@@ -922,6 +930,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     layerOwners,
     adrPresence,
     statesTransitions,
+    statusTransitionCatalog,
   });
   const humanView = {
     root,
@@ -931,6 +940,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     layerOwners,
     adrPresence,
     statesTransitions,
+    statusTransitionCatalog,
     operatingMode,
     designFitness,
     adopted,

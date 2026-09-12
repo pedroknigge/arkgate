@@ -6,6 +6,12 @@ in the immutable pre-2.0 archive linked below.
 ## Unreleased
 
 ### Added
+- Narrow opt-in status/transition catalog: when Domain-role code already
+  names a closed status/state vocabulary and a domain doc is in play without
+  a table (or one link), doctor JSON may add `statusTransitionCatalog` with
+  those names. Friendly next step. Not a fail. Silent when Domain has no
+  status vocabulary, or the domain doc is absent, or the map is already
+  present. No new skill, schema, or config key.
 - Doctor residual when a product-domain doc is already in play
   (`docs/domain.md` or a sibling) and there is no states → transitions table
   (or one link) yet. Friendly next step. Not a fail. Silent when that doc is

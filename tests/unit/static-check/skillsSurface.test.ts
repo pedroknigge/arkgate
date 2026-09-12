@@ -566,6 +566,7 @@ describe('LD05 layer description skill deepen (no /ark-describe)', () => {
     expect(adopt).toMatch(/No `?\/ark-states`|Do \*\*not\*\* invent `\/ark-states`/);
     const explore = readSkill('ark-explore');
     expect(explore).toContain('statesTransitions');
+    expect(explore).toContain('statusTransitionCatalog');
     expect(explore).toMatch(/No `?\/ark-states`/);
   });
 

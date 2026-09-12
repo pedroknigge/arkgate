@@ -176,6 +176,7 @@ export function printDoctorCompactHuman(view) {
       layerOwners: view.layerOwners,
       adrPresence: view.adrPresence,
       statesTransitions: view.statesTransitions,
+      statusTransitionCatalog: view.statusTransitionCatalog,
     },
     { line, warn }
   );
