@@ -17,6 +17,7 @@ import { collectDoctorNextActions } from './doctor-next-actions.mjs';
 import { printDoctorCompactHuman, printDoctorDetailsHuman } from './doctor-human.mjs';
 import { collectLayerOwnerResidual, layerGuidanceLine, placementDescriptionFields } from './layer-description.mjs';
 import { collectAdrPresenceResidual, printAdrPresenceHint } from './adr-presence.mjs';
+import { collectStatesTransitionsResidual } from './states-transitions-presence.mjs';
 export { printAdrPresenceHint };
 export { printDoctorCompactHuman, printDoctorDetailsHuman };
 export { summarizeRulesUnderContract };
@@ -644,6 +645,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     root,
     demanded: options.requireGates === true || adopted === 'required-merge',
   });
+  const statesTransitions = collectStatesTransitionsResidual({ root });
   const { coverageHonesty, baselineHonesty, writePathHonesty, productHonesty } =
     computeDoctorEnforcementHonesty({
       governedPercent: cov.governed.percent,
@@ -775,6 +777,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
             layers: cov.layers,
             ...(layerOwners ? { layerOwners } : {}),
             ...(adrPresence ? { adrPresence } : {}),
+            ...(statesTransitions ? { statesTransitions } : {}),
             emptyLayers: cov.emptyLayers,
             layersWithoutRules: cov.layersWithoutRules,
             ungovernedDirs: cov.suggestions.length,
@@ -918,6 +921,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     stewardNudge: doctorAdvisories.stewardNudge,
     layerOwners,
     adrPresence,
+    statesTransitions,
   });
   const humanView = {
     root,
@@ -926,6 +930,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     doctorAdvisories,
     layerOwners,
     adrPresence,
+    statesTransitions,
     operatingMode,
     designFitness,
     adopted,

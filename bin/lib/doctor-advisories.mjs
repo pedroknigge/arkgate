@@ -108,6 +108,12 @@ export function printCompactExtraDoctorLines(advisories, io) {
     io.line(io.warn, adr.ask);
     if (adr.nextAction) io.line(' ', `Next: ${adr.nextAction}`);
   }
+  const states = advisories?.statesTransitions;
+  if (states?.ask) {
+    console.log('');
+    io.line(io.warn, states.ask);
+    if (states.nextAction) io.line(' ', `Next: ${states.nextAction}`);
+  }
   const rulesUnderContract = advisories?.rulesUnderContract;
   const arkRulesLines = formatArkRulesDoctorLines(rulesUnderContract);
   if (arkRulesLines.length > 0) {
