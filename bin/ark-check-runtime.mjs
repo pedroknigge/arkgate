@@ -1387,8 +1387,7 @@ async function main() {
         JSON.stringify(
           {
             ok: preflight.halt.exitCode === 0,
-            ...(preflight.halt.cheap ? { cheap: true } : {}),
-            ...localCheckEnvelope(args, root),
+            ...(preflight.halt.cheap ? { cheap: true } : {}), ...localCheckEnvelope(args, root),
             teamParliament: preflight.halt.teamParliament,
             ...(policyDelta ? { policyDelta } : {}),
           },
@@ -1398,11 +1397,6 @@ async function main() {
       );
     } else if (preflight.halt.exitCode === 0) {
       console.log('✔ Ark check passed (no governed source or constitution files in the diff).');
-      if (args.local) {
-        console.log(
-          color.dim('Local check (touched files + import closure). Merge still uses --strict-merge.')
-        );
-      }
     } else {
       console.error(preflight.halt.message);
       const blocking = policyDelta?.findings?.find(
@@ -1958,8 +1952,7 @@ async function main() {
     });
     console.log(JSON.stringify({
       ...adapterResult,
-      ok,
-      ...localCheckEnvelope(args, root),
+      ok, ...localCheckEnvelope(args, root),
       violations: activeViolations.map(enrichViolationWithFixClass),
       suppressedViolations: suppressed.length,
       staleBaselineKeys,
@@ -2089,12 +2082,6 @@ async function main() {
         )
       );
     }
-  }
-
-  if (args.local && !args.json) {
-    console.log(
-      color.dim('Local check (touched files + import closure). Merge still uses --strict-merge.')
-    );
   }
 
   if (args.watch) {
