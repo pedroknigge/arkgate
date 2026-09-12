@@ -45,6 +45,9 @@ export function collectDoctorNextActions(ctx) {
         '/ark-explore, then one small refactor with /ark-autopilot and your OK'
     );
   }
+  if (ctx.adrPresence?.missing && ctx.adrPresence.nextAction) {
+    actions.push(ctx.adrPresence.nextAction);
+  }
   if (!ctx.analysisComplete) actions.push('restore complete analysis, then rerun ark-check --doctor');
   if (ctx.designSmells.length > 0 && ctx.postGreenPath) actions.push(ctx.postGreenPath.action);
   if (ctx.coverageHonesty.greenIsNotEnforcement && ctx.coverageHonesty.worseThanNoGate) {

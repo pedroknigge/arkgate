@@ -16,6 +16,8 @@ import { detectAgentHomeGaps } from './agent-homes.mjs';
 import { collectDoctorNextActions } from './doctor-next-actions.mjs';
 import { printDoctorCompactHuman, printDoctorDetailsHuman } from './doctor-human.mjs';
 import { collectLayerOwnerResidual, layerGuidanceLine, placementDescriptionFields } from './layer-description.mjs';
+import { collectAdrPresenceResidual, printAdrPresenceHint } from './adr-presence.mjs';
+export { printAdrPresenceHint };
 export { printDoctorCompactHuman, printDoctorDetailsHuman };
 export { summarizeRulesUnderContract };
 
@@ -638,6 +640,10 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     github: githubForBoundary,
     ci: ciMergeBoundary?.ci,
   });
+  const adrPresence = collectAdrPresenceResidual({
+    root,
+    demanded: options.requireGates === true || adopted === 'required-merge',
+  });
   const { coverageHonesty, baselineHonesty, writePathHonesty, productHonesty } =
     computeDoctorEnforcementHonesty({
       governedPercent: cov.governed.percent,
@@ -768,6 +774,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
             coverageHonesty,
             layers: cov.layers,
             ...(layerOwners ? { layerOwners } : {}),
+            ...(adrPresence ? { adrPresence } : {}),
             emptyLayers: cov.emptyLayers,
             layersWithoutRules: cov.layersWithoutRules,
             ungovernedDirs: cov.suggestions.length,
@@ -910,6 +917,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     adopted,
     stewardNudge: doctorAdvisories.stewardNudge,
     layerOwners,
+    adrPresence,
   });
   const humanView = {
     root,
@@ -917,6 +925,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     completeness,
     doctorAdvisories,
     layerOwners,
+    adrPresence,
     operatingMode,
     designFitness,
     adopted,

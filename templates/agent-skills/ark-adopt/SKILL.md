@@ -35,6 +35,10 @@ has honest houses. Skills never enforce — CLI / hooks / CI do.
   (GitHub handle or email). Compact starter may omit. Do not invent people.
   Absence is silent unless the user asked for required owners — then write
   `requireLayerOwners: true` after the live houses have names. No `/ark-owners`.
+- When the user wants required gates (`--require-gates` / `--strict-merge` /
+  required GitHub check) and there is no `docs/adr/` (or `docs/decisions/`),
+  leave a short decision note there — only if they loosen a rule or add a real
+  gate. Not every change. Doctor residual is soft. No `/ark-adr`.
 - CLI-first: if `arkgate-check` already resolved the root, do not wait on MCP.
 - Do not add `arkRun` or `arkOrder` unless the user wants that extra. When they do, write
   **advisory** extra in this turn (`arkRun` schema `1.2+`; `arkOrder` schema `1.3+`).
@@ -133,6 +137,15 @@ silent unless the user asked for required owners. Then write
 `requireLayerOwners: true` only after every live (non-reserved) layer has
 at least one owner. Do **not** invent people. No `/ark-owners`. The require
 flag is the fail-closed switch; owners themselves are metadata.
+
+## Decision notes (process)
+
+When gates are required (`--require-gates` / `--strict-merge` / required merge
+status) and there is no short decision-note home yet, doctor may ask for one
+under `docs/adr/` or `docs/decisions/`. Write a note when you loosen a rule or
+add a real gate — not on every file. Absence is silent unless that demand is
+on. The hint does not fail the check. Do **not** invent `/ark-adr`. Policy
+weaken still uses `--policy-ack`; this is only a place to write the why.
 
 ## When / not when
 
@@ -349,6 +362,7 @@ proposals applied or deferred, **phase**, **top Shape / design-weak opportunitie
 - Invent `layers[].description` filler or a `/ark-describe` skill.
 - Invent `layers[].trustBoundary` tags or a `/ark-trust` skill.
 - Invent `layers[].owners` names or a `/ark-owners` skill.
+- Invent `/ark-adr` or require a decision note on every change.
 - Claim Enforce while governed% is low, cores empty with I/O in Application, or core bags ungoverned.
 - End adopt with only “baseline written” when design-weak residual is visible in files you opened.
 

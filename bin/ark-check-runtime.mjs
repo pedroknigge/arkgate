@@ -67,6 +67,7 @@ import {
   runCoverage,
   runPlan,
   runDoctor,
+  printAdrPresenceHint,
 } from './lib/doctor-plan.mjs';
 import { runRatchetCores } from './lib/core-ratchet.mjs';
 import {
@@ -1351,7 +1352,7 @@ async function main() {
             (compactHost
               ? `AGENTS.md, compact host registration (${compactHost})`
               : REQUIRED_GATE_FILES.join(', '))
-        );
+        ); printAdrPresenceHint(args.root, (line) => console.log(line));
       }
       if (writeRequest?.host) {
         console.log(`Ark hard-write hook present for ${writeRequest.host}.`);
@@ -1539,7 +1540,7 @@ async function main() {
       configWalkedUp: args.configWalkedUp === true,
       safety, designDelta,
       ts, parseHealth, completeness,
-      all: args.all === true,
+      all: args.all === true, requireGates: args.requireGates === true,
     });
     if (designDelta) process.exitCode = !designDelta.complete ? 2 : designDelta.valid ? 0 : 1; return;
   }

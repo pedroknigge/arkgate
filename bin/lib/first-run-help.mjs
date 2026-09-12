@@ -279,6 +279,8 @@ export function checkUsageAll() {
     '--require-gates implies --strict-config and fails when the Ark contract in AGENTS.md,',
     'the project-rooted Ark server in .mcp.json, or fail-closed CI is missing/invalid.',
     'Included but unclassified source files therefore stay red instead of false-green.',
+    'If gates are required and there is no short decision note yet, it points at docs/adr/',
+    '(or docs/decisions/) — a hint, not a fail. Off without --require-gates.',
     '',
     '--install-agent-gates writes AGENTS.md, .mcp.json, and the CI workflow for every',
     'project, plus tool-specific templates. Known tools: claude, cursor, codex, grok, antigravity',
