@@ -12,6 +12,17 @@ import {
 
 describe('ark-check args (extracted)', () => {
   it('parses --strict as merge+gates+config and keeps --watch', () => {
+    const prevLocal = process.env.ARK_CHECK_LOCAL;
+    delete process.env.ARK_CHECK_LOCAL;
+    try {
+      const fromDefaultEnv = parseArgs(['node', 'ark-check']);
+      expect(fromDefaultEnv.local).toBe(false);
+      expect(fromDefaultEnv.changed).toBe(false);
+    } finally {
+      if (prevLocal === undefined) delete process.env.ARK_CHECK_LOCAL;
+      else process.env.ARK_CHECK_LOCAL = prevLocal;
+    }
+
     const args = parseArgs(['node', 'ark-check', '--strict', '--watch', '--json'], {});
     expect(args.strictMerge).toBe(true);
     expect(args.requireGates).toBe(true);

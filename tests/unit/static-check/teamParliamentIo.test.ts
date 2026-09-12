@@ -161,6 +161,62 @@ describe('team parliament I/O', () => {
     expect(noLocalNoBase.teamParliament?.baseRef).toBeUndefined();
   });
 
+  it('runTeamPreflight covers skip, weakening, dirty local, and mixed-law deny', () => {
+    const skipped = runTeamPreflight({
+      root: '/tmp',
+      args: {},
+      config: {},
+      policyDelta: null,
+      teamBase: null,
+    });
+    expect(skipped.halt).toBeNull();
+    expect(skipped.teamParliament).toBeNull();
+
+    const weakened = runTeamPreflight({
+      root: '/tmp',
+      args: { changed: true },
+      config: {},
+      policyDelta: { classification: 'weakening' },
+      teamBase: 'HEAD',
+    });
+    expect(weakened.halt?.exitCode).toBe(1);
+    expect(weakened.teamParliament).toMatchObject({ reasonId: 'steward-only-loosen' });
+
+    const judged = runTeamPreflight({
+      root: '/tmp',
+      args: { changed: true },
+      config: {},
+      policyDelta: { classification: 'judgment-required' },
+      teamBase: 'HEAD',
+    });
+    expect(judged.halt?.exitCode).toBe(1);
+    expect(judged.teamParliament).toMatchObject({ reasonId: 'steward-only-loosen' });
+
+    const root = mkRepo();
+    fs.mkdirSync(path.join(root, 'src'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src/app.ts'), 'export const app = 1;\n');
+    const dirty = runTeamPreflight({
+      root,
+      args: { local: true, changed: true, against: 'HEAD' },
+      config: {},
+      policyDelta: { classification: 'additive' },
+      teamBase: 'HEAD',
+    });
+    expect(dirty.halt).toBeNull();
+    expect(dirty.changedPaths.some((p) => p.endsWith('src/app.ts') || p === 'src/app.ts')).toBe(true);
+
+    fs.writeFileSync(path.join(root, '.ark-baseline.json'), '{}\n');
+    const mixed = runTeamPreflight({
+      root,
+      args: { local: true, changed: true, against: 'HEAD', baseline: '.ark-baseline.json' },
+      config: {},
+      policyDelta: { classification: 'additive' },
+      teamBase: 'HEAD',
+    });
+    expect(mixed.halt?.exitCode).toBe(1);
+    expect(mixed.teamParliament).toMatchObject({ reasonId: 'mixed-law-and-product' });
+  });
+
   it('does not treat plain --strict-merge as an explicit policy-base ref', () => {
     const root = mkRepo();
     const { args, teamBase } = bindTeamBaseRefs({ strictMerge: true }, root);
