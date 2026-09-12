@@ -53,6 +53,9 @@ export function collectDoctorNextActions(ctx) {
   } else if (ctx.statesTransitions?.nextAction) {
     actions.push(ctx.statesTransitions.nextAction);
   }
+  if (ctx.noDomainFrontend?.nextAction) {
+    actions.push(ctx.noDomainFrontend.nextAction);
+  }
   if (!ctx.analysisComplete) actions.push('restore complete analysis, then rerun ark-check --doctor');
   if (ctx.designSmells.length > 0 && ctx.postGreenPath) actions.push(ctx.postGreenPath.action);
   if (ctx.coverageHonesty.greenIsNotEnforcement && ctx.coverageHonesty.worseThanNoGate) {

@@ -121,6 +121,12 @@ export function printCompactExtraDoctorLines(advisories, io) {
       if (states.nextAction) io.line(' ', `Next: ${states.nextAction}`);
     }
   }
+  const noDomain = advisories?.noDomainFrontend;
+  if (noDomain?.ask) {
+    console.log('');
+    io.line(io.warn, noDomain.ask);
+    if (noDomain.nextAction) io.line(' ', `Next: ${noDomain.nextAction}`);
+  }
   const rulesUnderContract = advisories?.rulesUnderContract;
   const arkRulesLines = formatArkRulesDoctorLines(rulesUnderContract);
   if (arkRulesLines.length > 0) {

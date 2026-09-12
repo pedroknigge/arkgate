@@ -6,6 +6,12 @@ in the immutable pre-2.0 archive linked below.
 ## Unreleased
 
 ### Added
+- Soft doctor residual when Domain is declared but empty and the UI holds the
+  rules (`noDomainFrontend`). Projects empty Domain + presentation share, or
+  the existing `domain-logic-in-ui` smell. Friendly next step: one Domain file
+  (`/ark-place`) then one small refactor. Not a fail. Silent when there is no
+  frontend, Domain already has files, or the UI bag is too thin. No new skill,
+  schema, smell id, or config key.
 - Narrow opt-in status/transition catalog: when Domain-role code already
   names a closed status/state vocabulary and a domain doc is in play without
   a table (or one link), doctor JSON may add `statusTransitionCatalog` with

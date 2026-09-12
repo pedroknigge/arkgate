@@ -44,6 +44,10 @@ has honest houses. Skills never enforce — CLI / hooks / CI do.
   short states → transitions table (or one link) there. Use catalog names when
   present. No flag soup. Soft residual. Silent when that doc is absent or
   Domain has no status vocabulary. No `/ark-states`.
+- When doctor JSON has `noDomainFrontend`, keep the empty Domain house — do not
+  delete it to “clean” empty layers. Next is one Domain file (`/ark-place`), not
+  a weaker contract. Soft. Silent when there is no frontend or Domain already
+  has files. No `/ark-domain`.
 - CLI-first: if `arkgate-check` already resolved the root, do not wait on MCP.
 - Do not add `arkRun` or `arkOrder` unless the user wants that extra. When they do, write
   **advisory** extra in this turn (`arkRun` schema `1.2+`; `arkOrder` schema `1.3+`).
