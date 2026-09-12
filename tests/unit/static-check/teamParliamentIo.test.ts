@@ -19,6 +19,7 @@ import {
   readJsonMaybe,
   resolveTeamAuthor,
   safeGitRef,
+  runTeamPreflight,
   teamCheckRequested,
   teamStewardsFromConfig,
   ungovernedDumpMessage,
@@ -81,6 +82,19 @@ describe('team parliament I/O', () => {
     expect(teamCheckRequested({ strictMerge: true }, { stewards: ['pedroknigge'] })).toBe(true);
     expect(teamCheckRequested({ changed: true }, {})).toBe(true);
     expect(teamCheckRequested({ updateBaseline: true }, {})).toBe(true);
+  });
+
+  it('LC01 --local without a resolvable base exits 2 (local-needs-base)', () => {
+    const halted = runTeamPreflight({
+      root: '/tmp',
+      args: { local: true, changed: true },
+      config: {},
+      policyDelta: null,
+      teamBase: undefined,
+    });
+    expect(halted.halt?.exitCode).toBe(2);
+    expect(halted.halt?.message).toMatch(/--local needs a git merge base/);
+    expect(halted.teamParliament).toMatchObject({ reasonId: 'local-needs-base', deny: false });
   });
 
   it('does not treat plain --strict-merge as an explicit policy-base ref', () => {

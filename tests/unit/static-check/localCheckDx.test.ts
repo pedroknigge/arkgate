@@ -101,6 +101,27 @@ describe('LC01 local check DX', () => {
     expect(() => parseArgs(['node', 'ark-check', '--local', '--doctor'], {})).toThrow(
       /cannot be combined with report modes/
     );
+
+    const leftoverDoctor = parseArgs(['node', 'ark-check', '--doctor'], { ARK_CHECK_LOCAL: '1' });
+    expect(leftoverDoctor.doctor).toBe(true);
+    expect(leftoverDoctor.local).toBe(false);
+    expect(leftoverDoctor.changed).toBe(false);
+
+    const leftoverCoverage = parseArgs(['node', 'ark-check', '--coverage'], { ARK_CHECK_LOCAL: 'true' });
+    expect(leftoverCoverage.coverage).toBe(true);
+    expect(leftoverCoverage.local).toBe(false);
+
+    const leftoverPlan = parseArgs(['node', 'ark-check', '--plan'], { ARK_CHECK_LOCAL: 'yes' });
+    expect(leftoverPlan.plan).toBe(true);
+    expect(leftoverPlan.local).toBe(false);
+
+    const leftoverReport = parseArgs(['node', 'ark-check', '--report'], { ARK_CHECK_LOCAL: '1' });
+    expect(leftoverReport.report).toBe('ark-report.html');
+    expect(leftoverReport.local).toBe(false);
+
+    const leftoverPromote = parseArgs(['node', 'ark-check', '--promote'], { ARK_CHECK_LOCAL: '1' });
+    expect(leftoverPromote.promote).toBe(true);
+    expect(leftoverPromote.local).toBe(false);
   });
 
   it('CLI --local --strict-merge exits 2; --local --base HEAD cheap-passes a clean tree', () => {
@@ -126,6 +147,12 @@ describe('LC01 local check DX', () => {
     expect(body.local).toBe(true);
     expect(body.scope).toBe('changed');
     expect(body.analysisRoot).toBe(fs.realpathSync(root));
+
+    const noGit = mk('ark-local-dx-nongit-');
+    writeProject(noGit);
+    const needsBase = runCheck(noGit, ['--local', '--json']);
+    expect(needsBase.status).toBe(2);
+    expect(`${needsBase.stdout}${needsBase.stderr}`).toContain('--local needs a git merge base');
   });
 
   it('ARK_CHECK_LOCAL=1 does not narrow --strict-merge; two roots stay isolated', async () => {
