@@ -3,7 +3,7 @@ import { parseArgs, resolveDesignDeltaBaseRef } from '../../../bin/lib/check-arg
 
 describe('ark-check args (extracted)', () => {
   it('parses --strict as merge+gates+config and keeps --watch', () => {
-    const args = parseArgs(['node', 'ark-check', '--strict', '--watch', '--json']);
+    const args = parseArgs(['node', 'ark-check', '--strict', '--watch', '--json'], {});
     expect(args.strictMerge).toBe(true);
     expect(args.requireGates).toBe(true);
     expect(args.strictConfig).toBe(true);
