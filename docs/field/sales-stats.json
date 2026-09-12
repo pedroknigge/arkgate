@@ -3,26 +3,22 @@
   "schemaVersion": 1,
   "note": "Anonymous live-dogfood aggregates only. No third-party repo names, URLs, paths, or code.",
   "counters": {
-    "runs": 1,
-    "ok": 1,
+    "runs": 2,
+    "ok": 2,
     "fail": 0,
-    "byFindingKind": {
-      "UX": 1
-    },
-    "byPhaseBroke": {
-      "null": 1
-    }
+    "byFindingKind": { "UX": 2 },
+    "byPhaseBroke": { "null": 2 }
   },
+  "events": [
+    { "iso": "2026-09-09T01:24:03.147Z", "ok": true, "durationSec": 461, "phaseBroke": null, "findingKind": "UX" },
+    { "iso": "2026-09-12T01:12:29.588Z", "ok": true, "durationSec": 223, "phaseBroke": null, "findingKind": "UX" }
+  ],
   "aggregates": {
-    "okRate": 1,
-    "durationP50Sec": 461,
-    "runs": 1,
-    "phaseBrokeDistribution": {
-      "null": 1
-    },
-    "findingKindDistribution": {
-      "UX": 1
-    },
-    "updatedAt": "2026-09-09T01:24:03.147Z"
+    "okRate": 1.0,
+    "durationP50Sec": 342.0,
+    "runs": 2,
+    "phaseBrokeDistribution": { "null": 2 },
+    "findingKindDistribution": { "UX": 2 },
+    "updatedAt": "2026-09-12T01:12:29.588Z"
   }
 }
