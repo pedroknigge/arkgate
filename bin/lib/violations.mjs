@@ -97,10 +97,22 @@ export function printWarning(warning) {
   );
 }
 
+/** Non-blocking type-only placement debt: exit stays 0; do not paint ✖. */
+export function isNonBlockingPlacementDebt(violation) {
+  return violation?.failsStrict === false;
+}
+
+/** Human mark for one finding — ⚠ when the run still passes, ✖ when it fails. */
+export function violationMark(violation) {
+  return isNonBlockingPlacementDebt(violation) ? '⚠' : '✖';
+}
+
 export function printViolation(violation) {
   const location = `${violation.file}:${violation.line}`;
   const plane = violationPlaneLabel(violation.ruleId);
-  console.error(`${color.red('✖')} ${color.bold(`${plane}${violation.ruleId}`)}  ${location}`);
+  const mark = violationMark(violation);
+  const painted = isNonBlockingPlacementDebt(violation) ? color.yellow(mark) : color.red(mark);
+  console.error(`${painted} ${color.bold(`${plane}${violation.ruleId}`)}  ${location}`);
   if (violation.fromLayer && violation.toLayer) {
     const target = violation.target ? `  ${color.dim(`(${violation.target})`)}` : '';
     console.error(`  ${violation.fromLayer} → ${violation.toLayer}${target}`);

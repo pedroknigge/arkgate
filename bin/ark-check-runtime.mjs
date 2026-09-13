@@ -1155,7 +1155,11 @@ async function main() {
 
   if (args.recommend) {
     try {
-      const recommendation = buildArchitectureRecommendation(args.root);
+      const { withProjectedGovernedCoverage } = await import('./lib/projected-governed-coverage.mjs');
+      const recommendation = withProjectedGovernedCoverage(
+        buildArchitectureRecommendation(args.root),
+        args.root
+      );
       let planWritten;
       if (args.writePlan) {
         const result = writeAdoptionPlan(args.root, recommendation);

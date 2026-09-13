@@ -31,6 +31,11 @@ npx arkgate-check --doctor        # status — one next step
 npx arkgate-check --doctor --all  # full details
 ```
 
+`start --apply` refuses when projected governed coverage is below 50% or
+shape confidence is weak (below 0.6 with coverage under 80%). That lock is
+deliberate. Lock the shape with `--archetype <id>`, `--preset <name>`, or
+`--force`, or inspect ranked shapes with `npx arkgate-check --recommend`.
+
 Then keep working with your agent. Stuck? Run `--doctor` and do action **#1**. Compact first; `--all` for details.
 
 | Stuck on… | Do this |

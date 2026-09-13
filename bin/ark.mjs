@@ -8,10 +8,10 @@ import {
   arkCommand,
   buildArchitectureRecommendation,
   detectPackageManager,
-  detectWorkspaces,
   evaluateStartShapeConfidenceGate,
   resolveIncludeRoots,
   detectTsPackageRoots,
+  resolveStartInitPreset,
   INIT_WIZARD_CHOICES,
   isValidArchetypeId,
   mapWizardChoiceToArchetype,
@@ -586,41 +586,23 @@ async function start(args) {
     const configPath = path.join(root, 'ark.config.json');
     if (!fs.existsSync(configPath)) {
       const initArgs = ['--root', root, '--init'];
-      const preset = archetype ? resolveArchetypePreset(archetype).preset : undefined;
+      const startPreset = resolveStartInitPreset(root, rec ?? {}, archetype);
       const includeRoots = resolveIncludeRoots(root);
       const tsPackages = detectTsPackageRoots(root);
       const nestedTsPackages = tsPackages.filter((entry) => entry !== '.');
-      const workspaces = detectWorkspaces(root);
-      const looksLikeMonorepo =
-        includeRoots.length > 0 ||
-        nestedTsPackages.length > 0 ||
-        workspaces.length > 0 ||
-        fs.existsSync(path.join(root, 'rush.json')) ||
-        fs.existsSync(path.join(root, 'pnpm-workspace.yaml')) ||
-        fs.existsSync(path.join(root, 'lerna.json')) ||
-        fs.existsSync(path.join(root, 'apps')) ||
-        fs.existsSync(path.join(root, 'packages'));
-      // SPA (Vite + root api/lib) wins over monorepo heuristics (NEW-SPA-DEFAULT-LAYOUT).
-      if (rec?.preset === 'vite-vercel-spa' || preset === 'vite-vercel-spa') {
+      if (startPreset === 'vite-vercel-spa') {
         initArgs.push('--preset', 'vite-vercel-spa');
         console.log('  Vite/Vercel SPA layout detected — include src,api,lib; api→Application; db clients→Persistence.');
-      } else if (looksLikeMonorepo && (rec?.mature || includeRoots.length > 0 || tsPackages.length > 0)) {
-        // Mature multi-package / nested-TS trees must NOT get a thin src/** starter (0 files).
-        // UI-heavy TS packages (Remotion/Vite) prefer ui-surface patterns when recommend says so.
-        const useUi =
-          rec?.preset === 'feature-sliced' ||
-          rec?.archetype === 'frontend-surface' ||
-          (nestedTsPackages.length > 0 && includeRoots.length === 0 && !rec?.mature);
-        initArgs.push('--preset', useUi && nestedTsPackages.length <= 3 ? 'ui-surface' : 'monorepo');
+      } else if (startPreset === 'monorepo' || startPreset === 'ui-surface') {
+        initArgs.push('--preset', startPreset);
         const shown = includeRoots.length > 0 ? includeRoots : nestedTsPackages;
         console.log(
           shown.length > 0
             ? `  Multi-package / TS package layout detected — profile include: ${shown.join(', ')}.`
             : '  Multi-package layout detected — using monorepo profile.'
         );
-      } else if (preset) {
-        // Prefer recommended preset even on mature single-package trees (avoid vacuum hexagonal).
-        initArgs.push('--preset', preset);
+      } else if (startPreset) {
+        initArgs.push('--preset', startPreset);
       }
       const status = runArkCheck(initArgs, { cwd: root });
       if (status !== 0) return status;

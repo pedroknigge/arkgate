@@ -280,7 +280,7 @@ npx ark-check --recommend --json
 `--recommend` does not require `ark.config.json`. It exits `0` and prints a progressive
 adoption plan: archetype id, preset, `confidence`, `runnerUp`, `why` (shape signals),
 structured positive/negative `evidence`, discovered `signals.packageUnits`,
-`adoptInOrder.phase1`, `firstCommand` (`ark init --archetype …`), and `checkCommand`.
+`adoptInOrder.phase1`, `firstCommand` (`ark start --apply --archetype …`), and `checkCommand`.
 When the top two shapes are close or projected governed coverage is below 90%, JSON sets
 `requiresConfirmation: true` and explains why in `confirmationReasons`.
 
