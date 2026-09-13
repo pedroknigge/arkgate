@@ -6,14 +6,6 @@ in the immutable pre-2.0 archive linked below.
 ## Unreleased
 
 ### Added
-- Opt-in local / multi-worktree cheap check: `--local` or `ARK_CHECK_LOCAL=1`
-  reuses `--changed` (touched files + import closure) and stays per `--root`.
-  Explicit `--local --strict-merge` is refused so CI Contener stays fail-closed.
-  The env var is ignored under `--strict-merge` and under `--doctor` /
-  `--coverage` / `--plan` / `--report` / `--promote`. JSON may add `local`,
-  `scope: "changed"`, `analysisRoot`. Write hooks stay lexical. No new schema,
-  cache, skill, or second analysis engine. Design:
-  [docs/plans/local-check-worktree-dx/README.md](docs/plans/local-check-worktree-dx/README.md).
 - Soft doctor residual when Domain is declared but empty and the UI holds the
   rules (`noDomainFrontend`). Projects empty Domain + presentation share, or
   the existing `domain-logic-in-ui` smell. Friendly next step: one Domain file
@@ -74,13 +66,6 @@ in the immutable pre-2.0 archive linked below.
   Required CI is still the shared merge line. No new skill, schema, or host.
 
 ### Fixed
-- Dogfood honesty (#243 / #246 / #247, 4.8.15 slice 2): type-only
-  `LAYER_IMPORT_VIOLATION` prints `⚠` (not `✖`) when the check still exits 0;
-  one-minute `start --apply` copy and the start preview footer name the
-  deliberate lock flags (`--archetype`, `--preset`, `--force`,
-  `ark-check --recommend`) without softening the refuse gate; start,
-  `--recommend`, and doctor share one `computeCoverage` definition of
-  projected governed coverage. No version bump.
 - Write hook and `ark-check` now agree on overlapping layer globs: the hook
   probes the same specifier extensions as `ark-check` and classifies with
   `layerForRelativePath` (explicit `money.ts` beats `src/lib/**`). Field
@@ -110,6 +95,43 @@ in the immutable pre-2.0 archive linked below.
   `@2` pin (issue [#211](https://github.com/pedroknigge/arkgate/issues/211)).
   Existing configs keep whatever URL they already have. Editor completion
   matches the 4.x line you just installed.
+
+## 4.8.15 — 2026-09-13
+
+**Patch** over **4.8.14**. Pre-adoption ship bar: opt-in `--local` /
+`ARK_CHECK_LOCAL` cheap multi-worktree check
+([#251](https://github.com/pedroknigge/arkgate/pull/251)) and dogfood
+honesty
+([#252](https://github.com/pedroknigge/arkgate/pull/252) / [#243](https://github.com/pedroknigge/arkgate/issues/243) /
+[#246](https://github.com/pedroknigge/arkgate/issues/246) /
+[#247](https://github.com/pedroknigge/arkgate/issues/247)).
+**Write. Check. Ship.** **No required config migration.** No
+`schemaVersion` bump. Does not close `K01` / `Z09`. This mother
+`ark.config.json` still does **not** turn `arkOrder` on.
+
+**Status: prepared** (npm `latest` remains **4.8.14** until Actions `publish-npm`
+runs with `tag=v4.8.15` and `dry_run=false`).
+
+### Added
+- Opt-in local / multi-worktree cheap check: `--local` or `ARK_CHECK_LOCAL=1`
+  reuses `--changed` (touched files + import closure) and stays per `--root`.
+  Explicit `--local --strict-merge` is refused so CI Contener stays fail-closed.
+  The env var is ignored under `--strict-merge` and under `--doctor` /
+  `--coverage` / `--plan` / `--report` / `--promote`. JSON may add `local`,
+  `scope: "changed"`, `analysisRoot`. Write hooks stay lexical. No new schema,
+  cache, skill, or second analysis engine. Design:
+  [docs/plans/local-check-worktree-dx/README.md](docs/plans/local-check-worktree-dx/README.md).
+
+### Fixed
+- Dogfood honesty: type-only `LAYER_IMPORT_VIOLATION` prints `⚠` (not `✖`)
+  when the check still exits 0 ([#243](https://github.com/pedroknigge/arkgate/issues/243));
+  one-minute `start --apply` copy and the start preview footer name the
+  deliberate lock flags (`--archetype`, `--preset`, `--force`,
+  `ark-check --recommend`) without softening the refuse gate
+  ([#246](https://github.com/pedroknigge/arkgate/issues/246)); start,
+  `--recommend`, and doctor share one `computeCoverage` definition of
+  projected governed coverage
+  ([#247](https://github.com/pedroknigge/arkgate/issues/247)).
 
 ## 4.8.14 — 2026-09-06
 
