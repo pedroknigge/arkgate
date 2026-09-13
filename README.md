@@ -81,7 +81,8 @@ start → doctor → new files in the right folder
 ```
 
 Keep the rules file out of product PRs. Local check:
-`ark-check --changed --base origin/dev`. Changing the rules themselves uses `--contract-session`.
+`ark-check --local --base origin/dev` (same as `--changed`; refused with
+`--strict-merge`). Changing the rules themselves uses `--contract-session`.
 
 Aliases `ark` / `ark-check` / `ark-mcp` still work. npm / pnpm / yarn. No install lifecycle scripts
 — and none on pack or prepare either, so `pnpm add git+https://github.com/pedroknigge/arkgate`

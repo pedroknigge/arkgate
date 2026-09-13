@@ -138,7 +138,7 @@ import {
   resolveEffectiveProjectRoot,
 } from './lib/project-root.mjs';
 import { demoteArkRuleTeethUnderClassificationFloor } from './lib/rules-under-contract.mjs';
-import { parseArgs, resolveDesignDeltaBaseRef } from './lib/check-args.mjs';
+import { localCheckEnvelope, parseArgs, resolveDesignDeltaBaseRef } from './lib/check-args.mjs';
 import { detectConfig, proposeForUncovered } from './lib/check-config-detect.mjs';
 import { runWatchMode } from './lib/check-watch.mjs';
 
@@ -1387,7 +1387,7 @@ async function main() {
         JSON.stringify(
           {
             ok: preflight.halt.exitCode === 0,
-            ...(preflight.halt.cheap ? { cheap: true } : {}),
+            ...(preflight.halt.cheap ? { cheap: true } : {}), ...localCheckEnvelope(args, root),
             teamParliament: preflight.halt.teamParliament,
             ...(policyDelta ? { policyDelta } : {}),
           },
@@ -1952,7 +1952,7 @@ async function main() {
     });
     console.log(JSON.stringify({
       ...adapterResult,
-      ok,
+      ok, ...localCheckEnvelope(args, root),
       violations: activeViolations.map(enrichViolationWithFixClass),
       suppressedViolations: suppressed.length,
       staleBaselineKeys,

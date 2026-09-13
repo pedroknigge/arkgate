@@ -34,7 +34,9 @@ Apply plan A (`mechanical-safe` **and** judgment). If leftover design work remai
 Composes **explore → sensors → dual plan → write**. Validate with ark-check; never weaken the gate.
 **Team lock:** do not edit `ark.config.json`, `arkrules/*`, or `.ark-baseline.json` in this
 turn unless the user invoked a steward contract session. Feature diffs use
-`ark-check --changed --base <merge-ref>`. Growing the baseline is steward-only.
+`ark-check --local --base <merge-ref>` or `ark-check --changed --base <merge-ref>`.
+`--local` is the optional cheap path for many worktrees; it cannot combine with
+`--strict-merge`. Growing the baseline is steward-only.
 
 **Not a plan grinder.** Empty `--plan` does **not** mean “architecture is healthy” without
 the explore pass and dual-plan section B (pattern / Shape bets).

@@ -235,6 +235,16 @@ export function runTeamPreflight({ root, args, config, policyDelta, teamBase }) 
     return { halt: null, teamParliament: null, changedPaths: [] };
   }
   const againstRef = args.against || teamBase;
+  if (args.local && !againstRef) {
+    const message =
+      '--local needs a git merge base so it can reuse --changed. Pass --base <ref> (for example --base HEAD or --base origin/main). The merge gate stays --strict-merge.';
+    const teamParliament = { deny: false, reasonId: 'local-needs-base', message };
+    return {
+      halt: { exitCode: 2, message, teamParliament },
+      teamParliament,
+      changedPaths: [],
+    };
+  }
   const listed = againstRef ? listChangedPaths(root, againstRef) : { ok: true, paths: [], error: null };
   const changedPaths = listed.ok ? listed.paths : [];
   const changeSet = classifyChangeSet(changedPaths);

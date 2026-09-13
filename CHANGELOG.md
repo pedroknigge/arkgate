@@ -6,6 +6,14 @@ in the immutable pre-2.0 archive linked below.
 ## Unreleased
 
 ### Added
+- Opt-in local / multi-worktree cheap check: `--local` or `ARK_CHECK_LOCAL=1`
+  reuses `--changed` (touched files + import closure) and stays per `--root`.
+  Explicit `--local --strict-merge` is refused so CI Contener stays fail-closed.
+  The env var is ignored under `--strict-merge` and under `--doctor` /
+  `--coverage` / `--plan` / `--report` / `--promote`. JSON may add `local`,
+  `scope: "changed"`, `analysisRoot`. Write hooks stay lexical. No new schema,
+  cache, skill, or second analysis engine. Design:
+  [docs/plans/local-check-worktree-dx/README.md](docs/plans/local-check-worktree-dx/README.md).
 - Soft doctor residual when Domain is declared but empty and the UI holds the
   rules (`noDomainFrontend`). Projects empty Domain + presentation share, or
   the existing `domain-logic-in-ui` smell. Friendly next step: one Domain file
