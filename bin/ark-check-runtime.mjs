@@ -12,17 +12,13 @@ import {
   DEFAULT_RULES,
   applyFrameworkLayoutOverlays,
   arkCommand,
-  ADOPTION_PLAN_FILENAME,
-  buildArchitectureRecommendation,
   createElevenLayerConfig,
   enrichViolationWithFixClass,
   listPolicyPackIds,
   loadPolicyPackMeta,
-  writeAdoptionPlan,
   detectWorkspaces,
   detectTsPackageRoots,
   resolveIncludeRoots,
-  formatArchitectureRecommendationHuman,
   installDevHint,
   layerForFile,
 } from './ark-shared.mjs';
@@ -1154,42 +1150,8 @@ async function main() {
   }
 
   if (args.recommend) {
-    try {
-      const recommendation = buildArchitectureRecommendation(args.root);
-      let planWritten;
-      if (args.writePlan) {
-        const result = writeAdoptionPlan(args.root, recommendation);
-        planWritten = result.path;
-      }
-      if (args.json) {
-        console.log(
-          JSON.stringify(
-            {
-              ...recommendation,
-              ...(planWritten
-                ? { adoptionPlanPath: path.relative(args.root, planWritten) || ADOPTION_PLAN_FILENAME }
-                : {}),
-            },
-            null,
-            2
-          )
-        );
-      } else {
-        console.log(formatArchitectureRecommendationHuman(recommendation));
-        if (planWritten) {
-          console.log('');
-          console.log(`Wrote ${path.relative(args.root, planWritten) || ADOPTION_PLAN_FILENAME}`);
-        }
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      if (args.json) {
-        console.log(JSON.stringify({ ok: false, error: message }, null, 2));
-      } else {
-        console.error(`ark-check --recommend failed: ${message}`);
-      }
-      process.exitCode = 2;
-    }
+    const { runRecommend } = await import('./lib/recommend-cli.mjs');
+    runRecommend(args);
     return;
   }
 

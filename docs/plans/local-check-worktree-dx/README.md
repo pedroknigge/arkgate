@@ -1,8 +1,7 @@
 # Local multi-worktree check DX (4.8.15 first slice)
 
-**Status:** first slice (`LC01`) — opt-in local cheap path.  
-**Does not close** `Z09` / `K01`. No `schemaVersion` bump. No new skill.  
-**Later slices:** dogfood #243 / #246 / #247.
+**Status:** `LC01` done (#251). Slice 2 (`DF243` / `DF246` / `DF247`) — dogfood honesty.  
+**Does not close** `Z09` / `K01`. No `schemaVersion` bump. No new skill.
 
 Field: Pedro / Amarilla — many git worktrees and branches on one machine
 (64 GB Mac). `ark-check` / write-hook analysis felt like one machine-wide

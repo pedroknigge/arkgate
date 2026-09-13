@@ -1214,8 +1214,11 @@ describe('R-round: type-only non-blocking + honesty parity locks', () => {
       { encoding: 'utf8' }
     );
     expect(human.status).toBe(0);
-    expect(human.stdout + human.stderr).toMatch(/passed|type-only placement/i);
-    expect(human.stdout + human.stderr).not.toMatch(/✖.*violation/);
+    const humanOut = `${human.stdout}${human.stderr}`;
+    expect(humanOut).toMatch(/passed|type-only placement/i);
+    expect(humanOut).toMatch(/⚠\s+LAYER_IMPORT_VIOLATION/);
+    expect(humanOut).not.toMatch(/✖\s+LAYER_IMPORT_VIOLATION/);
+    expect(humanOut).not.toMatch(/✖.*violation/);
 
     // Value edge still fails.
     fs.writeFileSync(

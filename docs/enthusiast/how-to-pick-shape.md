@@ -26,7 +26,7 @@ Run **`/ark-adopt`** on a greenfield or early-adoption repo (leftover `/ark-arch
 | `adoptInOrder.phase1` | Folders to create first |
 | `analogy` | Plain-language mental model |
 | `antiPatterns` | What Ark will block later |
-| `firstCommand` | Usually `ark init --archetype <id> --yes` |
+| `firstCommand` | Usually `ark start --apply --archetype <id>` |
 
 Framework names appear only as secondary `toolHints` in JSON — never as the archetype label.
 

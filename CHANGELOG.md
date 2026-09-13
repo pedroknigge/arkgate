@@ -74,6 +74,13 @@ in the immutable pre-2.0 archive linked below.
   Required CI is still the shared merge line. No new skill, schema, or host.
 
 ### Fixed
+- Dogfood honesty (#243 / #246 / #247, 4.8.15 slice 2): type-only
+  `LAYER_IMPORT_VIOLATION` prints `⚠` (not `✖`) when the check still exits 0;
+  one-minute `start --apply` copy and the start preview footer name the
+  deliberate lock flags (`--archetype`, `--preset`, `--force`,
+  `ark-check --recommend`) without softening the refuse gate; start,
+  `--recommend`, and doctor share one `computeCoverage` definition of
+  projected governed coverage. No version bump.
 - Write hook and `ark-check` now agree on overlapping layer globs: the hook
   probes the same specifier extensions as `ark-check` and classifies with
   `layerForRelativePath` (explicit `money.ts` beats `src/lib/**`). Field
