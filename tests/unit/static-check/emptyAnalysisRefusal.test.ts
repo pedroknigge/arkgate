@@ -227,6 +227,63 @@ describe('emptyAnalysisRefusal (pure)', () => {
     ).toBe(null);
   });
 
+  it('treats a missing argument, null classified count, and non-finite classified as omitted', () => {
+    expect(emptyAnalysisRefusal()).toBe(null);
+    expect(
+      emptyAnalysisRefusal({
+        governedFileCount: 2,
+        classifiedFileCount: null,
+        root: '/repo',
+        configPath: '/repo/ark.config.json',
+      })
+    ).toBe(null);
+    expect(
+      emptyAnalysisRefusal({
+        governedFileCount: 2,
+        classifiedFileCount: Number.NaN,
+        root: '/repo',
+        configPath: '/repo/ark.config.json',
+      })
+    ).toBe(null);
+    expect(
+      emptyAnalysisRefusal({
+        governedFileCount: 2,
+        classifiedFileCount: Number.POSITIVE_INFINITY,
+        root: '/repo',
+        configPath: '/repo/ark.config.json',
+      })
+    ).toBe(null);
+  });
+
+  it('clamps a negative ungoverned count so a moved root still refuses with zero', () => {
+    const refusal = emptyAnalysisRefusal({
+      governedFileCount: 0,
+      ungovernedSourceCount: -5,
+      ungovernedSourceCap: -2,
+      root: '/tmp/probe',
+      requestedRoot: '/repo',
+      configPath: '/tmp/probe/ark.config.json',
+      configWalkedUp: true,
+    });
+    expect(refusal?.ruleId).toBe(EMPTY_ANALYSIS_RULE_ID);
+    expect(refusal?.message).toBe(MOVED_MESSAGE);
+    expect(refusal?.nextAction).toBe(MOVED_NEXT_ACTION);
+  });
+
+  it('keeps the classified-zero nextAction load-bearing (exact sentence)', () => {
+    const refusal = emptyAnalysisRefusal({
+      governedFileCount: 3,
+      classifiedFileCount: 0,
+      root: '/repo',
+      configPath: '/repo/ark.config.json',
+    });
+    expect(refusal?.nextAction).toBe(
+      'Extend layer patterns or narrow include in /repo/ark.config.json so every included file has a ' +
+        'layer. `npx arkgate-check --root . --coverage` lists unclassified files, and `/ark-place` ' +
+        'picks a folder. `--plan` and `--doctor` report this without refusing.'
+    );
+  });
+
   it('reports zero rather than a missing count when the caller passes no numbers or paths', () => {
     const refusal = emptyAnalysisRefusal({
       governedFileCount: 0,

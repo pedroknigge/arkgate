@@ -123,6 +123,11 @@ runs with `tag=v4.8.15` and `dry_run=false`).
   [docs/plans/local-check-worktree-dx/README.md](docs/plans/local-check-worktree-dx/README.md).
 
 ### Fixed
+- Publish confidence gate: retarget drifted critical mutation islands
+  (`config-loading`, `empty-analysis-refusal`, host fail-open / none-gap)
+  after owners + classified-file growth, and add tests that kill those
+  mutants. Threshold stays 90% with zero NoCoverage. Does not change
+  runtime behavior.
 - Dogfood honesty: type-only `LAYER_IMPORT_VIOLATION` prints `⚠` (not `✖`)
   when the check still exits 0 ([#243](https://github.com/pedroknigge/arkgate/issues/243));
   one-minute `start --apply` copy and the start preview footer name the
