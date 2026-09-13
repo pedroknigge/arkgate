@@ -130,6 +130,15 @@ describe('emptyAnalysisRefusal (pure)', () => {
     ).toBe(null);
     // Walk-up flag set with no requested root recorded: nothing to compare.
     expect(emptyAnalysisRefusal({ ...base, requestedRoot: '', configWalkedUp: true })).toBe(null);
+    expect(
+      emptyAnalysisRefusal({
+        governedFileCount: 0,
+        ungovernedSourceCount: 0,
+        root: '/repo',
+        configPath: '/repo/ark.config.json',
+        configWalkedUp: true,
+      })
+    ).toBe(null);
   });
 
   it('refuses a contract that governs none of the source under the root it was asked for', () => {
@@ -253,6 +262,30 @@ describe('emptyAnalysisRefusal (pure)', () => {
         configPath: '/repo/ark.config.json',
       })
     ).toBe(null);
+    // Non-finite included must not fall through into the classified-zero refuse.
+    expect(
+      emptyAnalysisRefusal({
+        governedFileCount: Number.POSITIVE_INFINITY,
+        classifiedFileCount: 0,
+        root: '/repo',
+        configPath: '/repo/ark.config.json',
+      })
+    ).toBe(null);
+  });
+
+  it('renders empty paths on the classified-zero refuse when root and config are omitted', () => {
+    const refusal = emptyAnalysisRefusal({ governedFileCount: 3, classifiedFileCount: 0 });
+    expect(refusal?.ruleId).toBe(EMPTY_ANALYSIS_RULE_ID);
+    expect(refusal?.message).toBe(
+      'Analysis covered 0 files: 3 included file(s) exist under  but none matched a ' +
+        'layer pattern in . Every rule is vacuously satisfied on an empty set, so a ' +
+        'pass here would certify nothing.'
+    );
+    expect(refusal?.nextAction).toBe(
+      'Extend layer patterns or narrow include in  so every included file has a ' +
+        'layer. `npx arkgate-check --root . --coverage` lists unclassified files, and `/ark-place` ' +
+        'picks a folder. `--plan` and `--doctor` report this without refusing.'
+    );
   });
 
   it('clamps a negative ungoverned count so a moved root still refuses with zero', () => {
