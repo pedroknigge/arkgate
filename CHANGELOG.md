@@ -55,6 +55,10 @@ in the immutable pre-2.0 archive linked below.
   short phrase templates so the shape is visible. No new skill, schema, or flag.
 
 ### Changed
+- Pack ceilings in `release/package-budgets.v1.json` remeasured on the IT01
+  CI pack (run 34848276803): gate 1,611,000 packed / 5,659,000 unpacked;
+  companion runtime 287,000 packed / 1,013,000 unpacked. ≥10% headroom over
+  that measurement. No new product surface.
 - Compact `--doctor` names ArkRules only when the `arkRules` map is on
   (one breath + counts, not a score). Absence stays silent. Reuses
   `rulesUnderContract` — no new schema, flag, or skill. `--doctor --all`
