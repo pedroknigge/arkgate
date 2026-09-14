@@ -17,6 +17,7 @@ import {
   loadInvariantCoverageInputs,
 } from './invariant-coverage-io.mjs';
 import {
+  declaredCoverageRootsPresent,
   declaredInvariantTestsPathPresent,
   scanDemandsInvariantTestsPath,
 } from './invariant-tests-path.mjs';
@@ -206,11 +207,13 @@ export function resolveArchitectureSnapshot({
   const pathPresent = adopted
     ? declaredInvariantTestsPathPresent(root, effectiveConfig.coverage)
     : true;
+  const rootsPresent = declaredCoverageRootsPresent(root, effectiveConfig.coverage);
   const analyzed = analyzeTrustedResolvedProject({
     contract: analysisContract,
     facts,
     ...(adopted ? { adopted: true } : {}),
     ...(adopted && pathPresent === false ? { invariantTestsPathPresent: false } : {}),
+    ...(rootsPresent === false ? { coverageRootsPresent: false } : {}),
     ...(coverageInputs ? { coverageInputs } : {}),
     ...(fileHints ? { fileHints } : {}),
   });

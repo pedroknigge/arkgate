@@ -6,6 +6,13 @@ in the immutable pre-2.0 archive linked below.
 ## Unreleased
 
 ### Added
+- When any catalogued domain invariant is enforced, `coverage.coverageRoots`
+  is required. Missing or empty fails closed
+  (`INVARIANT_COVERAGE_ROOTS_MISSING`). `coverage.testGlobs` alone is not
+  enough — without roots, coverage can certify a test no runner runs.
+  Doctor residual names the next step. Promotion to enforced also refuses
+  without roots. Silent when no invariant is enforced. Reuses the existing
+  coverage key — no new schema, flag, or skill.
 - Doctor green / healthy lines must name a file, config key, or test
   (`ark.config.json`, `.ark/ci-merge-boundary.json`, `coverage.testGlobs`,
   a real tests path). Uncited greens are demoted so they cannot look

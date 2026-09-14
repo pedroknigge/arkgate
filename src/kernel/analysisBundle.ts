@@ -30,6 +30,7 @@ export function analyzeTrustedResolvedProject(input: {
   facts: ResolvedCandidateFacts;
   adopted?: boolean;
   invariantTestsPathPresent?: boolean;
+  coverageRootsPresent?: boolean;
   coverageInputs?: {
     fileContents: Readonly<Record<string, string>>;
     testFiles?: readonly string[];

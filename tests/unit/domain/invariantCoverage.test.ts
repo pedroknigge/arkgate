@@ -6,10 +6,16 @@ import {
 import { ARK_CONFIG_SCHEMA } from '../../../src/domain/configContract';
 import {
   canPromoteInvariant,
+  catalogHasEnforcedInvariant,
+  collectMissingCoverageRootsFindings,
   collectMissingInvariantTestsPathFindings,
+  configuredCoverageRoots,
   configuredInvariantTestsPaths,
   evaluateInvariantCoverage,
+  hasConfiguredCoverageRoots,
   hasConfiguredInvariantTestsPath,
+  INVARIANT_COVERAGE_ROOTS_MESSAGE,
+  INVARIANT_COVERAGE_ROOTS_RULE_ID,
   INVARIANT_TESTS_PATH_MESSAGE,
   INVARIANT_TESTS_PATH_RULE_ID,
 } from '../../../src/domain/invariantCoverage';
@@ -359,6 +365,7 @@ describe('AR09–AR11 invariant coverage + promotion', () => {
     expect(outside?.message).toMatch(/tests, src/);
     expect(outside?.message).toMatch(/never executes tests/);
     expect(result.coverage[0]?.outsideDeclaredRoots).toBe(true);
+    expect(result.coverage[0]?.coverageRootsDeclared).toBe(true);
     expect(result.coverage[0]?.testEvidenceFile).toBe('scratch/order.test.ts');
   });
 
@@ -374,6 +381,7 @@ describe('AR09–AR11 invariant coverage + promotion', () => {
     });
     expect(result.coverage[0]?.testEvidenceFile).toBe('tests/order.test.ts');
     expect(result.coverage[0]?.outsideDeclaredRoots).toBe(false);
+    expect(result.coverage[0]?.coverageRootsDeclared).toBe(true);
     expect(
       result.violations.some((v) => v.ruleId === 'INVARIANT_COVERAGE_OUTSIDE_ROOTS')
     ).toBe(false);
@@ -388,6 +396,7 @@ describe('AR09–AR11 invariant coverage + promotion', () => {
     });
     expect(result.violations).toHaveLength(0);
     expect(result.coverage[0]?.outsideDeclaredRoots).toBeUndefined();
+    expect(result.coverage[0]?.coverageRootsDeclared).toBe(false);
     expect(result.coverage[0]?.covered).toBe(true);
   });
 
@@ -442,8 +451,22 @@ describe('AR09–AR11 invariant coverage + promotion', () => {
         'tests/order.test.ts': "describe('INV-ORDER-001', () => {})",
       },
       testFiles: ['tests/order.test.ts'],
+      coverageRoots: ['tests'],
     });
     expect(canPromoteInvariant(covered.coverage[0]).ok).toBe(true);
+    expect(canPromoteInvariant(covered.coverage[0]).reason).toMatch(/INV-ORDER-001/);
+
+    const noRoots = evaluateInvariantCoverage({
+      arkRules: catalog(),
+      fileContents: {
+        'src/domain/order.ts': 'class Order { ensureInvariants() {} }',
+        'tests/order.test.ts': "describe('INV-ORDER-001', () => {})",
+      },
+      testFiles: ['tests/order.test.ts'],
+    });
+    const refused = canPromoteInvariant(noRoots.coverage[0]);
+    expect(refused.ok).toBe(false);
+    expect(refused.reason).toMatch(/coverage\.coverageRoots/);
   });
 
   it('does not stick top-level partial when symbol evidence covers without tests', () => {
@@ -591,5 +614,77 @@ describe('§10 adopted invariant tests path', () => {
       declaredPathPresent: false,
     });
     expect(hit[0]?.ruleId).toBe(INVARIANT_TESTS_PATH_RULE_ID);
+  });
+});
+
+describe('§10 enforced invariant requires coverageRoots', () => {
+  it('treats missing and empty coverageRoots as no runner root', () => {
+    expect(hasConfiguredCoverageRoots(undefined)).toBe(false);
+    expect(hasConfiguredCoverageRoots({})).toBe(false);
+    expect(hasConfiguredCoverageRoots({ coverageRoots: [] })).toBe(false);
+    expect(hasConfiguredCoverageRoots({ coverageRoots: ['  '] })).toBe(false);
+    expect(configuredCoverageRoots({ coverageRoots: ['tests'] })).toEqual(['tests']);
+    expect(catalogHasEnforcedInvariant([{ mode: 'advisory' }])).toBe(false);
+    expect(catalogHasEnforcedInvariant([{ mode: 'enforced' }])).toBe(true);
+  });
+
+  it('fails closed when any invariant is enforced and coverageRoots is missing/empty', () => {
+    const missing = collectMissingCoverageRootsFindings({
+      hasEnforcedInvariant: true,
+    });
+    expect(missing).toHaveLength(1);
+    expect(missing[0]?.ruleId).toBe(INVARIANT_COVERAGE_ROOTS_RULE_ID);
+    expect(missing[0]?.failsStrict).toBe(true);
+    expect(missing[0]?.freezable).toBe(false);
+    expect(missing[0]?.message).toBe(INVARIANT_COVERAGE_ROOTS_MESSAGE);
+
+    const empty = collectMissingCoverageRootsFindings({
+      hasEnforcedInvariant: true,
+      coverage: { coverageRoots: [''] },
+      declaredPathPresent: false,
+    });
+    expect(empty[0]?.ruleId).toBe(INVARIANT_COVERAGE_ROOTS_RULE_ID);
+
+    const testGlobsOnly = collectMissingCoverageRootsFindings({
+      invariants: [{ mode: 'enforced' }],
+      coverage: { testGlobs: ['tests/**'] } as { coverageRoots?: unknown },
+    });
+    expect(testGlobsOnly[0]?.ruleId).toBe(INVARIANT_COVERAGE_ROOTS_RULE_ID);
+  });
+
+  it('stays silent when no invariant is enforced, or roots are declared', () => {
+    expect(
+      collectMissingCoverageRootsFindings({
+        hasEnforcedInvariant: false,
+        coverage: {},
+      })
+    ).toEqual([]);
+    expect(
+      collectMissingCoverageRootsFindings({
+        invariants: [{ mode: 'advisory' }],
+        coverage: {},
+      })
+    ).toEqual([]);
+    expect(
+      collectMissingCoverageRootsFindings({
+        invariants: [],
+        coverage: {},
+      })
+    ).toEqual([]);
+    expect(
+      collectMissingCoverageRootsFindings({
+        hasEnforcedInvariant: true,
+        coverage: { coverageRoots: ['tests'] },
+      })
+    ).toEqual([]);
+  });
+
+  it('fails closed when the declared roots are empty on disk', () => {
+    const hit = collectMissingCoverageRootsFindings({
+      hasEnforcedInvariant: true,
+      coverage: { coverageRoots: ['ghost'] },
+      declaredPathPresent: false,
+    });
+    expect(hit[0]?.ruleId).toBe(INVARIANT_COVERAGE_ROOTS_RULE_ID);
   });
 });
