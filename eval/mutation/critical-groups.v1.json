@@ -4,51 +4,52 @@
   "groups": [
     {
       "id": "config-loading",
+      "note": "4.8.4 pins (467–473 version parse, 493–551 walk/load/parse) drifted onto validateLayerOwners and JSDoc after LO01 owners + trustBoundary. Retargeted to the same migrateArkConfig / load / JSON.parse decisions. Skip 546 (equivalent typeof guard).",
       "targets": [
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 493,
-          "endLine": 494
+          "startLine": 542,
+          "endLine": 545
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 499,
-          "endLine": 500
+          "startLine": 547,
+          "endLine": 548
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 509,
-          "endLine": 511
+          "startLine": 568,
+          "endLine": 569
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 522,
-          "endLine": 522
+          "startLine": 574,
+          "endLine": 575
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 529,
-          "endLine": 529
+          "startLine": 584,
+          "endLine": 586
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 538,
-          "endLine": 540
+          "startLine": 597,
+          "endLine": 597
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 551,
-          "endLine": 551
+          "startLine": 604,
+          "endLine": 604
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 467,
-          "endLine": 470
+          "startLine": 613,
+          "endLine": 616
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 472,
-          "endLine": 473
+          "startLine": 627,
+          "endLine": 627
         }
       ]
     },
@@ -78,7 +79,7 @@
         {
           "file": "bin/lib/write-path-detect.mjs",
           "startLine": 11,
-          "endLine": 96
+          "endLine": 118
         }
       ]
     },
@@ -94,12 +95,12 @@
     },
     {
       "id": "empty-analysis-refusal",
-      "note": "A verdict over zero governed files is a false green, and the refusal is one condition plus one sentence. Unpinned, a mutant could flip the greenfield exemption or the moved-root branch and ark-check would silently pass an empty analysis again.",
+      "note": "A verdict over zero governed files is a false green, and the refusal is one condition plus one sentence. Unpinned, a mutant could flip the greenfield exemption or the moved-root branch and ark-check would silently pass an empty analysis again. 4.8.4 pinned 74-114 (the whole function); classifiedFileCount growth left the exemption at 115 unpinned — retargeted to the function body.",
       "targets": [
         {
           "file": "bin/lib/analysis-completeness.mjs",
-          "startLine": 74,
-          "endLine": 114
+          "startLine": 81,
+          "endLine": 141
         }
       ]
     },

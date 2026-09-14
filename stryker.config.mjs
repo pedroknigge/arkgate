@@ -26,9 +26,15 @@ const config = {
     'bin/lib/write-path-detect.mjs:11-32',
     'bin/lib/write-path-detect.mjs:47-47',
     'bin/lib/write-path-detect.mjs:62-62',
-    'bin/lib/write-path-detect.mjs:77-96',
+    // Fail-open tooth (#231) inserted ahead of mode===none. Keep the two
+    // decisions; skip 88-99 presentation (hookPath/label fallbacks are
+    // unhit for current hosts → NoCoverage string mutants).
+    'bin/lib/write-path-detect.mjs:77-87',
+    'bin/lib/write-path-detect.mjs:100-118',
     'bin/lib/analysis-completeness.mjs:9-27',
-    'bin/lib/analysis-completeness.mjs:74-114',
+    // 4.8.4 pinned 74-114 (the whole function). classifiedFileCount + JSDoc
+    // growth moved the greenfield exemption and refuse return past 114.
+    'bin/lib/analysis-completeness.mjs:81-141',
     'bin/lib/resolved-candidate-facts.mjs:736-786',
     // managed-upgrade force-preserve covered by fieldGapS4 unit tests; not in critical
     // mutation groups for 4.1.0 (NoCoverage noise on toml-section branch residual).
@@ -41,17 +47,19 @@ const config = {
     // (type-only fields above line 40 are not executable — do not pin them).
     'src/domain/baselineKey.ts:40-120',
     // 4.0: migrateArkConfig critical slices (excludes redundant throw-only / guard noise).
-    // 471 is an equivalent mutant: forcing the typeof guard true routes a
+    // 546 is an equivalent mutant: forcing the typeof guard true routes a
     // non-string schemaVersion to the unknown-version throw, same message.
-    'src/domain/configContract.ts:467-470',
-    'src/domain/configContract.ts:472-473',
-    'src/domain/configContract.ts:493-494',
-    'src/domain/configContract.ts:499-500',
-    'src/domain/configContract.ts:509-511',
-    'src/domain/configContract.ts:522-522',
-    'src/domain/configContract.ts:529-529',
-    'src/domain/configContract.ts:538-540',
-    'src/domain/configContract.ts:551-551',
+    // Retargeted after LO01 owners + trustBoundary shifted the 4.8.4 pins
+    // (467-473 had landed on validateLayerOwners guards; 529 on JSDoc).
+    'src/domain/configContract.ts:542-545',
+    'src/domain/configContract.ts:547-548',
+    'src/domain/configContract.ts:568-569',
+    'src/domain/configContract.ts:574-575',
+    'src/domain/configContract.ts:584-586',
+    'src/domain/configContract.ts:597-597',
+    'src/domain/configContract.ts:604-604',
+    'src/domain/configContract.ts:613-616',
+    'src/domain/configContract.ts:627-627',
     // DF04 — selective pure truth islands (fail-closed / ack / promote honesty).
     // peerIsolationDecision is the killable fail-closed core; findDeniedEdgeDecision wires it.
     'src/domain/layerMatch.ts:517-534',
@@ -78,6 +86,7 @@ const config = {
     'tests/unit/static-check/mutationCritical.test.ts',
     'tests/unit/static-check/z02Completeness.test.ts',
     'tests/unit/static-check/emptyAnalysisRefusal.test.ts',
+    'tests/unit/static-check/cursorHardWrite.test.ts',
     'tests/unit/analysis/z04ResolvedFactsResolver.test.ts',
     'tests/unit/static-check/z06ManagedUpgrade.test.ts',
     'tests/unit/static-check/fieldGapS4.test.ts',

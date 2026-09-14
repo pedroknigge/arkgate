@@ -80,6 +80,30 @@ describe('confidence gate wiring', () => {
     expect(baselinesSlice).toContain('export function baselineKey');
     expect(baselinesSlice).toContain('export function baselineOccurrenceKeys');
     expect(stryker).toContain(`${baselines.file}:${baselines.startLine}-${baselines.endLine}`);
+
+    const empty = group('empty-analysis-refusal');
+    expect(empty.file).toBe('bin/lib/analysis-completeness.mjs');
+    const emptySlice = slice(empty.file, empty.startLine, empty.endLine);
+    expect(emptySlice).toContain('export function emptyAnalysisRefusal');
+    expect(emptySlice).toContain('if (ungoverned === 0 && !movedRoot) return null');
+    expect(emptySlice).toContain('included > 0 && classified === 0');
+    expect(stryker).toContain(`${empty.file}:${empty.startLine}-${empty.endLine}`);
+
+    const loading = contract.groups.find((entry) => entry.id === 'config-loading');
+    expect(loading, 'config-loading').toBeTruthy();
+    const loadingBlob = loading!.targets
+      .map((target) => slice(target.file, target.startLine, target.endLine))
+      .join('\n');
+    expect(loadingBlob).toContain("input.schemaVersion === undefined");
+    expect(loadingBlob).toContain('? \'unversioned\'');
+    expect(loadingBlob).toContain('defaultedConfig(working)');
+    expect(loadingBlob).toContain('validateLayerOwners(candidate, issues)');
+    expect(loadingBlob).toContain('JSON.parse(json)');
+    expect(loadingBlob).not.toContain('function validateLayerOwners');
+    expect(loadingBlob).not.toContain('Rewrite schemaVersion through');
+    for (const target of loading!.targets) {
+      expect(stryker).toContain(`${target.file}:${target.startLine}-${target.endLine}`);
+    }
   });
 
   it('rejects NoCoverage even when every critical group remains above threshold', () => {
