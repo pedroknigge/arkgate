@@ -20,10 +20,7 @@ import { collectAdrPresenceResidual, printAdrPresenceHint } from './adr-presence
 import { collectStatesTransitionsResidual } from './states-transitions-presence.mjs';
 import { collectStatusTransitionCatalogResidual } from './status-transition-catalog.mjs';
 import { collectNoDomainFrontendResidual } from './no-domain-frontend.mjs';
-import {
-  collectCoverageRootsResidual,
-  collectInvariantTestsPathResidual,
-} from './invariant-tests-path.mjs';
+import { collectInvariantCoverageResiduals } from './invariant-tests-path.mjs';
 export { printAdrPresenceHint };
 export { printDoctorCompactHuman, printDoctorDetailsHuman };
 export { summarizeRulesUnderContract };
@@ -655,11 +652,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   const statesTransitions = collectStatesTransitionsResidual({ root });
   const statusTransitionCatalog = collectStatusTransitionCatalogResidual({ root, config, files, statesTransitions });
   const noDomainFrontend = collectNoDomainFrontendResidual({ config, coverage: cov, designSmells });
-  const invariantCoverageRoots = collectCoverageRootsResidual({ coverage: config?.coverage, config, root });
-  const invariantTestsPath =
-    invariantCoverageRoots
-      ? null
-      : collectInvariantTestsPathResidual({ adopted: isAdopted(adopted) || options.requireGates === true, coverage: config?.coverage, config, root });
+  const { invariantCoverageRoots, invariantTestsPath } = collectInvariantCoverageResiduals({ adopted: isAdopted(adopted) || options.requireGates === true, coverage: config?.coverage, config, root });
   const { coverageHonesty, baselineHonesty, writePathHonesty, productHonesty } =
     computeDoctorEnforcementHonesty({
       governedPercent: cov.governed.percent,

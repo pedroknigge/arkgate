@@ -167,6 +167,17 @@ function residualHasEnforcedInvariant(input) {
   return false;
 }
 
+/** One doctor light: roots residual wins when both would fire. */
+export function collectInvariantCoverageResiduals(input = {}) {
+  const invariantCoverageRoots = collectCoverageRootsResidual(input);
+  return {
+    invariantCoverageRoots,
+    invariantTestsPath: invariantCoverageRoots
+      ? null
+      : collectInvariantTestsPathResidual(input),
+  };
+}
+
 /**
  * Doctor residual when any invariant is enforced and coverageRoots is missing/empty.
  *
