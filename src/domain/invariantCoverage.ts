@@ -36,6 +36,22 @@ export type InvariantCoverageRuleId =
   | 'INVARIANT_UNCOVERED'
   | 'INVARIANT_COVERAGE_OUTSIDE_ROOTS';
 
+/** Adopted + catalogued invariants, but no declared tests path (P2 §10). */
+export const INVARIANT_TESTS_PATH_RULE_ID = 'INVARIANT_TESTS_PATH_MISSING' as const;
+
+export const INVARIANT_TESTS_PATH_MESSAGE =
+  'This project is adopted and has domain invariants, but ark.config.json does not name a real tests path. Add coverage.testGlobs or coverage.coverageRoots pointing at the folder where those tests live, then re-run. Without that path, coverage is an empty checkbox.';
+
+export type InvariantTestsPathFinding = {
+  ruleId: typeof INVARIANT_TESTS_PATH_RULE_ID;
+  message: string;
+  file: string;
+  line: number;
+  severity: 'error';
+  failsStrict: true;
+  freezable: false;
+};
+
 export type InvariantCoverageViolation = {
   ruleId: InvariantCoverageRuleId;
   message: string;
@@ -377,4 +393,89 @@ export function canPromoteInvariant(
     };
   }
   return { ok: true, reason: `Invariant ${coverage.invariantId} has coverage evidence.` };
+}
+
+function nonEmptyPathStrings(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  const out: string[] = [];
+  for (const item of value) {
+    if (typeof item !== 'string') continue;
+    const trimmed = item.trim();
+    if (trimmed.length > 0) out.push(trimmed);
+  }
+  return out;
+}
+
+/**
+ * Declared tests homes: `coverage.testGlobs` and/or `coverage.coverageRoots`.
+ * Either is a configured path. Empty strings do not count.
+ */
+export function configuredInvariantTestsPaths(
+  coverage: { testGlobs?: unknown; coverageRoots?: unknown } | null | undefined
+): string[] {
+  if (!coverage || typeof coverage !== 'object') return [];
+  return [...nonEmptyPathStrings(coverage.testGlobs), ...nonEmptyPathStrings(coverage.coverageRoots)];
+}
+
+export function hasConfiguredInvariantTestsPath(
+  coverage: { testGlobs?: unknown; coverageRoots?: unknown } | null | undefined
+): boolean {
+  return configuredInvariantTestsPaths(coverage).length > 0;
+}
+
+/**
+ * True when at least one catalogued invariant wants test evidence.
+ * Same default as AR10: `coverage.test !== false`. `test: false` is an explicit
+ * opt-out (starter Domain phrases use it) and does not demand a tests path.
+ */
+export function catalogDemandsInvariantTestsPath(
+  invariants: readonly { coverage?: { test?: boolean } | null }[] | null | undefined
+): boolean {
+  if (!Array.isArray(invariants) || invariants.length === 0) return false;
+  return invariants.some((inv) => inv != null && inv.coverage?.test !== false);
+}
+
+export type MissingInvariantTestsPathInput = {
+  /** D0 adopted (required-merge / advisory-only-acked) or --require-gates / --strict-merge. */
+  adopted?: boolean;
+  /**
+   * At least one invariant wants tests. Prefer `invariants` +
+   * `catalogDemandsInvariantTestsPath` at the call site. `true` is an explicit override.
+   */
+  hasDomainInvariants?: boolean;
+  /** Effective catalog entries; used when `hasDomainInvariants` is omitted. */
+  invariants?: readonly { coverage?: { test?: boolean } | null }[] | null;
+  coverage?: { testGlobs?: unknown; coverageRoots?: unknown } | null;
+  /**
+   * Tooling FS check. `false` means the declared path is empty on disk.
+   * Omitted: a non-empty config declaration is enough (Domain has no I/O).
+   */
+  declaredPathPresent?: boolean;
+};
+
+/**
+ * §10 — adopted + invariants that want tests require a real tests path.
+ * Fail-closed. Not freezable. Silent when not adopted, the catalog is empty,
+ * or every entry sets `coverage.test: false`.
+ */
+export function collectMissingInvariantTestsPathFindings(
+  input: MissingInvariantTestsPathInput
+): InvariantTestsPathFinding[] {
+  const demanded =
+    input.hasDomainInvariants === true ||
+    (input.hasDomainInvariants !== false && catalogDemandsInvariantTestsPath(input.invariants));
+  if (input.adopted !== true || !demanded) return [];
+  const configured = hasConfiguredInvariantTestsPath(input.coverage);
+  if (configured && input.declaredPathPresent !== false) return [];
+  return [
+    {
+      ruleId: INVARIANT_TESTS_PATH_RULE_ID,
+      message: INVARIANT_TESTS_PATH_MESSAGE,
+      file: 'ark.config.json',
+      line: 1,
+      severity: 'error',
+      failsStrict: true,
+      freezable: false,
+    },
+  ];
 }

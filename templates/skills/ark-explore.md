@@ -34,6 +34,12 @@ one bounded decision needs 2–3 enforceable options.
   rules. Next: one Domain file (`/ark-place`) then one small refactor
   (`/ark-autopilot`). Soft. Silent when there is no frontend or Domain already
   has files. No `/ark-domain`. Do not invent a Domain house.
+- When the tree is adopted and doctor JSON has `invariantTestsPath` (or the
+  check names `INVARIANT_TESTS_PATH_MISSING`), the next step is
+  `coverage.testGlobs` or `coverage.coverageRoots` on a real tests folder.
+  Fail-closed. Silent when not adopted, the catalog is empty, or every
+  invariant sets coverage.test false. Handoff
+  `/ark-adopt` to write the path. No new skill.
 - Distinguish **missing** skills vs **stale** catalog. Installed ≠ stale.
 - Hook green is not tree green (scripted edits bypass PreToolUse).
 - Bug / false green / false red / missing doc / improvable behavior **in ArkGate itself** → draft one upstream GitHub issue (`pedroknigge/arkgate` or the installed package `repository.url`), **ask the human to confirm send**, then `gh issue create`. Never auto-file. Never file ArkGate defects on the consumer product repo.

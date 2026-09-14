@@ -570,6 +570,16 @@ describe('LD05 layer description skill deepen (no /ark-describe)', () => {
     expect(explore).toMatch(/No `?\/ark-states`/);
   });
 
+  it('ark-adopt, ark-coverage, and ark-explore point at invariantTestsPath without a new skill', () => {
+    const adopt = readSkill('ark-adopt');
+    expect(adopt).toContain('invariantTestsPath');
+    expect(adopt).toContain('INVARIANT_TESTS_PATH_MISSING');
+    const coverage = readSkill('ark-coverage');
+    expect(coverage).toContain('INVARIANT_TESTS_PATH_MISSING');
+    const explore = readSkill('ark-explore');
+    expect(explore).toContain('invariantTestsPath');
+  });
+
   it('ark-explore, ark-place, and ark-adopt point at noDomainFrontend without a new skill', () => {
     const explore = readSkill('ark-explore');
     expect(explore).toContain('noDomainFrontend');

@@ -553,6 +553,18 @@ bump. No new skill. Does not close `Z09` / `K01`.
 |---:|---|---|---:|---|---|
 | 281 | `SC01` | `done` | S | GS01 | Opt-in Domain status/transition catalog + doctor residual when the map is thin; skills stay at 100% product |
 
+### Patch — domain-invariant tests path required under adopted
+
+When the tree is adopted (required CI or explicit advisory) and the catalog
+has domain invariants, a missing or empty `coverage.testGlobs` /
+`coverage.coverageRoots` fails closed. Doctor names the path. Reuses the
+existing coverage keys. No `schemaVersion` bump. No new skill. Does not
+close `Z09` / `K01`.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 287 | `IT01` | `doing` | S | SC01 | Adopted + domain invariants require a real tests path; missing/empty fails closed; happy path stays green |
+
 ### Patch 4.8.15 — local multi-worktree check DX (Pedro)
 
 Field: many git worktrees / branches made `ark-check` feel like one

@@ -20,6 +20,7 @@ import { collectAdrPresenceResidual, printAdrPresenceHint } from './adr-presence
 import { collectStatesTransitionsResidual } from './states-transitions-presence.mjs';
 import { collectStatusTransitionCatalogResidual } from './status-transition-catalog.mjs';
 import { collectNoDomainFrontendResidual } from './no-domain-frontend.mjs';
+import { collectInvariantTestsPathResidual } from './invariant-tests-path.mjs';
 export { printAdrPresenceHint };
 export { printDoctorCompactHuman, printDoctorDetailsHuman };
 export { summarizeRulesUnderContract };
@@ -73,6 +74,7 @@ import { writeCiMergeBoundary } from './ci-merge-boundary.mjs';
 import {
   classifyAdopted,
   githubEvidenceForCiMergeBoundary,
+  isAdopted,
   readAdoptionStance,
   NOT_ADOPTED_NEXT_ACTION,
 } from './adoption-stance.mjs';
@@ -650,6 +652,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   const statesTransitions = collectStatesTransitionsResidual({ root });
   const statusTransitionCatalog = collectStatusTransitionCatalogResidual({ root, config, files, statesTransitions });
   const noDomainFrontend = collectNoDomainFrontendResidual({ config, coverage: cov, designSmells });
+  const invariantTestsPath = collectInvariantTestsPathResidual({ adopted: isAdopted(adopted) || options.requireGates === true, coverage: config?.coverage, config, root });
   const { coverageHonesty, baselineHonesty, writePathHonesty, productHonesty } =
     computeDoctorEnforcementHonesty({
       governedPercent: cov.governed.percent,
@@ -782,7 +785,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
             ...(layerOwners ? { layerOwners } : {}),
             ...(adrPresence ? { adrPresence } : {}),
             ...(statesTransitions ? { statesTransitions } : {}),
-            ...(statusTransitionCatalog ? { statusTransitionCatalog } : {}), ...(noDomainFrontend ? { noDomainFrontend } : {}),
+            ...(statusTransitionCatalog ? { statusTransitionCatalog } : {}), ...(noDomainFrontend ? { noDomainFrontend } : {}), ...(invariantTestsPath ? { invariantTestsPath } : {}),
             emptyLayers: cov.emptyLayers,
             layersWithoutRules: cov.layersWithoutRules,
             ungovernedDirs: cov.suggestions.length,
@@ -927,7 +930,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     layerOwners,
     adrPresence,
     statesTransitions,
-    statusTransitionCatalog, noDomainFrontend,
+    statusTransitionCatalog, noDomainFrontend, invariantTestsPath,
   });
   const humanView = {
     root,
@@ -937,7 +940,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     layerOwners,
     adrPresence,
     statesTransitions,
-    statusTransitionCatalog, noDomainFrontend,
+    statusTransitionCatalog, noDomainFrontend, invariantTestsPath,
     operatingMode,
     designFitness,
     adopted,
