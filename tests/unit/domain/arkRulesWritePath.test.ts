@@ -413,6 +413,28 @@ export class Order {
     ).toBe(false);
   });
 
+  it('stays silent when adopted but every invariant opts out of tests', () => {
+    const arkRules = invariantRules([
+      {
+        id: 'INV-ALWAYS-VALID',
+        description: 'A domain object is never stored in an invalid state',
+        mode: 'advisory',
+        coverage: { test: false },
+      },
+    ]);
+    const cfg = { ...BASE_CONFIG, arkRules: { DomainModel: 'arkrules/DomainModel.json' } };
+    const result = analyzeCanonicalResolvedProject({
+      contract: loadContract(cfg as never, 'ark.config.json', { arkRules }),
+      facts: minimalFacts(cfg),
+      adopted: true,
+    });
+    expect(
+      [...(result.ir.violations ?? []), ...(result.ir.warnings ?? [])].some(
+        (v) => v.ruleId === 'INVARIANT_TESTS_PATH_MISSING'
+      )
+    ).toBe(false);
+  });
+
   it('stays silent when not adopted even if the tests path is missing', () => {
     const arkRules = invariantRules([
       { id: 'INV-ORDER-001', description: 'Order total never negative', mode: 'advisory' },

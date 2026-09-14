@@ -36,6 +36,7 @@ import {
   type ArkRuleSensorViolation,
 } from '../domain/arkRuleSensors';
 import {
+  catalogDemandsInvariantTestsPath,
   collectMissingInvariantTestsPathFindings,
   evaluateInvariantCoverage,
 } from '../domain/invariantCoverage';
@@ -511,7 +512,7 @@ export function analyzeCanonicalResolvedProject(
   const hasInvariants = (arkRules.invariants?.length ?? 0) > 0;
   const testsPathFindings = collectMissingInvariantTestsPathFindings({
     adopted: input.adopted === true,
-    hasDomainInvariants: hasInvariants,
+    hasDomainInvariants: catalogDemandsInvariantTestsPath(arkRules.invariants),
     coverage: input.contract.config.coverage,
     ...(input.invariantTestsPathPresent === false ? { declaredPathPresent: false } : {}),
   });

@@ -37,7 +37,8 @@ one bounded decision needs 2–3 enforceable options.
 - When the tree is adopted and doctor JSON has `invariantTestsPath` (or the
   check names `INVARIANT_TESTS_PATH_MISSING`), the next step is
   `coverage.testGlobs` or `coverage.coverageRoots` on a real tests folder.
-  Fail-closed. Silent when not adopted or the catalog is empty. Handoff
+  Fail-closed. Silent when not adopted, the catalog is empty, or every
+  invariant sets coverage.test false. Handoff
   `/ark-adopt` to write the path. No new skill.
 - Distinguish **missing** skills vs **stale** catalog. Installed ≠ stale.
 - Hook green is not tree green (scripted edits bypass PreToolUse).

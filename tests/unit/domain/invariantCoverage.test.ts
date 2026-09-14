@@ -575,6 +575,12 @@ describe('§10 adopted invariant tests path', () => {
         coverage: { coverageRoots: ['tests'] },
       })
     ).toEqual([]);
+    expect(
+      collectMissingInvariantTestsPathFindings({
+        adopted: true,
+        invariants: [{ coverage: { test: false } }, { coverage: { test: false } }],
+      })
+    ).toEqual([]);
   });
 
   it('fails closed when the declared path is empty on disk', () => {

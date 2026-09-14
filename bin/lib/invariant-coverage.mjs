@@ -264,11 +264,24 @@ export function hasConfiguredInvariantTestsPath(coverage) {
     return configuredInvariantTestsPaths(coverage).length > 0;
 }
 /**
- * §10 — adopted + domain invariants require a real tests path.
- * Fail-closed. Not freezable. Silent when not adopted or the catalog is empty.
+ * True when at least one catalogued invariant wants test evidence.
+ * Same default as AR10: `coverage.test !== false`. `test: false` is an explicit
+ * opt-out (starter Domain phrases use it) and does not demand a tests path.
+ */
+export function catalogDemandsInvariantTestsPath(invariants) {
+    if (!Array.isArray(invariants) || invariants.length === 0)
+        return false;
+    return invariants.some((inv) => inv != null && inv.coverage?.test !== false);
+}
+/**
+ * §10 — adopted + invariants that want tests require a real tests path.
+ * Fail-closed. Not freezable. Silent when not adopted, the catalog is empty,
+ * or every entry sets `coverage.test: false`.
  */
 export function collectMissingInvariantTestsPathFindings(input) {
-    if (input.adopted !== true || input.hasDomainInvariants !== true)
+    const demanded = input.hasDomainInvariants === true ||
+        (input.hasDomainInvariants !== false && catalogDemandsInvariantTestsPath(input.invariants));
+    if (input.adopted !== true || !demanded)
         return [];
     const configured = hasConfiguredInvariantTestsPath(input.coverage);
     if (configured && input.declaredPathPresent !== false)

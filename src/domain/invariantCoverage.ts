@@ -423,11 +423,28 @@ export function hasConfiguredInvariantTestsPath(
   return configuredInvariantTestsPaths(coverage).length > 0;
 }
 
+/**
+ * True when at least one catalogued invariant wants test evidence.
+ * Same default as AR10: `coverage.test !== false`. `test: false` is an explicit
+ * opt-out (starter Domain phrases use it) and does not demand a tests path.
+ */
+export function catalogDemandsInvariantTestsPath(
+  invariants: readonly { coverage?: { test?: boolean } | null }[] | null | undefined
+): boolean {
+  if (!Array.isArray(invariants) || invariants.length === 0) return false;
+  return invariants.some((inv) => inv != null && inv.coverage?.test !== false);
+}
+
 export type MissingInvariantTestsPathInput = {
   /** D0 adopted (required-merge / advisory-only-acked) or --require-gates / --strict-merge. */
   adopted?: boolean;
-  /** Effective catalog has at least one invariant. Absence stays silent. */
+  /**
+   * At least one invariant wants tests. Prefer `invariants` +
+   * `catalogDemandsInvariantTestsPath` at the call site. `true` is an explicit override.
+   */
   hasDomainInvariants?: boolean;
+  /** Effective catalog entries; used when `hasDomainInvariants` is omitted. */
+  invariants?: readonly { coverage?: { test?: boolean } | null }[] | null;
   coverage?: { testGlobs?: unknown; coverageRoots?: unknown } | null;
   /**
    * Tooling FS check. `false` means the declared path is empty on disk.
@@ -437,13 +454,17 @@ export type MissingInvariantTestsPathInput = {
 };
 
 /**
- * §10 — adopted + domain invariants require a real tests path.
- * Fail-closed. Not freezable. Silent when not adopted or the catalog is empty.
+ * §10 — adopted + invariants that want tests require a real tests path.
+ * Fail-closed. Not freezable. Silent when not adopted, the catalog is empty,
+ * or every entry sets `coverage.test: false`.
  */
 export function collectMissingInvariantTestsPathFindings(
   input: MissingInvariantTestsPathInput
 ): InvariantTestsPathFinding[] {
-  if (input.adopted !== true || input.hasDomainInvariants !== true) return [];
+  const demanded =
+    input.hasDomainInvariants === true ||
+    (input.hasDomainInvariants !== false && catalogDemandsInvariantTestsPath(input.invariants));
+  if (input.adopted !== true || !demanded) return [];
   const configured = hasConfiguredInvariantTestsPath(input.coverage);
   if (configured && input.declaredPathPresent !== false) return [];
   return [

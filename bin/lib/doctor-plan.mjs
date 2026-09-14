@@ -652,7 +652,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   const statesTransitions = collectStatesTransitionsResidual({ root });
   const statusTransitionCatalog = collectStatusTransitionCatalogResidual({ root, config, files, statesTransitions });
   const noDomainFrontend = collectNoDomainFrontendResidual({ config, coverage: cov, designSmells });
-  const invariantTestsPath = collectInvariantTestsPathResidual({ adopted: isAdopted(adopted) || options.requireGates === true, coverage: config?.coverage, hasDomainInvariants: (rulesUnderContract?.invariants ?? 0) > 0, root });
+  const invariantTestsPath = collectInvariantTestsPathResidual({ adopted: isAdopted(adopted) || options.requireGates === true, coverage: config?.coverage, config, root });
   const { coverageHonesty, baselineHonesty, writePathHonesty, productHonesty } =
     computeDoctorEnforcementHonesty({
       governedPercent: cov.governed.percent,

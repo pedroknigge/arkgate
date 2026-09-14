@@ -327,10 +327,10 @@ Declaring nothing is silent — without `coverage.coverageRoots` there is no sec
 
 **Domain-invariant tests path missing under adopted**
 
-- **Why:** The project is adopted (required CI or explicit advisory) and has domain invariants, but `ark.config.json` does not name where those tests live. Green coverage without a real tests path is an empty checkbox.
+- **Why:** The project is adopted (required CI or explicit advisory) and has domain invariants that want test evidence, but `ark.config.json` does not name where those tests live. Green coverage without a real tests path is an empty checkbox.
 - **Fix:** Add `coverage.testGlobs` or `coverage.coverageRoots` in `ark.config.json` pointing at a real tests folder, then re-run. Adopted mode fails closed until that path is present. Not freezable.
 
-Not adopted, or no catalogued invariants, stays silent. This is not a new config key.
+Not adopted, no catalogued invariants, or every invariant sets `coverage.test: false`, stays silent. This is not a new config key.
 
 ## ArkRun (opt-in extra)
 

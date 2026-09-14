@@ -12,11 +12,13 @@ import {
   readAdoptionStance,
 } from './adoption-stance.mjs';
 import {
+  catalogDemandsInvariantTestsPath,
   configuredInvariantTestsPaths,
   collectMissingInvariantTestsPathFindings,
   hasConfiguredInvariantTestsPath,
   INVARIANT_TESTS_PATH_MESSAGE,
 } from './invariant-coverage.mjs';
+import { loadEffectiveArkRulesFromDisk } from './effective-contract-load.mjs';
 
 export const INVARIANT_TESTS_PATH_ASK = INVARIANT_TESTS_PATH_MESSAGE;
 
@@ -68,21 +70,39 @@ export function declaredInvariantTestsPathPresent(root, coverage) {
  * @param {{
  *   adopted?: boolean,
  *   coverage?: { testGlobs?: unknown, coverageRoots?: unknown } | null,
+ *   config?: object,
+ *   invariants?: unknown[],
  *   hasDomainInvariants?: boolean,
  *   root?: string,
  * }} [input]
  * @returns {{ missing: true, ask: string, nextAction: string } | null}
  */
+function residualDemandsInvariantTests(input) {
+  if (input.hasDomainInvariants === true) return true;
+  if (input.hasDomainInvariants === false) return false;
+  if (Array.isArray(input.invariants)) return catalogDemandsInvariantTestsPath(input.invariants);
+  if (typeof input.root === 'string' && input.config) {
+    try {
+      const loaded = loadEffectiveArkRulesFromDisk(input.root, input.config);
+      if (loaded.errors?.length) return false;
+      return catalogDemandsInvariantTestsPath(loaded.arkRules?.invariants);
+    } catch {
+      return false;
+    }
+  }
+  return false;
+}
+
 export function collectInvariantTestsPathResidual(input = {}) {
   if (input.adopted !== true) return null;
-  const coverage = input.coverage;
+  const coverage = input.coverage ?? input.config?.coverage;
   const present =
     typeof input.root === 'string' && input.root.length > 0
       ? declaredInvariantTestsPathPresent(input.root, coverage)
       : hasConfiguredInvariantTestsPath(coverage);
   const findings = collectMissingInvariantTestsPathFindings({
     adopted: true,
-    hasDomainInvariants: input.hasDomainInvariants === true,
+    hasDomainInvariants: residualDemandsInvariantTests(input),
     coverage,
     declaredPathPresent: present,
   });

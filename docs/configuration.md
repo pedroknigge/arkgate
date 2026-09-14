@@ -91,7 +91,8 @@ Top-level fields:
   `maxFiles` (evidence file budget, default `400`) and `coverageRoots` (path prefixes where the
   project declares its runner actually executes tests). Absence is silent unless the tree is
   **adopted** (required CI or `.ark/adoption-stance.json` advisory-only) **and** the catalog
-  has domain invariants — then a missing or empty tests path fails closed
+  has domain invariants that want test evidence (`coverage.test` is not `false`) —
+  then a missing or empty tests path fails closed
   (`INVARIANT_TESTS_PATH_MISSING`). Either `testGlobs` or `coverageRoots` satisfies the path.
   Unknown keys fail closed. **`maxFiles` also bounds structural-hint preload** for
   `orchestration-only`, `thin-adapter`, and `writes-via-aggregate` (the hint loader reuses

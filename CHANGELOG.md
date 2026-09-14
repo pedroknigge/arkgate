@@ -10,7 +10,8 @@ in the immutable pre-2.0 archive linked below.
   (`coverage.testGlobs` or `coverage.coverageRoots`). Missing or empty fails
   closed (`INVARIANT_TESTS_PATH_MISSING`) on `--require-gates` / `--strict-merge`
   and on an explicit advisory-only ack. Doctor residual names the next step.
-  Silent when not adopted or the catalog is empty. Reuses the existing coverage
+  Silent when not adopted, the catalog is empty, or every invariant sets
+  `coverage.test: false` (starter Domain phrases). Reuses the existing coverage
   keys — no new schema, flag, or skill.
 - Soft doctor residual when Domain is declared but empty and the UI holds the
   rules (`noDomainFrontend`). Projects empty Domain + presentation share, or
