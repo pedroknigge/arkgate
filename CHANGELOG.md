@@ -6,6 +6,11 @@ in the immutable pre-2.0 archive linked below.
 ## Unreleased
 
 ### Added
+- Doctor green / healthy lines must name a file, config key, or test
+  (`ark.config.json`, `.ark/ci-merge-boundary.json`, `coverage.testGlobs`,
+  a real tests path). Uncited greens are demoted so they cannot look
+  healthy. Happy path stays a short cited line. Reuses the existing doctor
+  view — no new schema, flag, or skill.
 - Adopted trees with catalogued domain invariants must name a real tests path
   (`coverage.testGlobs` or `coverage.coverageRoots`). Missing or empty fails
   closed (`INVARIANT_TESTS_PATH_MISSING`) on `--require-gates` / `--strict-merge`

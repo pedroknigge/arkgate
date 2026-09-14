@@ -120,6 +120,8 @@ npx ark report --submit --i-confirm-submit
 
 `--doctor --json` is a stable envelope (4.6.5+): `{ "schemaVersion": "1.0", "envelope": "doctor", "ok": boolean, "doctor": { … } }`.
 Payload lives only under `doctor`. Do not parse sibling root keys as the doctor object.
+A green or Healthy line names a file, config key, or test so a stranger can
+check it in about a minute. Uncited green is not honest — treat it as unfinished.
 
 Doctor also writes `.ark/ci-merge-boundary.json` (hook configured-not-fired, per-host writePath,
 CI present-but-not-required, GitHub Free cannot require). Read that file — do not grep `node_modules`.
