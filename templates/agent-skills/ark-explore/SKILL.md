@@ -40,6 +40,8 @@ one bounded decision needs 2–3 enforceable options.
   Fail-closed. Silent when not adopted, the catalog is empty, or every
   invariant sets coverage.test false. Handoff
   `/ark-adopt` to write the path. No new skill.
+- A doctor green / Healthy line must name a file, config key, or test.
+  Uncited green is a lie — treat it as unfinished. No `/ark-cite`.
 - Distinguish **missing** skills vs **stale** catalog. Installed ≠ stale.
 - Hook green is not tree green (scripted edits bypass PreToolUse).
 - Bug / false green / false red / missing doc / improvable behavior **in ArkGate itself** → draft one upstream GitHub issue (`pedroknigge/arkgate` or the installed package `repository.url`), **ask the human to confirm send**, then `gh issue create`. Never auto-file. Never file ArkGate defects on the consumer product repo.

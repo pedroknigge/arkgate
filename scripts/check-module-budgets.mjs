@@ -57,7 +57,8 @@ const BUDGETS = [
   // AL01 D0 adopted stance + ci-merge-boundary writer — was 1320.
   // AL06 compact vs Details extract — doctor-plan orchestration only.
   { path: 'bin/lib/doctor-plan.mjs', max: 980 },
-  { path: 'bin/lib/doctor-human.mjs', max: 560 },
+  // GR01 cited greens — formatting lives in doctor-green-cite; was 560.
+  { path: 'bin/lib/doctor-human.mjs', max: 600 },
   // 4.0.0 ArkRules start/init templates + dual-plane presets — was 650 (loc 870).
   // S3 SPA + adopt/migrate patterns (vite-vercel-spa, P0A retrofit) — was 920 (loc ~1130).
   { path: 'bin/lib/presets.mjs', max: 1160 },

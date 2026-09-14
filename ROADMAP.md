@@ -563,7 +563,18 @@ close `Z09` / `K01`.
 
 | Order | ID | Status | Size | Depends on | Outcome |
 |---:|---|---|---:|---|---|
-| 287 | `IT01` | `doing` | S | SC01 | Adopted + domain invariants require a real tests path; missing/empty fails closed; happy path stays green |
+| 287 | `IT01` | `done` | S | SC01 | Adopted + domain invariants require a real tests path; missing/empty fails closed; happy path stays green (#255) |
+
+### Patch — doctor green claims cite a file, config key, or test
+
+Golden rule: a doctor green / Healthy line that can mislead must name a
+concrete backing artifact, or be demoted. Reuses the existing doctor view
+and the IT01 / ADR residual shape. No `schemaVersion` bump. No new skill.
+Does not close `Z09` / `K01`.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 288 | `GR01` | `done` | S | IT01 | Doctor green / Healthy cites a file, config key, or test; uncited greens demote |
 
 ### Patch 4.8.15 — local multi-worktree check DX (Pedro)
 

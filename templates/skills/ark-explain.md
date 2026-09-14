@@ -24,7 +24,8 @@ Name 1–3 **residual** lenses in plain language before skill-shopping. Always `
 **What the user should feel next:** fewer blocked AI writes, clearer folders, safer domain — then jargon.
 
 **Anti false-done:** empty plan A + residual lenses / design-weak → **Incomplete? yes**. Green edges alone
-are not “architecture finished.”
+are not “architecture finished.” A doctor green / Healthy line must name a
+file, config key, or test; uncited green is unfinished.
 
 **AI-easy architecture:** ports over concrete I/O in domain; one concern per module; golden pattern for
 new files; place before write (`/ark-place` / prepare-write).

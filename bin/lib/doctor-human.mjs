@@ -13,24 +13,16 @@ import { enforcementDoctorLines } from './enforcement-state.mjs';
 import { analysisIncompleteStatement } from './analysis-completeness.mjs';
 import { skillGapsForActiveHost, detectCodexHomeGap, codexConcernIsActive } from './agent-gates.mjs';
 import { agentHomeConcernIsActive } from './agent-homes.mjs';
-import { REQUIRED_GATE_WORKFLOW } from './gate-files.mjs';
 import { layerGuidanceLine } from './layer-description.mjs';
-
-function displayedMissingGates(gatesMissing, view) {
-  const list = Array.isArray(gatesMissing) ? gatesMissing : [];
-  const hideGlob = Boolean(
-    view?.ciNotFailClosed?.workflowFile ||
-      view?.ciNotFailClosed?.error === 'ci-not-fail-closed' ||
-      view?.ciMergeBoundary?.ci?.workflowPresent
-  );
-  return hideGlob ? list.filter((item) => item !== REQUIRED_GATE_WORKFLOW) : list;
-}
-
-function ciNotFailClosedNotice(view) {
-  const file = view?.ciNotFailClosed?.workflowFile;
-  if (!file) return null;
-  return `CI not fail-closed: ${file} — remove the skippable if:, or write .ark/adoption-stance.json with stance: advisory-only`;
-}
+import {
+  citedGreen,
+  ciMergeGreenCites,
+  ciNotFailClosedNotice,
+  displayedMissingGates,
+  foundGateCites,
+  printHealthyHeadline,
+  writePathGreenCites,
+} from './doctor-green-cite.mjs';
 
 function lineWith(ok, warn, bad, color) {
   return (mark, text) => console.log(`  ${mark} ${text}`);
@@ -97,14 +89,13 @@ export function printDoctorCompactHuman(view) {
         : 'import rules check out. Keep host + CI.',
   };
   const modeTitle = operatingModeTitle(mode, designFitness.designWeak, stewardUnfinished);
-  line(
-    modeMark,
-    `${modeTitle} — ${
-      designFitness.designWeak
-        ? 'import rules check out; leftover design work remains.'
-        : modeHelp[mode]
-    }`
-  );
+  const modeClaim = `${modeTitle} — ${
+    designFitness.designWeak
+      ? 'import rules check out; leftover design work remains.'
+      : modeHelp[mode]
+  }`;
+  if (modeMark === ok) citedGreen(line, { ok, warn }, modeClaim, ['ark.config.json']);
+  else line(modeMark, modeClaim);
   if (emptyScope) {
     line(
       bad,
@@ -114,17 +105,18 @@ export function printDoctorCompactHuman(view) {
 
   console.log('');
   if (ciMergeBoundary?.ci?.state) {
-    line(
-      ciMergeBoundary.ci.state === 'required' ? ok : warn,
-      `CI merge: ${ciMergeBoundary.ci.state}`
-    );
+    const mergeClaim = `CI merge: ${ciMergeBoundary.ci.state}`;
+    if (ciMergeBoundary.ci.state === 'required') {
+      citedGreen(line, { ok, warn }, mergeClaim, ciMergeGreenCites(view));
+    } else {
+      line(warn, mergeClaim);
+    }
   }
   if (adopted === 'advisory-only-acked') {
     line(warn, 'Adoption: advisory-only ack — not a required GitHub status.');
   }
   if (isDoctorHealthyNothingToDo(designFitness, uniqueActions, adopted)) {
-    console.log(color.green('✔ Healthy — nothing to do.'));
-    console.log(color.dim('  Keep write path + CI.'));
+    printHealthyHeadline(view, color);
   } else {
     console.log(color.bold('Primary next action'));
     console.log(`  1. ${uniqueActions[0]}`);
@@ -132,13 +124,10 @@ export function printDoctorCompactHuman(view) {
 
   console.log('');
   console.log(color.bold('Coverage'));
-  const govMark =
-    emptyScope || cov.governed.percent < 50
-      ? bad
-      : cov.governed.percent >= 80
-        ? ok
-        : warn;
-  line(govMark, `Governed: ${cov.governed.percent}% (${cov.governed.classifiedFiles}/${cov.governed.totalFiles} files)`);
+  const govClaim = `Governed: ${cov.governed.percent}% (${cov.governed.classifiedFiles}/${cov.governed.totalFiles} files)`;
+  if (emptyScope || cov.governed.percent < 50) line(bad, govClaim);
+  else if (cov.governed.percent >= 80) citedGreen(line, { ok, warn }, govClaim, ['ark.config.json', 'include', 'layers']);
+  else line(warn, govClaim);
   for (const row of cov.layers ?? []) {
     const guidance = layerGuidanceLine(row);
     if (guidance) line(' ', `${row.name} — ${guidance}`);
@@ -261,7 +250,12 @@ export function printDoctorDetailsHuman(view) {
       `Dual-match: ${cov.dualMembership.count} file(s) match multiple layers — ${cov.dualMembership.note ?? 'review overlapping globs'}`
     );
   }
-  if (cov.suggestions.length === 0 && cov.emptyLayers.length === 0) line(ok, 'Every layer classifies files; no empty layers');
+  if (cov.suggestions.length === 0 && cov.emptyLayers.length === 0) {
+    citedGreen(line, { ok, warn }, 'Every layer classifies files; no empty layers', [
+      'ark.config.json',
+      'layers',
+    ]);
+  }
   const captioned = (cov.layers ?? []).filter((row) => layerGuidanceLine(row));
   if (captioned.length > 0) {
     console.log('');
@@ -288,7 +282,8 @@ export function printDoctorDetailsHuman(view) {
   console.log('');
   console.log(color.bold('Design fitness'));
   if (designSmells.length === 0) {
-    line(analysisComplete ? ok : warn, designFitness.label);
+    if (analysisComplete) citedGreen(line, { ok, warn }, designFitness.label, ['ark.config.json']);
+    else line(warn, designFitness.label);
   } else {
     line(designFitness.designWeak ? warn : warn, designFitness.label);
     for (const smell of designSmells.slice(0, 5)) {
@@ -355,15 +350,16 @@ export function printDoctorDetailsHuman(view) {
     } else if (designFitness.designWeak) {
       line(warn, `None on checked imports — import rules match the config; leftover design work remains (${modeTitle}). Not healthy finished.`);
     } else {
-      line(ok, 'None — the code matches the contract on checked edges');
+      citedGreen(line, { ok, warn }, 'None — the code matches the contract on checked edges', [
+        'ark.config.json',
+      ]);
     }
   } else {
     const typeNote = summary.typeOnlyCount > 0 ? ` (${summary.valueCount} value · ${summary.typeOnlyCount} type-only)` : '';
     const supNote = suppressed > 0 ? `, ${suppressed} frozen` : '';
-    line(
-      activeCount > 0 ? warn : ok,
-      `${violations.length} total${typeNote}${supNote}${activeCount > 0 ? ` — ${activeCount} NOT baselined` : ''}`
-    );
+    const violClaim = `${violations.length} total${typeNote}${supNote}${activeCount > 0 ? ` — ${activeCount} NOT baselined` : ''}`;
+    if (activeCount > 0) line(warn, violClaim);
+    else citedGreen(line, { ok, warn }, violClaim, ['.ark-baseline.json']);
     for (const edge of summary.edges.slice(0, 3)) line(' ', color.dim(`${edge.count}  ${edge.edge}`));
     if (summary.concentrated && typeof summary.dominant === 'string' && summary.dominant.includes(' → ')) {
       line(warn, color.dim(`${Math.round(summary.dominantShare * 100)}% on one edge (${summary.dominant}) — likely a contract fix, not debt`));
@@ -387,7 +383,17 @@ export function printDoctorDetailsHuman(view) {
         : bad;
   line(' ', `Active host: ${writePath.activeHost}`);
   line(' ', `Supported profile: ${writePath.supportSummary}`);
-  line(wpMark, `Mode: ${writePath.mode} — ${writePathLabels[writePath.mode] || writePath.mode}`);
+  const modeLine = `Mode: ${writePath.mode} — ${writePathLabels[writePath.mode] || writePath.mode}`;
+  if (wpMark === ok) {
+    citedGreen(
+      line,
+      { ok, warn },
+      modeLine,
+      writePathGreenCites(writePath)
+    );
+  } else {
+    line(wpMark, modeLine);
+  }
   if (writePathHonesty.message) line(warn, writePathHonesty.message);
   if (writePath.sessionNote) {
     line(warn, writePath.sessionNote);
@@ -397,14 +403,21 @@ export function printDoctorDetailsHuman(view) {
   const supportCaps = writePath.support?.capabilities || {};
   const repairReinjection = supportCaps['repair-reinjection-guaranteed'] === true;
   const repairEnvelope = supportCaps['repair-envelope-emitted'] === true || supportCaps['repair-payload'] === true;
-  line(
-    repairReinjection ? ok : warn,
-    repairReinjection
-      ? 'Repair: envelope + reinjection guaranteed on hard path when installed + trusted'
-      : repairEnvelope
+  if (repairReinjection) {
+    citedGreen(
+      line,
+      { ok, warn },
+      'Repair: envelope + reinjection guaranteed on hard path when installed + trusted',
+      writePathGreenCites(writePath)
+    );
+  } else {
+    line(
+      warn,
+      repairEnvelope
         ? 'Repair: envelope may emit (`--hook-repair`); reinjection not guaranteed (advisory host)'
         : 'Repair: no hard-boundary payload'
-  );
+    );
+  }
   if (writePath.gap) {
     line(writePath.gap.severity === 'warn' ? warn : warn, writePath.gap.message);
     if (writePath.gap.fix) {
@@ -415,7 +428,12 @@ export function printDoctorDetailsHuman(view) {
   console.log('');
   console.log(color.bold('Gates & skills'));
   if (listedMissing.length === 0 && !skippableCi) {
-    line(ok, 'Shared gate artifacts found on disk (AGENTS.md, .mcp.json, CI); runtime activation is reported separately');
+    citedGreen(
+      line,
+      { ok, warn },
+      'Shared gate artifacts found on disk; runtime activation is reported separately',
+      foundGateCites(view)
+    );
   } else {
     if (listedMissing.length > 0) line(bad, `Missing gates: ${listedMissing.join(', ')}`);
     if (skippableCi) line(warn, skippableCi);
@@ -430,7 +448,11 @@ export function printDoctorDetailsHuman(view) {
   );
   const remMiss = remainingGaps.reduce((s, g) => s + g.missing, 0);
   const remStale = remainingGaps.reduce((s, g) => s + g.stale, 0);
-  if (remMiss + remStale === 0 && !legacyCodex) line(ok, '/ark-* skills current for detected tools');
+  if (remMiss + remStale === 0 && !legacyCodex) {
+    citedGreen(line, { ok, warn }, '/ark-* skills current for detected tools', [
+      '.agents/skills',
+    ]);
+  }
   if (legacyCodex) {
     line(warn, 'Codex: legacy flat .codex/prompts only (not a loadable skill catalog)');
   }
@@ -480,10 +502,17 @@ export function printDoctorDetailsHuman(view) {
   console.log('');
   console.log(color.bold('Baseline'));
   if (!baseline.exists) {
-    line(!analysisComplete || violations.length > 0 ? warn : ok, !analysisComplete ? 'No baseline — current violations were not fully evaluated' : violations.length > 0 ? 'No baseline — adopting a dirty repo? freeze with --update-baseline --force --contract-session --author <steward>' : 'No baseline (nothing to freeze)');
+    const none = !analysisComplete
+      ? 'No baseline — current violations were not fully evaluated'
+      : violations.length > 0
+        ? 'No baseline — adopting a dirty repo? freeze with --update-baseline --force --contract-session --author <steward>'
+        : 'No baseline (nothing to freeze)';
+    if (!analysisComplete || violations.length > 0) line(warn, none);
+    else line(' ', none);
   } else {
-    const baseMark = !analysisComplete || baselineHonesty.dirtyBaselineRisk ? warn : ok;
-    line(baseMark, `${baseline.keys.size} frozen key(s)${analysisComplete ? '' : ' — stale comparison not verified'}`);
+    const baseClaim = `${baseline.keys.size} frozen key(s)${analysisComplete ? '' : ' — stale comparison not verified'}`;
+    if (!analysisComplete || baselineHonesty.dirtyBaselineRisk) line(warn, baseClaim);
+    else citedGreen(line, { ok, warn }, baseClaim, ['.ark-baseline.json']);
     if (analysisComplete && baselineHonesty.dirtyBaselineRisk) {
       line(warn, baselineHonesty.message);
     }
@@ -494,7 +523,9 @@ export function printDoctorDetailsHuman(view) {
 
   console.log('');
   console.log(color.bold('Command runners'));
-  if (staleRunners.length === 0) line(ok, 'Emitted commands match the package manager');
+  if (staleRunners.length === 0) {
+    citedGreen(line, { ok, warn }, 'Emitted commands match the package manager', ['package.json']);
+  }
   else {
     line(warn, `Stale runner in ${staleRunners.join(', ')}`);
   }
@@ -502,9 +533,11 @@ export function printDoctorDetailsHuman(view) {
   console.log('');
   console.log(color.bold('Adoption (separate from fitness score)'));
   if (adoption.gaps.length === 0 && !adoption.layerBalance) {
-    line(
-      ok,
-      'Hosts, MCP argv, core optionality, origin report, baseline policy, and deploy-path lint/types look complete'
+    citedGreen(
+      line,
+      { ok, warn },
+      'Hosts, MCP argv, core optionality, origin report, baseline policy, and deploy-path lint/types look complete',
+      ['AGENTS.md', 'ark.config.json']
     );
   } else {
     for (const gap of adoption.gaps) {
@@ -553,7 +586,9 @@ export function printDoctorDetailsHuman(view) {
       ['Rules with peerIsolation: false', safety.disabledPeerIsolationRules],
     ];
     for (const [label, entries] of rows) {
-      line(entries.length === 0 ? ok : warn, `${label}: ${entries.length}`);
+      const claim = `${label}: ${entries.length}`;
+      if (entries.length === 0) line(' ', claim);
+      else line(warn, claim);
     }
   }
 }
