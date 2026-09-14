@@ -16,6 +16,7 @@ import {
   invariantIdsFromCatalog,
   loadInvariantCoverageInputs,
 } from './invariant-coverage-io.mjs';
+import { catalogHasEnforcedInvariant } from './invariant-coverage.mjs';
 import {
   declaredCoverageRootsPresent,
   declaredInvariantTestsPathPresent,
@@ -207,7 +208,10 @@ export function resolveArchitectureSnapshot({
   const pathPresent = adopted
     ? declaredInvariantTestsPathPresent(root, effectiveConfig.coverage)
     : true;
-  const rootsPresent = declaredCoverageRootsPresent(root, effectiveConfig.coverage);
+  // Silent when nothing is enforced — do not probe coverageRoots on that path.
+  const rootsPresent = catalogHasEnforcedInvariant(arkRulesLoad.arkRules?.invariants)
+    ? declaredCoverageRootsPresent(root, effectiveConfig.coverage)
+    : true;
   const analyzed = analyzeTrustedResolvedProject({
     contract: analysisContract,
     facts,

@@ -72,6 +72,7 @@ describe('coverageRoots helper', () => {
         invariants: [{ mode: 'advisory' }],
       })
     ).toBeNull();
+    expect(collectCoverageRootsResidual({ config: {}, root: '/tmp' })).toBeNull();
   });
 
   it('names missing roots only when an invariant is enforced', () => {

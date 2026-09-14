@@ -155,6 +155,8 @@ function residualHasEnforcedInvariant(input) {
   if (input.hasEnforcedInvariant === true) return true;
   if (input.hasEnforcedInvariant === false) return false;
   if (Array.isArray(input.invariants)) return catalogHasEnforcedInvariant(input.invariants);
+  const refs = input.config?.arkRules;
+  if (!refs || typeof refs !== 'object' || Object.keys(refs).length === 0) return false;
   if (typeof input.root === 'string' && input.config) {
     try {
       const loaded = loadEffectiveArkRulesFromDisk(input.root, input.config);
