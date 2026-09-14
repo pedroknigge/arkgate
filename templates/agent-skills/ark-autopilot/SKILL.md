@@ -143,7 +143,9 @@ ArkGate has **always-on Layers** plus opt-in extras. The user chooses extras; yo
 - After explore/doctor: if inventory has high-confidence candidates **or** user wants domain rules, include **[ArkRules] plan A/B**:
   - A: mechanical-safe remains inter-layer only; structure/invariant fixes are **judgment**.
   - B: one pilot = one rule (declare in `arkrules/<Layer>.json` → implement → test title/symbol → re-doctor).
-- Never promote advisory→enforced without coverage evidence (`canPromoteInvariant` / policy-delta).
+- Never promote advisory→enforced without coverage evidence and declared
+  `coverage.coverageRoots` (`canPromoteInvariant` / policy-delta). Missing
+  roots refuse promotion — otherwise OUTSIDE_ROOTS stays silent.
 - End report must list what was **layer-edge** work vs **intra-layer rule** work.
 
 ### Autopilot + ArkRun

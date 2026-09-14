@@ -580,6 +580,19 @@ describe('LD05 layer description skill deepen (no /ark-describe)', () => {
     expect(explore).toContain('invariantTestsPath');
   });
 
+  it('ark-adopt, ark-coverage, ark-explore, and ark-autopilot point at coverageRoots when enforced', () => {
+    const adopt = readSkill('ark-adopt');
+    expect(adopt).toContain('invariantCoverageRoots');
+    expect(adopt).toContain('INVARIANT_COVERAGE_ROOTS_MISSING');
+    const coverage = readSkill('ark-coverage');
+    expect(coverage).toContain('INVARIANT_COVERAGE_ROOTS_MISSING');
+    const explore = readSkill('ark-explore');
+    expect(explore).toContain('invariantCoverageRoots');
+    const autopilot = readSkill('ark-autopilot');
+    expect(autopilot).toContain('coverage.coverageRoots');
+    expect(autopilot).toMatch(/canPromoteInvariant/);
+  });
+
   it('ark-explore, ark-place, and ark-adopt point at noDomainFrontend without a new skill', () => {
     const explore = readSkill('ark-explore');
     expect(explore).toContain('noDomainFrontend');

@@ -40,6 +40,11 @@ one bounded decision needs 2–3 enforceable options.
   Fail-closed. Silent when not adopted, the catalog is empty, or every
   invariant sets coverage.test false. Handoff
   `/ark-adopt` to write the path. No new skill.
+- When any invariant is enforced and doctor JSON has `invariantCoverageRoots`
+  (or the check names `INVARIANT_COVERAGE_ROOTS_MISSING`), the next step is
+  `coverage.coverageRoots` on the folder the test runner uses. Fail-closed.
+  `testGlobs` alone is not enough. Silent when no invariant is enforced.
+  Handoff `/ark-adopt` to write the roots. No new skill.
 - A doctor green / Healthy line must name a file, config key, or test.
   Uncited green is a lie — treat it as unfinished. No `/ark-cite`.
 - Distinguish **missing** skills vs **stale** catalog. Installed ≠ stale.

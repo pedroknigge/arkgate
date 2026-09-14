@@ -297,7 +297,7 @@ export const ARK_CONFIG_SCHEMA = {
       type: 'object',
       additionalProperties: false,
       description:
-        'Invariant coverage scan controls. testGlobs replaces the built-in test-name heuristic; maxFiles raises or lowers the evidence file budget and also bounds structural-hint preload for orchestration-only, thin-adapter, and writes-via-aggregate (default 400; there is no arkrules.hintBudget); coverageRoots declares where the project runs its tests, so a covering test found outside them is reported instead of silently certifying an invariant.',
+        'Invariant coverage scan controls. testGlobs replaces the built-in test-name heuristic; maxFiles raises or lowers the evidence file budget and also bounds structural-hint preload for orchestration-only, thin-adapter, and writes-via-aggregate (default 400; there is no arkrules.hintBudget); coverageRoots declares where the project runs its tests, so a covering test found outside them is reported instead of silently certifying an invariant. When any invariant is enforced, missing coverageRoots fails closed.',
       properties: {
         testGlobs: { ...stringArraySchema, minItems: 1 },
         maxFiles: {

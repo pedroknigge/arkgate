@@ -312,6 +312,8 @@ export function deterministicNextAction(violation: ArkViolationLike): string {
         : 'Add 1–2 short phrases to invariants[] in arkrules/<Domain>.json, then run ark-check --doctor. Starters show the shape.';
     case 'INVARIANT_TESTS_PATH_MISSING':
       return 'Add coverage.testGlobs or coverage.coverageRoots in ark.config.json pointing at a real tests folder, then re-run. Adopted mode fails closed until that path is present.';
+    case 'INVARIANT_COVERAGE_ROOTS_MISSING':
+      return 'Add coverage.coverageRoots in ark.config.json pointing at the folder the test runner uses, then re-run. An enforced invariant fails closed until that path is present.';
     case 'ARKRULE_STRUCTURE':
     case 'ARKRULE_INVARIANT':
     case 'INVARIANT_UNCOVERED':
@@ -476,6 +478,7 @@ export function classifyRemediation(violation: ArkViolationLike | null | undefin
     ruleId === 'ARKRULE_INVARIANT' ||
     ruleId === 'INVARIANT_UNCOVERED' ||
     ruleId === 'INVARIANT_COVERAGE_OUTSIDE_ROOTS' ||
+    ruleId === 'INVARIANT_COVERAGE_ROOTS_MISSING' ||
     (typeof ruleId === 'string' && ruleId.startsWith('ARKRULE_'))
   ) {
     return {
@@ -609,6 +612,12 @@ export function enrichViolationWithFixClass<T extends ArkViolationLike>(
       enriched.effort = 'small';
       enriched.enthusiastHint =
         'The covering test lives where the project says its runner does not go. Move it, or declare that root in coverage.coverageRoots.';
+      break;
+    case 'INVARIANT_COVERAGE_ROOTS_MISSING':
+      enriched.fixClass = 'review-contract';
+      enriched.effort = 'small';
+      enriched.enthusiastHint =
+        'An invariant is enforced, but the project never said where tests run. Add coverage.coverageRoots so coverage cannot tick a test no runner uses.';
       break;
     case 'ARKRULE_STRUCTURE':
     case 'ARKRULE_INVARIANT':

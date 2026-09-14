@@ -72,6 +72,11 @@ export type AnalyzeResolvedProjectInput = {
    */
   invariantTestsPathPresent?: boolean;
   /**
+   * Tooling FS check for declared `coverage.coverageRoots`. `false` means
+   * missing or empty on disk. Omitted: a non-empty config declaration is enough.
+   */
+  coverageRootsPresent?: boolean;
+  /**
    * AR10 — Tooling-supplied contents for invariant coverage evidence.
    * When omitted and the Effective Contract has invariants, coverage is partial
    * (never false green covered).

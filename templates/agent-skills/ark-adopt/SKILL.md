@@ -53,6 +53,11 @@ has honest houses. Skills never enforce — CLI / hooks / CI do.
   `coverage.coverageRoots` to a real tests folder. Fail-closed until that path
   exists. Silent when not adopted, the catalog is empty, or every invariant
   sets coverage.test false. No new skill.
+- When any invariant is enforced and doctor JSON has `invariantCoverageRoots`
+  (or the check names `INVARIANT_COVERAGE_ROOTS_MISSING`), write
+  `coverage.coverageRoots` to the folder the test runner uses. Fail-closed
+  until that path exists. `coverage.testGlobs` alone is not enough. Silent
+  when no invariant is enforced. No new skill.
 - CLI-first: if `arkgate-check` already resolved the root, do not wait on MCP.
 - Do not add `arkRun` or `arkOrder` unless the user wants that extra. When they do, write
   **advisory** extra in this turn (`arkRun` schema `1.2+`; `arkOrder` schema `1.3+`).
