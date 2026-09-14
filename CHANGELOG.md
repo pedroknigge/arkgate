@@ -6,6 +6,12 @@ in the immutable pre-2.0 archive linked below.
 ## Unreleased
 
 ### Added
+- Adopted trees with catalogued domain invariants must name a real tests path
+  (`coverage.testGlobs` or `coverage.coverageRoots`). Missing or empty fails
+  closed (`INVARIANT_TESTS_PATH_MISSING`) on `--require-gates` / `--strict-merge`
+  and on an explicit advisory-only ack. Doctor residual names the next step.
+  Silent when not adopted or the catalog is empty. Reuses the existing coverage
+  keys — no new schema, flag, or skill.
 - Soft doctor residual when Domain is declared but empty and the UI holds the
   rules (`noDomainFrontend`). Projects empty Domain + presentation share, or
   the existing `domain-logic-in-ui` smell. Friendly next step: one Domain file

@@ -16,6 +16,10 @@ import {
   invariantIdsFromCatalog,
   loadInvariantCoverageInputs,
 } from './invariant-coverage-io.mjs';
+import {
+  declaredInvariantTestsPathPresent,
+  scanDemandsInvariantTestsPath,
+} from './invariant-tests-path.mjs';
 import { loadArkRuleFileHints } from './arkrule-file-hints.mjs';
 import { collectGovernedFiles } from './scan-files.mjs';
 
@@ -198,9 +202,15 @@ export function resolveArchitectureSnapshot({
     filterHintPreload(coverageInputs?.fileContents, scoped),
     scoped
   );
+  const adopted = scanDemandsInvariantTestsPath(root, args);
+  const pathPresent = adopted
+    ? declaredInvariantTestsPathPresent(root, effectiveConfig.coverage)
+    : true;
   const analyzed = analyzeTrustedResolvedProject({
     contract: analysisContract,
     facts,
+    ...(adopted ? { adopted: true } : {}),
+    ...(adopted && pathPresent === false ? { invariantTestsPathPresent: false } : {}),
     ...(coverageInputs ? { coverageInputs } : {}),
     ...(fileHints ? { fileHints } : {}),
   });

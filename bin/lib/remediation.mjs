@@ -220,6 +220,8 @@ export function deterministicNextAction(violation) {
             return typeof violation.file === 'string' && violation.file.length > 0
                 ? `Add 1–2 short phrases to invariants[] in ${violation.file}, then run ark-check --doctor. Starters show the shape.`
                 : 'Add 1–2 short phrases to invariants[] in arkrules/<Domain>.json, then run ark-check --doctor. Starters show the shape.';
+        case 'INVARIANT_TESTS_PATH_MISSING':
+            return 'Add coverage.testGlobs or coverage.coverageRoots in ark.config.json pointing at a real tests folder, then re-run. Adopted mode fails closed until that path is present.';
         case 'ARKRULE_STRUCTURE':
         case 'ARKRULE_INVARIANT':
         case 'INVARIANT_UNCOVERED':

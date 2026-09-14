@@ -47,6 +47,7 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 | [`INVARIANT_CATALOG_EMPTY`](#INVARIANT_CATALOG_EMPTY) | arkrules | Domain invariant catalog is empty |
 | [`INVARIANT_UNCOVERED`](#INVARIANT_UNCOVERED) | arkrules | Invariant without coverage evidence |
 | [`INVARIANT_COVERAGE_OUTSIDE_ROOTS`](#INVARIANT_COVERAGE_OUTSIDE_ROOTS) | arkrules | Covering test outside the declared coverage roots |
+| [`INVARIANT_TESTS_PATH_MISSING`](#INVARIANT_TESTS_PATH_MISSING) | arkrules | Domain-invariant tests path missing under adopted |
 | [`ARKRUN_MISSING_ROOT`](#ARKRUN_MISSING_ROOT) | arkrun | No kernel factory in composition roots |
 | [`ARKRUN_KERNEL_IN_DOMAIN`](#ARKRUN_KERNEL_IN_DOMAIN) | arkrun | Domain-role layer imports the kernel |
 | [`ARKRUN_DIRECT_NEW`](#ARKRUN_DIRECT_NEW) | arkrun | Managed type constructed with new |
@@ -319,6 +320,17 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 - **Fix:** Move the test under a declared coverage root, or add its root to `coverage.coverageRoots` in ark.config.json. Advisory: it never fails strict, but promotion to enforced refuses on it.
 
 Declaring nothing is silent — without `coverage.coverageRoots` there is no second declaration to compare against, and ArkGate makes no claim about where tests run.
+
+<a id="INVARIANT_TESTS_PATH_MISSING"></a>
+
+### `INVARIANT_TESTS_PATH_MISSING`
+
+**Domain-invariant tests path missing under adopted**
+
+- **Why:** The project is adopted (required CI or explicit advisory) and has domain invariants, but `ark.config.json` does not name where those tests live. Green coverage without a real tests path is an empty checkbox.
+- **Fix:** Add `coverage.testGlobs` or `coverage.coverageRoots` in `ark.config.json` pointing at a real tests folder, then re-run. Adopted mode fails closed until that path is present. Not freezable.
+
+Not adopted, or no catalogued invariants, stays silent. This is not a new config key.
 
 ## ArkRun (opt-in extra)
 

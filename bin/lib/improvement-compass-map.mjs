@@ -262,7 +262,8 @@ function mapViolations(byId, violations) {
         }
         if (upper.startsWith('ARKRULE_') ||
             upper === 'INVARIANT_UNCOVERED' ||
-            upper === 'INVARIANT_CATALOG_EMPTY') {
+            upper === 'INVARIANT_CATALOG_EMPTY' ||
+            upper === 'INVARIANT_TESTS_PATH_MISSING') {
             attach('encapsulation', 'ArkRules structure / invariant residual inside a layer.', {
                 kind: 'skill',
                 ref: '/ark-autopilot',

@@ -48,6 +48,10 @@ has honest houses. Skills never enforce — CLI / hooks / CI do.
   delete it to “clean” empty layers. Next is one Domain file (`/ark-place`), not
   a weaker contract. Soft. Silent when there is no frontend or Domain already
   has files. No `/ark-domain`.
+- When the tree is adopted and doctor JSON has `invariantTestsPath` (or the
+  check names `INVARIANT_TESTS_PATH_MISSING`), write `coverage.testGlobs` or
+  `coverage.coverageRoots` to a real tests folder. Fail-closed until that path
+  exists. Silent when not adopted or the invariant catalog is empty. No new skill.
 - CLI-first: if `arkgate-check` already resolved the root, do not wait on MCP.
 - Do not add `arkRun` or `arkOrder` unless the user wants that extra. When they do, write
   **advisory** extra in this turn (`arkRun` schema `1.2+`; `arkOrder` schema `1.3+`).

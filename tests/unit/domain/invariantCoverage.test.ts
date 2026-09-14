@@ -6,7 +6,12 @@ import {
 import { ARK_CONFIG_SCHEMA } from '../../../src/domain/configContract';
 import {
   canPromoteInvariant,
+  collectMissingInvariantTestsPathFindings,
+  configuredInvariantTestsPaths,
   evaluateInvariantCoverage,
+  hasConfiguredInvariantTestsPath,
+  INVARIANT_TESTS_PATH_MESSAGE,
+  INVARIANT_TESTS_PATH_RULE_ID,
 } from '../../../src/domain/invariantCoverage';
 
 function catalog() {
@@ -510,5 +515,75 @@ describe('AR09–AR11 invariant coverage + promotion', () => {
     expect(
       (ARK_CONFIG_SCHEMA.properties as { arkRules?: unknown }).arkRules
     ).not.toHaveProperty('hintBudget');
+  });
+});
+
+describe('§10 adopted invariant tests path', () => {
+  it('treats missing and empty coverage as no path', () => {
+    expect(hasConfiguredInvariantTestsPath(undefined)).toBe(false);
+    expect(hasConfiguredInvariantTestsPath({})).toBe(false);
+    expect(hasConfiguredInvariantTestsPath({ testGlobs: [], coverageRoots: [] })).toBe(false);
+    expect(hasConfiguredInvariantTestsPath({ testGlobs: ['  '], coverageRoots: [''] })).toBe(false);
+    expect(configuredInvariantTestsPaths({ testGlobs: ['tests/**'] })).toEqual(['tests/**']);
+    expect(configuredInvariantTestsPaths({ coverageRoots: ['tests'] })).toEqual(['tests']);
+  });
+
+  it('fails closed when adopted + invariants + missing/empty path', () => {
+    const missing = collectMissingInvariantTestsPathFindings({
+      adopted: true,
+      hasDomainInvariants: true,
+    });
+    expect(missing).toHaveLength(1);
+    expect(missing[0]?.ruleId).toBe(INVARIANT_TESTS_PATH_RULE_ID);
+    expect(missing[0]?.failsStrict).toBe(true);
+    expect(missing[0]?.freezable).toBe(false);
+    expect(missing[0]?.message).toBe(INVARIANT_TESTS_PATH_MESSAGE);
+
+    const empty = collectMissingInvariantTestsPathFindings({
+      adopted: true,
+      hasDomainInvariants: true,
+      coverage: { testGlobs: [''] },
+      declaredPathPresent: false,
+    });
+    expect(empty[0]?.ruleId).toBe(INVARIANT_TESTS_PATH_RULE_ID);
+  });
+
+  it('stays silent when not adopted, catalog is empty, or a real path is configured', () => {
+    expect(
+      collectMissingInvariantTestsPathFindings({
+        hasDomainInvariants: true,
+        coverage: {},
+      })
+    ).toEqual([]);
+    expect(
+      collectMissingInvariantTestsPathFindings({
+        adopted: true,
+        hasDomainInvariants: false,
+      })
+    ).toEqual([]);
+    expect(
+      collectMissingInvariantTestsPathFindings({
+        adopted: true,
+        hasDomainInvariants: true,
+        coverage: { testGlobs: ['tests/**'] },
+      })
+    ).toEqual([]);
+    expect(
+      collectMissingInvariantTestsPathFindings({
+        adopted: true,
+        hasDomainInvariants: true,
+        coverage: { coverageRoots: ['tests'] },
+      })
+    ).toEqual([]);
+  });
+
+  it('fails closed when the declared path is empty on disk', () => {
+    const hit = collectMissingInvariantTestsPathFindings({
+      adopted: true,
+      hasDomainInvariants: true,
+      coverage: { testGlobs: ['ghost/**'] },
+      declaredPathPresent: false,
+    });
+    expect(hit[0]?.ruleId).toBe(INVARIANT_TESTS_PATH_RULE_ID);
   });
 });

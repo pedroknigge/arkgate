@@ -259,6 +259,13 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
     'Move the test under a declared coverage root, or add its root to coverage.coverageRoots in ark.config.json. Advisory: it never fails strict, but promotion to enforced refuses on it.',
     { oftenAdvisory: true }
   ),
+  entry(
+    'INVARIANT_TESTS_PATH_MISSING',
+    'arkrules',
+    'Domain-invariant tests path missing under adopted',
+    'The project is adopted (required CI or explicit advisory) and has domain invariants, but ark.config.json does not name where those tests live. Green coverage without a real tests path is an empty checkbox.',
+    'Add coverage.testGlobs or coverage.coverageRoots in ark.config.json pointing at a real tests folder, then re-run. Adopted mode fails closed until that path is present. Not freezable.'
+  ),
 
   // ── ArkRun (opt-in extra; RN05 dual-depth nextAction) ────────────────────
   entry(

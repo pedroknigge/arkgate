@@ -89,7 +89,10 @@ Top-level fields:
 - **`coverage`** (optional) — invariant-coverage scan controls: `testGlobs` (globs that decide
   which files count as tests, replacing the built-in `*.test.*` / `tests/` name heuristic),
   `maxFiles` (evidence file budget, default `400`) and `coverageRoots` (path prefixes where the
-  project declares its runner actually executes tests). Absence is silent and changes no verdict.
+  project declares its runner actually executes tests). Absence is silent unless the tree is
+  **adopted** (required CI or `.ark/adoption-stance.json` advisory-only) **and** the catalog
+  has domain invariants — then a missing or empty tests path fails closed
+  (`INVARIANT_TESTS_PATH_MISSING`). Either `testGlobs` or `coverageRoots` satisfies the path.
   Unknown keys fail closed. **`maxFiles` also bounds structural-hint preload** for
   `orchestration-only`, `thin-adapter`, and `writes-via-aggregate` (the hint loader reuses
   coverage contents when present). There is no separate `arkrules.hintBudget`. When eligible
