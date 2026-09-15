@@ -1,0 +1,51 @@
+{
+  "product": "arkgate",
+  "schemaVersion": 1,
+  "note": "Anonymous live-dogfood aggregates only. No third-party repo names, URLs, paths, or code.",
+  "counters": {
+    "runs": 3,
+    "ok": 3,
+    "fail": 0,
+    "byFindingKind": {
+      "UX": 3
+    },
+    "byPhaseBroke": {
+      "null": 3
+    }
+  },
+  "events": [
+    {
+      "iso": "2026-09-09T01:24:03.147Z",
+      "ok": true,
+      "durationSec": 461,
+      "phaseBroke": null,
+      "findingKind": "UX"
+    },
+    {
+      "iso": "2026-09-12T01:12:29.588Z",
+      "ok": true,
+      "durationSec": 223,
+      "phaseBroke": null,
+      "findingKind": "UX"
+    },
+    {
+      "iso": "2026-09-15T01:31:41.521461Z",
+      "ok": true,
+      "durationSec": 213,
+      "phaseBroke": null,
+      "findingKind": "UX"
+    }
+  ],
+  "aggregates": {
+    "okRate": 1.0,
+    "durationP50Sec": 223.0,
+    "runs": 3,
+    "phaseBrokeDistribution": {
+      "null": 3
+    },
+    "findingKindDistribution": {
+      "UX": 3
+    },
+    "updatedAt": "2026-09-15T01:31:41.521461Z"
+  }
+}
