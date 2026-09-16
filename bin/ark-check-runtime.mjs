@@ -1959,9 +1959,13 @@ async function main() {
         );
         console.error(`  Next: ${finding.nextAction}`);
       }
+      if (policyDelta.adrNote?.missing) {
+        console.error(policyDelta.adrNote.ask);
+        console.error(`Next: ${policyDelta.adrNote.nextAction}`);
+      }
       console.error(
         `Policy transition blocked (${policyDelta.basePolicyHash} → ${policyDelta.candidatePolicyHash}). ` +
-          'Provide --policy-ack with the exact hashes, finding ids, and a non-empty reason.'
+          'Provide --policy-ack with the exact hashes, finding ids, a non-empty reason, and adrPath to a short note under docs/adr/.'
       );
     }
     if (designCheck.failureText()) console.error(designCheck.failureText());

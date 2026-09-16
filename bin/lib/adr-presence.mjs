@@ -1,7 +1,8 @@
 /**
  * Soft ADR / decision-note presence when gates are demanded.
  * Tooling I/O. Never a gate fail. Absence is silent unless require-gates
- * or adopted-strict (required-merge) is on.
+ * or adopted-strict (required-merge) is on. The policy-ack path tooth lives
+ * in adr-path.mjs so doctor does not parse it.
  */
 
 import fs from 'node:fs';
@@ -23,7 +24,7 @@ export const ADR_PRESENCE_ASK =
 export const ADR_PRESENCE_NEXT =
   'Add a short note under docs/adr/ (or docs/decisions/) when you loosen a rule or add a real gate. Not every change.';
 
-function isNonEmptyMarkdownFile(file) {
+export function isNonEmptyMarkdownFile(file) {
   if (!fs.existsSync(file) || !fs.statSync(file).isFile()) return false;
   try {
     return fs.readFileSync(file, 'utf8').trim().length > 0;

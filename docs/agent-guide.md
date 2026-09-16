@@ -1347,7 +1347,7 @@ The server exposes these thirteen tools. Every tool accepts the additive
 | `ark_manifest` | No non-project args: return the machine-readable architecture contract with an authoritative binding after the identity handshake. |
 | `validate_code` | `{ source, layer?, filePath? }`: validate one snippet; infer the layer from `filePath` when possible; return an error result when invalid. |
 | `ark_check` | `{ strict?, baseline? }`: run the full project architecture check. `verdict` separates `identity`, `completeness`, `graph`, `coverage`, `gates`, and `overallOk`; no individual green fact substitutes for the combined verdict. |
-| `ark_policy_delta` | `{ baseConfig, candidateConfig?, acknowledgement? }`: classify a complete contract transition; never edits the contract. |
+| `ark_policy_delta` | `{ baseConfig, candidateConfig?, acknowledgement? }`: classify a complete contract transition; never edits the contract. Weakening / new layer / new allow edge needs `adrPath` on the acknowledgement. |
 | `ark_coverage` | No args: report per-layer counts, every unclassified file, unmatched layers, and missing rule edges. |
 | `ark_place` | `{ filePath?, description? }`: resolve or propose a governed home and return its import/global constraints. |
 | `ark_prepare_write` | `{ source, filePath?, description?, layer? }`: compose placement and snippet validation, with hashes and a mechanical-safe patch when available. |

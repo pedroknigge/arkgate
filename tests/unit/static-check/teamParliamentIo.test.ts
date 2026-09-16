@@ -306,6 +306,11 @@ describe('team parliament I/O', () => {
     const payload = JSON.parse(blocked.stdout);
     expect(payload.policyDelta.classification).toBe('weakening');
     fs.mkdirSync(path.join(root, '.ark'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'docs/adr'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'docs/adr/0001-temporary-loader.md'),
+      '# Temporary loader\n\nStatic imports are migrating.\n'
+    );
     fs.writeFileSync(
       path.join(root, '.ark/policy-delta-ack.json'),
       `${JSON.stringify({
@@ -314,6 +319,7 @@ describe('team parliament I/O', () => {
         candidatePolicyHash: payload.policyDelta.candidatePolicyHash,
         findingIds: payload.policyDelta.blockingFindingIds,
         reason: 'Temporary loader while static imports are migrated.',
+        adrPath: 'docs/adr/0001-temporary-loader.md',
       })}\n`
     );
     const ackOnly = spawnSync(
