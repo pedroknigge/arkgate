@@ -182,17 +182,17 @@
     },
     {
       "id": "invariant-coverage-message-honesty",
-      "note": "The coverage verdict is only as good as its sentence: formatCoverageDiscards and budgetDetail carry every discard reason and the knob that raises the cap. Unpinned, a mutant could silence a discard clause and no gate would notice.",
+      "note": "The coverage verdict is only as good as its sentence: formatCoverageDiscards and budgetDetail carry every discard reason and the knob that raises the cap. Unpinned, a mutant could silence a discard clause and no gate would notice. 4.8.4 pinned 127-146 (formatter) and 213-217 (budgetDetail). IT01/CR01 coverageRoots + tests-path findings shifted those onto InvariantCoverageStats JSDoc and symbolPresent className — retargeted to the same two decisions.",
       "targets": [
         {
           "file": "src/domain/invariantCoverage.ts",
-          "startLine": 127,
-          "endLine": 146
+          "startLine": 165,
+          "endLine": 184
         },
         {
           "file": "src/domain/invariantCoverage.ts",
-          "startLine": 213,
-          "endLine": 217
+          "startLine": 251,
+          "endLine": 255
         }
       ]
     },

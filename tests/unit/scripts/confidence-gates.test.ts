@@ -72,6 +72,22 @@ describe('confidence gate wiring', () => {
     expect(stryker).toContain(`${facts.file}:${facts.startLine}-${facts.endLine}`);
     expect(stryker).toContain(`${promote.file}:${promote.startLine}-${promote.endLine}`);
 
+    const honesty = contract.groups.find((entry) => entry.id === 'invariant-coverage-message-honesty');
+    expect(honesty, 'invariant-coverage-message-honesty').toBeTruthy();
+    const honestyBlob = honesty!.targets
+      .map((target) => slice(target.file, target.startLine, target.endLine))
+      .join('\n');
+    expect(honestyBlob).toContain('function formatCoverageDiscards');
+    expect(honestyBlob).toContain('if (d.budget > 0 && !omitBudget)');
+    expect(honestyBlob).toContain('const budgetDetail = stats');
+    expect(honestyBlob).toContain("typeof stats.filesRead === 'number'");
+    expect(honestyBlob).not.toContain('export type InvariantCoverageStats');
+    expect(honestyBlob).not.toContain('function symbolPresent');
+    expect(honestyBlob).not.toContain('const className = parts.length > 1');
+    for (const target of honesty!.targets) {
+      expect(stryker).toContain(`${target.file}:${target.startLine}-${target.endLine}`);
+    }
+
     const baselines = group('baselines');
     expect(baselines.file).toBe('src/domain/baselineKey.ts');
     const baselinesSlice = slice(baselines.file, baselines.startLine, baselines.endLine);

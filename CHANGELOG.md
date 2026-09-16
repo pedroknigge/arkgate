@@ -135,6 +135,13 @@ runs with `tag=v4.8.16` and `dry_run=false`).
 - Pack ceilings remeasured on the IT01 CI pack (run 34848276803).
   ≥10% headroom. No new product surface.
 
+### Fixed
+- Publish confidence gate: retarget drifted
+  `invariant-coverage-message-honesty` after IT01/CR01 coverageRoots +
+  tests-path findings shifted the 4.8.4 pins onto a type/JSDoc block and
+  `symbolPresent`. Threshold stays 90% with zero NoCoverage. Does not
+  change runtime behavior.
+
 ## 4.8.15 — 2026-09-13
 
 **Patch** over **4.8.14**. Pre-adoption ship bar: opt-in `--local` /

@@ -64,8 +64,12 @@ const config = {
     // peerIsolationDecision is the killable fail-closed core; findDeniedEdgeDecision wires it.
     'src/domain/layerMatch.ts:517-534',
     'src/domain/policyDelta.ts:934-963',
-    'src/domain/invariantCoverage.ts:127-146',
-    'src/domain/invariantCoverage.ts:213-217',
+    // 4.8.4 pinned 127-146 (formatCoverageDiscards) and 213-217
+    // (budgetDetail). IT01/CR01 coverageRoots + tests-path findings
+    // shifted those onto InvariantCoverageStats JSDoc and symbolPresent
+    // className — retargeted to the same two decisions.
+    'src/domain/invariantCoverage.ts:165-184',
+    'src/domain/invariantCoverage.ts:251-255',
     'src/domain/invariantCoverage.ts:386-427',
     'src/kernel/semanticAnalysis.ts:18-49',
     'src/kernel/semanticAnalysis.ts:78-258',
