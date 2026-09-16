@@ -29,6 +29,10 @@ right house. Skills never enforce — CLI / hooks / CI do.
 - When doctor JSON has `noDomainFrontend`, the new file is a Domain rule — not
   another UI helper. Soft. Silent when Domain already has files or there is no
   frontend. No `/ark-domain`.
+- When doctor JSON has `prototypeShortcuts`, the new file is a Persistence
+  adapter or a Domain / auth-tag policy — not another SQLite / JSON-file store
+  or admin literal in the page. Soft. Silent when those houses are absent or
+  the shortcut is already in the right house. No `/ark-prototype`.
 - When the matched layer has `layers[].description`, print that caption next to the
   layer name and globs. Omit when absent — do not invent a caption or `/ark-describe`.
 - When the matched layer has `layers[].trustBoundary`, print `trust: <tag>` next

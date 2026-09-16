@@ -48,6 +48,11 @@ has honest houses. Skills never enforce — CLI / hooks / CI do.
   delete it to “clean” empty layers. Next is one Domain file (`/ark-place`), not
   a weaker contract. Soft. Silent when there is no frontend or Domain already
   has files. No `/ark-domain`.
+- When doctor JSON has `prototypeShortcuts`, keep the Persistence / Domain
+  house — do not delete it to “clean” empty layers. Next is one Persistence
+  adapter or Domain policy file (`/ark-place`), not a weaker contract. Soft.
+  Silent when those houses are absent or the shortcut is already in the right
+  house. No `/ark-prototype`.
 - When the tree is adopted and doctor JSON has `invariantTestsPath` (or the
   check names `INVARIANT_TESTS_PATH_MISSING`), write `coverage.testGlobs` or
   `coverage.coverageRoots` to a real tests folder. Fail-closed until that path
