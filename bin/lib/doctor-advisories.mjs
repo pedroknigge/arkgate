@@ -36,6 +36,7 @@ import {
   summarizeArkOrderSection,
 } from './ark-order-doctor.mjs';
 import { composeMergePlanesHonesty } from './extra-merge-teeth.mjs';
+import { collectPrototypeShortcutsResidual } from './prototype-shortcuts.mjs';
 
 export function attachExtraDoctorSections(rulesUnderContract, config, classification, findings) {
   const arkRulesMerge = {
@@ -126,6 +127,12 @@ export function printCompactExtraDoctorLines(advisories, io) {
     console.log('');
     io.line(io.warn, noDomain.ask);
     if (noDomain.nextAction) io.line(' ', `Next: ${noDomain.nextAction}`);
+  }
+  const prototypeShortcuts = advisories?.prototypeShortcuts;
+  if (prototypeShortcuts?.ask) {
+    console.log('');
+    io.line(io.warn, prototypeShortcuts.ask);
+    if (prototypeShortcuts.nextAction) io.line(' ', `Next: ${prototypeShortcuts.nextAction}`);
   }
   const testsPath = advisories?.invariantTestsPath;
   if (testsPath?.missing && testsPath.ask) {
@@ -233,7 +240,14 @@ export function computeDoctorAdvisories(root, config, cov, rules, files, ts, par
     classification,
     activeViolations
   );
+  const prototypeShortcuts = collectPrototypeShortcutsResidual({
+    root,
+    config,
+    coverage: cov,
+    files,
+  });
   return {
+    ...(prototypeShortcuts ? { prototypeShortcuts } : {}),
     contractHealth: computeContractHealth(root, config, cov, rules),
     ambientState: computeAmbientState(ts, root, config, files),
     physicalCohesion,

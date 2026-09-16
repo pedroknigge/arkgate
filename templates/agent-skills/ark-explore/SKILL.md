@@ -34,6 +34,12 @@ one bounded decision needs 2–3 enforceable options.
   rules. Next: one Domain file (`/ark-place`) then one small refactor
   (`/ark-autopilot`). Soft. Silent when there is no frontend or Domain already
   has files. No `/ark-domain`. Do not invent a Domain house.
+- When doctor JSON has `prototypeShortcuts`, SQLite / a JSON-file store is
+  standing in for Persistence, or admin / god-mode literals sit outside Domain
+  (or an auth tag). Next: one Persistence adapter or Domain policy file
+  (`/ark-place`) then one small refactor (`/ark-autopilot`). Soft. Silent when
+  those houses are absent, the shortcut is already in the right house, or there
+  are no such markers. No `/ark-prototype`. Do not invent a Persistence house.
 - When the tree is adopted and doctor JSON has `invariantTestsPath` (or the
   check names `INVARIANT_TESTS_PATH_MISSING`), the next step is
   `coverage.testGlobs` or `coverage.coverageRoots` on a real tests folder.

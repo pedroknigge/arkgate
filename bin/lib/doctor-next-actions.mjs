@@ -56,6 +56,9 @@ export function collectDoctorNextActions(ctx) {
   if (ctx.noDomainFrontend?.nextAction) {
     actions.push(ctx.noDomainFrontend.nextAction);
   }
+  if (ctx.prototypeShortcuts?.nextAction) {
+    actions.push(ctx.prototypeShortcuts.nextAction);
+  }
   if (ctx.invariantTestsPath?.missing && ctx.invariantTestsPath.nextAction) {
     actions.push(ctx.invariantTestsPath.nextAction);
   }

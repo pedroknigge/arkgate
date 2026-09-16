@@ -6,6 +6,14 @@ in the immutable pre-2.0 archive linked below.
 ## Unreleased
 
 ### Added
+- Soft doctor residual when prototype shortcuts are standing in for a
+  declared Persistence or Domain house (`prototypeShortcuts`). SQLite or a
+  JSON-file store outside Persistence, or admin / god-mode literals outside
+  Domain (or an auth tag). Friendly next step: one Persistence adapter or
+  Domain policy file (`/ark-place`) then one small refactor. Not a fail.
+  Silent when those houses are absent, the shortcut is already in the right
+  house, or there are no such markers. No new skill, schema, smell id, or
+  config key.
 - When any catalogued domain invariant is enforced, `coverage.coverageRoots`
   is required. Missing or empty fails closed
   (`INVARIANT_COVERAGE_ROOTS_MISSING`). `coverage.testGlobs` alone is not

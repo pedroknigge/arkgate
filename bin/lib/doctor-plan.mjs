@@ -930,7 +930,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     layerOwners,
     adrPresence,
     statesTransitions,
-    statusTransitionCatalog, noDomainFrontend, invariantTestsPath, invariantCoverageRoots,
+    statusTransitionCatalog, noDomainFrontend, prototypeShortcuts: doctorAdvisories.prototypeShortcuts, invariantTestsPath, invariantCoverageRoots,
   });
   const humanView = {
     root,
@@ -940,7 +940,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     layerOwners,
     adrPresence,
     statesTransitions,
-    statusTransitionCatalog, noDomainFrontend, invariantTestsPath, invariantCoverageRoots,
+    statusTransitionCatalog, noDomainFrontend, prototypeShortcuts: doctorAdvisories.prototypeShortcuts, invariantTestsPath, invariantCoverageRoots,
     operatingMode,
     designFitness,
     adopted,

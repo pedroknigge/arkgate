@@ -605,6 +605,21 @@ describe('LD05 layer description skill deepen (no /ark-describe)', () => {
     expect(adopt).toMatch(/empty Domain house/);
   });
 
+  it('ark-explore, ark-place, ark-adopt, and ark-autopilot point at prototypeShortcuts without a new skill', () => {
+    const explore = readSkill('ark-explore');
+    expect(explore).toContain('prototypeShortcuts');
+    expect(explore).toMatch(/No `?\/ark-prototype`/);
+    const place = readSkill('ark-place');
+    expect(place).toContain('prototypeShortcuts');
+    expect(place).toMatch(/Persistence\s+adapter/);
+    const adopt = readSkill('ark-adopt');
+    expect(adopt).toContain('prototypeShortcuts');
+    expect(adopt).toMatch(/Persistence \/ Domain/);
+    const autopilot = readSkill('ark-autopilot');
+    expect(autopilot).toContain('prototypeShortcuts');
+    expect(autopilot).toMatch(/file-store|admin literal/);
+  });
+
   it('ark-place prints owners next to layer name and globs when present', () => {
     const body = readSkill('ark-place');
     expect(body).toContain('## Layer owners (process)');
