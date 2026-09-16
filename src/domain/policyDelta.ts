@@ -47,7 +47,7 @@ export type PolicyDeltaAcknowledgement = {
 type FindingInput = Omit<PolicyDeltaFinding, 'id'> & { kind: string };
 
 const ADR_PATH_NEXT_ACTION =
-  'Add a short note under docs/adr/ (or docs/decisions/) and put that file path in --policy-ack as adrPath.';
+  'add a short note under docs/adr/ (or docs/decisions/) and put that file path in --policy-ack as adrPath.';
 
 function addFinding(findings: PolicyDeltaFinding[], input: FindingInput): void {
   const defaultNext =
