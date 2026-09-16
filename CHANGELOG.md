@@ -6,33 +6,6 @@ in the immutable pre-2.0 archive linked below.
 ## Unreleased
 
 ### Added
-- Soft doctor residual when prototype shortcuts are standing in for a
-  declared Persistence or Domain house (`prototypeShortcuts`). SQLite or a
-  JSON-file store outside Persistence, or admin / god-mode literals outside
-  Domain (or an auth tag). Friendly next step: one Persistence adapter or
-  Domain policy file (`/ark-place`) then one small refactor. Not a fail.
-  Silent when those houses are absent, the shortcut is already in the right
-  house, or there are no such markers. No new skill, schema, smell id, or
-  config key.
-- When any catalogued domain invariant is enforced, `coverage.coverageRoots`
-  is required. Missing or empty fails closed
-  (`INVARIANT_COVERAGE_ROOTS_MISSING`). `coverage.testGlobs` alone is not
-  enough — without roots, coverage can certify a test no runner runs.
-  Doctor residual names the next step. Promotion to enforced also refuses
-  without roots. Silent when no invariant is enforced. Reuses the existing
-  coverage key — no new schema, flag, or skill.
-- Doctor green / healthy lines must name a file, config key, or test
-  (`ark.config.json`, `.ark/ci-merge-boundary.json`, `coverage.testGlobs`,
-  a real tests path). Uncited greens are demoted so they cannot look
-  healthy. Happy path stays a short cited line. Reuses the existing doctor
-  view — no new schema, flag, or skill.
-- Adopted trees with catalogued domain invariants must name a real tests path
-  (`coverage.testGlobs` or `coverage.coverageRoots`). Missing or empty fails
-  closed (`INVARIANT_TESTS_PATH_MISSING`) on `--require-gates` / `--strict-merge`
-  and on an explicit advisory-only ack. Doctor residual names the next step.
-  Silent when not adopted, the catalog is empty, or every invariant sets
-  `coverage.test: false` (starter Domain phrases). Reuses the existing coverage
-  keys — no new schema, flag, or skill.
 - Soft doctor residual when Domain is declared but empty and the UI holds the
   rules (`noDomainFrontend`). Projects empty Domain + presentation share, or
   the existing `domain-logic-in-ui` smell. Friendly next step: one Domain file
@@ -75,16 +48,6 @@ in the immutable pre-2.0 archive linked below.
   short phrase templates so the shape is visible. No new skill, schema, or flag.
 
 ### Changed
-- `start --apply` fails closed when the post-apply package install exits
-  non-zero. Host files may already be written; the command prints the exact
-  install just attempted and `npx --package=arkgate arkgate-check --doctor`
-  so the next step cannot 404 a phantom `arkgate-check` package. An older
-  caret pin is bumped to this CLI version. First-contact help/docs use the
-  same recoverable doctor command.
-- Pack ceilings in `release/package-budgets.v1.json` remeasured on the IT01
-  CI pack (run 34848276803): gate 1,611,000 packed / 5,659,000 unpacked;
-  companion runtime 287,000 packed / 1,013,000 unpacked. ≥10% headroom over
-  that measurement. No new product surface.
 - Compact `--doctor` names ArkRules only when the `arkRules` map is on
   (one breath + counts, not a score). Absence stays silent. Reuses
   `rulesUnderContract` — no new schema, flag, or skill. `--doctor --all`
@@ -132,6 +95,45 @@ in the immutable pre-2.0 archive linked below.
   `@2` pin (issue [#211](https://github.com/pedroknigge/arkgate/issues/211)).
   Existing configs keep whatever URL they already have. Editor completion
   matches the 4.x line you just installed.
+
+## 4.8.16 — 2026-09-16
+
+**Patch** over **4.8.15**. Daily accumulate of the five ships that landed
+after 4.8.15 published: invariant tests path
+([#255](https://github.com/pedroknigge/arkgate/pull/255)), doctor green
+cites ([#256](https://github.com/pedroknigge/arkgate/pull/256)),
+coverageRoots when enforced
+([#257](https://github.com/pedroknigge/arkgate/pull/257)),
+`start --apply` install honesty
+([#259](https://github.com/pedroknigge/arkgate/pull/259)), and prototype
+shortcuts ([#260](https://github.com/pedroknigge/arkgate/pull/260)).
+**Write. Check. Ship.** **No required config migration.** No
+`schemaVersion` bump. Does not close `K01` / `Z09`. This mother
+`ark.config.json` still does **not** turn `arkOrder` on.
+
+**Status: prepared** (npm `latest` remains **4.8.15** until Actions `publish-npm`
+runs with `tag=v4.8.16` and `dry_run=false`).
+
+### Added
+- Adopted trees with domain invariants must name a real tests path, so
+  coverage cannot certify a test no runner runs
+  ([#255](https://github.com/pedroknigge/arkgate/pull/255)).
+- Doctor green / healthy lines now cite a file, config key, or test — an
+  uncited line cannot look healthy
+  ([#256](https://github.com/pedroknigge/arkgate/pull/256)).
+- When a domain invariant is enforced, `coverage.coverageRoots` is
+  required. Test globs alone are not enough
+  ([#257](https://github.com/pedroknigge/arkgate/pull/257)).
+- Soft residual when SQLite, a JSON-file store, or admin literals stand
+  in for Persistence or Domain
+  ([#260](https://github.com/pedroknigge/arkgate/pull/260)).
+
+### Changed
+- `start --apply` fails closed if the package install fails, and names
+  the exact command to recover
+  ([#259](https://github.com/pedroknigge/arkgate/pull/259)).
+- Pack ceilings remeasured on the IT01 CI pack (run 34848276803).
+  ≥10% headroom. No new product surface.
 
 ## 4.8.15 — 2026-09-13
 
