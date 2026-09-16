@@ -9,7 +9,7 @@ import {
   loadInvariantCoverageInputs,
 } from './invariant-coverage-io.mjs';
 import { evaluateInvariantCoverage } from './invariant-coverage.mjs';
-import { attachPolicyAdrNote } from './adr-presence.mjs';
+import { attachPolicyAdrNote } from './adr-path.mjs';
 
 function readJsonFile(filePath, label) {
   if (!fs.existsSync(filePath)) throw new Error(`${label} not found: ${filePath}`);

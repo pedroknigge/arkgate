@@ -107,7 +107,7 @@ import {
   evaluateWriteDesignDelta,
   formatDesignDeltaBlock,
 } from './lib/design-delta.mjs';
-import { attachPolicyAdrNote } from './lib/adr-presence.mjs';
+import { attachPolicyAdrNote } from './lib/adr-path.mjs';
 
 const arkCheckBin = fileURLToPath(new URL('./ark-check.mjs', import.meta.url));
 const arkMcpLauncher = fileURLToPath(new URL('./ark-mcp.mjs', import.meta.url));

@@ -8,17 +8,19 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
-  ADR_PATH_ASK,
-  ADR_PATH_NEXT,
   ADR_PRESENCE_ASK,
   ADR_PRESENCE_NEXT,
-  attachPolicyAdrNote,
-  collectAdrPathResidual,
   collectAdrPresenceResidual,
   findAdrPresenceHome,
+} from '../../../bin/lib/adr-presence.mjs';
+import {
+  ADR_PATH_ASK,
+  ADR_PATH_NEXT,
+  attachPolicyAdrNote,
+  collectAdrPathResidual,
   isConventionalAdrPath,
   resolveAdrNotePath,
-} from '../../../bin/lib/adr-presence.mjs';
+} from '../../../bin/lib/adr-path.mjs';
 import { runDoctor } from '../../../bin/lib/doctor-plan.mjs';
 
 const temps: string[] = [];
