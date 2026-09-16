@@ -69,9 +69,11 @@ Full map: **[docs/README.md](docs/README.md)**
 npm install -D arkgate typescript
 npx arkgate start                 # preview files + commands
 npx arkgate start --apply         # compact config + host router + CI plan
-npx arkgate-check --doctor        # status — one next step
-npx arkgate-check --doctor --all  # full details
+npx --package=arkgate arkgate-check --doctor        # status — one next step
+npx --package=arkgate arkgate-check --doctor --all  # full details
 ```
+
+`arkgate-check` is a command in the `arkgate` package, not its own npm package. After a local install, `npx arkgate-check --doctor` also works.
 
 `start --apply` refuses when projected governed coverage is below 50% or
 shape confidence is weak (below 0.6 with coverage under 80%). That lock is

@@ -37,8 +37,10 @@ ArkGate solves this by shifting the check to the exact moment of writing. By int
 ```bash
 npm install -D arkgate typescript
 npx arkgate start --apply
-npx arkgate-check --doctor
+npx --package=arkgate arkgate-check --doctor
 ```
+
+`arkgate-check` is a command in the `arkgate` package. After a local install, `npx arkgate-check --doctor` also works.
 
 Make the import-rules check a **required** merge **status context** (GitHub/GitLab/etc.). The CLI
 command is `arkgate-check --strict-merge` / `ark-check --strict-merge` — the hard boundary is

@@ -13,6 +13,7 @@ ${NORTH_STAR_ONE_LINE}
   arkgate start --apply      write host + CI setup
                              (refuses weak coverage/shape; lock with --archetype/--preset/--force)
   arkgate-check --doctor     status — one next step
+                             (if missing: npx --package=arkgate arkgate-check --doctor)
 
 Stuck? Run status (--doctor). Do #1.
 `;

@@ -22,7 +22,12 @@ import {
 } from './ark-shared.mjs';
 import { pinArkgateDevDependency, FALSE_GREEN_GAP_ID } from './lib/field-install.mjs';
 import { validateHardWriteRequest } from './lib/enforcement-profiles.mjs';
-import { applyStartPreview, planStart, renderStartPreview } from './lib/start-preview.mjs';
+import {
+  applyStartPreview,
+  formatStartPackageInstallFailure,
+  planStart,
+  renderStartPreview,
+} from './lib/start-preview.mjs';
 import { runUpgradeCommand } from './lib/upgrade-command.mjs';
 import { detectActiveAgentHost } from './lib/skill-install.mjs';
 import { loadArkConfigContract } from './lib/config-contract.mjs';
@@ -489,7 +494,8 @@ async function start(args) {
       const skip = shouldSkipArkgateInstall(args.root, cliVersion());
       if (!skip.skip) {
         const [command, commandArgs] = packageInstallArgv(args.root, `^${cliVersion()}`);
-        if (!args.json) console.log(`Installing package: ${command} ${commandArgs.join(' ')}`);
+        const installCommand = `${command} ${commandArgs.join(' ')}`;
+        if (!args.json) console.log(`Installing package: ${installCommand}`);
         // Keep stdout clean for --json consumers (package managers are chatty on stdout).
         const status = args.json
           ? (spawnSync(command, commandArgs, {
@@ -498,10 +504,9 @@ async function start(args) {
               encoding: 'utf8',
             }).status ?? 1)
           : runCommand(command, commandArgs, args.root);
-        if (status !== 0 && !args.json) {
-          console.log(
-            `Package manager exited ${status}. package.json is pinned; run the install command when online.`
-          );
+        if (status !== 0) {
+          console.error(formatStartPackageInstallFailure({ exitStatus: status, installCommand }));
+          return status;
         }
       }
     }
@@ -568,8 +573,12 @@ async function start(args) {
       if (pinned.changed) {
         console.log(`  Pinned arkgate@${pinned.version} in package.json devDependencies.`);
         if (installStatus !== null && installStatus !== 0) {
-          console.log(
-            `  Package manager install exited ${installStatus} — package.json is still pinned; run install when online.`
+          const [command, commandArgs] = packageInstallArgv(root, pinned.version);
+          console.error(
+            formatStartPackageInstallFailure({
+              exitStatus: installStatus,
+              installCommand: `${command} ${commandArgs.join(' ')}`,
+            })
           );
         }
       } else if (pinned.reason === 'already-present') {

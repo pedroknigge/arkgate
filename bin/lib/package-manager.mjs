@@ -92,6 +92,14 @@ export function arkCommand(root, bin, argsStr = '') {
 }
 
 /**
+ * Run an Ark binary from package `arkgate` when local bins may be missing.
+ * Bare `npx arkgate-check` 404s — npx treats that bin name as its own package.
+ */
+export function arkPackageRecoveryCommand(bin, argsStr = '') {
+  return `npx --package=arkgate ${bin}${argsStr ? ` ${argsStr}` : ''}`;
+}
+
+/**
  * Split { command, args } form for JSON/TOML configs (.mcp.json, config.toml) that spawn
  * the binary directly. `pnpm exec ark-mcp` becomes command "pnpm" + args ["exec","ark-mcp",…]
  * so the runner is a real argv[0], not a space-joined string a shell would mis-split.

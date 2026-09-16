@@ -93,7 +93,7 @@ function run(file: string, args: string[], root: string, host: Host) {
 
 async function start(root: string, host: Host, apply = false) {
   const args = ['start', '--root', root, '--no-strict', '--tools', host, '--install', '--json'];
-  if (apply) args.push('--apply');
+  if (apply) args.push('--apply', '--skip-package-manager');
   const result = await run(ARK, args, root, host);
   expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(0);
   return JSON.parse(result.stdout) as StartResult;
@@ -144,9 +144,8 @@ describe('O04 clean-room onboarding matrix', () => {
 
         const applied = await start(root, host, true);
         const after = snapshot(root);
-        // --install may run the package manager and rewrite lockfiles outside the
-        // declared Ark mutation set (e.g. npm regenerating package-lock.json when
-        // arkgate is added). Compare product files only.
+        // Apply skips the package manager (unpublished CLI versions fail-closed).
+        // Preview still names the install command. Compare product files only.
         const lockfiles = new Set(['package-lock.json', 'pnpm-lock.yaml', 'yarn.lock']);
         const productChanged = changedPaths(before, after).filter((file) => !lockfiles.has(file));
         const productDeclared = applied.changes
