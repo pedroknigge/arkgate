@@ -83,6 +83,37 @@ function addDevDependencyPreservingFormat(source, version) {
   return `${source.slice(0, contentEnd)}${addition}${eol}${rootClosingIndent}${source.slice(rootClose)}`;
 }
 
+function replaceArkgateDependencyPreservingFormat(source, version) {
+  const encoded = JSON.stringify(version);
+  const next = source.replace(/("arkgate"\s*:\s*)(?:"(?:\\.|[^"\\])*")/, `$1${encoded}`);
+  if (next === source) {
+    throw new Error('arkgate pin not found in package.json');
+  }
+  return next;
+}
+
+/** True when a caret/tilde/exact pin is an older semver than the CLI. Non-semver stays. */
+function pinCoreIsBehind(declaredPin, cliVersion) {
+  const pinCore = String(declaredPin).replace(/^[\^~>=<\s]+/, '').split(/\s+/)[0];
+  const pinParts = pinCore.split('.').map((p) => Number.parseInt(p, 10));
+  const cliParts = String(cliVersion).split('.').map((p) => Number.parseInt(p, 10));
+  if (
+    pinParts.length < 1 ||
+    cliParts.length < 1 ||
+    !pinParts.every((n) => Number.isFinite(n)) ||
+    !cliParts.every((n) => Number.isFinite(n))
+  ) {
+    return false;
+  }
+  for (let i = 0; i < 3; i += 1) {
+    const p = pinParts[i] ?? 0;
+    const c = cliParts[i] ?? 0;
+    if (p < c) return true;
+    if (p > c) return false;
+  }
+  return false;
+}
+
 const ARK_CHECK_BIN_RE = /\b(?:ark-check|arkgate-check)(?:\.mjs|\.js)?\b/;
 const ARK_CHECK_RUNNER_RE =
   /(?:^|[\s"'`;|&])(?:npx|pnpm|yarn|npm|bunx?|node)(?:\s|$)/;
@@ -379,13 +410,6 @@ export function pinArkgateDevDependency(root, opts = {}) {
   }
   const deps = pkg.dependencies && typeof pkg.dependencies === 'object' ? pkg.dependencies : {};
   const dev = pkg.devDependencies && typeof pkg.devDependencies === 'object' ? pkg.devDependencies : {};
-  if (typeof deps.arkgate === 'string' || typeof dev.arkgate === 'string') {
-    return {
-      changed: false,
-      reason: 'already-present',
-      version: deps.arkgate || dev.arkgate,
-    };
-  }
   const shipped = arkPackageVersion();
   const version =
     typeof opts.version === 'string' && opts.version
@@ -393,6 +417,22 @@ export function pinArkgateDevDependency(root, opts = {}) {
       : shipped
         ? `^${shipped}`
         : 'latest';
+  if (typeof deps.arkgate === 'string' || typeof dev.arkgate === 'string') {
+    const current = deps.arkgate || dev.arkgate;
+    const shouldBump =
+      opts.force === true || (Boolean(shipped) && pinCoreIsBehind(current, shipped));
+    if (!shouldBump || current === version) {
+      return {
+        changed: false,
+        reason: 'already-present',
+        version: current,
+      };
+    }
+    if (opts.write !== false) {
+      fs.writeFileSync(pkgPath, replaceArkgateDependencyPreservingFormat(source, version));
+    }
+    return { changed: true, reason: 'bumped', version };
+  }
   if (opts.write !== false) {
     fs.writeFileSync(pkgPath, addDevDependencyPreservingFormat(source, version));
   }

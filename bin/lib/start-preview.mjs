@@ -3,7 +3,12 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { arkCommand, buildArchitectureRecommendation, START_APPLY_REFUSE_FOOTER } from '../ark-shared.mjs';
+import {
+  arkCommand,
+  arkPackageRecoveryCommand,
+  buildArchitectureRecommendation,
+  START_APPLY_REFUSE_FOOTER,
+} from '../ark-shared.mjs';
 import { withProjectedGovernedCoverage } from './projected-governed-coverage.mjs';
 import { ARKORDER_FIRST_CONTACT_NEXT, ARKORDER_ONE_BREATH } from './ark-order-doctor.mjs';
 import { compactAgentInstructions, instructionRule, mcpJson } from './ci-and-commands.mjs';
@@ -133,6 +138,20 @@ function commands(root, args, helpers) {
   result.push(arkCommand(root, 'ark-check', '--plan --json'));
   result.push(arkCommand(root, 'ark-check', '--coverage --json'));
   return result;
+}
+
+/**
+ * Red next-step when post-apply package install fails.
+ * Host files may already be written; local bins may be missing.
+ */
+export function formatStartPackageInstallFailure({ exitStatus, installCommand }) {
+  const doctor = arkPackageRecoveryCommand('arkgate-check', '--doctor');
+  return [
+    `Package install failed (exit ${exitStatus}). Setup files are written; the local command is not installed yet.`,
+    `  ${installCommand}`,
+    `  ${doctor}`,
+    '`arkgate-check` is a command in the arkgate package — not its own npm package.',
+  ].join('\n');
 }
 
 /**

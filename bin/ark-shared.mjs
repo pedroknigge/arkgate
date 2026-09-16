@@ -22,6 +22,7 @@ import {
   normalizeArkgateInstallSpec,
   packageInstallArgv,
   installDevHint,
+  arkPackageRecoveryCommand,
 } from './lib/package-manager.mjs';
 
 /**
@@ -674,6 +675,7 @@ export {
   normalizeArkgateInstallSpec,
   packageInstallArgv,
   installDevHint,
+  arkPackageRecoveryCommand,
 };
 
 // FX01–FX02: registry-aware skip lives in upgrade-package-decision (injectable probe).

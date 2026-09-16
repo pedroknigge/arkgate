@@ -67,6 +67,12 @@ in the immutable pre-2.0 archive linked below.
   short phrase templates so the shape is visible. No new skill, schema, or flag.
 
 ### Changed
+- `start --apply` fails closed when the post-apply package install exits
+  non-zero. Host files may already be written; the command prints the exact
+  install just attempted and `npx --package=arkgate arkgate-check --doctor`
+  so the next step cannot 404 a phantom `arkgate-check` package. An older
+  caret pin is bumped to this CLI version. First-contact help/docs use the
+  same recoverable doctor command.
 - Pack ceilings in `release/package-budgets.v1.json` remeasured on the IT01
   CI pack (run 34848276803): gate 1,611,000 packed / 5,659,000 unpacked;
   companion runtime 287,000 packed / 1,013,000 unpacked. ≥10% headroom over
