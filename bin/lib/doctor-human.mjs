@@ -164,7 +164,7 @@ export function printDoctorCompactHuman(view) {
       ...doctorAdvisories,
       layerOwners: view.layerOwners,
       adrPresence: view.adrPresence,
-      statesTransitions: view.statesTransitions, statusTransitionCatalog: view.statusTransitionCatalog, noDomainFrontend: view.noDomainFrontend, invariantTestsPath: view.invariantTestsPath,
+      statesTransitions: view.statesTransitions, statusTransitionCatalog: view.statusTransitionCatalog, noDomainFrontend: view.noDomainFrontend, invariantTestsPath: view.invariantTestsPath, invariantCoverageRoots: view.invariantCoverageRoots,
     },
     { line, warn }
   );

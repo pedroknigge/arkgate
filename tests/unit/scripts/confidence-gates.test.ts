@@ -63,9 +63,9 @@ describe('confidence gate wiring', () => {
 
     const promote = group('invariant-promote-honesty');
     expect(promote.file).toBe('src/domain/invariantCoverage.ts');
-    expect(slice(promote.file, promote.startLine, promote.endLine)).toContain(
-      'export function canPromoteInvariant'
-    );
+    const promoteSlice = slice(promote.file, promote.startLine, promote.endLine);
+    expect(promoteSlice).toContain('export function canPromoteInvariant');
+    expect(promoteSlice).toContain('coverageRootsDeclared === false');
 
     const stryker = read('stryker.config.mjs');
     expect(stryker).toContain(`${ack.file}:${ack.startLine}-${ack.endLine}`);

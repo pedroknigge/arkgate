@@ -37,6 +37,8 @@ import {
 } from '../domain/arkRuleSensors';
 import {
   catalogDemandsInvariantTestsPath,
+  catalogHasEnforcedInvariant,
+  collectMissingCoverageRootsFindings,
   collectMissingInvariantTestsPathFindings,
   evaluateInvariantCoverage,
 } from '../domain/invariantCoverage';
@@ -421,6 +423,7 @@ export function analyzeCanonicalResolvedProject(
     fileHints?: AnalyzeResolvedProjectInput['fileHints'];
     adopted?: boolean;
     invariantTestsPathPresent?: boolean;
+    coverageRootsPresent?: boolean;
   }
 ): ResolvedAnalysisResult {
   const { facts } = input;
@@ -510,22 +513,44 @@ export function analyzeCanonicalResolvedProject(
     }),
   ];
   const hasInvariants = (arkRules.invariants?.length ?? 0) > 0;
-  const testsPathFindings = collectMissingInvariantTestsPathFindings({
-    adopted: input.adopted === true,
-    hasDomainInvariants: catalogDemandsInvariantTestsPath(arkRules.invariants),
+  const coverageRootsFindings = collectMissingCoverageRootsFindings({
+    hasEnforcedInvariant: catalogHasEnforcedInvariant(arkRules.invariants),
     coverage: input.contract.config.coverage,
-    ...(input.invariantTestsPathPresent === false ? { declaredPathPresent: false } : {}),
+    ...(input.coverageRootsPresent === false ? { declaredPathPresent: false } : {}),
   });
-  const testsPathViolations: ArchitectureEngineViolation[] = testsPathFindings.map((finding) => ({
-    ruleId: finding.ruleId,
-    file: finding.file,
-    line: finding.line,
-    message: finding.message,
-    nextAction:
-      'Add coverage.testGlobs or coverage.coverageRoots in ark.config.json pointing at a real tests folder, then re-run. Adopted mode fails closed until that path is present.',
-    failsStrict: true,
-    freezable: false,
-  }));
+  // Roots finding is the tighter §10 residual: adding coverageRoots also
+  // satisfies IT01. Emit only one light when both would fire.
+  const testsPathFindings =
+    coverageRootsFindings.length > 0
+      ? []
+      : collectMissingInvariantTestsPathFindings({
+          adopted: input.adopted === true,
+          hasDomainInvariants: catalogDemandsInvariantTestsPath(arkRules.invariants),
+          coverage: input.contract.config.coverage,
+          ...(input.invariantTestsPathPresent === false ? { declaredPathPresent: false } : {}),
+        });
+  const testsPathViolations: ArchitectureEngineViolation[] = [
+    ...coverageRootsFindings.map((finding) => ({
+      ruleId: finding.ruleId,
+      file: finding.file,
+      line: finding.line,
+      message: finding.message,
+      nextAction:
+        'Add coverage.coverageRoots in ark.config.json pointing at the folder the test runner uses, then re-run. An enforced invariant fails closed until that path is present.',
+      failsStrict: true as const,
+      freezable: false as const,
+    })),
+    ...testsPathFindings.map((finding) => ({
+      ruleId: finding.ruleId,
+      file: finding.file,
+      line: finding.line,
+      message: finding.message,
+      nextAction:
+        'Add coverage.testGlobs or coverage.coverageRoots in ark.config.json pointing at a real tests folder, then re-run. Adopted mode fails closed until that path is present.',
+      failsStrict: true as const,
+      freezable: false as const,
+    })),
+  ];
   const arkRuleViolations: ArchitectureEngineViolation[] = arkRuleFindings
     .filter((finding) => finding.failsStrict)
     .map((finding) => toArkRuleEngineViolation(finding, arkRuleFindingNextAction(finding, false)));
@@ -762,5 +787,6 @@ export function analyzeResolvedProject(input: AnalyzeResolvedProjectInput): Reso
     fileHints: input.fileHints,
     adopted: input.adopted,
     invariantTestsPathPresent: input.invariantTestsPathPresent,
+    coverageRootsPresent: input.coverageRootsPresent,
   });
 }

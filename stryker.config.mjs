@@ -66,7 +66,7 @@ const config = {
     'src/domain/policyDelta.ts:934-963',
     'src/domain/invariantCoverage.ts:127-146',
     'src/domain/invariantCoverage.ts:213-217',
-    'src/domain/invariantCoverage.ts:347-380',
+    'src/domain/invariantCoverage.ts:386-427',
     'src/kernel/semanticAnalysis.ts:18-49',
     'src/kernel/semanticAnalysis.ts:78-258',
     'src/kernel/workflow/Saga.ts:188-238',

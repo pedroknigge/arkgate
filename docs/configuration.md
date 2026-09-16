@@ -94,6 +94,9 @@ Top-level fields:
   has domain invariants that want test evidence (`coverage.test` is not `false`) —
   then a missing or empty tests path fails closed
   (`INVARIANT_TESTS_PATH_MISSING`). Either `testGlobs` or `coverageRoots` satisfies the path.
+  When any catalogued invariant is **enforced**, `coverage.coverageRoots` is required
+  (`INVARIANT_COVERAGE_ROOTS_MISSING`) — `testGlobs` alone is not enough. Silent when no
+  invariant is enforced.
   Unknown keys fail closed. **`maxFiles` also bounds structural-hint preload** for
   `orchestration-only`, `thin-adapter`, and `writes-via-aggregate` (the hint loader reuses
   coverage contents when present). There is no separate `arkrules.hintBudget`. When eligible
@@ -121,8 +124,9 @@ Top-level fields:
   the invariant just as well as one that runs. Declaring `coverageRoots` gives ArkGate a second
   declaration to compare the first against: when the only covering test falls outside them, it
   reports `INVARIANT_COVERAGE_OUTSIDE_ROOTS` (advisory) and refuses to promote that invariant to
-  `enforced`. Declaring nothing keeps the old silence — without a declaration there is nothing to
-  compare, and ArkGate makes no claim about where tests run.
+  `enforced`. Declaring nothing stays silent unless any invariant is already enforced — then
+  missing roots fail closed (`INVARIANT_COVERAGE_ROOTS_MISSING`), because otherwise coverage can
+  certify a test the project never declared a runner root for.
 - **`arkRules`** (optional, schema `1.1+`) — map of layer name → project-relative path to an
   ArkRules file (e.g. `"DomainModel": "arkrules/DomainModel.json"`). Keys must match a declared
   layer. Missing/invalid referenced files **fail closed**.

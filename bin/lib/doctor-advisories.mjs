@@ -133,6 +133,12 @@ export function printCompactExtraDoctorLines(advisories, io) {
     io.line(io.warn, testsPath.ask);
     if (testsPath.nextAction) io.line(' ', `Next: ${testsPath.nextAction}`);
   }
+  const coverageRoots = advisories?.invariantCoverageRoots;
+  if (coverageRoots?.missing && coverageRoots.ask) {
+    console.log('');
+    io.line(io.warn, coverageRoots.ask);
+    if (coverageRoots.nextAction) io.line(' ', `Next: ${coverageRoots.nextAction}`);
+  }
   const rulesUnderContract = advisories?.rulesUnderContract;
   const arkRulesLines = formatArkRulesDoctorLines(rulesUnderContract);
   if (arkRulesLines.length > 0) {
