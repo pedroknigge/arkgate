@@ -188,6 +188,7 @@ describe('q1 coverage top-up (dense, non-overlapping)', () => {
         path.join(root, 'package.json'),
         JSON.stringify({ name: 'app', dependencies: { arkgate: '1.0.0' } })
       );
+      expect(pinArkgateDevDependency(root).reason).toBe('bumped');
       expect(pinArkgateDevDependency(root).reason).toBe('already-present');
       fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ name: 'app', scripts: {} }));
       expect(pinArkgateDevDependency(root, { version: '3.0.0' }).changed).toBe(true);
