@@ -6,6 +6,12 @@ in the immutable pre-2.0 archive linked below.
 ## Unreleased
 
 ### Added
+- Policy-ack `adrPath`: a weaken, new layer, or new allow edge must name a
+  short note under `docs/adr/` or `docs/decisions/` on the same
+  `--policy-ack` JSON. Check JSON `policyDelta.adrNote`. Fail-closed only on
+  the existing policy-ack / `--strict-merge` plane. Soft ADR home presence
+  (`--require-gates`) stays a hint. No `requireAdr` flag, new skill, or
+  `schemaVersion` bump.
 - Soft doctor residual when Domain is declared but empty and the UI holds the
   rules (`noDomainFrontend`). Projects empty Domain + presentation share, or
   the existing `domain-logic-in-ui` smell. Friendly next step: one Domain file

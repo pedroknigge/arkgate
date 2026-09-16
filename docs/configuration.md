@@ -457,12 +457,15 @@ JSON artifact passed with `--policy-ack`:
   "basePolicyHash": "fnv1a-...",
   "candidatePolicyHash": "fnv1a-...",
   "findingIds": ["weakening:$.dynamicImportAllowlist:added"],
-  "reason": "Temporary loader while the static registry is migrated."
+  "reason": "Temporary loader while the static registry is migrated.",
+  "adrPath": "docs/adr/0001-temporary-loader.md"
 }
 ```
 
-The acknowledgement must list every blocking finding exactly. It is not a permanent allowlist:
-changing either contract changes its hash and invalidates the acknowledgement.
+The acknowledgement must list every blocking finding exactly and name a short
+decision note as `adrPath` (under `docs/adr/` or `docs/decisions/`). A reason
+alone is not enough. It is not a permanent allowlist: changing either contract
+changes its hash and invalidates the acknowledgement.
 
 ## Team parliament (law vs feature)
 

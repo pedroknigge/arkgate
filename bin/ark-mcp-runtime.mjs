@@ -107,6 +107,7 @@ import {
   evaluateWriteDesignDelta,
   formatDesignDeltaBlock,
 } from './lib/design-delta.mjs';
+import { attachPolicyAdrNote } from './lib/adr-presence.mjs';
 
 const arkCheckBin = fileURLToPath(new URL('./ark-check.mjs', import.meta.url));
 const arkMcpLauncher = fileURLToPath(new URL('./ark-mcp.mjs', import.meta.url));
@@ -1995,7 +1996,8 @@ export async function runArkMcp({ hookInput } = {}) {
         'judgment-required, or weakening. Pass the previous baseConfig and optional ' +
         'candidateConfig (defaults to this project contract). Weakening and judgment-required ' +
         'results set isError unless acknowledgement exactly matches both policy hashes and all ' +
-        'blocking finding ids. Read-only; never edits the contract.',
+        'blocking finding ids, and adrPath names a short note under docs/adr/ or docs/decisions/. ' +
+        'Read-only; never edits the contract.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -2010,7 +2012,8 @@ export async function runArkMcp({ hookInput } = {}) {
           acknowledgement: {
             type: 'object',
             description:
-              'Optional schemaVersion/basePolicyHash/candidatePolicyHash/findingIds/reason object.',
+              'Optional schemaVersion/basePolicyHash/candidatePolicyHash/findingIds/reason object. ' +
+              'When the transition needs an acknowledgement, adrPath must name a short note under docs/adr/ or docs/decisions/.',
           },
         },
         required: ['baseConfig'],
@@ -2468,11 +2471,15 @@ export async function runArkMcp({ hookInput } = {}) {
       };
     }
     try {
-      const result = ark.analyzePolicyDelta({
-        baseConfig,
-        candidateConfig: params?.arguments?.candidateConfig ?? config,
-        acknowledgement: params?.arguments?.acknowledgement,
-      });
+      const acknowledgement = params?.arguments?.acknowledgement;
+      const result = attachPolicyAdrNote(
+        ark.analyzePolicyDelta({
+          baseConfig,
+          candidateConfig: params?.arguments?.candidateConfig ?? config,
+          acknowledgement,
+        }),
+        { root: args.root, acknowledgement, failClosed: true }
+      );
       return {
         content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
         structuredContent: result,

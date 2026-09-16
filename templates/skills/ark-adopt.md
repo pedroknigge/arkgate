@@ -168,8 +168,10 @@ When gates are required (`--require-gates` / `--strict-merge` / required merge
 status) and there is no short decision-note home yet, doctor may ask for one
 under `docs/adr/` or `docs/decisions/`. Write a note when you loosen a rule or
 add a real gate — not on every file. Absence is silent unless that demand is
-on. The hint does not fail the check. Do **not** invent `/ark-adr`. Policy
-weaken still uses `--policy-ack`; this is only a place to write the why.
+on. The home hint does not fail the check. Do **not** invent `/ark-adr`.
+When `--policy-ack` is required (weaken, new layer, or new allow edge), put
+that note's path on the acknowledgement as `adrPath`. A free-floating reason
+is not enough on the policy-ack plane.
 
 ## States and transitions (process)
 

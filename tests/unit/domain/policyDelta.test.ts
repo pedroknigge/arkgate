@@ -128,6 +128,42 @@ describe('T01 semantic policy delta', () => {
     });
   });
 
+  it('classifies a new allow edge as judgment-required and keeps hash-only ack valid', () => {
+    const candidate = {
+      ...structuredClone(BASE_CONFIG),
+      rules: [
+        ...structuredClone(BASE_CONFIG.rules),
+        { from: 'DomainModel', to: 'Kernel', allowed: true },
+      ],
+    };
+    const first = analyzePolicyDelta({ baseConfig: BASE_CONFIG, candidateConfig: candidate });
+    expect(first).toMatchObject({
+      classification: 'judgment-required',
+      valid: false,
+      requiresAcknowledgement: true,
+    });
+    expect(first.findings).toContainEqual(
+      expect.objectContaining({
+        id: 'judgment-required:$.rules[DomainModel->Kernel]:allow-added',
+        path: '$.rules[DomainModel->Kernel]',
+      })
+    );
+
+    expect(
+      analyzePolicyDelta({
+        baseConfig: BASE_CONFIG,
+        candidateConfig: candidate,
+        acknowledgement: {
+          schemaVersion: '1.0',
+          basePolicyHash: first.basePolicyHash,
+          candidatePolicyHash: first.candidatePolicyHash,
+          findingIds: first.blockingFindingIds,
+          reason: 'Kernel may read DomainModel after the extract.',
+        },
+      })
+    ).toMatchObject({ valid: true, acknowledged: true });
+  });
+
   it('treats removed deny rules as weakening and invalid/unknown fields as fail-closed input', () => {
     expect(
       analyzePolicyDelta({

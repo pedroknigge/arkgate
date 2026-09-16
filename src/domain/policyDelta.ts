@@ -36,21 +36,31 @@ export type PolicyDeltaAcknowledgement = {
   candidatePolicyHash: string;
   findingIds: readonly string[];
   reason: string;
+  /**
+   * Relative decision-note path under a conventional home (`docs/adr/`,
+   * `docs/decisions/`, or the AP01 single-file homes). Tooling checks the file.
+   * Hash matching does not require it.
+   */
+  adrPath?: string;
 };
 
 type FindingInput = Omit<PolicyDeltaFinding, 'id'> & { kind: string };
 
+const ADR_PATH_NEXT_ACTION =
+  'Add a short note under docs/adr/ (or docs/decisions/) and put that file path in --policy-ack as adrPath.';
+
 function addFinding(findings: PolicyDeltaFinding[], input: FindingInput): void {
+  const defaultNext =
+    input.classification === 'weakening' || input.classification === 'judgment-required'
+      ? `Restore the previous protection at ${input.path}, or ${ADR_PATH_NEXT_ACTION}`
+      : undefined;
+  const nextAction = input.nextAction ?? defaultNext;
   findings.push({
     id: `${input.classification}:${input.path}:${input.kind}`,
     path: input.path,
     classification: input.classification,
     message: input.message,
-    ...(input.classification === 'weakening' || input.classification === 'judgment-required'
-      ? {
-          nextAction: `Restore the previous protection at ${input.path}, then run ArkGate again.`,
-        }
-      : {}),
+    ...(nextAction ? { nextAction } : {}),
     ...(input.before === undefined ? {} : { before: input.before }),
     ...(input.after === undefined ? {} : { after: input.after }),
   });
@@ -170,6 +180,8 @@ function compareLayers(
         path,
         classification: 'judgment-required',
         message: 'A layer was added; verify overlap, ownership, and rule coverage.',
+        nextAction:
+          'Write a short note under docs/adr/ (or docs/decisions/) for this new layer and put that file path in --policy-ack as adrPath.',
         after: candidate,
       });
       continue;
@@ -295,6 +307,16 @@ function compareRules(
           path,
           classification: 'strengthening',
           message: 'A denied dependency edge was added.',
+          after: candidate,
+        });
+      } else {
+        addFinding(findings, {
+          kind: 'allow-added',
+          path,
+          classification: 'judgment-required',
+          message: 'A new import edge was added; confirm this house should import that one.',
+          nextAction:
+            'Write a short note under docs/adr/ (or docs/decisions/) for this new import edge and put that file path in --policy-ack as adrPath.',
           after: candidate,
         });
       }

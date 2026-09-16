@@ -9,6 +9,7 @@ import {
   loadInvariantCoverageInputs,
 } from './invariant-coverage-io.mjs';
 import { evaluateInvariantCoverage } from './invariant-coverage.mjs';
+import { attachPolicyAdrNote } from './adr-presence.mjs';
 
 function readJsonFile(filePath, label) {
   if (!fs.existsSync(filePath)) throw new Error(`${label} not found: ${filePath}`);
@@ -196,14 +197,22 @@ export function analyzePolicyTransition({
     candidateInvariantCoverage = evaluated.coverage;
   }
 
-  return analyzePolicyDelta({
-    baseConfig: base.config,
-    candidateConfig,
-    acknowledgement: readPolicyAcknowledgement(root, acknowledgementPath),
-    baseSource: base.source,
-    candidateSource: path.isAbsolute(configPath) ? configPath : path.join(root, configPath),
-    ...(baseArkRules ? { baseArkRules } : {}),
-    candidateArkRules,
-    ...(candidateInvariantCoverage ? { candidateInvariantCoverage } : {}),
-  });
+  const acknowledgement = readPolicyAcknowledgement(root, acknowledgementPath);
+  return attachPolicyAdrNote(
+    analyzePolicyDelta({
+      baseConfig: base.config,
+      candidateConfig,
+      acknowledgement,
+      baseSource: base.source,
+      candidateSource: path.isAbsolute(configPath) ? configPath : path.join(root, configPath),
+      ...(baseArkRules ? { baseArkRules } : {}),
+      candidateArkRules,
+      ...(candidateInvariantCoverage ? { candidateInvariantCoverage } : {}),
+    }),
+    {
+      root,
+      acknowledgement,
+      failClosed: Boolean(strictMerge || acknowledgementPath),
+    }
+  );
 }

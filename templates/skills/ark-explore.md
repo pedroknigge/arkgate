@@ -24,7 +24,9 @@ one bounded decision needs 2–3 enforceable options.
 - Doctor #1: if ENFORCE + empty plan A and gates are already installed → **Shape** (`/ark-explore` then `/ark-autopilot`). Do not say install-agent-gates.
 - When `--require-gates` / adopted-strict is on and doctor JSON has `adrPresence`,
   the next step is a short note under `docs/adr/` (or `docs/decisions/`). Soft.
-  Not every change. Off when require-gates is off. No `/ark-adr`.
+  Not every change. Off when require-gates is off. No `/ark-adr`. When
+  `policyDelta` needs `--policy-ack` (weaken, new layer, or new allow edge),
+  the ack must name that note as `adrPath` — a reason alone is not enough.
 - When doctor JSON has `statesTransitions` or `statusTransitionCatalog`, the
   next step is a short states → transitions table (or one link) on the domain
   doc already in play. Use catalog names when present. Soft. Silent when that

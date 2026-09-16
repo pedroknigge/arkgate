@@ -8,10 +8,16 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
+  ADR_PATH_ASK,
+  ADR_PATH_NEXT,
   ADR_PRESENCE_ASK,
   ADR_PRESENCE_NEXT,
+  attachPolicyAdrNote,
+  collectAdrPathResidual,
   collectAdrPresenceResidual,
   findAdrPresenceHome,
+  isConventionalAdrPath,
+  resolveAdrNotePath,
 } from '../../../bin/lib/adr-presence.mjs';
 import { runDoctor } from '../../../bin/lib/doctor-plan.mjs';
 
@@ -184,5 +190,68 @@ describe('doctor residual', () => {
       },
     });
     expect(present?.doctor?.adrPresence).toBeUndefined();
+  });
+});
+
+describe('ADR path on policy-ack', () => {
+  it('accepts conventional homes and rejects escapes', () => {
+    expect(isConventionalAdrPath('docs/adr/0001-why.md')).toBe(true);
+    expect(isConventionalAdrPath('docs/decisions/note.md')).toBe(true);
+    expect(isConventionalAdrPath('ADR.md')).toBe(true);
+    expect(isConventionalAdrPath('../docs/adr/x.md')).toBe(false);
+    expect(isConventionalAdrPath('README.md')).toBe(false);
+    expect(isConventionalAdrPath('/tmp/note.md')).toBe(false);
+  });
+
+  it('is silent unless a weaken or new edge needs a note', () => {
+    const root = mk();
+    expect(collectAdrPathResidual({ root, needed: false, adrPath: undefined })).toBeNull();
+    expect(collectAdrPathResidual({ root })).toBeNull();
+    expect(collectAdrPathResidual({ root, needed: true })?.ask).toBe(ADR_PATH_ASK);
+    expect(collectAdrPathResidual({ root, needed: true })?.nextAction).toBe(ADR_PATH_NEXT);
+  });
+
+  it('resolves a real note and residual when the path is missing', () => {
+    const root = mk();
+    writeNote(root);
+    expect(resolveAdrNotePath(root, 'docs/adr/0001-why.md')).toBe('docs/adr/0001-why.md');
+    expect(collectAdrPathResidual({ root, needed: true, adrPath: 'docs/adr/0001-why.md' })).toBeNull();
+    expect(collectAdrPathResidual({ root, needed: true, adrPath: 'docs/adr/missing.md' })?.missing).toBe(
+      true
+    );
+  });
+
+  it('flips valid only on the fail-closed policy-ack plane', () => {
+    const root = mk();
+    writeNote(root);
+    const result = {
+      requiresAcknowledgement: true,
+      valid: true,
+      acknowledged: true,
+    };
+    expect(
+      attachPolicyAdrNote(result, {
+        root,
+        acknowledgement: { reason: 'because' },
+        failClosed: false,
+      })
+    ).toMatchObject({ valid: true, adrNote: { missing: true } });
+    expect(
+      attachPolicyAdrNote(result, {
+        root,
+        acknowledgement: { reason: 'because' },
+        failClosed: true,
+      })
+    ).toMatchObject({ valid: false, adrNote: { missing: true } });
+    expect(
+      attachPolicyAdrNote(result, {
+        root,
+        acknowledgement: { reason: 'because', adrPath: 'docs/adr/0001-why.md' },
+        failClosed: true,
+      })
+    ).toMatchObject({ valid: true, adrNote: { missing: false, path: 'docs/adr/0001-why.md' } });
+    expect(attachPolicyAdrNote({ requiresAcknowledgement: false, valid: true }, { failClosed: true })).toEqual(
+      { requiresAcknowledgement: false, valid: true }
+    );
   });
 });
