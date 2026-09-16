@@ -236,6 +236,92 @@ describe('AR09–AR11 invariant coverage + promotion', () => {
     expect(message).toMatch(/4 symlinked outside the project root/);
   });
 
+  it('names each discard reason alone so a silenced clause cannot hide among others', () => {
+    const zero = {
+      budget: 0,
+      noInvariantMention: 0,
+      oversize: 0,
+      unreadable: 0,
+      depthLimited: 0,
+      outOfRoot: 0,
+    };
+    const rows: Array<{ discarded: typeof zero; match: RegExp; absent: RegExp[] }> = [
+      {
+        discarded: { ...zero, budget: 7 },
+        match: /7 past the 400-file budget/,
+        absent: [/naming no catalogued invariant/, /byte cap/, /unreadable/, /walk depth/, /symlinked/],
+      },
+      {
+        discarded: { ...zero, noInvariantMention: 9 },
+        match: /9 naming no catalogued invariant/,
+        absent: [/past the 400-file budget/, /byte cap/, /unreadable/, /walk depth/, /symlinked/],
+      },
+      {
+        discarded: { ...zero, oversize: 2 },
+        match: /2 over the per-file byte cap/,
+        absent: [/past the 400-file budget/, /naming no catalogued invariant/, /unreadable/, /walk depth/, /symlinked/],
+      },
+      {
+        discarded: { ...zero, unreadable: 1 },
+        match: /1 unreadable \(files or directories\)/,
+        absent: [/past the 400-file budget/, /naming no catalogued invariant/, /byte cap/, /walk depth/, /symlinked/],
+      },
+      {
+        discarded: { ...zero, depthLimited: 3 },
+        match: /3 directories past the walk depth limit/,
+        absent: [/past the 400-file budget/, /naming no catalogued invariant/, /byte cap/, /unreadable/, /symlinked/],
+      },
+      {
+        discarded: { ...zero, outOfRoot: 4 },
+        match: /4 symlinked outside the project root/,
+        absent: [/past the 400-file budget/, /naming no catalogued invariant/, /byte cap/, /unreadable/, /walk depth/],
+      },
+    ];
+    for (const row of rows) {
+      const result = evaluateInvariantCoverage({
+        arkRules: catalog(),
+        fileContents: { 'tests/a.test.ts': "it('unrelated', () => {})" },
+        testFiles: ['tests/a.test.ts'],
+        coverageStats: {
+          filesLoaded: 1,
+          testFilesRetained: 1,
+          maxFiles: 400,
+          discarded: row.discarded,
+        },
+      });
+      const message = result.violations[0]?.message ?? '';
+      expect(message).toMatch(row.match);
+      for (const absent of row.absent) {
+        expect(message).not.toMatch(absent);
+      }
+    }
+  });
+
+  it('treats filesRead 0 as a reported read count, not silence', () => {
+    const result = evaluateInvariantCoverage({
+      arkRules: catalog(),
+      fileContents: {},
+      testFiles: [],
+      testGlobsMissing: true,
+      coverageBudgetExhausted: true,
+      coverageStats: {
+        filesRead: 0,
+        filesLoaded: 0,
+        testFilesRetained: 0,
+        maxFiles: 400,
+        discarded: {
+          budget: 0,
+          noInvariantMention: 0,
+          oversize: 0,
+          unreadable: 0,
+          depthLimited: 0,
+          outOfRoot: 0,
+        },
+      },
+    });
+    expect(result.violations[0]?.message).toMatch(/; 0 were read/);
+  });
+
   it('renders the whole uncovered sentence, with no tail when nothing was discarded', () => {
     // Exact text, not a fragment: every clause of a coverage verdict is a claim
     // about the user's repo, and a fragment match cannot notice a clause that

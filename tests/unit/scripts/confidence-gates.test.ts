@@ -72,6 +72,26 @@ describe('confidence gate wiring', () => {
     expect(stryker).toContain(`${facts.file}:${facts.startLine}-${facts.endLine}`);
     expect(stryker).toContain(`${promote.file}:${promote.startLine}-${promote.endLine}`);
 
+    const messageHonesty = contract.groups.find(
+      (entry) => entry.id === 'invariant-coverage-message-honesty'
+    );
+    expect(messageHonesty, 'invariant-coverage-message-honesty').toBeTruthy();
+    const messageBlob = messageHonesty!.targets
+      .map((target) => slice(target.file, target.startLine, target.endLine))
+      .join('\n');
+    expect(messageBlob).toContain('function formatCoverageDiscards');
+    expect(messageBlob).toContain("if (!stats) return ''");
+    expect(messageBlob).toContain('naming no catalogued invariant');
+    expect(messageBlob).toContain('symlinked outside the project root');
+    expect(messageBlob).toContain('const budgetDetail = stats');
+    expect(messageBlob).toContain('coverage.maxFiles');
+    expect(messageBlob).toContain("typeof stats.filesRead === 'number'");
+    expect(messageBlob).not.toContain('function symbolPresent');
+    expect(messageBlob).not.toContain('filesRead?: number');
+    for (const target of messageHonesty!.targets) {
+      expect(stryker).toContain(`${target.file}:${target.startLine}-${target.endLine}`);
+    }
+
     const baselines = group('baselines');
     expect(baselines.file).toBe('src/domain/baselineKey.ts');
     const baselinesSlice = slice(baselines.file, baselines.startLine, baselines.endLine);
