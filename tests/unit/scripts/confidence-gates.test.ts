@@ -50,9 +50,14 @@ describe('confidence gate wiring', () => {
 
     const ack = group('policy-delta-ack-match');
     expect(ack.file).toBe('src/domain/policyDelta.ts');
-    expect(slice(ack.file, ack.startLine, ack.endLine)).toContain(
-      'export function policyDeltaAcknowledgementMatches'
-    );
+    const ackSlice = slice(ack.file, ack.startLine, ack.endLine);
+    expect(ackSlice).toContain('export function policyDeltaAcknowledgementMatches');
+    expect(ackSlice).toContain('acknowledgement.schemaVersion !== POLICY_DELTA_SCHEMA_VERSION');
+    expect(ackSlice).toContain('acknowledgement.reason.trim().length === 0');
+    expect(ackSlice).toContain('actualIds.every((id, index) => id === expectedIds[index])');
+    expect(ackSlice).not.toContain('compareArkRules');
+    expect(ackSlice).not.toContain('compareArkRun');
+    expect(ackSlice).not.toContain('compareArkOrder');
 
     const facts = group('resolved-candidate-facts');
     expect(facts.file).toBe('bin/lib/resolved-candidate-facts.mjs');
