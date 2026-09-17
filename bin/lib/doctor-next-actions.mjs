@@ -17,6 +17,39 @@ function missingGateFiles(ctx) {
   return list;
 }
 
+/** Ignore a handful of expected Next API dual-matches. */
+const DUAL_MATCH_REPAIR_FLOOR = 20;
+/** Absolute pile-up even when the tree is huge. */
+const DUAL_MATCH_REPAIR_ABSOLUTE = 50;
+/** Share of in-scope files that match two+ layers. */
+const DUAL_MATCH_REPAIR_SHARE = 0.1;
+
+/**
+ * Dual-match is a lying layer map when it is large — especially Domain
+ * overlapping Presentation/Application after over-broad monorepo start globs.
+ */
+export function dualMatchNeedsGlobRepair(cov) {
+  const count = Number(cov?.dualMembership?.count) || 0;
+  if (count < DUAL_MATCH_REPAIR_FLOOR) return false;
+  const total = Number(cov?.totalFiles ?? cov?.governed?.totalFiles) || 0;
+  const samples = Array.isArray(cov?.dualMembership?.samples) ? cov.dualMembership.samples : [];
+  const domainOverlap = samples.some((row) => (row.layers ?? []).includes('DomainModel'));
+  if (domainOverlap) return true;
+  if (total > 0 && count / total >= DUAL_MATCH_REPAIR_SHARE) return true;
+  return count >= DUAL_MATCH_REPAIR_ABSOLUTE;
+}
+
+export function overlappingGlobNextAction(cov) {
+  const count = Number(cov?.dualMembership?.count) || 0;
+  const sample = Array.isArray(cov?.dualMembership?.samples) ? cov.dualMembership.samples[0] : null;
+  const layers = Array.isArray(sample?.layers) ? sample.layers.filter(Boolean) : [];
+  const example =
+    sample?.file && layers.length > 1
+      ? `${sample.file} matches ${layers.join(' + ')}`
+      : 'api/** covering the same files as **/app/**';
+  return `Fix overlapping layer globs — ${count} files match more than one layer (e.g. ${example}). Narrow DomainModel to package-scoped paths (packages/*/src/domain/**), not whole-app roots like api/**. Then /ark-adopt`;
+}
+
 export function collectDoctorNextActions(ctx) {
   const actions = [];
   const missingFiles = missingGateFiles(ctx);
@@ -70,6 +103,8 @@ export function collectDoctorNextActions(ctx) {
   if (ctx.coverageHonesty.greenIsNotEnforcement && ctx.coverageHonesty.worseThanNoGate) {
     actions.push('raise governed coverage above a minority slice before treating green as enforcement');
   }
+  const overlapAction = dualMatchNeedsGlobRepair(ctx.cov) ? overlappingGlobNextAction(ctx.cov) : null;
+  if (overlapAction) actions.push(overlapAction);
   if (ctx.cov.suggestions.length > 0) actions.push('classify the ungoverned directories (/ark-adopt)');
   if (ctx.packageVersionTruth?.dualTruth) {
     actions.push(
@@ -161,6 +196,9 @@ export function collectDoctorNextActions(ctx) {
   const unique = mergePostGreenTopActions(actions, ctx.postGreenPath);
   if (ctx.designFitness.designWeak && unique.length === 0 && ctx.postGreenPath) {
     unique.push(ctx.postGreenPath.action);
+  }
+  if (overlapAction) {
+    return [overlapAction, ...unique.filter((a) => a !== overlapAction)];
   }
   if (notAdopted) {
     const next = ctx.notAdoptedNextAction || NOT_ADOPTED_NEXT_ACTION;

@@ -66,6 +66,13 @@ in the immutable pre-2.0 archive linked below.
   Required CI is still the shared merge line. No new skill, schema, or host.
 
 ### Fixed
+- Monorepo `arkgate start` no longer puts whole-app roots (`api/**`,
+  `client/**`) on DomainModel next to the finer globs. Domain stays
+  package-scoped (`packages/*/src/**`, `**/domain/**`). When dual-match
+  is huge, doctor #1 is “fix overlapping layer globs” with one example,
+  not only “make CI required”
+  (issue [#269](https://github.com/pedroknigge/arkgate/issues/269)).
+  Add-ons stay silent when off. No new skill, schema, or flag.
 - Write hook and `ark-check` now agree on overlapping layer globs: the hook
   probes the same specifier extensions as `ark-check` and classifies with
   `layerForRelativePath` (explicit `money.ts` beats `src/lib/**`). Field
