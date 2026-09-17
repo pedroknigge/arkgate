@@ -78,6 +78,8 @@ Maintainer-only local notes may live under gitignored `internal/` — never comm
    Mutation runs on `main` and at publish.
 5. **Small diffs.** No new abstraction without a second concrete use.
 6. **Honest docs.** Do not claim npm-published status before `npm view` succeeds.
+   Packed `README.md` and `docs/README.md` must not say npm `latest` remains an
+   older version than this package — this tarball publishes as `latest`.
    Product copy follows [docs/product-voice.md](docs/product-voice.md).
 
 ---
@@ -143,6 +145,11 @@ Boring path. No extra labels. No extra notes file.
 `server.json`.
 
 **Must write:** a [CHANGELOG.md](CHANGELOG.md) line for the version.
+
+Packed front doors (`README.md`, `docs/README.md`) and this version's
+CHANGELOG section must not say npm `latest` remains an older version.
+Write those lines for the tarball. `npm run check:package-files` refuses
+the waiting-room pin.
 
 Then:
 
