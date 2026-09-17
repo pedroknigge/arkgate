@@ -160,12 +160,12 @@
     },
     {
       "id": "policy-delta-ack-match",
-      "note": "DF04: policyDeltaAcknowledgementMatches hash + finding-id set equality.",
+      "note": "DF04: policyDeltaAcknowledgementMatches hash + finding-id set equality. AP02 (#264) inserted adrPath JSDoc, ADR_PATH_NEXT_ACTION, and allow-added above the helper, so 934-963 landed on classifyArkPolicyDelta's compare/sort tail plus the function signature. Retargeted to the same helper body.",
       "targets": [
         {
           "file": "src/domain/policyDelta.ts",
-          "startLine": 934,
-          "endLine": 963
+          "startLine": 956,
+          "endLine": 985
         }
       ]
     },
