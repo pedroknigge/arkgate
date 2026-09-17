@@ -6,12 +6,6 @@ in the immutable pre-2.0 archive linked below.
 ## Unreleased
 
 ### Added
-- Policy-ack `adrPath`: a weaken, new layer, or new allow edge must name a
-  short note under `docs/adr/` or `docs/decisions/` on the same
-  `--policy-ack` JSON. Check JSON `policyDelta.adrNote`. Fail-closed only on
-  the existing policy-ack / `--strict-merge` plane. Soft ADR home presence
-  (`--require-gates`) stays a hint. No `requireAdr` flag, new skill, or
-  `schemaVersion` bump.
 - Soft doctor residual when Domain is declared but empty and the UI holds the
   rules (`noDomainFrontend`). Projects empty Domain + presentation share, or
   the existing `domain-logic-in-ui` smell. Friendly next step: one Domain file
@@ -101,6 +95,32 @@ in the immutable pre-2.0 archive linked below.
   `@2` pin (issue [#211](https://github.com/pedroknigge/arkgate/issues/211)).
   Existing configs keep whatever URL they already have. Editor completion
   matches the 4.x line you just installed.
+
+## 4.8.17 — 2026-09-17
+
+**Patch** over **4.8.16**. Daily accumulate of the two ships that landed
+after 4.8.16 published: ADR path on policy weaken / new layer edge
+([#264](https://github.com/pedroknigge/arkgate/pull/264)) and the
+policy-delta-ack-match confidence retarget
+([#265](https://github.com/pedroknigge/arkgate/pull/265)).
+**Write. Check. Ship.** **No required config migration.** No
+`schemaVersion` bump. Does not close `K01` / `Z09`. This mother
+`ark.config.json` still does **not** turn `arkOrder` on.
+
+**Status: prepared** (npm `latest` remains **4.8.16** until Actions `publish-npm`
+runs with `tag=v4.8.17` and `dry_run=false`).
+
+### Added
+- A weaken, new layer, or new allow edge must name a short ADR /
+  decision-note path on `--policy-ack` (`adrPath`). A free-floating
+  reason is not enough
+  ([#264](https://github.com/pedroknigge/arkgate/pull/264)).
+
+### Fixed
+- Retarget `policy-delta-ack-match` onto the current
+  `policyDeltaAcknowledgementMatches` body so the 90% confidence
+  floor still holds after #264
+  ([#265](https://github.com/pedroknigge/arkgate/pull/265)).
 
 ## 4.8.16 — 2026-09-16
 
