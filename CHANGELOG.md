@@ -66,6 +66,11 @@ in the immutable pre-2.0 archive linked below.
   Required CI is still the shared merge line. No new skill, schema, or host.
 
 ### Fixed
+- Doctor #1 no longer treats intentional Domain+Tooling file+glob dual-lists
+  (generated CLI listed on Domain under Tooling `bin/**`) as a glob leak, and
+  overlapping-glob copy names the tree's real roots/samples instead of a
+  canned `api/**` sermon. Over-broad Domain wildcards and huge dual-match
+  pile-ups still surface #1. No new skill, schema, or flag.
 - Packed README / docs hub no longer claim npm `latest` remains an older
   version than this tarball. `check:package-files` and the packed-artifact
   path refuse that pin

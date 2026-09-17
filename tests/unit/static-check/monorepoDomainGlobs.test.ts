@@ -1,6 +1,7 @@
 /**
  * Issue #269: monorepo start must not dump whole-app roots onto DomainModel,
- * and doctor #1 must name overlapping globs when dual-match is huge.
+ * and doctor #1 must name overlapping globs when dual-match is a glob leak.
+ * H-P0-3: intentional file+glob dual-lists must not steal #1 or sermon `api/**`.
  */
 import { afterEach, describe, expect, it } from 'vitest';
 import fs from 'node:fs';
@@ -161,6 +162,64 @@ describe('doctor overlapping-glob priority (#269)', () => {
     expect(overlappingGlobNextAction(hugeDual)).toMatch(/Fix overlapping layer globs/);
     expect(overlappingGlobNextAction(hugeDual)).toContain('api/src/app/page.ts matches DomainModel + PresentationAdapters');
     expect(overlappingGlobNextAction(hugeDual)).toMatch(/api\/\*\*/);
+    expect(overlappingGlobNextAction(hugeDual)).not.toMatch(/packages\/\*\/src\/domain/);
+  });
+
+  it('does not steal doctor #1 for mother-like Domain+Tooling file+glob dual-lists', () => {
+    const motherLike = {
+      suggestions: [],
+      totalFiles: 343,
+      layers: [
+        {
+          name: 'DomainModel',
+          patterns: ['src/domain/**', 'bin/ark-layer-match.mjs', 'bin/lib/remediation.mjs'],
+        },
+        { name: 'Tooling', patterns: ['src/eslint/**', 'bin/**', 'scripts/**'] },
+      ],
+      dualMembership: {
+        count: 24,
+        samples: [
+          {
+            file: 'bin/ark-layer-match.mjs',
+            layers: ['DomainModel', 'Tooling'],
+            winner: 'DomainModel',
+          },
+        ],
+      },
+    };
+    expect(dualMatchNeedsGlobRepair(motherLike)).toBe(false);
+    const actions = collectDoctorNextActions(nextActionsCtx(motherLike));
+    expect(actions[0]).toBe(NOT_ADOPTED_NEXT_ACTION);
+    expect(actions[0]).not.toMatch(/api\/\*\*/);
+    expect(actions.some((action) => /Fix overlapping layer globs/.test(String(action)))).toBe(false);
+  });
+
+  it('names the tree overlapping roots instead of a canned api/** sermon', () => {
+    const webLeak = {
+      suggestions: [],
+      totalFiles: 80,
+      layers: [
+        { name: 'DomainModel', patterns: ['apps/web/**', '**/domain/**'] },
+        { name: 'PresentationAdapters', patterns: ['**/app/**'] },
+      ],
+      dualMembership: {
+        count: 40,
+        samples: [
+          {
+            file: 'apps/web/src/app/page.ts',
+            layers: ['DomainModel', 'PresentationAdapters'],
+            winner: 'DomainModel',
+          },
+        ],
+      },
+    };
+    expect(dualMatchNeedsGlobRepair(webLeak)).toBe(true);
+    const copy = overlappingGlobNextAction(webLeak);
+    expect(copy).toContain('apps/web/src/app/page.ts matches DomainModel + PresentationAdapters');
+    expect(copy).toContain('apps/web/**');
+    expect(copy).not.toMatch(/api\/\*\*/);
+    expect(copy).not.toMatch(/packages\/\*\/src\/domain/);
+    expect(collectDoctorNextActions(nextActionsCtx(webLeak))[0]).toBe(copy);
   });
 
   it('does not displace CI-required for a handful of non-Domain dual-matches', () => {
