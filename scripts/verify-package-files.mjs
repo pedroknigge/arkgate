@@ -8,6 +8,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { collectPackedFrontDoorErrors } from './packed-front-door-latest-truth.mjs';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -96,6 +97,24 @@ function main() {
   if (!fs.existsSync(path.join(REPO, 'docs', 'threat-model.md'))) {
     errors.push('docs/threat-model.md missing');
   }
+
+  // This package publishes as npm `latest`. Packed front doors must not say
+  // latest remains an older version (#270).
+  const pkgVersion = typeof pkg.version === 'string' ? pkg.version : '';
+  errors.push(
+    ...collectPackedFrontDoorErrors({
+      version: pkgVersion,
+      readme: fs.existsSync(path.join(REPO, 'README.md'))
+        ? fs.readFileSync(path.join(REPO, 'README.md'), 'utf8')
+        : '',
+      docsReadme: fs.existsSync(path.join(REPO, 'docs', 'README.md'))
+        ? fs.readFileSync(path.join(REPO, 'docs', 'README.md'), 'utf8')
+        : '',
+      changelog: fs.existsSync(path.join(REPO, 'CHANGELOG.md'))
+        ? fs.readFileSync(path.join(REPO, 'CHANGELOG.md'), 'utf8')
+        : '',
+    })
+  );
 
   const ok = errors.length === 0;
   const report = { ok, errors, warnings, filesCount: files.length };

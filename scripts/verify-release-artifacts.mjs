@@ -11,6 +11,7 @@ import {
   validateReleaseOutput,
 } from './release-output-safety.mjs';
 import { parseNpmPackReport } from './npm-pack-report.mjs';
+import { collectPackedFrontDoorErrors } from './packed-front-door-latest-truth.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const budgets = JSON.parse(fs.readFileSync(path.join(root, 'release/package-budgets.v1.json'), 'utf8'));
@@ -28,6 +29,14 @@ function cyclonedxSerial(component) {
   const hex = createHash('sha256').update(component).digest('hex');
   return `urn:uuid:${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
 }
+function packedEntry(tarball, entry) {
+  try {
+    return execFileSync('tar', ['-xOf', tarball, entry], { encoding: 'utf8' });
+  } catch {
+    return null;
+  }
+}
+
 function pack(name, policy, work) {
   const cwd = path.join(root, policy.path);
   const report = parseNpmPackReport(run('npm', ['pack', '--json', '--ignore-scripts', '--pack-destination', work], cwd));
@@ -37,6 +46,18 @@ function pack(name, policy, work) {
   if (report.unpackedSize > policy.maxUnpackedBytes) errors.push(`unpacked ${report.unpackedSize} exceeds ${policy.maxUnpackedBytes}`);
   if (report.files.length > policy.maxFiles) errors.push(`files ${report.files.length} exceeds ${policy.maxFiles}`);
   const pkg = JSON.parse(fs.readFileSync(path.join(cwd, 'package.json'), 'utf8'));
+  if (name === 'gate') {
+    const readme = packedEntry(tarball, 'package/README.md');
+    if (readme == null) errors.push('packed tarball missing package/README.md');
+    errors.push(
+      ...collectPackedFrontDoorErrors({
+        version: pkg.version,
+        readme: readme ?? '',
+        docsReadme: packedEntry(tarball, 'package/docs/README.md') ?? '',
+        changelog: packedEntry(tarball, 'package/CHANGELOG.md') ?? '',
+      })
+    );
+  }
   const component = { type: 'library', name: pkg.name, version: pkg.version, licenses: [{ license: { id: pkg.license || 'NOASSERTION' } }] };
   fs.mkdirSync(path.join(output, name), { recursive: true });
   fs.copyFileSync(tarball, path.join(output, name, report.filename));

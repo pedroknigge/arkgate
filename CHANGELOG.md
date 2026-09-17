@@ -66,6 +66,10 @@ in the immutable pre-2.0 archive linked below.
   Required CI is still the shared merge line. No new skill, schema, or host.
 
 ### Fixed
+- Packed README / docs hub no longer claim npm `latest` remains an older
+  version than this tarball. `check:package-files` and the packed-artifact
+  path refuse that pin
+  ([#270](https://github.com/pedroknigge/arkgate/issues/270)).
 - Monorepo `arkgate start` no longer puts whole-app roots (`api/**`,
   `client/**`) on DomainModel next to the finer globs. Domain stays
   package-scoped (`packages/*/src/**`, `**/domain/**`). When dual-match
@@ -114,8 +118,7 @@ policy-delta-ack-match confidence retarget
 `schemaVersion` bump. Does not close `K01` / `Z09`. This mother
 `ark.config.json` still does **not** turn `arkOrder` on.
 
-**Status: prepared** (npm `latest` remains **4.8.16** until Actions `publish-npm`
-runs with `tag=v4.8.17` and `dry_run=false`).
+**Status: published** (npm `latest` is **4.8.17**).
 
 ### Added
 - A weaken, new layer, or new allow edge must name a short ADR /

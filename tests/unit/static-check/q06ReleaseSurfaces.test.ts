@@ -196,8 +196,8 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
     expect(read('CONTRIBUTING.md')).toMatch(/Optional \(not gates\)/);
     expect(read('CONTRIBUTING.md')).not.toMatch(/Current release candidate:/);
     expect(read('CONTRIBUTING.md')).not.toMatch(/Prior published:/);
-    expect(read('docs/README.md')).toMatch(/Prepared:.*4\.8\.17/s);
-    expect(read('docs/README.md')).toMatch(/Current published:.*4\.8\.11/s);
+    expect(read('docs/README.md')).toMatch(/Current published:.*4\.8\.17/s);
+    expect(read('docs/README.md')).toMatch(/Prior published:.*4\.8\.11/s);
     expect(read('docs/README.md')).toMatch(/Prior published:.*4\.8\.10/s);
     expect(read('docs/README.md')).toMatch(/Prior:.*4\.6\.2/s);
     expect(read('docs/package-surface.md')).toMatch(/current published:.*4\.8\.11/is);
@@ -370,13 +370,12 @@ describe('CHANGELOG + release note cover 4.8.16 daily accumulate', () => {
 });
 
 describe('CHANGELOG + release note cover 4.8.17 daily accumulate', () => {
-  it('records the prepared release without claiming publication', () => {
+  it('records the published release', () => {
     const changelog = changelogText();
     const section = changelogSection(changelog, '4.8.17', '4.8.16');
-    expect(section).toMatch(/Status:\s*prepared/i);
-    expect(section).toMatch(/npm `latest` remains \*\*4\.8\.16\*\*/);
-    expect(section).toMatch(/tag=v4\.8\.17/);
-    expect(section).toMatch(/dry_run=false/);
+    expect(section).toMatch(/Status:\s*published/i);
+    expect(section).toMatch(/npm `latest` is \*\*4\.8\.17\*\*/);
+    expect(section).not.toMatch(/latest remains/);
     expect(section).toMatch(/#264/);
     expect(section).toMatch(/#265/);
     expect(section).toMatch(/adrPath/);
@@ -385,7 +384,7 @@ describe('CHANGELOG + release note cover 4.8.17 daily accumulate', () => {
     expect(section).toMatch(/No required config migration/i);
     expect(section).toMatch(/Does not close\s*`K01`\s*\/\s*`Z09`/);
     expect(section).toMatch(/does \*\*not\*\* turn `arkOrder` on/);
-    expect(section).not.toMatch(/Status:\s*published/i);
+    expect(section).not.toMatch(/Status:\s*prepared/i);
     expect(section).not.toMatch(/No package version bump/);
     expect(section).not.toMatch(/Status:\s*unreleased/i);
     expect(fs.existsSync(path.join(REPO, 'docs/releases/4.8.17.md'))).toBe(false);
