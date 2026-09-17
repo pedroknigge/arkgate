@@ -6,7 +6,10 @@
  * packs the same files. Strangers read the tarball.
  */
 const SEMVER = '([0-9]+\\.[0-9]+\\.[0-9]+)';
-const LATEST_REMAINS = new RegExp(`latest remains\\s+\\*{0,2}${SEMVER}\\*{0,2}`, 'gi');
+const LATEST_REMAINS = new RegExp(
+  `latest\`?\\s+remains\\s+\\*{0,2}${SEMVER}\\*{0,2}`,
+  'gi'
+);
 const PREPARED_ON_TREE = /is prepared on this tree/i;
 const PREPARED_NOT_PUBLISHED = new RegExp(
   `Prepared\\s*\\(([^\\n)]*${SEMVER}[^\\n)]*);\\s*not published\\)`,
