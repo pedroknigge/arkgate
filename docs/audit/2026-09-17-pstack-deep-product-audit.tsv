@@ -1,0 +1,19 @@
+id	claim	evidence	verdict	notes
+Q1	Write vs CI always same verdict	bin/ark-mcp-runtime.mjs snippet+ratchet vs bin/ark-check.mjs --strict-merge	NOT_VERIFIED	Documented adapter split; kernel parity tests exist
+Q2	Doctor never two competing #1 lights	bin/lib/doctor-human.mjs single Primary next action; JSON also has postGreenPath	PARTIAL	Compact human is one-light
+Q3	start --apply never exits 0 when install fails	bin/ark.mjs returns PM status; tests/unit/static-check/startApplyInstallHonesty.test.ts	VERIFIED	Skipped when --skip-package-manager
+Q4	Monorepo start never puts api/** or client/** on DomainModel	bin/lib/presets.mjs domainScoped filter; live ARCHITECTURE_PRESETS.monorepo fixture	VERIFIED	**/domain/** still tree-wide
+Q5	Unclassified include cannot look green	Partial CONFIG_UNCLASSIFIED_FILES warning without --strict-*; zero-classified ANALYSIS_COVERS_NO_FILES after #233	NOT_VERIFIED	Universal claim false; strict-merge honest
+Q6	Doctor green always cites file/key/test	bin/lib/doctor-green-cite.mjs Healthy headline only	NOT_VERIFIED	Other checkmarks may be uncited
+Q7	Extra off => zero extra residual on doctor/status/report	Sensors early-return; JSON residual 0; compact prints ArkOrder breath	PARTIAL	Gate silent; human Order loud
+Q8	Extra off => start does not write extra keys	Live start --apply fixture: no arkRun/arkOrder; HAS arkRules + 4 templates	FAIL_FOR_RULES	Run/Order pass
+Q9	Skills when/not-when/handoff for all three extras	npm run check:agent-skills exit 0; ARK_SKILL_CAPACITY	VERIFIED	Rules folded; no /ark-rules
+Q10	ArkOrder adoptable without ADR 0029/0034	templates/agent-skills/ark-order/SKILL.md + docs/arkorder.md breath	PARTIAL	Full valve physics still ADR-linked
+H1	Packed README npm latest is 4.8.16	Audit-time banner vs npm view 4.8.17; #270 closed via merged #272 at 4a11295	CLOSED	Issue #270 CLOSED; PR #272 MERGED
+H2	#271 removed whole-app Domain globs	Live preset patterns; no api/** client/**	TRUE	Closes #269 shape
+H3	#271 doctor #1 safe on mother tree	24 intentional Domain+Tooling dual-lists; overlappingGlobNextAction hardcodes api/**	FALSE	Over-fire
+H4	Add-ons silent when absent	product-copy.mjs ArkOrder speaks when off; start writes ArkRules; --sensors lists all planes	FALSE_VS_SACRED	TRUE for gate findings
+H5	SK216 = 100% product surface	ADR 0036 planes+stars vs 16-row package index; no dashboard skill	TRUE_FOR_DECLARED	FALSE_FOR_FULL_SURFACE
+H6	UC01 still engineering doing	PR #233 merged; ROADMAP.md UC01 doing; draft #234	QUEUE_STALE	Code done
+H7	ROADMAP one doing	RL817 doing + UC01 doing; npm already 4.8.17	FALSE	Process dual-truth
+H8	Mother doctor analysis complete	No node_modules/typescript in this VM	INCONCLUSIVE	Coverage walk still ran
