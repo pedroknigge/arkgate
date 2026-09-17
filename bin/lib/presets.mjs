@@ -9,6 +9,7 @@ import {
   createElevenLayerConfig,
   DEFAULT_DOMAIN_FORBIDDEN_GLOBALS,
   discoverRepoUnits,
+  packageRoleSourcePatterns,
   DEFAULT_INTENT_PREFIXES,
   resolveIncludeRoots,
 } from '../ark-shared.mjs';
@@ -630,26 +631,15 @@ export const ARCHITECTURE_PRESETS = {
     // Turborepo: apps/ + packages/; Nx enterprise: apps/ + libs/ (+ packages/).
     if (include.length === 0) include = ['packages', 'apps', 'libs'];
     // Established workspaces often have flat package source roots rather than a
-    // directory named domain/application. The package manifest supplies a real,
-    // reviewable role signal: a published library is a domain surface; an app or
-    // CLI package coordinates work. This is deliberately limited to package roots
-    // Ark already discovered, never a catch-all **/src/** fallback.
-    const packagePatterns = (roles) => {
-      if (!root) return [];
-      return units
-        .filter((unit) => roles.includes(unit.role))
-        .flatMap((unit) => unit.sourceRoots.map((sourceRoot) => {
-          const base = unit.root === '.'
-            ? sourceRoot
-            : sourceRoot === '.'
-              ? unit.root
-              : `${unit.root}/${sourceRoot}`;
-          return base === '.' ? null : `${base}/**`;
-        }))
-        .filter(Boolean);
-    };
-    const librarySourcePatterns = packagePatterns(['library']);
-    const applicationSourcePatterns = packagePatterns(['application', 'cli']);
+    // directory named domain/application. Published libraries under packages/
+    // or libs/ stay Domain; whole-app roots (api/**, client/**) do not — those
+    // dual-match Presentation/Application and make Governed % a false green.
+    const librarySourcePatterns = root
+      ? packageRoleSourcePatterns(units, ['library'], { domainScoped: true })
+      : [];
+    const applicationSourcePatterns = root
+      ? packageRoleSourcePatterns(units, ['application', 'cli'])
+      : [];
     return presetWithOverlays(
       {
         include,

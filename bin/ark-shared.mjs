@@ -1046,6 +1046,53 @@ export function discoverRepoUnits(root) {
   return units;
 }
 
+/** Conventional published-library homes. Whole-app roots (api/, client/) are not these. */
+const MONOREPO_LIBRARY_HOMES = new Set(['packages', 'libs']);
+const MONOREPO_APP_SURFACE_ROOTS = new Set([
+  'api',
+  'client',
+  'frontend',
+  'web',
+  'app',
+  'apps',
+  'server',
+  'mobile',
+  'desktop',
+  'www',
+  'site',
+]);
+
+/**
+ * Source-root globs for discovered package units of the given roles.
+ * DomainModel (`domainScoped`) stays package-scoped: never workspace-root
+ * bags or app-surface first segments (`api/**`, `client/**`) that dual-match
+ * Presentation/Application and inflate Governed %.
+ */
+export function packageRoleSourcePatterns(units, roles, options = {}) {
+  const domainScoped = options.domainScoped === true;
+  return (units ?? [])
+    .filter((unit) => roles.includes(unit.role))
+    .flatMap((unit) => {
+      if (domainScoped && unit.root === '.') return [];
+      return (unit.sourceRoots ?? []).map((sourceRoot) => {
+        const base =
+          unit.root === '.'
+            ? sourceRoot
+            : sourceRoot === '.'
+              ? unit.root
+              : `${unit.root}/${sourceRoot}`;
+        return base === '.' ? null : `${base}/**`;
+      });
+    })
+    .filter(Boolean)
+    .filter((pattern) => {
+      if (!domainScoped) return true;
+      const first = String(pattern).replace(/\/\*\*$/, '').split('/')[0];
+      if (MONOREPO_APP_SURFACE_ROOTS.has(first)) return false;
+      return MONOREPO_LIBRARY_HOMES.has(first);
+    });
+}
+
 function walkSourceFiles(dir, files = [], depth = 0) {
   if (depth > 12) return files;
   const stat = fs.statSync(dir, { throwIfNoEntry: false });
