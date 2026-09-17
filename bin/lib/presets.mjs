@@ -9,7 +9,6 @@ import {
   createElevenLayerConfig,
   DEFAULT_DOMAIN_FORBIDDEN_GLOBALS,
   discoverRepoUnits,
-  packageRoleSourcePatterns,
   DEFAULT_INTENT_PREFIXES,
   resolveIncludeRoots,
 } from '../ark-shared.mjs';
@@ -630,16 +629,21 @@ export const ARCHITECTURE_PRESETS = {
     }
     // Turborepo: apps/ + packages/; Nx enterprise: apps/ + libs/ (+ packages/).
     if (include.length === 0) include = ['packages', 'apps', 'libs'];
-    // Established workspaces often have flat package source roots rather than a
-    // directory named domain/application. Published libraries under packages/
-    // or libs/ stay Domain; whole-app roots (api/**, client/**) do not — those
-    // dual-match Presentation/Application and make Governed % a false green.
-    const librarySourcePatterns = root
-      ? packageRoleSourcePatterns(units, ['library'], { domainScoped: true })
-      : [];
-    const applicationSourcePatterns = root
-      ? packageRoleSourcePatterns(units, ['application', 'cli'])
-      : [];
+    // Library Domain bags stay under packages/ or libs/ — never api/** or client/**.
+    const roleGlobs = (roles, domainScoped) =>
+      !root
+        ? []
+        : units
+            .filter((unit) => roles.includes(unit.role) && !(domainScoped && unit.root === '.'))
+            .flatMap((unit) =>
+              (unit.sourceRoots ?? []).map((sourceRoot) => {
+                const base = unit.root === '.' ? sourceRoot : sourceRoot === '.' ? unit.root : `${unit.root}/${sourceRoot}`;
+                return base === '.' ? null : `${base}/**`;
+              })
+            )
+            .filter((pattern) => pattern && (!domainScoped || /^(packages|libs)\//.test(pattern)));
+    const librarySourcePatterns = roleGlobs(['library'], true);
+    const applicationSourcePatterns = roleGlobs(['application', 'cli'], false);
     return presetWithOverlays(
       {
         include,
