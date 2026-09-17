@@ -374,4 +374,139 @@ export class Order {
       )
     ).toBe(true);
   });
+
+  it('fails closed when adopted and the domain-invariant tests path is missing', () => {
+    const arkRules = invariantRules([
+      { id: 'INV-ORDER-001', description: 'Order total never negative', mode: 'advisory' },
+    ]);
+    const cfg = { ...BASE_CONFIG, arkRules: { DomainModel: 'arkrules/DomainModel.json' } };
+    const result = analyzeCanonicalResolvedProject({
+      contract: loadContract(cfg as never, 'ark.config.json', { arkRules }),
+      facts: minimalFacts(cfg),
+      adopted: true,
+    });
+    const hit = result.ir.violations.find((v) => v.ruleId === 'INVARIANT_TESTS_PATH_MISSING');
+    expect(hit?.failsStrict).not.toBe(false);
+    expect(hit?.freezable).toBe(false);
+    expect(hit?.message).toMatch(/empty checkbox/);
+    expect(result.valid).toBe(false);
+  });
+
+  it('stays green when adopted and a tests path is configured', () => {
+    const arkRules = invariantRules([
+      { id: 'INV-ORDER-001', description: 'Order total never negative', mode: 'advisory' },
+    ]);
+    const cfg = {
+      ...BASE_CONFIG,
+      arkRules: { DomainModel: 'arkrules/DomainModel.json' },
+      coverage: { testGlobs: ['tests/**'] },
+    };
+    const result = analyzeCanonicalResolvedProject({
+      contract: loadContract(cfg as never, 'ark.config.json', { arkRules }),
+      facts: minimalFacts(cfg),
+      adopted: true,
+    });
+    expect(
+      [...(result.ir.violations ?? []), ...(result.ir.warnings ?? [])].some(
+        (v) => v.ruleId === 'INVARIANT_TESTS_PATH_MISSING'
+      )
+    ).toBe(false);
+  });
+
+  it('stays silent when adopted but every invariant opts out of tests', () => {
+    const arkRules = invariantRules([
+      {
+        id: 'INV-ALWAYS-VALID',
+        description: 'A domain object is never stored in an invalid state',
+        mode: 'advisory',
+        coverage: { test: false },
+      },
+    ]);
+    const cfg = { ...BASE_CONFIG, arkRules: { DomainModel: 'arkrules/DomainModel.json' } };
+    const result = analyzeCanonicalResolvedProject({
+      contract: loadContract(cfg as never, 'ark.config.json', { arkRules }),
+      facts: minimalFacts(cfg),
+      adopted: true,
+    });
+    expect(
+      [...(result.ir.violations ?? []), ...(result.ir.warnings ?? [])].some(
+        (v) => v.ruleId === 'INVARIANT_TESTS_PATH_MISSING'
+      )
+    ).toBe(false);
+  });
+
+  it('stays silent when not adopted even if the tests path is missing', () => {
+    const arkRules = invariantRules([
+      { id: 'INV-ORDER-001', description: 'Order total never negative', mode: 'advisory' },
+    ]);
+    const cfg = { ...BASE_CONFIG, arkRules: { DomainModel: 'arkrules/DomainModel.json' } };
+    const result = analyzeCanonicalResolvedProject({
+      contract: loadContract(cfg as never, 'ark.config.json', { arkRules }),
+      facts: minimalFacts(cfg),
+    });
+    expect(
+      [...(result.ir.violations ?? []), ...(result.ir.warnings ?? [])].some(
+        (v) => v.ruleId === 'INVARIANT_TESTS_PATH_MISSING'
+      )
+    ).toBe(false);
+  });
+
+  it('fails closed when an invariant is enforced and coverageRoots is missing', () => {
+    const arkRules = invariantRules([
+      { id: 'INV-ORDER-001', description: 'Order total never negative', mode: 'enforced' },
+    ]);
+    const cfg = {
+      ...BASE_CONFIG,
+      arkRules: { DomainModel: 'arkrules/DomainModel.json' },
+      coverage: { testGlobs: ['tests/**'] },
+    };
+    const result = analyzeCanonicalResolvedProject({
+      contract: loadContract(cfg as never, 'ark.config.json', { arkRules }),
+      facts: minimalFacts(cfg),
+    });
+    const hit = result.ir.violations.find((v) => v.ruleId === 'INVARIANT_COVERAGE_ROOTS_MISSING');
+    expect(hit?.failsStrict).not.toBe(false);
+    expect(hit?.freezable).toBe(false);
+    expect(hit?.message).toMatch(/coverage\.coverageRoots/);
+    expect(result.valid).toBe(false);
+    expect(result.ir.violations.some((v) => v.ruleId === 'INVARIANT_TESTS_PATH_MISSING')).toBe(
+      false
+    );
+  });
+
+  it('stays green when an invariant is enforced and coverageRoots is declared', () => {
+    const arkRules = invariantRules([
+      { id: 'INV-ORDER-001', description: 'Order total never negative', mode: 'enforced' },
+    ]);
+    const cfg = {
+      ...BASE_CONFIG,
+      arkRules: { DomainModel: 'arkrules/DomainModel.json' },
+      coverage: { coverageRoots: ['tests'] },
+    };
+    const result = analyzeCanonicalResolvedProject({
+      contract: loadContract(cfg as never, 'ark.config.json', { arkRules }),
+      facts: minimalFacts(cfg),
+    });
+    expect(
+      [...(result.ir.violations ?? []), ...(result.ir.warnings ?? [])].some(
+        (v) => v.ruleId === 'INVARIANT_COVERAGE_ROOTS_MISSING'
+      )
+    ).toBe(false);
+  });
+
+  it('stays silent when every invariant is advisory even if coverageRoots is missing', () => {
+    const arkRules = invariantRules([
+      { id: 'INV-ORDER-001', description: 'Order total never negative', mode: 'advisory' },
+    ]);
+    const cfg = { ...BASE_CONFIG, arkRules: { DomainModel: 'arkrules/DomainModel.json' } };
+    const result = analyzeCanonicalResolvedProject({
+      contract: loadContract(cfg as never, 'ark.config.json', { arkRules }),
+      facts: minimalFacts(cfg),
+    });
+    expect(
+      [...(result.ir.violations ?? []), ...(result.ir.warnings ?? [])].some(
+        (v) => v.ruleId === 'INVARIANT_COVERAGE_ROOTS_MISSING'
+      )
+    ).toBe(false);
+  });
 });

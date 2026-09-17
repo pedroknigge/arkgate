@@ -89,7 +89,14 @@ Top-level fields:
 - **`coverage`** (optional) — invariant-coverage scan controls: `testGlobs` (globs that decide
   which files count as tests, replacing the built-in `*.test.*` / `tests/` name heuristic),
   `maxFiles` (evidence file budget, default `400`) and `coverageRoots` (path prefixes where the
-  project declares its runner actually executes tests). Absence is silent and changes no verdict.
+  project declares its runner actually executes tests). Absence is silent unless the tree is
+  **adopted** (required CI or `.ark/adoption-stance.json` advisory-only) **and** the catalog
+  has domain invariants that want test evidence (`coverage.test` is not `false`) —
+  then a missing or empty tests path fails closed
+  (`INVARIANT_TESTS_PATH_MISSING`). Either `testGlobs` or `coverageRoots` satisfies the path.
+  When any catalogued invariant is **enforced**, `coverage.coverageRoots` is required
+  (`INVARIANT_COVERAGE_ROOTS_MISSING`) — `testGlobs` alone is not enough. Silent when no
+  invariant is enforced.
   Unknown keys fail closed. **`maxFiles` also bounds structural-hint preload** for
   `orchestration-only`, `thin-adapter`, and `writes-via-aggregate` (the hint loader reuses
   coverage contents when present). There is no separate `arkrules.hintBudget`. When eligible
@@ -117,8 +124,9 @@ Top-level fields:
   the invariant just as well as one that runs. Declaring `coverageRoots` gives ArkGate a second
   declaration to compare the first against: when the only covering test falls outside them, it
   reports `INVARIANT_COVERAGE_OUTSIDE_ROOTS` (advisory) and refuses to promote that invariant to
-  `enforced`. Declaring nothing keeps the old silence — without a declaration there is nothing to
-  compare, and ArkGate makes no claim about where tests run.
+  `enforced`. Declaring nothing stays silent unless any invariant is already enforced — then
+  missing roots fail closed (`INVARIANT_COVERAGE_ROOTS_MISSING`), because otherwise coverage can
+  certify a test the project never declared a runner root for.
 - **`arkRules`** (optional, schema `1.1+`) — map of layer name → project-relative path to an
   ArkRules file (e.g. `"DomainModel": "arkrules/DomainModel.json"`). Keys must match a declared
   layer. Missing/invalid referenced files **fail closed**.
@@ -449,12 +457,15 @@ JSON artifact passed with `--policy-ack`:
   "basePolicyHash": "fnv1a-...",
   "candidatePolicyHash": "fnv1a-...",
   "findingIds": ["weakening:$.dynamicImportAllowlist:added"],
-  "reason": "Temporary loader while the static registry is migrated."
+  "reason": "Temporary loader while the static registry is migrated.",
+  "adrPath": "docs/adr/0001-temporary-loader.md"
 }
 ```
 
-The acknowledgement must list every blocking finding exactly. It is not a permanent allowlist:
-changing either contract changes its hash and invalidates the acknowledgement.
+The acknowledgement must list every blocking finding exactly and name a short
+decision note as `adrPath` (under `docs/adr/` or `docs/decisions/`). A reason
+alone is not enough. It is not a permanent allowlist: changing either contract
+changes its hash and invalidates the acknowledgement.
 
 ## Team parliament (law vs feature)
 
@@ -487,6 +498,7 @@ type than product source:
 
 | Check | What it does |
 |-------|----------------|
+| `ark-check --local --base origin/dev` | Opt-in local / multi-worktree cheap check. Same engine as `--changed`. Refused with `--strict-merge`. `ARK_CHECK_LOCAL=1` is the same unless CI or a full-tree report mode is on. |
 | `ark-check --changed --base origin/dev` | Layer check on touched sources only. A CSS/i18n PR pays almost nothing. |
 | `ark-check --against origin/dev` | New violation keys vs **that ref's** baseline (not only HEAD). |
 | `ark-check --contract-diff --base origin/dev` | Classifies tighten / loosen / reclassify / baseline-grow. |
@@ -495,8 +507,10 @@ type than product source:
 | `ark status --vs origin/dev` | One line: pin / contract / baseline drift vs that ref. |
 
 Write-gate ApplyPatch denies a batch that mixes law files with product source. Humans who
-never hit PreToolUse are unchanged. Local `pnpm` gates should call `--changed --base`, not
-only full-tree `--strict-merge`.
+never hit PreToolUse are unchanged. Local `pnpm` gates should call `--local --base` or
+`--changed --base`, not only full-tree `--strict-merge`. Write hooks stay on the lexical
+snippet path — they do not run a full-tree check. Analysis is per `--root` (each git
+worktree has its own root); there is no machine-wide analysis lock.
 
 `--changed` resolves the touched sources plus their import closure — not the whole
 include tree. File-local ArkRules sensors (class shape, orchestration-only, thin-adapter,

@@ -11,7 +11,9 @@ ${NORTH_STAR_ONE_LINE}
 
   arkgate start              preview (no writes)
   arkgate start --apply      write host + CI setup
+                             (refuses weak coverage/shape; lock with --archetype/--preset/--force)
   arkgate-check --doctor     status — one next step
+                             (if missing: npx --package=arkgate arkgate-check --doctor)
 
 Stuck? Run status (--doctor). Do #1.
 `;
@@ -167,6 +169,7 @@ export function checkUsage() {
     NORTH_STAR_ONE_LINE,
     '',
     '  arkgate-check --doctor         where you are: one status light, one next action',
+    '  arkgate-check --local --base <ref>      optional local / multi-worktree cheap check',
     '  arkgate-check --changed --base <ref>   local / pre-push: checks touched files only',
     '  arkgate-check --strict-merge   CI / merge gate (required GitHub status)',
     '  arkgate-check --sensors        which sensors can ever be enforced (does not run analysis)',
@@ -183,7 +186,7 @@ export function checkUsageAll() {
     '',
     'Usage: arkgate-check | ark-check  (identical bins; product name ArkGate)',
     '       arkgate-check --version',
-    '       arkgate-check --root <project> --config <ark.config.json> [--manifest <ark.manifest.json>] [--tsconfig <tsconfig.json>] [--strict-merge | --strict | --strict-config] [--policy-base <file> | --policy-base-ref <git-ref>] [--policy-ack <file>] [--fail-on-new-smells --base-ref <git-ref>] [--contract-diff] [--contract-session] [--changed] [--against <git-ref>] [--base <git-ref>] [--persona touch|contributor|agent|steward] [--author <id>] [--require-gates] [--require-write-hook <host>] [--json] [--baseline [file]] [--report [file.html]] [--no-cache]',
+    '       arkgate-check --root <project> --config <ark.config.json> [--manifest <ark.manifest.json>] [--tsconfig <tsconfig.json>] [--strict-merge | --strict | --strict-config] [--policy-base <file> | --policy-base-ref <git-ref>] [--policy-ack <file>] [--fail-on-new-smells --base-ref <git-ref>] [--contract-diff] [--contract-session] [--local] [--changed] [--against <git-ref>] [--base <git-ref>] [--persona touch|contributor|agent|steward] [--author <id>] [--require-gates] [--require-write-hook <host>] [--json] [--baseline [file]] [--report [file.html]] [--no-cache]',
     '       ark-check --doctor [--json] [--all] [--resident] [--fail-on-new-smells --base-ref <git-ref>]  compact first screen; --all prints Details; resident JSON falls back cold',
     '       ark-check --coverage [--json]          per-layer file counts + full unclassified list (report only, exit 0)',
     '       ark-check --plan [--json]              classified remediation plan (mechanical-safe / judgment / deferred) + goal; report only',
@@ -225,6 +228,9 @@ export function checkUsageAll() {
     '',
     'Team parliament: law files (ark.config / arkrules / .ark-baseline.json) cannot ship in',
     'the same diff as product source. --changed --base <ref> checks touched files only.',
+    '--local (or ARK_CHECK_LOCAL=1) is the same cheap path: it turns on --changed and',
+    'stays per worktree root. It cannot combine with --strict-merge. Write hooks stay',
+    'on the lexical snippet path; they do not run a full-tree check.',
     '--against <ref> ratchets new keys vs that ref\'s baseline. --contract-session is a',
     'steward law-only PR. Loosen / baseline-grow need stewards[] + --author when set.',
     '',
@@ -265,7 +271,8 @@ export function checkUsageAll() {
     'This merge profile never depends on an editor/agent hook.',
     'When a Git merge base is available, --strict-merge classifies the ark.config.json',
     'transition. Weakening or judgment-required findings fail unless --policy-ack names',
-    'every finding and is bound to both policy hashes. Use --policy-base/--policy-base-ref',
+    'every finding, is bound to both policy hashes, and adrPath points at a short note',
+    'under docs/adr/ or docs/decisions/. Use --policy-base/--policy-base-ref',
     'for an explicit comparison; ARK_POLICY_BASE_REF is the CI environment equivalent.',
     'The same merge profile blocks new UI business-rule files (domain-logic-in-ui) created',
     'versus that base; leftover design on existing files stays green. Missing base skips',
@@ -279,6 +286,8 @@ export function checkUsageAll() {
     '--require-gates implies --strict-config and fails when the Ark contract in AGENTS.md,',
     'the project-rooted Ark server in .mcp.json, or fail-closed CI is missing/invalid.',
     'Included but unclassified source files therefore stay red instead of false-green.',
+    'If gates are required and there is no short decision note yet, it points at docs/adr/',
+    '(or docs/decisions/) — a hint, not a fail. Off without --require-gates.',
     '',
     '--install-agent-gates writes AGENTS.md, .mcp.json, and the CI workflow for every',
     'project, plus tool-specific templates. Known tools: claude, cursor, codex, grok, antigravity',

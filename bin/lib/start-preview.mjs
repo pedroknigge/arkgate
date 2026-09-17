@@ -3,7 +3,13 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { arkCommand, buildArchitectureRecommendation } from '../ark-shared.mjs';
+import {
+  arkCommand,
+  arkPackageRecoveryCommand,
+  buildArchitectureRecommendation,
+  START_APPLY_REFUSE_FOOTER,
+} from '../ark-shared.mjs';
+import { withProjectedGovernedCoverage } from './projected-governed-coverage.mjs';
 import { ARKORDER_FIRST_CONTACT_NEXT, ARKORDER_ONE_BREATH } from './ark-order-doctor.mjs';
 import { compactAgentInstructions, instructionRule, mcpJson } from './ci-and-commands.mjs';
 import {
@@ -135,6 +141,20 @@ function commands(root, args, helpers) {
 }
 
 /**
+ * Red next-step when post-apply package install fails.
+ * Host files may already be written; local bins may be missing.
+ */
+export function formatStartPackageInstallFailure({ exitStatus, installCommand }) {
+  const doctor = arkPackageRecoveryCommand('arkgate-check', '--doctor');
+  return [
+    `Package install failed (exit ${exitStatus}). Setup files are written; the local command is not installed yet.`,
+    `  ${installCommand}`,
+    `  ${doctor}`,
+    '`arkgate-check` is a command in the arkgate package — not its own npm package.',
+  ].join('\n');
+}
+
+/**
  * @param {object} preview
  * @param {{ applying?: boolean }} [options] when applying=true, do not claim “no files were changed”
  */
@@ -166,6 +186,7 @@ export function renderStartPreview(preview, options = {}) {
     console.log('Optional extras stay off. This start is layers only — they stop bad imports.');
     console.log(ARKORDER_ONE_BREATH);
     console.log(ARKORDER_FIRST_CONTACT_NEXT);
+    console.log(START_APPLY_REFUSE_FOOTER);
   }
   if (preview.runtimeActivation) {
     console.log('Host: Codex is configured but not verified yet. Restart the host, then confirm this project.');
@@ -325,12 +346,13 @@ export async function planStart(args, helpers) {
     };
   } else {
     try {
-      const rec = buildArchitectureRecommendation(root);
+      const rec = withProjectedGovernedCoverage(buildArchitectureRecommendation(root), root);
       recommendation = {
         archetype: rec.archetype,
         label: rec.label,
         confidence: rec.confidence,
         mature: rec.mature,
+        projectedGovernedCoverage: rec.signals?.projectedGovernedCoverage,
       };
     } catch {
       recommendation = null;

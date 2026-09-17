@@ -629,27 +629,21 @@ export const ARCHITECTURE_PRESETS = {
     }
     // Turborepo: apps/ + packages/; Nx enterprise: apps/ + libs/ (+ packages/).
     if (include.length === 0) include = ['packages', 'apps', 'libs'];
-    // Established workspaces often have flat package source roots rather than a
-    // directory named domain/application. The package manifest supplies a real,
-    // reviewable role signal: a published library is a domain surface; an app or
-    // CLI package coordinates work. This is deliberately limited to package roots
-    // Ark already discovered, never a catch-all **/src/** fallback.
-    const packagePatterns = (roles) => {
-      if (!root) return [];
-      return units
-        .filter((unit) => roles.includes(unit.role))
-        .flatMap((unit) => unit.sourceRoots.map((sourceRoot) => {
-          const base = unit.root === '.'
-            ? sourceRoot
-            : sourceRoot === '.'
-              ? unit.root
-              : `${unit.root}/${sourceRoot}`;
-          return base === '.' ? null : `${base}/**`;
-        }))
-        .filter(Boolean);
-    };
-    const librarySourcePatterns = packagePatterns(['library']);
-    const applicationSourcePatterns = packagePatterns(['application', 'cli']);
+    // Library Domain bags stay under packages/ or libs/ — never api/** or client/**.
+    const roleGlobs = (roles, domainScoped) =>
+      !root
+        ? []
+        : units
+            .filter((unit) => roles.includes(unit.role) && !(domainScoped && unit.root === '.'))
+            .flatMap((unit) =>
+              (unit.sourceRoots ?? []).map((sourceRoot) => {
+                const base = unit.root === '.' ? sourceRoot : sourceRoot === '.' ? unit.root : `${unit.root}/${sourceRoot}`;
+                return base === '.' ? null : `${base}/**`;
+              })
+            )
+            .filter((pattern) => pattern && (!domainScoped || /^(packages|libs)\//.test(pattern)));
+    const librarySourcePatterns = roleGlobs(['library'], true);
+    const applicationSourcePatterns = roleGlobs(['application', 'cli'], false);
     return presetWithOverlays(
       {
         include,

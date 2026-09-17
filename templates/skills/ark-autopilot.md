@@ -16,6 +16,11 @@ imports, one small change at a time. Skills never enforce — CLI / hooks / CI d
 
 1. Read `arkgate-check --doctor` (do #1).
 2. Fix import-rule debt; if leftover design remains, apply **one** small refactor.
+   When doctor JSON has `noDomainFrontend`, that refactor is one pure rule into
+   Domain — not another UI helper. Soft. Silent when Domain already has files.
+   When doctor JSON has `prototypeShortcuts`, that refactor is one file-store
+   move into Persistence, or one admin literal behind Domain / an auth tag.
+   Soft. Silent when those houses are absent or the shortcut is already home.
 3. Re-run doctor. Never weaken `ark.config.json`.
 
 **This is the apply door.** Invoking it **is** the approval. Run `arkgate-check --doctor` for the next step.
@@ -32,7 +37,9 @@ Apply plan A (`mechanical-safe` **and** judgment). If leftover design work remai
 Composes **explore → sensors → dual plan → write**. Validate with ark-check; never weaken the gate.
 **Team lock:** do not edit `ark.config.json`, `arkrules/*`, or `.ark-baseline.json` in this
 turn unless the user invoked a steward contract session. Feature diffs use
-`ark-check --changed --base <merge-ref>`. Growing the baseline is steward-only.
+`ark-check --local --base <merge-ref>` or `ark-check --changed --base <merge-ref>`.
+`--local` is the optional cheap path for many worktrees; it cannot combine with
+`--strict-merge`. Growing the baseline is steward-only.
 
 **Not a plan grinder.** Empty `--plan` does **not** mean “architecture is healthy” without
 the explore pass and dual-plan section B (pattern / Shape bets).
@@ -139,7 +146,9 @@ ArkGate has **always-on Layers** plus opt-in extras. The user chooses extras; yo
 - After explore/doctor: if inventory has high-confidence candidates **or** user wants domain rules, include **[ArkRules] plan A/B**:
   - A: mechanical-safe remains inter-layer only; structure/invariant fixes are **judgment**.
   - B: one pilot = one rule (declare in `arkrules/<Layer>.json` → implement → test title/symbol → re-doctor).
-- Never promote advisory→enforced without coverage evidence (`canPromoteInvariant` / policy-delta).
+- Never promote advisory→enforced without coverage evidence and declared
+  `coverage.coverageRoots` (`canPromoteInvariant` / policy-delta). Missing
+  roots refuse promotion — otherwise OUTSIDE_ROOTS stays silent.
 - End report must list what was **layer-edge** work vs **intra-layer rule** work.
 
 ### Autopilot + ArkRun

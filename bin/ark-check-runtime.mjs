@@ -12,17 +12,13 @@ import {
   DEFAULT_RULES,
   applyFrameworkLayoutOverlays,
   arkCommand,
-  ADOPTION_PLAN_FILENAME,
-  buildArchitectureRecommendation,
   createElevenLayerConfig,
   enrichViolationWithFixClass,
   listPolicyPackIds,
   loadPolicyPackMeta,
-  writeAdoptionPlan,
   detectWorkspaces,
   detectTsPackageRoots,
   resolveIncludeRoots,
-  formatArchitectureRecommendationHuman,
   installDevHint,
   layerForFile,
 } from './ark-shared.mjs';
@@ -67,6 +63,7 @@ import {
   runCoverage,
   runPlan,
   runDoctor,
+  printAdrPresenceHint,
 } from './lib/doctor-plan.mjs';
 import { runRatchetCores } from './lib/core-ratchet.mjs';
 import {
@@ -137,7 +134,7 @@ import {
   resolveEffectiveProjectRoot,
 } from './lib/project-root.mjs';
 import { demoteArkRuleTeethUnderClassificationFloor } from './lib/rules-under-contract.mjs';
-import { parseArgs, resolveDesignDeltaBaseRef } from './lib/check-args.mjs';
+import { localCheckEnvelope, parseArgs, resolveDesignDeltaBaseRef } from './lib/check-args.mjs';
 import { detectConfig, proposeForUncovered } from './lib/check-config-detect.mjs';
 import { runWatchMode } from './lib/check-watch.mjs';
 
@@ -1153,42 +1150,8 @@ async function main() {
   }
 
   if (args.recommend) {
-    try {
-      const recommendation = buildArchitectureRecommendation(args.root);
-      let planWritten;
-      if (args.writePlan) {
-        const result = writeAdoptionPlan(args.root, recommendation);
-        planWritten = result.path;
-      }
-      if (args.json) {
-        console.log(
-          JSON.stringify(
-            {
-              ...recommendation,
-              ...(planWritten
-                ? { adoptionPlanPath: path.relative(args.root, planWritten) || ADOPTION_PLAN_FILENAME }
-                : {}),
-            },
-            null,
-            2
-          )
-        );
-      } else {
-        console.log(formatArchitectureRecommendationHuman(recommendation));
-        if (planWritten) {
-          console.log('');
-          console.log(`Wrote ${path.relative(args.root, planWritten) || ADOPTION_PLAN_FILENAME}`);
-        }
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      if (args.json) {
-        console.log(JSON.stringify({ ok: false, error: message }, null, 2));
-      } else {
-        console.error(`ark-check --recommend failed: ${message}`);
-      }
-      process.exitCode = 2;
-    }
+    const { runRecommend } = await import('./lib/recommend-cli.mjs');
+    runRecommend(args);
     return;
   }
 
@@ -1351,7 +1314,7 @@ async function main() {
             (compactHost
               ? `AGENTS.md, compact host registration (${compactHost})`
               : REQUIRED_GATE_FILES.join(', '))
-        );
+        ); printAdrPresenceHint(args.root, (line) => console.log(line));
       }
       if (writeRequest?.host) {
         console.log(`Ark hard-write hook present for ${writeRequest.host}.`);
@@ -1386,7 +1349,7 @@ async function main() {
         JSON.stringify(
           {
             ok: preflight.halt.exitCode === 0,
-            ...(preflight.halt.cheap ? { cheap: true } : {}),
+            ...(preflight.halt.cheap ? { cheap: true } : {}), ...localCheckEnvelope(args, root),
             teamParliament: preflight.halt.teamParliament,
             ...(policyDelta ? { policyDelta } : {}),
           },
@@ -1539,7 +1502,7 @@ async function main() {
       configWalkedUp: args.configWalkedUp === true,
       safety, designDelta,
       ts, parseHealth, completeness,
-      all: args.all === true,
+      all: args.all === true, requireGates: args.requireGates === true,
     });
     if (designDelta) process.exitCode = !designDelta.complete ? 2 : designDelta.valid ? 0 : 1; return;
   }
@@ -1951,7 +1914,7 @@ async function main() {
     });
     console.log(JSON.stringify({
       ...adapterResult,
-      ok,
+      ok, ...localCheckEnvelope(args, root),
       violations: activeViolations.map(enrichViolationWithFixClass),
       suppressedViolations: suppressed.length,
       staleBaselineKeys,
@@ -1996,9 +1959,13 @@ async function main() {
         );
         console.error(`  Next: ${finding.nextAction}`);
       }
+      if (policyDelta.adrNote?.missing) {
+        console.error(policyDelta.adrNote.ask);
+        console.error(`Next: ${policyDelta.adrNote.nextAction}`);
+      }
       console.error(
         `Policy transition blocked (${policyDelta.basePolicyHash} → ${policyDelta.candidatePolicyHash}). ` +
-          'Provide --policy-ack with the exact hashes, finding ids, and a non-empty reason.'
+          'Provide --policy-ack with the exact hashes, finding ids, a non-empty reason, and adrPath to a short note under docs/adr/.'
       );
     }
     if (designCheck.failureText()) console.error(designCheck.failureText());

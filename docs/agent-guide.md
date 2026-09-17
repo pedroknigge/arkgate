@@ -120,6 +120,8 @@ npx ark report --submit --i-confirm-submit
 
 `--doctor --json` is a stable envelope (4.6.5+): `{ "schemaVersion": "1.0", "envelope": "doctor", "ok": boolean, "doctor": { … } }`.
 Payload lives only under `doctor`. Do not parse sibling root keys as the doctor object.
+A green or Healthy line names a file, config key, or test so a stranger can
+check it in about a minute. Uncited green is not honest — treat it as unfinished.
 
 Doctor also writes `.ark/ci-merge-boundary.json` (hook configured-not-fired, per-host writePath,
 CI present-but-not-required, GitHub Free cannot require). Read that file — do not grep `node_modules`.
@@ -280,7 +282,7 @@ npx ark-check --recommend --json
 `--recommend` does not require `ark.config.json`. It exits `0` and prints a progressive
 adoption plan: archetype id, preset, `confidence`, `runnerUp`, `why` (shape signals),
 structured positive/negative `evidence`, discovered `signals.packageUnits`,
-`adoptInOrder.phase1`, `firstCommand` (`ark init --archetype …`), and `checkCommand`.
+`adoptInOrder.phase1`, `firstCommand` (`ark start --apply --archetype …`), and `checkCommand`.
 When the top two shapes are close or projected governed coverage is below 90%, JSON sets
 `requiresConfirmation: true` and explains why in `confirmationReasons`.
 
@@ -332,7 +334,8 @@ Filter: **Contener · Guiar · Ordenar** — contain the write, guide the next s
 
 **Team parliament:** adopt is a **contract session** (law-only). Feature work must not edit
 `ark.config.json` / `arkrules/*` / `.ark-baseline.json`. Prefer
-`ark-check --changed --base <merge-ref>` in local gates. `--contract-diff` + `--author`
+`ark-check --local --base <merge-ref>` (or `--changed --base`) in local gates.
+`--strict-merge` stays the CI merge line. `--contract-diff` + `--author`
 when `stewards` is set (`--author` is a GitHub handle or email, not git `user.name`).
 `ark status --vs <ref>` prints pin / contract / baseline drift.
 
@@ -1344,7 +1347,7 @@ The server exposes these thirteen tools. Every tool accepts the additive
 | `ark_manifest` | No non-project args: return the machine-readable architecture contract with an authoritative binding after the identity handshake. |
 | `validate_code` | `{ source, layer?, filePath? }`: validate one snippet; infer the layer from `filePath` when possible; return an error result when invalid. |
 | `ark_check` | `{ strict?, baseline? }`: run the full project architecture check. `verdict` separates `identity`, `completeness`, `graph`, `coverage`, `gates`, and `overallOk`; no individual green fact substitutes for the combined verdict. |
-| `ark_policy_delta` | `{ baseConfig, candidateConfig?, acknowledgement? }`: classify a complete contract transition; never edits the contract. |
+| `ark_policy_delta` | `{ baseConfig, candidateConfig?, acknowledgement? }`: classify a complete contract transition; never edits the contract. Weakening / new layer / new allow edge needs `adrPath` on the acknowledgement. |
 | `ark_coverage` | No args: report per-layer counts, every unclassified file, unmatched layers, and missing rule edges. |
 | `ark_place` | `{ filePath?, description? }`: resolve or propose a governed home and return its import/global constraints. |
 | `ark_prepare_write` | `{ source, filePath?, description?, layer? }`: compose placement and snippet validation, with hashes and a mechanical-safe patch when available. |

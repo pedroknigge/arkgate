@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-09-08 (Engineering: `LO01` **done** — optional layer owners + `requireLayerOwners` (#241); `HR01` **done** — write hook layer specificity matches ark-check (#237); `UC01` **doing** — unclassified include is not a green check; `WG01` **done** — write-gate fail-closed host parity (#231); `RL814` **doing** — Patch **4.8.14** catch npm to main; `SK216` **done** — skill catalog 100% product capacity, issue #216 + PR-gate fail-closed; `RL813` **done** — Patch **4.8.13** on npm `latest`; `RL812` **done** — tag `v4.8.12` cut, publish-npm failed branch coverage; Patch **4.8.12** ArkOrder first-contact **prepared** (tag stands); `AO17` **done**; `RL811` **done**; Patch **4.8.11** nested `--config` + Shape dogfood **done** — 4.8.11 published on npm `latest`, MCP Registry, and website; does not close `Z09` / `K01`; no schemaVersion bump; Release `RL810` **done** — 4.8.10 published; Patch **4.8.10** Amarilla first-aggregate sensors `HINT01`–`IN01` **done**; Release `RL89` **done** — 4.8.9 published; Patch `AH01`/`CS01`/`CI01`/`UP01`/`PX01`/`INT01` **done** and Amarilla ArkOrder `AO10`–`AO16` **done**; Release `RL88` **done** — 4.8.8 published; Phase **LD** `LD01`–`LD06` **done** (4.8.7 published); Patch `ST02` **done** — unlabeled public story; Patch `ST01` **done** — beginner-clear STAR openings; Patch `AO09` **done** — ArkOrder recomputable-status honesty; Phase **LV** ArkOrder valved loop `LV01`–`LV09` **done** (4.8.6 published); Phase **XP** ArkOrder x ArkRun convergence **done** (`XP01`-`XP08`); Patch **4.8.5** `AGY01`+XP **done** — published; Patch **4.8.5** `AGY01` **done** — Antigravity skill refresh (`--antigravity-home` + default tools + dogfood `.agents/skills`); published; Patch **4.8.4** **done** — three false greens closed (coverage certifying tests no runner runs, an empty analysis passing), `--path-drift`, `--sensors`/`--promote`, peer isolation, git install without a build allowlist entry, and honest `--plan`; Phase OR `OR01`–`OR08` **done**; `K01` remains parked; Z09 still parked; npm `latest` is **4.8.11**)
+- **Status date:** 2026-09-17 (Engineering: `RL817` **doing** — Patch **4.8.17** daily accumulate; `AP02` **done** — P2 §3 ADR path on policy weaken / new layer edge (#264); `RL816` **done** — Patch **4.8.16** on npm `latest`; `CR01` **done** — P2 §10 coverageRoots required when any invariant is enforced; `RL815` **done** — Patch **4.8.15** on npm `latest`; `DF243`/`DF246`/`DF247` **done** — dogfood honesty 4.8.15 slice 2; `LC01` **done** — opt-in `--local` / multi-worktree cheap check (#251); `SC01` **done** — narrow status/transition catalog (opt-in sensor); `GS01` **done** — guide states/transitions artifact (doctor next step) (#248); `AP01` **done** — soft ADR presence when `--require-gates` (#242); `LO01` **done** — optional layer owners + `requireLayerOwners` (#241); `HR01` **done** — write hook layer specificity matches ark-check (#237); `UC01` **doing** — unclassified include is not a green check; `WG01` **done** — write-gate fail-closed host parity (#231); `RL814` **done** — Patch **4.8.14** on npm `latest`; `SK216` **done** — skill catalog 100% product capacity, issue #216 + PR-gate fail-closed; `RL813` **done** — Patch **4.8.13** on npm `latest`; `RL812` **done** — tag `v4.8.12` cut, publish-npm failed branch coverage; Patch **4.8.12** ArkOrder first-contact **prepared** (tag stands); `AO17` **done**; `RL811` **done**; Patch **4.8.11** nested `--config` + Shape dogfood **done** — 4.8.11 published on npm `latest`, MCP Registry, and website; does not close `Z09` / `K01`; no schemaVersion bump; Release `RL810` **done** — 4.8.10 published; Patch **4.8.10** Amarilla first-aggregate sensors `HINT01`–`IN01` **done**; Release `RL89` **done** — 4.8.9 published; Patch `AH01`/`CS01`/`CI01`/`UP01`/`PX01`/`INT01` **done** and Amarilla ArkOrder `AO10`–`AO16` **done**; Release `RL88` **done** — 4.8.8 published; Phase **LD** `LD01`–`LD06` **done** (4.8.7 published); Patch `ST02` **done** — unlabeled public story; Patch `ST01` **done** — beginner-clear STAR openings; Patch `AO09` **done** — ArkOrder recomputable-status honesty; Phase **LV** ArkOrder valved loop `LV01`–`LV09` **done** (4.8.6 published); Phase **XP** ArkOrder x ArkRun convergence **done** (`XP01`-`XP08`); Patch **4.8.5** `AGY01`+XP **done** — published; Patch **4.8.5** `AGY01` **done** — Antigravity skill refresh (`--antigravity-home` + default tools + dogfood `.agents/skills`); published; Patch **4.8.4** **done** — three false greens closed (coverage certifying tests no runner runs, an empty analysis passing), `--path-drift`, `--sensors`/`--promote`, peer isolation, git install without a build allowlist entry, and honest `--plan`; Phase OR `OR01`–`OR08` **done**; `K01` remains parked; Z09 still parked; npm `latest` is **4.8.11**)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -449,7 +449,38 @@ Does not close `Z09` / `K01`.
 
 | Order | ID | Status | Size | Depends on | Outcome |
 |---:|---|---|---:|---|---|
-| 273 | `RL814` | `doing` | S | RL813 | Prepare **4.8.14** (first-class `/ark-order` #217 and post-`v4.8.13` ships). After merge: annotated tag `v4.8.14` + GitHub Release + `gh workflow run publish-npm.yml -f tag=v4.8.14 -f dry_run=false`. Does not close `Z09` / `K01` |
+| 273 | `RL814` | `done` | S | RL813 | Prepare **4.8.14** (first-class `/ark-order` #217 and post-`v4.8.13` ships). Tag `v4.8.14` and GitHub Release exist. Published on npm `latest`. Does not close `Z09` / `K01` |
+
+### Release 4.8.15 — pre-adoption ship bar
+
+Thin patch: opt-in `--local` / `ARK_CHECK_LOCAL` (#251) and dogfood honesty
+(#252 / #243 / #246 / #247). CI `--strict-merge` stays hard. No
+`docs/releases/4.8.15.md`. Does not close `Z09` / `K01`.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 286 | `RL815` | `done` | S | LC01 | Prepare **4.8.15** (`--local` #251 + dogfood honesty #252). Tag `v4.8.15` and GitHub Release exist. Published on npm `latest`. Does not close `Z09` / `K01` |
+
+### Release 4.8.16 — daily accumulate
+
+Thin patch: five ships after 4.8.15 published — IT01 tests path (#255),
+doctor green cites (#256), coverageRoots when enforced (#257),
+`start --apply` install honesty (#259), prototype shortcuts (#260).
+No `docs/releases/4.8.16.md`. Does not close `Z09` / `K01`.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 290 | `RL816` | `done` | S | CR01 | Prepare **4.8.16** (daily accumulate #255–#257, #259, #260). Tag `v4.8.16` and GitHub Release exist. Published on npm `latest`. Does not close `Z09` / `K01` |
+
+### Release 4.8.17 — daily accumulate
+
+Thin patch: two ships after 4.8.16 published — ADR path on policy
+weaken / new layer edge (#264) and `policy-delta-ack-match` confidence
+retarget (#265). No `docs/releases/4.8.17.md`. Does not close `Z09` / `K01`.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 291 | `RL817` | `doing` | S | AP02 | Prepare **4.8.17** (daily accumulate #264, #265). After merge: annotated tag `v4.8.17` + GitHub Release + `gh workflow run publish-npm.yml -f tag=v4.8.17 -f dry_run=false`. Does not close `Z09` / `K01` |
 
 ### Patch — write-gate fail-closed host parity
 
@@ -508,6 +539,102 @@ Does not close `Z09` / `K01`.
 |---:|---|---|---:|---|---|
 | 278 | `LO01` | `done` | S | TB01 | Optional `layers[].owners` + `requireLayerOwners`; schema + policyHash strip + doctor/deny/skills; invalid identity fails; absence silent unless required |
 
+### Patch — soft ADR presence when `--require-gates`
+
+When gates are demanded, if there is no short decision-note home, guide the
+human to `docs/adr/` (or `docs/decisions/`). Soft residual — not theater, not
+a fail, silent when require-gates is off. Do not swallow policy-weaken or
+new-layer-edge work. No `schemaVersion` bump. No new skill. Does not close
+`Z09` / `K01`.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 279 | `AP01` | `done` | S | LO01 | Soft ADR presence under `--require-gates` / adopted-strict; doctor next-step; conventional `docs/adr` homes; skills stay at 100% product |
+
+### Patch — ADR path on policy weaken / new layer edge
+
+AP01 left two Contener teeth as residuals: a free-floating `--policy-ack`
+(reason only) and a silent new layer / new allow edge. Reuse the existing
+policy-ack + `adr-presence` homes. Optional `adrPath` on the same ack JSON.
+Fail-closed only on the existing policy-ack / `--strict-merge` plane.
+No `requireAdr` flag, no `/ark-adr`, no `schemaVersion` bump, no new skill.
+Does not close `Z09` / `K01`.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 290 | `AP02` | `done` | S | AP01 | ADR/decision-note path tied to policy weaken + new layer/allow edge; skills stay at 100% product (#264) |
+
+### Patch — guide states/transitions artifact (doctor next step)
+
+When a product-domain doc is already in play and the states → transitions
+map is missing or only a heading, doctor names one next step. Soft residual —
+not a fail, silent when that doc is absent. Status-field catalog is `SC01`.
+No `schemaVersion` bump. No new skill. Does not close `Z09` / `K01`.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 280 | `GS01` | `done` | S | AP01 | Doctor next-step for missing/incomplete states/transitions artifact; conventional domain homes; skills stay at 100% product |
+
+### Patch — narrow status/transition catalog (opt-in sensor)
+
+When Domain-role code already names a closed status/state vocabulary and a
+domain doc is in play without a table (or one link), doctor catalogs those
+names and asks for the short map. Soft residual — not a fail, silent when
+Domain has no such vocabulary or that doc is absent. No `schemaVersion`
+bump. No new skill. Does not close `Z09` / `K01`.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 281 | `SC01` | `done` | S | GS01 | Opt-in Domain status/transition catalog + doctor residual when the map is thin; skills stay at 100% product |
+
+### Patch — domain-invariant tests path required under adopted
+
+When the tree is adopted (required CI or explicit advisory) and the catalog
+has domain invariants, a missing or empty `coverage.testGlobs` /
+`coverage.coverageRoots` fails closed. Doctor names the path. Reuses the
+existing coverage keys. No `schemaVersion` bump. No new skill. Does not
+close `Z09` / `K01`.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 287 | `IT01` | `done` | S | SC01 | Adopted + domain invariants require a real tests path; missing/empty fails closed; happy path stays green (#255) |
+
+### Patch — doctor green claims cite a file, config key, or test
+
+Golden rule: a doctor green / Healthy line that can mislead must name a
+concrete backing artifact, or be demoted. Reuses the existing doctor view
+and the IT01 / ADR residual shape. No `schemaVersion` bump. No new skill.
+Does not close `Z09` / `K01`.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 288 | `GR01` | `done` | S | IT01 | Doctor green / Healthy cites a file, config key, or test; uncited greens demote |
+
+### Patch — coverageRoots required when any invariant is enforced
+
+When any catalogued domain invariant is `enforced`, missing or empty
+`coverage.coverageRoots` fails closed. Doctor names the path. Promote
+refuses without roots. Reuses the existing coverage key. No
+`schemaVersion` bump. No new skill. Does not close `Z09` / `K01`.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 289 | `CR01` | `done` | S | GR01 | Enforced invariants require `coverage.coverageRoots`; missing/empty fails closed; happy path stays green |
+
+### Patch 4.8.15 — local multi-worktree check DX (Pedro)
+
+Field: many git worktrees / branches made `ark-check` feel like one
+machine-wide multi-minute block. Reuse `--changed`; keep `--strict-merge`
+fail-closed. Slice 2: dogfood #243 / #246 / #247. Does not close
+`Z09` / `K01`. No `schemaVersion` bump. No new skill.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 282 | `LC01` | `done` | S | SC01 | Opt-in `--local` / `ARK_CHECK_LOCAL=1` reuses `--changed`; refuse `--strict-merge`; per-root isolation proof; write hooks stay lexical (#251) |
+| 283 | `DF243` | `done` | S | LC01 | Dogfood #243: type-only `LAYER_IMPORT_VIOLATION` warning glyph when exit stays 0 |
+| 284 | `DF246` | `done` | S | LC01 | Dogfood #246: `start --apply` refuse UX on the one-minute path |
+| 285 | `DF247` | `done` | S | LC01 | Dogfood #247: start vs `--recommend` vs doctor share one projected governed coverage |
+
 ### Patch — skill catalog 100% product capacity (issue #216)
 
 Pedro bar: the shipped skill *set* exercises Layers + ArkRules + ArkRun + ArkOrder
@@ -548,10 +675,10 @@ Plan: [docs/plans/alive-in-six-months/README.md](docs/plans/alive-in-six-months/
 | 183 | `AL05` | `parked` | S | required-status possible + 3 partners | Field enrollment. Does **not** close Z09 |
 | 184 | `AL06` | `done` | S | AL04 | Compact first-screen vs Details independently invocable; first-screen honesty stays |
 
-Engineering doing: `RL814`. Patch 4.8.14 **prepared**. `RL813` **done** (4.8.13 on npm `latest`). `RL812` **done** (tag `v4.8.12` cut; publish failed coverage; skip on npm). Patch 4.8.12 **tagged, not published**. `AO17` **done**. `RL811` **done** (4.8.11 published). `RL810` **done** (4.8.10 published). `RL89` **done** (4.8.9 published). `AH01`/`CS01`/`CI01`/`UP01`/`PX01`/`INT01` **done**. Amarilla ArkOrder `AO10`–`AO16` **done**. `RL88` **done** (4.8.8 published). Phase **LD** `LD01`–`LD06` **done** (4.8.7 published). `ST02`, `ST01`, and `AO09` **done**. Phase **LV** `LV01`–`LV09` **done** (4.8.6 published). `AGY01` **done** (4.8.5 published). `OR01`–`OR07` **done**. `WH01` **done** (ADR 0026). `PK01` **done**.
+Engineering doing: `RL817`. `AP02` **done**. Patch 4.8.17 **prepared**. Patch 4.8.16 **published**. `DF243`/`DF246`/`DF247` **done** (4.8.15 slice 2 — dogfood honesty). `LC01` **done**. `SC01` **done**. `RL816` **done** (4.8.16 on npm `latest`). `RL815` **done** (4.8.15 published). `RL814` **done** (4.8.14 published). `RL813` **done** (4.8.13 published). `RL812` **done** (tag `v4.8.12` cut; publish failed coverage; skip on npm). Patch 4.8.12 **tagged, not published**. `AO17` **done**. `RL811` **done** (4.8.11 published). `RL810` **done** (4.8.10 published). `RL89` **done** (4.8.9 published). `AH01`/`CS01`/`CI01`/`UP01`/`PX01`/`INT01` **done**. Amarilla ArkOrder `AO10`–`AO16` **done**. `RL88` **done** (4.8.8 published). Phase **LD** `LD01`–`LD06` **done** (4.8.7 published). `ST02`, `ST01`, and `AO09` **done**. Phase **LV** `LV01`–`LV09` **done** (4.8.6 published). `AGY01` **done** (4.8.5 published). `OR01`–`OR07` **done**. `WH01` **done** (ADR 0026). `PK01` **done**.
 `K01` **parked** (4.7.6 primitives only).
 Phase DX (`DX01`–`DX03`) **done** and present in published `arkgate@4.8.0+` (4.7.6 predates them).
-Phase HS (`HS01`–`HS05`) **done**. Remaining first-contact copy **4.7.3** published. Write. Check. Ship. patch **4.7.5** published. **4.8.11** is on npm `latest`. 4.8.13 is published. 4.8.14 is prepared. Tag `v4.8.12` stands; skip that version on npm.
+Phase HS (`HS01`–`HS05`) **done**. Remaining first-contact copy **4.7.3** published. Write. Check. Ship. patch **4.7.5** published. **4.8.11** is on npm `latest`. 4.8.13 is published. 4.8.14 is published. 4.8.15 is published. 4.8.16 is published. 4.8.17 is prepared. Tag `v4.8.12` stands; skip that version on npm.
 `RN16` **done** (public docs + 4.7.0 published). `RN17` **done** (`@arkgate/runtime@0.1.0-experimental.0` on npm `experimental`).
 `RN15` **done** (deepen `/ark-runtime` `/ark-place` `/ark-adopt`; no new skill names).
 `RN14` **done** (skip corpus: extra absent = green; enforced = fail `new` / peer import / homemade bus).

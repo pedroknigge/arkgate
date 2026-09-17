@@ -25,6 +25,7 @@ describe('buildUnknownHostSessionNote', () => {
   it('covers inventory edges: empty, hosts, merge-gate, and non-object host records', () => {
     expect(buildUnknownHostSessionNote(null)).toMatch(/activeHost unknown/);
     expect(buildUnknownHostSessionNote(null)).not.toMatch(/On-disk hosts/);
+    expect(buildUnknownHostSessionNote(undefined)).toMatch(/activeHost unknown/);
     expect(
       buildUnknownHostSessionNote({
         hosts: {
@@ -32,10 +33,12 @@ describe('buildUnknownHostSessionNote', () => {
           ghost: null,
           bare: 'skip',
           cursor: { configured: false, capabilities: { 'advisory-write': true } },
+          grok: { configured: false, capabilities: { 'hard-write': true } },
+          antigravity: { configured: false, capabilities: { 'repair-payload': true } },
         },
         capabilities: {},
       })
-    ).toMatch(/On-disk hosts with write-path assets: claude, cursor/);
+    ).toMatch(/On-disk hosts with write-path assets: antigravity, claude, cursor, grok/);
     expect(
       buildUnknownHostSessionNote(
         { hosts: {}, capabilities: { 'merge-gate': true } },
@@ -45,6 +48,7 @@ describe('buildUnknownHostSessionNote', () => {
     expect(
       buildUnknownHostSessionNote({ hosts: {}, capabilities: {} }, { 'merge-gate': true })
     ).toMatch(/CI merge gate configured/);
+    expect(buildUnknownHostSessionNote({ hosts: 'skip' })).not.toMatch(/On-disk hosts/);
   });
 });
 
@@ -105,6 +109,39 @@ describe('detectWritePathCapabilities (shipped write-path-detect.mjs)', () => {
       const cap = detectWritePathCapabilities(root, 'claude');
       expect(cap.activeHost).toBe('claude');
       expect(cap.sessionNote).toBeUndefined();
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('opens write-path-fail-open when Cursor is fail-open, not write-path-none', () => {
+    const root = mk();
+    try {
+      fs.mkdirSync(path.join(root, '.cursor'), { recursive: true });
+      fs.writeFileSync(
+        path.join(root, '.cursor', 'hooks.json'),
+        JSON.stringify({
+          version: 1,
+          hooks: {
+            preToolUse: [
+              {
+                command:
+                  'npx arkgate-mcp --hook --hook-repair --root . --root-env CURSOR_PROJECT_DIR --config ark.config.json',
+                matcher: 'Write|StrReplace',
+              },
+            ],
+          },
+        })
+      );
+      const cap = detectWritePathCapabilities(root, 'cursor');
+      expect(cap.nativeFailClosed).toBe(false);
+      expect(cap.gap?.id).toBe('write-path-fail-open');
+      expect(cap.gap?.host).toBe('cursor');
+      expect(cap.gap?.severity).toBe('warn');
+      expect(cap.gap?.message).toContain('fail-open');
+      expect(cap.gap?.message).toContain('Set failClosed: true on .cursor/hooks.json');
+      expect(cap.gap?.fix).toContain('--install-agent-gates --tools cursor --force');
+      expect(cap.mode).toBe('none');
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
     }

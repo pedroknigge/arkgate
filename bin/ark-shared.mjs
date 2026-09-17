@@ -22,6 +22,7 @@ import {
   normalizeArkgateInstallSpec,
   packageInstallArgv,
   installDevHint,
+  arkPackageRecoveryCommand,
 } from './lib/package-manager.mjs';
 
 /**
@@ -674,6 +675,7 @@ export {
   normalizeArkgateInstallSpec,
   packageInstallArgv,
   installDevHint,
+  arkPackageRecoveryCommand,
 };
 
 // FX01–FX02: registry-aware skip lives in upgrade-package-decision (injectable probe).
@@ -1158,7 +1160,9 @@ export function collectRepoShapeSignals(root) {
     return !excludedUnitRoots.some((prefix) => rel.startsWith(prefix));
   });
   const discoveredFileSet = new Set(sourceFiles.map((file) => path.resolve(file)));
-  const projectedGovernedCoverage = productionFiles.length === 0
+  // Files under detected source roots — NOT layer-governed coverage. User-facing
+  // "projected governed coverage" is computeCoverage (see projected-governed-coverage.mjs).
+  const discoveredSourceCoverage = productionFiles.length === 0
     ? 0
     : Math.round((productionFiles.filter((file) => discoveredFileSet.has(path.resolve(file))).length / productionFiles.length) * 100);
   const tinyTree = sourceFileCount < 3;
@@ -1337,7 +1341,7 @@ export function collectRepoShapeSignals(root) {
     libraryOnly,
     tinyTree,
     sourceFileCount,
-    projectedGovernedCoverage,
+    discoveredSourceCoverage,
     domain,
     application,
     domainHeavy,
@@ -1605,7 +1609,6 @@ export function scoreArchetypes(signals, playbook) {
       confidence,
       requiresConfirmation: true,
       confirmationReasons: [
-        `projected governed coverage is ${signals.projectedGovernedCoverage ?? 0}% (below 90%)`,
         'no archetype received a positive score',
       ],
       phases: fallback.phases,
@@ -1630,9 +1633,7 @@ export function scoreArchetypes(signals, playbook) {
     confidence = Math.min(confidence, 0.28);
   }
   const closeRecommendations = Boolean(second && top.score - second.score <= 2);
-  const lowProjectedCoverage = (signals.projectedGovernedCoverage ?? 0) < 90;
   if (closeRecommendations) confidence = Math.min(confidence, 0.49);
-  if (lowProjectedCoverage) confidence = Math.min(confidence, 0.49);
 
   return {
     ranked: scored,
@@ -1647,10 +1648,9 @@ export function scoreArchetypes(signals, playbook) {
             'TypeScript/JS surface is thin or missing — treat the archetype as a weak hint. Prefer ark-check --suggest-include / --adopt-contract on the real package roots before scaffolding.',
         }
       : {}),
-    requiresConfirmation: closeRecommendations || thinTs || lowProjectedCoverage,
+    requiresConfirmation: closeRecommendations || thinTs,
     confirmationReasons: [
       ...(closeRecommendations ? ['top recommendations are within 2 score points'] : []),
-      ...(lowProjectedCoverage ? [`projected governed coverage is ${signals.projectedGovernedCoverage}% (below 90%)`] : []),
       ...(thinTs ? ['the discovered source surface is thin'] : []),
     ],
     phases: top.phases,
@@ -1707,7 +1707,7 @@ export function buildArchitectureRecommendation(root, options = {}) {
     policyPack: policyPackId,
     signals: {
       sourceFileCount: signals.sourceFileCount,
-      projectedGovernedCoverage: signals.projectedGovernedCoverage,
+      discoveredSourceCoverage: signals.discoveredSourceCoverage,
       discoveredRoots: signals.discoveredRoots,
       packageUnits: signals.repoUnits.map((unit) => ({
         root: unit.root,
@@ -1740,7 +1740,7 @@ export function buildArchitectureRecommendation(root, options = {}) {
     // a thin slice and can mis-flag framework internals, so steer these to the adoption flow.
     mature: signals.sourceFileCount >= MATURE_REPO_FILE_THRESHOLD,
     initCommand: `${arkCommand(root, 'ark', `init --archetype ${result.archetype} --yes`)}`,
-    firstCommand: `${arkCommand(root, 'ark', `init --archetype ${result.archetype} --yes`)}`,
+    firstCommand: `${arkCommand(root, 'ark', `start --apply --archetype ${result.archetype}`)}`,
     adoptCommand: arkCommand(root, 'ark-check', '--recommend --write-plan'),
     recommendCommand: arkCommand(root, 'ark-check', '--recommend'),
     checkCommand: arkCommand(root, 'ark-check', '--root . --config ark.config.json --strict-config'),
@@ -1780,6 +1780,49 @@ export function resolveArchetypePreset(archetypeId, playbookPath = defaultPlaybo
     phases: def.phases,
   };
 }
+
+/**
+ * Preset `ark start --internal-apply` / `--init` would write. Shared so recommend
+ * can project the same governed % start and doctor measure after that write.
+ */
+export function resolveStartInitPreset(root, rec = {}, archetype = rec.archetype) {
+  const presetFromArchetype =
+    archetype && isValidArchetypeId(archetype)
+      ? resolveArchetypePreset(archetype).preset
+      : undefined;
+  const preset = rec.preset || presetFromArchetype;
+  const includeRoots = resolveIncludeRoots(root);
+  const tsPackages = detectTsPackageRoots(root);
+  const nestedTsPackages = tsPackages.filter((entry) => entry !== '.');
+  const workspaces = detectWorkspaces(root);
+  const looksLikeMonorepo =
+    includeRoots.length > 0 ||
+    nestedTsPackages.length > 0 ||
+    workspaces.length > 0 ||
+    fs.existsSync(path.join(root, 'rush.json')) ||
+    fs.existsSync(path.join(root, 'pnpm-workspace.yaml')) ||
+    fs.existsSync(path.join(root, 'lerna.json')) ||
+    fs.existsSync(path.join(root, 'apps')) ||
+    fs.existsSync(path.join(root, 'packages'));
+  if (rec.preset === 'vite-vercel-spa' || preset === 'vite-vercel-spa') {
+    return 'vite-vercel-spa';
+  }
+  if (looksLikeMonorepo && (rec.mature || includeRoots.length > 0 || tsPackages.length > 0)) {
+    const useUi =
+      rec.preset === 'feature-sliced' ||
+      rec.archetype === 'frontend-surface' ||
+      (nestedTsPackages.length > 0 && includeRoots.length === 0 && !rec.mature);
+    return useUi && nestedTsPackages.length <= 3 ? 'ui-surface' : 'monorepo';
+  }
+  return preset ?? null;
+}
+
+/** One-minute / preview footer when the coverage·confidence gate may refuse apply. */
+export const START_APPLY_REFUSE_FOOTER = [
+  'If apply refuses (coverage below 50% or weak shape), that lock is deliberate.',
+  'Lock the shape: --archetype <id>  ·  --preset <name>  ·  --force',
+  'Inspect ranked shapes: arkgate-check --recommend',
+].join('\n');
 
 export function mapWizardChoiceToArchetype(choiceKey) {
   const entry = INIT_WIZARD_CHOICES.find((c) => c.key === String(choiceKey).trim());
@@ -1829,6 +1872,18 @@ export function formatArchitectureRecommendationHuman(recommendation) {
   lines.push('');
   lines.push(`Archetype: ${recommendation.archetype} — ${recommendation.label}`);
   lines.push(`Preset: ${recommendation.preset} (confidence ${recommendation.confidence})`);
+  const projected =
+    recommendation.projectedCoverage?.percent ??
+    recommendation.signals?.projectedGovernedCoverage;
+  if (typeof projected === 'number') {
+    const classified = recommendation.projectedCoverage?.classifiedFiles;
+    const total = recommendation.projectedCoverage?.totalFiles;
+    const counts =
+      typeof classified === 'number' && typeof total === 'number'
+        ? ` (${classified}/${total} files)`
+        : '';
+    lines.push(`Projected governed coverage: ${projected}%${counts}`);
+  }
   if (recommendation.requiresConfirmation) {
     lines.push('⚠ Confirmation required before applying this recommendation.');
     for (const reason of recommendation.confirmationReasons ?? []) lines.push(`  - ${reason}`);

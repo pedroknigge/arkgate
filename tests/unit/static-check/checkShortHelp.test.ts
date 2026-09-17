@@ -15,12 +15,15 @@ describe('ark-check short --help (issue #204)', () => {
     const short = checkUsage();
     expect(short).toContain('Write. Check. Ship.');
     expect(short).toMatch(/When the agent writes a bad import/);
+    expect(short).toContain('arkgate-check --local --base <ref>');
+    expect(short).toContain('optional local / multi-worktree cheap check');
     expect(short).toContain('arkgate-check --changed --base <ref>');
     expect(short).toContain('local / pre-push: checks touched files only');
     expect(short).not.toMatch(/Team parliament/i);
 
     const spawned = spawnSync('node', [arkCheck, '--help'], { encoding: 'utf8' });
     expect(spawned.status).toBe(0);
+    expect(spawned.stdout).toContain('arkgate-check --local --base <ref>');
     expect(spawned.stdout).toContain('arkgate-check --changed --base <ref>');
     expect(spawned.stdout).toContain('local / pre-push: checks touched files only');
     expect(spawned.stdout).not.toMatch(/Team parliament/i);

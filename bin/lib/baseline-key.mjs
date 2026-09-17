@@ -12,6 +12,8 @@
 export const NON_FREEZABLE_BASELINE_RULE_IDS = [
     'ARKRULE_SCOPE_EMPTY',
     'INVARIANT_CATALOG_EMPTY',
+    'INVARIANT_TESTS_PATH_MISSING',
+    'INVARIANT_COVERAGE_ROOTS_MISSING',
 ];
 /**
  * STRUCTURE freeze `target`: sensor id, plus `:symbol` when a method/class is known.

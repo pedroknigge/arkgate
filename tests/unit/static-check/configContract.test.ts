@@ -423,6 +423,64 @@ describe('C01 config contract', () => {
     );
   });
 
+  it('treats a missing schemaVersion as unversioned and keeps a provided current version', () => {
+    const omitted = migrateArkConfig({ ...VALID_MINIMAL_CONFIG });
+    expect(omitted.migratedFrom).toBe('unversioned');
+    expect(omitted.candidate.schemaVersion).toBe(ARK_CONFIG_SCHEMA_VERSION);
+    const current = migrateArkConfig({
+      ...VALID_MINIMAL_CONFIG,
+      schemaVersion: ARK_CONFIG_SCHEMA_VERSION,
+    });
+    expect(current.migratedFrom).toBe(null);
+    expect(current.candidate.schemaVersion).toBe(ARK_CONFIG_SCHEMA_VERSION);
+    expect(current.candidate.include).toEqual(VALID_MINIMAL_CONFIG.include);
+  });
+
+  it('records migratedFrom for every supported prior stamp including 1.2', () => {
+    expect(migrateArkConfig({ ...VALID_MINIMAL_CONFIG, schemaVersion: '1.2' })).toMatchObject({
+      migratedFrom: '1.2',
+    });
+    const loaded = loadArkConfigContract({ ...VALID_MINIMAL_CONFIG, schemaVersion: '1.2' });
+    expect(loaded.migratedFrom).toBe('1.2');
+    expect(loaded.config.schemaVersion).toBe(ARK_CONFIG_SCHEMA_VERSION);
+  });
+
+  it('refuses a display-name layer owner after extras validation (same load path)', () => {
+    expect(() =>
+      loadArkConfigContract({
+        ...VALID_MINIMAL_CONFIG,
+        layers: [
+          {
+            name: 'DomainModel',
+            patterns: ['src/domain/**'],
+            owners: ['Pedro Knigge'],
+          },
+        ],
+      })
+    ).toThrow('$.layers[0].owners[0]');
+    expect(() =>
+      loadArkConfigContract({
+        ...VALID_MINIMAL_CONFIG,
+        layers: [
+          {
+            name: 'DomainModel',
+            patterns: ['src/domain/**'],
+            owners: ['pedroknigge'],
+          },
+        ],
+      })
+    ).not.toThrow();
+  });
+
+  it('fails closed on invalid JSON through parseArkConfigJson, not a thrown SyntaxError', () => {
+    expect(() => parseArkConfigJson('{', 'broken.json')).toThrow(
+      'Invalid ArkGate config (broken.json):\n- $: invalid JSON'
+    );
+    expect(() => parseArkConfigJson('[]', 'array.json')).toThrow(
+      'Invalid ArkGate config (array.json):\n- $: must be an object; received array'
+    );
+  });
+
   it('fails closed when the migration table has a gap mid-chain', () => {
     const saved = [...ARK_CONFIG_MIGRATIONS];
     ARK_CONFIG_MIGRATIONS.splice(0, ARK_CONFIG_MIGRATIONS.length, {

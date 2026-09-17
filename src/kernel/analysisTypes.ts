@@ -62,6 +62,21 @@ export type AnalyzeResolvedProjectInput = {
   contract: AnalysisContract;
   facts: unknown;
   /**
+   * D0 adopted or --require-gates / --strict-merge. When true, a missing
+   * domain-invariant tests path fails closed. Omitted stays silent.
+   */
+  adopted?: boolean;
+  /**
+   * Tooling FS check for the declared tests path. `false` means empty on disk.
+   * Omitted: a non-empty config declaration is enough.
+   */
+  invariantTestsPathPresent?: boolean;
+  /**
+   * Tooling FS check for declared `coverage.coverageRoots`. `false` means
+   * missing or empty on disk. Omitted: a non-empty config declaration is enough.
+   */
+  coverageRootsPresent?: boolean;
+  /**
    * AR10 — Tooling-supplied contents for invariant coverage evidence.
    * When omitted and the Effective Contract has invariants, coverage is partial
    * (never false green covered).

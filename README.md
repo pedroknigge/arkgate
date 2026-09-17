@@ -39,7 +39,7 @@ Works with Cursor, Claude, Codex, and Grok.
 
 </div>
 
-> **ArkGate 4.8.14** is prepared on this tree; npm `latest` remains **4.8.13** until `publish-npm` for `v4.8.14`.
+> **ArkGate 4.8.17** is on npm `latest`.
 > Write. Check. Ship. Adopted = required GitHub
 > status running `arkgate-check --strict-merge`, or an explicit `advisory-only` stance.
 > Status is compact (`arkgate-check --doctor`; `--all` for Details). Optional **ArkRun**
@@ -47,7 +47,7 @@ Works with Cursor, Claude, Codex, and Grok.
 > (`arkgate/order`) stops rewriting a big product choice — like the billing plan —
 > as if it were a seat count. Change those choices through a valve, not a generic update.
 > `@arkgate/runtime` is deprecated.
-> [4.8.14 prepared](CHANGELOG.md) · [4.8.11 published](docs/releases/4.8.11.md) · [4.8.10](docs/releases/4.8.10.md) · [4.8.9](docs/releases/4.8.9.md) · [4.8.8](docs/releases/4.8.8.md) · [4.8.7](docs/releases/4.8.7.md) · [4.8.6](docs/releases/4.8.6.md) · [4.8.5](docs/releases/4.8.5.md) · [4.8.4](docs/releases/4.8.4.md) · [4.8.3](docs/releases/4.8.3.md) · [4.8.2](docs/releases/4.8.2.md) · [4.8.1](docs/releases/4.8.1.md) · [4.8.0](docs/releases/4.8.0.md) · [Docs hub](docs/README.md) · [Voice](docs/product-voice.md)
+> [4.8.17](CHANGELOG.md) · [4.8.11](docs/releases/4.8.11.md) · [4.8.10](docs/releases/4.8.10.md) · [4.8.9](docs/releases/4.8.9.md) · [4.8.8](docs/releases/4.8.8.md) · [4.8.7](docs/releases/4.8.7.md) · [4.8.6](docs/releases/4.8.6.md) · [4.8.5](docs/releases/4.8.5.md) · [4.8.4](docs/releases/4.8.4.md) · [4.8.3](docs/releases/4.8.3.md) · [4.8.2](docs/releases/4.8.2.md) · [4.8.1](docs/releases/4.8.1.md) · [4.8.0](docs/releases/4.8.0.md) · [Docs hub](docs/README.md) · [Voice](docs/product-voice.md)
 
 ---
 
@@ -69,9 +69,16 @@ Full map: **[docs/README.md](docs/README.md)**
 npm install -D arkgate typescript
 npx arkgate start                 # preview files + commands
 npx arkgate start --apply         # compact config + host router + CI plan
-npx arkgate-check --doctor        # status — one next step
-npx arkgate-check --doctor --all  # full details
+npx --package=arkgate arkgate-check --doctor        # status — one next step
+npx --package=arkgate arkgate-check --doctor --all  # full details
 ```
+
+`arkgate-check` is a command in the `arkgate` package, not its own npm package. After a local install, `npx arkgate-check --doctor` also works.
+
+`start --apply` refuses when projected governed coverage is below 50% or
+shape confidence is weak (below 0.6 with coverage under 80%). That lock is
+deliberate. Lock the shape with `--archetype <id>`, `--preset <name>`, or
+`--force`, or inspect ranked shapes with `npx arkgate-check --recommend`.
 
 That is the product. Stuck? Run status (`--doctor`) and do action **#1**.
 
@@ -81,7 +88,8 @@ start → doctor → new files in the right folder
 ```
 
 Keep the rules file out of product PRs. Local check:
-`ark-check --changed --base origin/dev`. Changing the rules themselves uses `--contract-session`.
+`ark-check --local --base origin/dev` (same as `--changed`; refused with
+`--strict-merge`). Changing the rules themselves uses `--contract-session`.
 
 Aliases `ark` / `ark-check` / `ark-mcp` still work. npm / pnpm / yarn. No install lifecycle scripts
 — and none on pack or prepare either, so `pnpm add git+https://github.com/pedroknigge/arkgate`
@@ -336,8 +344,8 @@ Compact starters leave the extra off. Details: [ArkOrder](docs/arkorder.md).
 | Config · package surface · TS | [configuration](docs/configuration.md) · [package-surface](docs/package-surface.md) · [typescript-support](docs/typescript-support.md) |
 | Brownfield | [docs/brownfield-adoption.md](docs/brownfield-adoption.md) |
 | Security | [SECURITY.md](SECURITY.md) |
-| Prepared (4.8.14; not published) | [CHANGELOG](CHANGELOG.md) |
-| Current published (4.8.11 on npm `latest`) | [docs/releases/4.8.11.md](docs/releases/4.8.11.md) · [CHANGELOG](CHANGELOG.md) |
+| Current published (4.8.17 on npm `latest`) | [CHANGELOG](CHANGELOG.md) |
+| Prior published (4.8.11) | [docs/releases/4.8.11.md](docs/releases/4.8.11.md) · [CHANGELOG](CHANGELOG.md) |
 | Prior published (4.8.10) | [docs/releases/4.8.10.md](docs/releases/4.8.10.md) · [CHANGELOG](CHANGELOG.md) |
 | Prior published (4.8.9) | [docs/releases/4.8.9.md](docs/releases/4.8.9.md) · [CHANGELOG](CHANGELOG.md) |
 | Prior published (4.8.7) | [docs/releases/4.8.7.md](docs/releases/4.8.7.md) · [CHANGELOG](CHANGELOG.md) |

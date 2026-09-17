@@ -27,15 +27,22 @@ For **anyone** shipping TypeScript with an AI coding agent.
 npm install -D arkgate typescript
 npx arkgate start                 # preview what will change
 npx arkgate start --apply         # install compact config + host router + CI; merge write-path gates into existing AGENTS.md / .mcp.json
-npx arkgate-check --doctor        # status — one next step
-npx arkgate-check --doctor --all  # full details
+npx --package=arkgate arkgate-check --doctor        # status — one next step
+npx --package=arkgate arkgate-check --doctor --all  # full details
 ```
+
+`arkgate-check` is a command in the `arkgate` package, not its own npm package. After a local install, `npx arkgate-check --doctor` also works.
+
+`start --apply` refuses when projected governed coverage is below 50% or
+shape confidence is weak (below 0.6 with coverage under 80%). That lock is
+deliberate. Lock the shape with `--archetype <id>`, `--preset <name>`, or
+`--force`, or inspect ranked shapes with `npx arkgate-check --recommend`.
 
 Then keep working with your agent. Stuck? Run `--doctor` and do action **#1**. Compact first; `--all` for details.
 
 | Stuck on… | Do this |
 |-----------|---------|
-| Unsure | `npx arkgate-check --doctor` |
+| Unsure | `npx --package=arkgate arkgate-check --doctor` |
 | Agent broke architecture | Fix the edge doctor names (or re-run check) |
 | Code is green but still a mess | Leftover design work — see below |
 | New ArkGate version | Follow doctor / upgrade guidance |

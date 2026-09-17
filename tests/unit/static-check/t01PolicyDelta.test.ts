@@ -135,12 +135,18 @@ describe('T01 strict policy transition guard', () => {
     expect(unackedSession.status).toBe(1);
     expect(unackedSession.stderr).toContain('Policy transition rejected');
 
+    fs.mkdirSync(path.join(root, 'docs/adr'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'docs/adr/0001-temporary-loader.md'),
+      '# Temporary loader\n\nStatic imports are migrating.\n'
+    );
     writeJson(root, '.ark/policy-delta-ack.json', {
       schemaVersion: '1.0',
       basePolicyHash: payload.policyDelta.basePolicyHash,
       candidatePolicyHash: payload.policyDelta.candidatePolicyHash,
       findingIds: payload.policyDelta.blockingFindingIds,
       reason: 'Temporary loader while static imports are migrated.',
+      adrPath: 'docs/adr/0001-temporary-loader.md',
     });
     const accepted = run(root, [
       '--strict-merge',
@@ -222,5 +228,116 @@ describe('T01 strict policy transition guard', () => {
 
     expect(result.status).toBe(0);
     expect(JSON.parse(result.stdout)).not.toHaveProperty('policyDelta');
+  });
+
+  it('rejects a hash-bound ack without adrPath and accepts one tied to a note', () => {
+    const { root, base } = setupRoot();
+    writeJson(root, 'ark.config.json', {
+      ...base,
+      dynamicImportAllowlist: ['src/domain/dynamic.ts'],
+    });
+    const blocked = run(root, ['--strict-merge', '--policy-base-ref', 'HEAD']);
+    const payload = JSON.parse(blocked.stdout);
+    writeJson(root, '.ark/policy-delta-ack.json', {
+      schemaVersion: '1.0',
+      basePolicyHash: payload.policyDelta.basePolicyHash,
+      candidatePolicyHash: payload.policyDelta.candidatePolicyHash,
+      findingIds: payload.policyDelta.blockingFindingIds,
+      reason: 'Temporary loader while static imports are migrated.',
+    });
+    const floating = run(root, [
+      '--strict-merge',
+      '--policy-base-ref',
+      'HEAD',
+      '--policy-ack',
+      '.ark/policy-delta-ack.json',
+      '--contract-session',
+    ]);
+    expect(floating.status).toBe(1);
+    const floatingPayload = JSON.parse(floating.stdout);
+    expect(floatingPayload.policyDelta).toMatchObject({
+      acknowledged: true,
+      valid: false,
+      adrNote: { missing: true },
+    });
+    expect(`${floating.stdout}${floating.stderr}`).toMatch(/adrPath/);
+
+    fs.mkdirSync(path.join(root, 'docs/adr'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'docs/adr/0001-temporary-loader.md'),
+      '# Temporary loader\n\nStatic imports are migrating.\n'
+    );
+    writeJson(root, '.ark/policy-delta-ack.json', {
+      schemaVersion: '1.0',
+      basePolicyHash: payload.policyDelta.basePolicyHash,
+      candidatePolicyHash: payload.policyDelta.candidatePolicyHash,
+      findingIds: payload.policyDelta.blockingFindingIds,
+      reason: 'Temporary loader while static imports are migrated.',
+      adrPath: 'docs/adr/0001-temporary-loader.md',
+    });
+    const accepted = run(root, [
+      '--strict-merge',
+      '--policy-base-ref',
+      'HEAD',
+      '--policy-ack',
+      '.ark/policy-delta-ack.json',
+      '--contract-session',
+    ]);
+    expect(accepted.status, accepted.stderr).toBe(0);
+    expect(JSON.parse(accepted.stdout).policyDelta).toMatchObject({
+      valid: true,
+      acknowledged: true,
+      adrNote: { missing: false, path: 'docs/adr/0001-temporary-loader.md' },
+    });
+  });
+
+  it('requires a decision-note path when a new allow edge is added', () => {
+    const { root, base } = setupRoot();
+    writeJson(root, 'ark.config.json', {
+      ...base,
+      layers: [
+        ...base.layers,
+        { name: 'Kernel', patterns: ['src/kernel/**'] },
+      ],
+      rules: [{ from: 'DomainModel', to: 'Kernel', allowed: true }],
+    });
+    const blocked = run(root, ['--strict-merge', '--policy-base-ref', 'HEAD']);
+    expect(blocked.status).toBe(1);
+    const payload = JSON.parse(blocked.stdout);
+    expect(payload.policyDelta.classification).toBe('judgment-required');
+    expect(payload.policyDelta.blockingFindingIds).toEqual(
+      expect.arrayContaining([
+        'judgment-required:$.layers[Kernel]:layer-added',
+        'judgment-required:$.rules[DomainModel->Kernel]:allow-added',
+      ])
+    );
+
+    fs.mkdirSync(path.join(root, 'docs/adr'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'docs/adr/0002-kernel-edge.md'),
+      '# Kernel may read Domain\n'
+    );
+    writeJson(root, '.ark/policy-delta-ack.json', {
+      schemaVersion: '1.0',
+      basePolicyHash: payload.policyDelta.basePolicyHash,
+      candidatePolicyHash: payload.policyDelta.candidatePolicyHash,
+      findingIds: payload.policyDelta.blockingFindingIds,
+      reason: 'Kernel reads Domain after the extract.',
+      adrPath: 'docs/adr/0002-kernel-edge.md',
+    });
+    const accepted = run(root, [
+      '--strict-merge',
+      '--policy-base-ref',
+      'HEAD',
+      '--policy-ack',
+      '.ark/policy-delta-ack.json',
+      '--contract-session',
+    ]);
+    expect(accepted.status, accepted.stderr).toBe(0);
+    expect(JSON.parse(accepted.stdout).policyDelta).toMatchObject({
+      valid: true,
+      acknowledged: true,
+      adrNote: { path: 'docs/adr/0002-kernel-edge.md', missing: false },
+    });
   });
 });

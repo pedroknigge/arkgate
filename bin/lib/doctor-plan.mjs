@@ -16,6 +16,12 @@ import { detectAgentHomeGaps } from './agent-homes.mjs';
 import { collectDoctorNextActions } from './doctor-next-actions.mjs';
 import { printDoctorCompactHuman, printDoctorDetailsHuman } from './doctor-human.mjs';
 import { collectLayerOwnerResidual, layerGuidanceLine, placementDescriptionFields } from './layer-description.mjs';
+import { collectAdrPresenceResidual, printAdrPresenceHint } from './adr-presence.mjs';
+import { collectStatesTransitionsResidual } from './states-transitions-presence.mjs';
+import { collectStatusTransitionCatalogResidual } from './status-transition-catalog.mjs';
+import { collectNoDomainFrontendResidual } from './no-domain-frontend.mjs';
+import { collectInvariantCoverageResiduals } from './invariant-tests-path.mjs';
+export { printAdrPresenceHint };
 export { printDoctorCompactHuman, printDoctorDetailsHuman };
 export { summarizeRulesUnderContract };
 
@@ -68,6 +74,7 @@ import { writeCiMergeBoundary } from './ci-merge-boundary.mjs';
 import {
   classifyAdopted,
   githubEvidenceForCiMergeBoundary,
+  isAdopted,
   readAdoptionStance,
   NOT_ADOPTED_NEXT_ACTION,
 } from './adoption-stance.mjs';
@@ -638,6 +645,14 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     github: githubForBoundary,
     ci: ciMergeBoundary?.ci,
   });
+  const adrPresence = collectAdrPresenceResidual({
+    root,
+    demanded: options.requireGates === true || adopted === 'required-merge',
+  });
+  const statesTransitions = collectStatesTransitionsResidual({ root });
+  const statusTransitionCatalog = collectStatusTransitionCatalogResidual({ root, config, files, statesTransitions });
+  const noDomainFrontend = collectNoDomainFrontendResidual({ config, coverage: cov, designSmells });
+  const { invariantCoverageRoots, invariantTestsPath } = collectInvariantCoverageResiduals({ adopted: isAdopted(adopted) || options.requireGates === true, coverage: config?.coverage, config, root });
   const { coverageHonesty, baselineHonesty, writePathHonesty, productHonesty } =
     computeDoctorEnforcementHonesty({
       governedPercent: cov.governed.percent,
@@ -768,6 +783,9 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
             coverageHonesty,
             layers: cov.layers,
             ...(layerOwners ? { layerOwners } : {}),
+            ...(adrPresence ? { adrPresence } : {}),
+            ...(statesTransitions ? { statesTransitions } : {}),
+            ...(statusTransitionCatalog ? { statusTransitionCatalog } : {}), ...(noDomainFrontend ? { noDomainFrontend } : {}), ...(invariantTestsPath ? { invariantTestsPath } : {}), ...(invariantCoverageRoots ? { invariantCoverageRoots } : {}),
             emptyLayers: cov.emptyLayers,
             layersWithoutRules: cov.layersWithoutRules,
             ungovernedDirs: cov.suggestions.length,
@@ -910,6 +928,9 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     adopted,
     stewardNudge: doctorAdvisories.stewardNudge,
     layerOwners,
+    adrPresence,
+    statesTransitions,
+    statusTransitionCatalog, noDomainFrontend, prototypeShortcuts: doctorAdvisories.prototypeShortcuts, invariantTestsPath, invariantCoverageRoots,
   });
   const humanView = {
     root,
@@ -917,6 +938,9 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     completeness,
     doctorAdvisories,
     layerOwners,
+    adrPresence,
+    statesTransitions,
+    statusTransitionCatalog, noDomainFrontend, prototypeShortcuts: doctorAdvisories.prototypeShortcuts, invariantTestsPath, invariantCoverageRoots,
     operatingMode,
     designFitness,
     adopted,

@@ -50,9 +50,14 @@ describe('confidence gate wiring', () => {
 
     const ack = group('policy-delta-ack-match');
     expect(ack.file).toBe('src/domain/policyDelta.ts');
-    expect(slice(ack.file, ack.startLine, ack.endLine)).toContain(
-      'export function policyDeltaAcknowledgementMatches'
-    );
+    const ackSlice = slice(ack.file, ack.startLine, ack.endLine);
+    expect(ackSlice).toContain('export function policyDeltaAcknowledgementMatches');
+    expect(ackSlice).toContain('acknowledgement.schemaVersion !== POLICY_DELTA_SCHEMA_VERSION');
+    expect(ackSlice).toContain('acknowledgement.reason.trim().length === 0');
+    expect(ackSlice).toContain('actualIds.every((id, index) => id === expectedIds[index])');
+    expect(ackSlice).not.toContain('compareArkRules');
+    expect(ackSlice).not.toContain('compareArkRun');
+    expect(ackSlice).not.toContain('compareArkOrder');
 
     const facts = group('resolved-candidate-facts');
     expect(facts.file).toBe('bin/lib/resolved-candidate-facts.mjs');
@@ -63,14 +68,34 @@ describe('confidence gate wiring', () => {
 
     const promote = group('invariant-promote-honesty');
     expect(promote.file).toBe('src/domain/invariantCoverage.ts');
-    expect(slice(promote.file, promote.startLine, promote.endLine)).toContain(
-      'export function canPromoteInvariant'
-    );
+    const promoteSlice = slice(promote.file, promote.startLine, promote.endLine);
+    expect(promoteSlice).toContain('export function canPromoteInvariant');
+    expect(promoteSlice).toContain('coverageRootsDeclared === false');
 
     const stryker = read('stryker.config.mjs');
     expect(stryker).toContain(`${ack.file}:${ack.startLine}-${ack.endLine}`);
     expect(stryker).toContain(`${facts.file}:${facts.startLine}-${facts.endLine}`);
     expect(stryker).toContain(`${promote.file}:${promote.startLine}-${promote.endLine}`);
+
+    const messageHonesty = contract.groups.find(
+      (entry) => entry.id === 'invariant-coverage-message-honesty'
+    );
+    expect(messageHonesty, 'invariant-coverage-message-honesty').toBeTruthy();
+    const messageBlob = messageHonesty!.targets
+      .map((target) => slice(target.file, target.startLine, target.endLine))
+      .join('\n');
+    expect(messageBlob).toContain('function formatCoverageDiscards');
+    expect(messageBlob).toContain("if (!stats) return ''");
+    expect(messageBlob).toContain('naming no catalogued invariant');
+    expect(messageBlob).toContain('symlinked outside the project root');
+    expect(messageBlob).toContain('const budgetDetail = stats');
+    expect(messageBlob).toContain('coverage.maxFiles');
+    expect(messageBlob).toContain("typeof stats.filesRead === 'number'");
+    expect(messageBlob).not.toContain('function symbolPresent');
+    expect(messageBlob).not.toContain('filesRead?: number');
+    for (const target of messageHonesty!.targets) {
+      expect(stryker).toContain(`${target.file}:${target.startLine}-${target.endLine}`);
+    }
 
     const baselines = group('baselines');
     expect(baselines.file).toBe('src/domain/baselineKey.ts');
@@ -80,6 +105,30 @@ describe('confidence gate wiring', () => {
     expect(baselinesSlice).toContain('export function baselineKey');
     expect(baselinesSlice).toContain('export function baselineOccurrenceKeys');
     expect(stryker).toContain(`${baselines.file}:${baselines.startLine}-${baselines.endLine}`);
+
+    const empty = group('empty-analysis-refusal');
+    expect(empty.file).toBe('bin/lib/analysis-completeness.mjs');
+    const emptySlice = slice(empty.file, empty.startLine, empty.endLine);
+    expect(emptySlice).toContain('export function emptyAnalysisRefusal');
+    expect(emptySlice).toContain('if (ungoverned === 0 && !movedRoot) return null');
+    expect(emptySlice).toContain('included > 0 && classified === 0');
+    expect(stryker).toContain(`${empty.file}:${empty.startLine}-${empty.endLine}`);
+
+    const loading = contract.groups.find((entry) => entry.id === 'config-loading');
+    expect(loading, 'config-loading').toBeTruthy();
+    const loadingBlob = loading!.targets
+      .map((target) => slice(target.file, target.startLine, target.endLine))
+      .join('\n');
+    expect(loadingBlob).toContain("input.schemaVersion === undefined");
+    expect(loadingBlob).toContain('? \'unversioned\'');
+    expect(loadingBlob).toContain('defaultedConfig(working)');
+    expect(loadingBlob).toContain('validateLayerOwners(candidate, issues)');
+    expect(loadingBlob).toContain('JSON.parse(json)');
+    expect(loadingBlob).not.toContain('function validateLayerOwners');
+    expect(loadingBlob).not.toContain('Rewrite schemaVersion through');
+    for (const target of loading!.targets) {
+      expect(stryker).toContain(`${target.file}:${target.startLine}-${target.endLine}`);
+    }
   });
 
   it('rejects NoCoverage even when every critical group remains above threshold', () => {

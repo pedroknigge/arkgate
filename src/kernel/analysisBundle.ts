@@ -28,6 +28,9 @@ export function createTrustedResolvedCandidateFacts(
 export function analyzeTrustedResolvedProject(input: {
   contract: AnalysisContract;
   facts: ResolvedCandidateFacts;
+  adopted?: boolean;
+  invariantTestsPathPresent?: boolean;
+  coverageRootsPresent?: boolean;
   coverageInputs?: {
     fileContents: Readonly<Record<string, string>>;
     testFiles?: readonly string[];

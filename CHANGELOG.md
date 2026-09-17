@@ -6,6 +6,27 @@ in the immutable pre-2.0 archive linked below.
 ## Unreleased
 
 ### Added
+- Soft doctor residual when Domain is declared but empty and the UI holds the
+  rules (`noDomainFrontend`). Projects empty Domain + presentation share, or
+  the existing `domain-logic-in-ui` smell. Friendly next step: one Domain file
+  (`/ark-place`) then one small refactor. Not a fail. Silent when there is no
+  frontend, Domain already has files, or the UI bag is too thin. No new skill,
+  schema, smell id, or config key.
+- Narrow opt-in status/transition catalog: when Domain-role code already
+  names a closed status/state vocabulary and a domain doc is in play without
+  a table (or one link), doctor JSON may add `statusTransitionCatalog` with
+  those names. Friendly next step. Not a fail. Silent when Domain has no
+  status vocabulary, or the domain doc is absent, or the map is already
+  present. No new skill, schema, or config key.
+- Doctor residual when a product-domain doc is already in play
+  (`docs/domain.md` or a sibling) and there is no states → transitions table
+  (or one link) yet. Friendly next step. Not a fail. Silent when that doc is
+  absent. No new skill, schema, or status-field sensor.
+- Soft ADR / decision-note presence when `--require-gates` (or
+  `--strict` / `--strict-merge` / doctor adopted-strict) is on and the tree
+  has no `docs/adr/` or `docs/decisions/` note yet. Doctor residual + a
+  friendly next step. Not a fail. Silent when require-gates is off. No new
+  skill, schema, or config key. Policy weaken still uses `--policy-ack`.
 - Optional `layers[].owners` on each layer (GitHub handle or email, same
   identity as `stewards`) and optional `requireLayerOwners`. Absence is
   silent. When the require flag is on, doctor names the first house without
@@ -45,6 +66,17 @@ in the immutable pre-2.0 archive linked below.
   Required CI is still the shared merge line. No new skill, schema, or host.
 
 ### Fixed
+- Packed README / docs hub no longer claim npm `latest` remains an older
+  version than this tarball. `check:package-files` and the packed-artifact
+  path refuse that pin
+  ([#270](https://github.com/pedroknigge/arkgate/issues/270)).
+- Monorepo `arkgate start` no longer puts whole-app roots (`api/**`,
+  `client/**`) on DomainModel next to the finer globs. Domain stays
+  package-scoped (`packages/*/src/**`, `**/domain/**`). When dual-match
+  is huge, doctor #1 is “fix overlapping layer globs” with one example,
+  not only “make CI required”
+  (issue [#269](https://github.com/pedroknigge/arkgate/issues/269)).
+  Add-ons stay silent when off. No new skill, schema, or flag.
 - Write hook and `ark-check` now agree on overlapping layer globs: the hook
   probes the same specifier extensions as `ark-check` and classifies with
   `layerForRelativePath` (explicit `money.ts` beats `src/lib/**`). Field
@@ -74,6 +106,112 @@ in the immutable pre-2.0 archive linked below.
   `@2` pin (issue [#211](https://github.com/pedroknigge/arkgate/issues/211)).
   Existing configs keep whatever URL they already have. Editor completion
   matches the 4.x line you just installed.
+
+## 4.8.17 — 2026-09-17
+
+**Patch** over **4.8.16**. Daily accumulate of the two ships that landed
+after 4.8.16 published: ADR path on policy weaken / new layer edge
+([#264](https://github.com/pedroknigge/arkgate/pull/264)) and the
+policy-delta-ack-match confidence retarget
+([#265](https://github.com/pedroknigge/arkgate/pull/265)).
+**Write. Check. Ship.** **No required config migration.** No
+`schemaVersion` bump. Does not close `K01` / `Z09`. This mother
+`ark.config.json` still does **not** turn `arkOrder` on.
+
+**Status: published** (npm `latest` is **4.8.17**).
+
+### Added
+- A weaken, new layer, or new allow edge must name a short ADR /
+  decision-note path on `--policy-ack` (`adrPath`). A free-floating
+  reason is not enough
+  ([#264](https://github.com/pedroknigge/arkgate/pull/264)).
+
+### Fixed
+- Retarget `policy-delta-ack-match` onto the current
+  `policyDeltaAcknowledgementMatches` body so the 90% confidence
+  floor still holds after #264
+  ([#265](https://github.com/pedroknigge/arkgate/pull/265)).
+
+## 4.8.16 — 2026-09-16
+
+**Patch** over **4.8.15**. Daily accumulate of the five ships that landed
+after 4.8.15 published: invariant tests path
+([#255](https://github.com/pedroknigge/arkgate/pull/255)), doctor green
+cites ([#256](https://github.com/pedroknigge/arkgate/pull/256)),
+coverageRoots when enforced
+([#257](https://github.com/pedroknigge/arkgate/pull/257)),
+`start --apply` install honesty
+([#259](https://github.com/pedroknigge/arkgate/pull/259)), and prototype
+shortcuts ([#260](https://github.com/pedroknigge/arkgate/pull/260)).
+**Write. Check. Ship.** **No required config migration.** No
+`schemaVersion` bump. Does not close `K01` / `Z09`. This mother
+`ark.config.json` still does **not** turn `arkOrder` on.
+
+**Status: prepared** (npm `latest` remains **4.8.15** until Actions `publish-npm`
+runs with `tag=v4.8.16` and `dry_run=false`).
+
+### Added
+- Adopted trees with domain invariants must name a real tests path, so
+  coverage cannot certify a test no runner runs
+  ([#255](https://github.com/pedroknigge/arkgate/pull/255)).
+- Doctor green / healthy lines now cite a file, config key, or test — an
+  uncited line cannot look healthy
+  ([#256](https://github.com/pedroknigge/arkgate/pull/256)).
+- When a domain invariant is enforced, `coverage.coverageRoots` is
+  required. Test globs alone are not enough
+  ([#257](https://github.com/pedroknigge/arkgate/pull/257)).
+- Soft residual when SQLite, a JSON-file store, or admin literals stand
+  in for Persistence or Domain
+  ([#260](https://github.com/pedroknigge/arkgate/pull/260)).
+
+### Changed
+- `start --apply` fails closed if the package install fails, and names
+  the exact command to recover
+  ([#259](https://github.com/pedroknigge/arkgate/pull/259)).
+- Pack ceilings remeasured on the IT01 CI pack (run 34848276803).
+  ≥10% headroom. No new product surface.
+
+## 4.8.15 — 2026-09-13
+
+**Patch** over **4.8.14**. Pre-adoption ship bar: opt-in `--local` /
+`ARK_CHECK_LOCAL` cheap multi-worktree check
+([#251](https://github.com/pedroknigge/arkgate/pull/251)) and dogfood
+honesty
+([#252](https://github.com/pedroknigge/arkgate/pull/252) / [#243](https://github.com/pedroknigge/arkgate/issues/243) /
+[#246](https://github.com/pedroknigge/arkgate/issues/246) /
+[#247](https://github.com/pedroknigge/arkgate/issues/247)).
+**Write. Check. Ship.** **No required config migration.** No
+`schemaVersion` bump. Does not close `K01` / `Z09`. This mother
+`ark.config.json` still does **not** turn `arkOrder` on.
+
+**Status: prepared** (npm `latest` remains **4.8.14** until Actions `publish-npm`
+runs with `tag=v4.8.15` and `dry_run=false`).
+
+### Added
+- Opt-in local / multi-worktree cheap check: `--local` or `ARK_CHECK_LOCAL=1`
+  reuses `--changed` (touched files + import closure) and stays per `--root`.
+  Explicit `--local --strict-merge` is refused so CI Contener stays fail-closed.
+  The env var is ignored under `--strict-merge` and under `--doctor` /
+  `--coverage` / `--plan` / `--report` / `--promote`. JSON may add `local`,
+  `scope: "changed"`, `analysisRoot`. Write hooks stay lexical. No new schema,
+  cache, skill, or second analysis engine. Design:
+  [docs/plans/local-check-worktree-dx/README.md](docs/plans/local-check-worktree-dx/README.md).
+
+### Fixed
+- Publish confidence gate: retarget drifted critical mutation islands
+  (`config-loading`, `empty-analysis-refusal`, host fail-open / none-gap)
+  after owners + classified-file growth, and add tests that kill those
+  mutants. Threshold stays 90% with zero NoCoverage. Does not change
+  runtime behavior.
+- Dogfood honesty: type-only `LAYER_IMPORT_VIOLATION` prints `⚠` (not `✖`)
+  when the check still exits 0 ([#243](https://github.com/pedroknigge/arkgate/issues/243));
+  one-minute `start --apply` copy and the start preview footer name the
+  deliberate lock flags (`--archetype`, `--preset`, `--force`,
+  `ark-check --recommend`) without softening the refuse gate
+  ([#246](https://github.com/pedroknigge/arkgate/issues/246)); start,
+  `--recommend`, and doctor share one `computeCoverage` definition of
+  projected governed coverage
+  ([#247](https://github.com/pedroknigge/arkgate/issues/247)).
 
 ## 4.8.14 — 2026-09-06
 

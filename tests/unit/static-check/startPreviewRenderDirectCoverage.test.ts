@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ARKORDER_FIRST_CONTACT_NEXT, ARKORDER_ONE_BREATH } from '../../../bin/lib/ark-order-doctor.mjs';
+import { START_APPLY_REFUSE_FOOTER } from '../../../bin/ark-shared.mjs';
 import { renderStartPreview } from '../../../bin/lib/start-preview.mjs';
 
 afterEach(() => {
@@ -63,6 +64,11 @@ describe('renderStartPreview direct output coverage', () => {
     expect(output).toContain('Unresolved decisions:');
     expect(output).toContain('Classify three remaining files.');
     expect(output).toContain('Apply this plan with: arkgate start --apply');
+    expect(output).toContain(START_APPLY_REFUSE_FOOTER);
+    expect(output).toContain('--archetype');
+    expect(output).toContain('--preset');
+    expect(output).toContain('--force');
+    expect(output).toContain('arkgate-check --recommend');
     expect(output).toContain('Review complete file contents with --json.');
   });
 

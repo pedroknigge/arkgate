@@ -36,6 +36,7 @@ import {
   summarizeArkOrderSection,
 } from './ark-order-doctor.mjs';
 import { composeMergePlanesHonesty } from './extra-merge-teeth.mjs';
+import { collectPrototypeShortcutsResidual } from './prototype-shortcuts.mjs';
 
 export function attachExtraDoctorSections(rulesUnderContract, config, classification, findings) {
   const arkRulesMerge = {
@@ -101,6 +102,49 @@ export function printCompactExtraDoctorLines(advisories, io) {
     console.log('');
     io.line(io.warn, owners.ask);
     if (owners.nextAction) io.line(' ', `Next: ${owners.nextAction}`);
+  }
+  const adr = advisories?.adrPresence;
+  if (adr?.missing && adr.ask) {
+    console.log('');
+    io.line(io.warn, adr.ask);
+    if (adr.nextAction) io.line(' ', `Next: ${adr.nextAction}`);
+  }
+  const catalog = advisories?.statusTransitionCatalog;
+  if (catalog?.ask) {
+    console.log('');
+    io.line(io.warn, catalog.ask);
+    if (catalog.nextAction) io.line(' ', `Next: ${catalog.nextAction}`);
+  } else {
+    const states = advisories?.statesTransitions;
+    if (states?.ask) {
+      console.log('');
+      io.line(io.warn, states.ask);
+      if (states.nextAction) io.line(' ', `Next: ${states.nextAction}`);
+    }
+  }
+  const noDomain = advisories?.noDomainFrontend;
+  if (noDomain?.ask) {
+    console.log('');
+    io.line(io.warn, noDomain.ask);
+    if (noDomain.nextAction) io.line(' ', `Next: ${noDomain.nextAction}`);
+  }
+  const prototypeShortcuts = advisories?.prototypeShortcuts;
+  if (prototypeShortcuts?.ask) {
+    console.log('');
+    io.line(io.warn, prototypeShortcuts.ask);
+    if (prototypeShortcuts.nextAction) io.line(' ', `Next: ${prototypeShortcuts.nextAction}`);
+  }
+  const testsPath = advisories?.invariantTestsPath;
+  if (testsPath?.missing && testsPath.ask) {
+    console.log('');
+    io.line(io.warn, testsPath.ask);
+    if (testsPath.nextAction) io.line(' ', `Next: ${testsPath.nextAction}`);
+  }
+  const coverageRoots = advisories?.invariantCoverageRoots;
+  if (coverageRoots?.missing && coverageRoots.ask) {
+    console.log('');
+    io.line(io.warn, coverageRoots.ask);
+    if (coverageRoots.nextAction) io.line(' ', `Next: ${coverageRoots.nextAction}`);
   }
   const rulesUnderContract = advisories?.rulesUnderContract;
   const arkRulesLines = formatArkRulesDoctorLines(rulesUnderContract);
@@ -196,7 +240,14 @@ export function computeDoctorAdvisories(root, config, cov, rules, files, ts, par
     classification,
     activeViolations
   );
+  const prototypeShortcuts = collectPrototypeShortcutsResidual({
+    root,
+    config,
+    coverage: cov,
+    files,
+  });
   return {
+    ...(prototypeShortcuts ? { prototypeShortcuts } : {}),
     contractHealth: computeContractHealth(root, config, cov, rules),
     ambientState: computeAmbientState(ts, root, config, files),
     physicalCohesion,

@@ -10,7 +10,7 @@ import { version } from '../../../src/version.ts';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 /** Tree package identity. */
-const CURRENT = '4.8.14';
+const CURRENT = '4.8.17';
 /** Version confirmed on npm `latest`. */
 const PUBLISHED_LATEST = '4.8.11';
 
@@ -59,7 +59,7 @@ describe('package budget ceilings retain 10% headroom over the recorded clean ca
       files: 190,
     });
     expect([gate.maxPackedBytes, gate.maxUnpackedBytes, gate.maxFiles]).toEqual([
-      1456000, 5145000, 270,
+      1611000, 5659000, 270,
     ]);
     expect(gate.maxPackedBytes).toBeGreaterThanOrEqual(
       Math.ceil(gate.measuredCandidate.packedBytes * 1.1)
@@ -138,7 +138,7 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
 
   it('keeps 4.8.11 published on npm latest and 4.8.10 as prior', () => {
     expect(PUBLISHED_LATEST).toBe('4.8.11');
-    expect(CURRENT).toBe('4.8.14');
+    expect(CURRENT).toBe('4.8.17');
     expect(read('docs/releases/4.8.9.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.8.9.md')).toMatch(/arkgate@4\.8\.9/);
     expect(read('docs/releases/4.8.9.md')).not.toMatch(/\*\*Status:\*\*\s*prepared/i);
@@ -196,8 +196,8 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
     expect(read('CONTRIBUTING.md')).toMatch(/Optional \(not gates\)/);
     expect(read('CONTRIBUTING.md')).not.toMatch(/Current release candidate:/);
     expect(read('CONTRIBUTING.md')).not.toMatch(/Prior published:/);
-    expect(read('docs/README.md')).toMatch(/Prepared:.*4\.8\.14/s);
-    expect(read('docs/README.md')).toMatch(/Current published:.*4\.8\.11/s);
+    expect(read('docs/README.md')).toMatch(/Current published:.*4\.8\.17/s);
+    expect(read('docs/README.md')).toMatch(/Prior published:.*4\.8\.11/s);
     expect(read('docs/README.md')).toMatch(/Prior published:.*4\.8\.10/s);
     expect(read('docs/README.md')).toMatch(/Prior:.*4\.6\.2/s);
     expect(read('docs/package-surface.md')).toMatch(/current published:.*4\.8\.11/is);
@@ -306,7 +306,90 @@ describe('CHANGELOG + release note cover 4.8.14 main-catch-up patch', () => {
     expect(section).not.toMatch(/Status:\s*unreleased/i);
     expect(fs.existsSync(path.join(REPO, 'docs/releases/4.8.14.md'))).toBe(false);
     expect(read('ROADMAP.md')).toMatch(/\| 271 \| `RL813` \| `done`/);
-    expect(read('ROADMAP.md')).toMatch(/\| 273 \| `RL814` \| `doing`/);
+    expect(read('ROADMAP.md')).toMatch(/\| 273 \| `RL814` \| `done`/);
+  });
+});
+
+describe('CHANGELOG + release note cover 4.8.15 pre-adoption ship bar', () => {
+  it('records the prepared release without claiming publication', () => {
+    const changelog = changelogText();
+    const section = changelogSection(changelog, '4.8.15', '4.8.14');
+    expect(section).toMatch(/Status:\s*prepared/i);
+    expect(section).toMatch(/npm `latest` remains \*\*4\.8\.14\*\*/);
+    expect(section).toMatch(/tag=v4\.8\.15/);
+    expect(section).toMatch(/dry_run=false/);
+    expect(section).toMatch(/--local/);
+    expect(section).toMatch(/ARK_CHECK_LOCAL/);
+    expect(section).toMatch(/--strict-merge/);
+    expect(section).toMatch(/#251|#252/);
+    expect(section).toMatch(/#243/);
+    expect(section).toMatch(/#246/);
+    expect(section).toMatch(/#247/);
+    expect(section).toMatch(/⚠|type-only/);
+    expect(section).toMatch(/projected governed coverage/);
+    expect(section).toMatch(/No required config migration/i);
+    expect(section).toMatch(/Does not close\s*`K01`\s*\/\s*`Z09`/);
+    expect(section).toMatch(/does \*\*not\*\* turn `arkOrder` on/);
+    expect(section).not.toMatch(/Status:\s*published/i);
+    expect(section).not.toMatch(/No package version bump/);
+    expect(section).not.toMatch(/Status:\s*unreleased/i);
+    expect(fs.existsSync(path.join(REPO, 'docs/releases/4.8.15.md'))).toBe(false);
+    expect(read('ROADMAP.md')).toMatch(/\| 273 \| `RL814` \| `done`/);
+    expect(read('ROADMAP.md')).toMatch(/\| 286 \| `RL815` \| `done`/);
+  });
+});
+
+describe('CHANGELOG + release note cover 4.8.16 daily accumulate', () => {
+  it('records the prepared release without claiming publication', () => {
+    const changelog = changelogText();
+    const section = changelogSection(changelog, '4.8.16', '4.8.15');
+    expect(section).toMatch(/Status:\s*prepared/i);
+    expect(section).toMatch(/npm `latest` remains \*\*4\.8\.15\*\*/);
+    expect(section).toMatch(/tag=v4\.8\.16/);
+    expect(section).toMatch(/dry_run=false/);
+    expect(section).toMatch(/#255/);
+    expect(section).toMatch(/#256/);
+    expect(section).toMatch(/#257/);
+    expect(section).toMatch(/#259/);
+    expect(section).toMatch(/#260/);
+    expect(section).toMatch(/coverageRoots|coverage\.coverageRoots/);
+    expect(section).toMatch(/start --apply/);
+    expect(section).toMatch(/prototype|SQLite|JSON-file/i);
+    expect(section).toMatch(/cite|cited|uncited/i);
+    expect(section).toMatch(/tests path/i);
+    expect(section).toMatch(/No required config migration/i);
+    expect(section).toMatch(/Does not close\s*`K01`\s*\/\s*`Z09`/);
+    expect(section).toMatch(/does \*\*not\*\* turn `arkOrder` on/);
+    expect(section).not.toMatch(/Status:\s*published/i);
+    expect(section).not.toMatch(/No package version bump/);
+    expect(section).not.toMatch(/Status:\s*unreleased/i);
+    expect(fs.existsSync(path.join(REPO, 'docs/releases/4.8.16.md'))).toBe(false);
+    expect(read('ROADMAP.md')).toMatch(/\| 286 \| `RL815` \| `done`/);
+    expect(read('ROADMAP.md')).toMatch(/\| 290 \| `RL816` \| `done`/);
+  });
+});
+
+describe('CHANGELOG + release note cover 4.8.17 daily accumulate', () => {
+  it('records the published release', () => {
+    const changelog = changelogText();
+    const section = changelogSection(changelog, '4.8.17', '4.8.16');
+    expect(section).toMatch(/Status:\s*published/i);
+    expect(section).toMatch(/npm `latest` is \*\*4\.8\.17\*\*/);
+    expect(section).not.toMatch(/latest remains/);
+    expect(section).toMatch(/#264/);
+    expect(section).toMatch(/#265/);
+    expect(section).toMatch(/adrPath/);
+    expect(section).toMatch(/policy-delta-ack-match/);
+    expect(section).toMatch(/policyDeltaAcknowledgementMatches/);
+    expect(section).toMatch(/No required config migration/i);
+    expect(section).toMatch(/Does not close\s*`K01`\s*\/\s*`Z09`/);
+    expect(section).toMatch(/does \*\*not\*\* turn `arkOrder` on/);
+    expect(section).not.toMatch(/Status:\s*prepared/i);
+    expect(section).not.toMatch(/No package version bump/);
+    expect(section).not.toMatch(/Status:\s*unreleased/i);
+    expect(fs.existsSync(path.join(REPO, 'docs/releases/4.8.17.md'))).toBe(false);
+    expect(read('ROADMAP.md')).toMatch(/\| 290 \| `RL816` \| `done`/);
+    expect(read('ROADMAP.md')).toMatch(/\| 291 \| `RL817` \| `doing`/);
   });
 });
 

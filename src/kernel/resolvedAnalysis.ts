@@ -35,7 +35,13 @@ import {
   evaluateArkRuleSensors,
   type ArkRuleSensorViolation,
 } from '../domain/arkRuleSensors';
-import { evaluateInvariantCoverage } from '../domain/invariantCoverage';
+import {
+  catalogDemandsInvariantTestsPath,
+  catalogHasEnforcedInvariant,
+  collectMissingCoverageRootsFindings,
+  collectMissingInvariantTestsPathFindings,
+  evaluateInvariantCoverage,
+} from '../domain/invariantCoverage';
 import { classifyResolvedLayerCoverage } from '../domain/extraMergeTeeth';
 import { evaluateArkRunSensors } from '../domain/arkRunSensors';
 import { evaluateArkOrderSensors } from '../domain/arkOrderSensors';
@@ -415,6 +421,9 @@ export function analyzeCanonicalResolvedProject(
     facts: ResolvedCandidateFacts;
     coverageInputs?: AnalyzeResolvedProjectInput['coverageInputs'];
     fileHints?: AnalyzeResolvedProjectInput['fileHints'];
+    adopted?: boolean;
+    invariantTestsPathPresent?: boolean;
+    coverageRootsPresent?: boolean;
   }
 ): ResolvedAnalysisResult {
   const { facts } = input;
@@ -503,6 +512,45 @@ export function analyzeCanonicalResolvedProject(
       files: filePaths.map((path) => ({ path, layer: resolveLayer(path) })),
     }),
   ];
+  const hasInvariants = (arkRules.invariants?.length ?? 0) > 0;
+  const coverageRootsFindings = collectMissingCoverageRootsFindings({
+    hasEnforcedInvariant: catalogHasEnforcedInvariant(arkRules.invariants),
+    coverage: input.contract.config.coverage,
+    ...(input.coverageRootsPresent === false ? { declaredPathPresent: false } : {}),
+  });
+  // Roots finding is the tighter §10 residual: adding coverageRoots also
+  // satisfies IT01. Emit only one light when both would fire.
+  const testsPathFindings =
+    coverageRootsFindings.length > 0
+      ? []
+      : collectMissingInvariantTestsPathFindings({
+          adopted: input.adopted === true,
+          hasDomainInvariants: catalogDemandsInvariantTestsPath(arkRules.invariants),
+          coverage: input.contract.config.coverage,
+          ...(input.invariantTestsPathPresent === false ? { declaredPathPresent: false } : {}),
+        });
+  const testsPathViolations: ArchitectureEngineViolation[] = [
+    ...coverageRootsFindings.map((finding) => ({
+      ruleId: finding.ruleId,
+      file: finding.file,
+      line: finding.line,
+      message: finding.message,
+      nextAction:
+        'Add coverage.coverageRoots in ark.config.json pointing at the folder the test runner uses, then re-run. An enforced invariant fails closed until that path is present.',
+      failsStrict: true as const,
+      freezable: false as const,
+    })),
+    ...testsPathFindings.map((finding) => ({
+      ruleId: finding.ruleId,
+      file: finding.file,
+      line: finding.line,
+      message: finding.message,
+      nextAction:
+        'Add coverage.testGlobs or coverage.coverageRoots in ark.config.json pointing at a real tests folder, then re-run. Adopted mode fails closed until that path is present.',
+      failsStrict: true as const,
+      freezable: false as const,
+    })),
+  ];
   const arkRuleViolations: ArchitectureEngineViolation[] = arkRuleFindings
     .filter((finding) => finding.failsStrict)
     .map((finding) => toArkRuleEngineViolation(finding, arkRuleFindingNextAction(finding, false)));
@@ -514,7 +562,6 @@ export function analyzeCanonicalResolvedProject(
     }));
 
   // AR10: invariant coverage. Without Tooling-supplied contents, report partial (never covered).
-  const hasInvariants = (arkRules.invariants?.length ?? 0) > 0;
   const coverageEval = hasInvariants
     ? evaluateInvariantCoverage({
         arkRules,
@@ -668,6 +715,7 @@ export function analyzeCanonicalResolvedProject(
     contentViolations: [
       ...contentViolations(input, facts, layerByFile),
       ...arkRuleViolations,
+      ...testsPathViolations,
       ...invariantViolations,
       ...arkRunViolations,
       ...arkOrderViolations,
@@ -737,5 +785,8 @@ export function analyzeResolvedProject(input: AnalyzeResolvedProjectInput): Reso
     facts: loadResolvedCandidateFacts(input.facts),
     coverageInputs: input.coverageInputs,
     fileHints: input.fileHints,
+    adopted: input.adopted,
+    invariantTestsPathPresent: input.invariantTestsPathPresent,
+    coverageRootsPresent: input.coverageRootsPresent,
   });
 }

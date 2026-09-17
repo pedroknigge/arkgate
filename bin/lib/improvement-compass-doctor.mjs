@@ -45,7 +45,9 @@ export function buildDoctorImprovementCompass(input = {}) {
     if (
       id.startsWith('ARKRULE_') ||
       id === 'INVARIANT_UNCOVERED' ||
-      id === 'INVARIANT_CATALOG_EMPTY'
+      id === 'INVARIANT_CATALOG_EMPTY' ||
+      id === 'INVARIANT_TESTS_PATH_MISSING' ||
+      id === 'INVARIANT_COVERAGE_ROOTS_MISSING'
     )
       arkRulesStructureResidual += 1;
   }

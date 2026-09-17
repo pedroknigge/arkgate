@@ -8,6 +8,12 @@
  * Pure CLI helper (bin/lib/invariant-coverage.mjs). Zero Node I/O.
  */
 
+/** Adopted + catalogued invariants, but no declared tests path (P2 §10). */
+export const INVARIANT_TESTS_PATH_RULE_ID = 'INVARIANT_TESTS_PATH_MISSING';
+export const INVARIANT_TESTS_PATH_MESSAGE = 'This project is adopted and has domain invariants, but ark.config.json does not name a real tests path. Add coverage.testGlobs or coverage.coverageRoots pointing at the folder where those tests live, then re-run. Without that path, coverage is an empty checkbox.';
+/** Enforced invariant, but no declared runner roots (P2 §10 residual). */
+export const INVARIANT_COVERAGE_ROOTS_RULE_ID = 'INVARIANT_COVERAGE_ROOTS_MISSING';
+export const INVARIANT_COVERAGE_ROOTS_MESSAGE = 'A domain invariant is enforced, but ark.config.json does not name coverage.coverageRoots — the folders where this project\'s test runner actually goes. Add coverage.coverageRoots pointing at that folder, then re-run. Without it, coverage can certify a test no runner runs.';
 /**
  * Human-readable discard tail. Empty when the scan discarded nothing.
  * `omitBudget` drops the budget clause and the load totals for messages whose
@@ -149,6 +155,7 @@ export function evaluateInvariantCoverage(input) {
             description: inv.description,
             ...(testEvidenceFile !== undefined ? { testEvidenceFile } : {}),
             ...(outsideDeclaredRoots !== undefined ? { outsideDeclaredRoots } : {}),
+            coverageRootsDeclared: rootsDeclared,
         });
         // The covering test exists but sits outside the roots the project declared
         // its runner walks. ArkGate does not execute tests, so it cannot tell the
@@ -233,5 +240,119 @@ export function canPromoteInvariant(coverage) {
             reason: `Invariant ${coverage.invariantId} is covered only by ${coverage.testEvidenceFile ?? 'a test'}, outside the declared coverage roots; ArkGate cannot tell whether that test runs, so it will not promote on it.`,
         };
     }
+    // Explicit false only: hand-built evidence may omit the field. The evaluator
+    // always sets it. Promoting without roots would make OUTSIDE_ROOTS silent.
+    if (coverage.coverageRootsDeclared === false) {
+        return {
+            ok: false,
+            reason: `Declare coverage.coverageRoots in ark.config.json before promoting ${coverage.invariantId} to enforced. Without that, ArkGate cannot tell whether a covering test is one the runner executes.`,
+        };
+    }
     return { ok: true, reason: `Invariant ${coverage.invariantId} has coverage evidence.` };
+}
+function nonEmptyPathStrings(value) {
+    if (!Array.isArray(value))
+        return [];
+    const out = [];
+    for (const item of value) {
+        if (typeof item !== 'string')
+            continue;
+        const trimmed = item.trim();
+        if (trimmed.length > 0)
+            out.push(trimmed);
+    }
+    return out;
+}
+/**
+ * Declared tests homes: `coverage.testGlobs` and/or `coverage.coverageRoots`.
+ * Either is a configured path. Empty strings do not count.
+ */
+export function configuredInvariantTestsPaths(coverage) {
+    if (!coverage || typeof coverage !== 'object')
+        return [];
+    return [...nonEmptyPathStrings(coverage.testGlobs), ...nonEmptyPathStrings(coverage.coverageRoots)];
+}
+export function hasConfiguredInvariantTestsPath(coverage) {
+    return configuredInvariantTestsPaths(coverage).length > 0;
+}
+/**
+ * True when at least one catalogued invariant wants test evidence.
+ * Same default as AR10: `coverage.test !== false`. `test: false` is an explicit
+ * opt-out (starter Domain phrases use it) and does not demand a tests path.
+ */
+export function catalogDemandsInvariantTestsPath(invariants) {
+    if (!Array.isArray(invariants) || invariants.length === 0)
+        return false;
+    return invariants.some((inv) => inv != null && inv.coverage?.test !== false);
+}
+/**
+ * §10 — adopted + invariants that want tests require a real tests path.
+ * Fail-closed. Not freezable. Silent when not adopted, the catalog is empty,
+ * or every entry sets `coverage.test: false`.
+ */
+export function collectMissingInvariantTestsPathFindings(input) {
+    const demanded = input.hasDomainInvariants === true ||
+        (input.hasDomainInvariants !== false && catalogDemandsInvariantTestsPath(input.invariants));
+    if (input.adopted !== true || !demanded)
+        return [];
+    const configured = hasConfiguredInvariantTestsPath(input.coverage);
+    if (configured && input.declaredPathPresent !== false)
+        return [];
+    return [
+        {
+            ruleId: INVARIANT_TESTS_PATH_RULE_ID,
+            message: INVARIANT_TESTS_PATH_MESSAGE,
+            file: 'ark.config.json',
+            line: 1,
+            severity: 'error',
+            failsStrict: true,
+            freezable: false,
+        },
+    ];
+}
+/**
+ * Declared runner homes: `coverage.coverageRoots` only.
+ * Empty strings do not count. testGlobs is not a runner root.
+ */
+export function configuredCoverageRoots(coverage) {
+    if (!coverage || typeof coverage !== 'object')
+        return [];
+    return nonEmptyPathStrings(coverage.coverageRoots);
+}
+export function hasConfiguredCoverageRoots(coverage) {
+    return configuredCoverageRoots(coverage).length > 0;
+}
+/**
+ * True when at least one catalogued invariant is `mode: "enforced"`.
+ * Structure-sensor enforced is not this — only `invariants[]`.
+ */
+export function catalogHasEnforcedInvariant(invariants) {
+    if (!Array.isArray(invariants) || invariants.length === 0)
+        return false;
+    return invariants.some((inv) => inv != null && inv.mode === 'enforced');
+}
+/**
+ * P2 §10 residual — any enforced invariant requires `coverage.coverageRoots`.
+ * Fail-closed. Not freezable. Silent when no invariant is enforced.
+ * testGlobs alone does not satisfy this: without roots, OUTSIDE_ROOTS cannot fire.
+ */
+export function collectMissingCoverageRootsFindings(input) {
+    const enforced = input.hasEnforcedInvariant === true ||
+        (input.hasEnforcedInvariant !== false && catalogHasEnforcedInvariant(input.invariants));
+    if (!enforced)
+        return [];
+    const configured = hasConfiguredCoverageRoots(input.coverage);
+    if (configured && input.declaredPathPresent !== false)
+        return [];
+    return [
+        {
+            ruleId: INVARIANT_COVERAGE_ROOTS_RULE_ID,
+            message: INVARIANT_COVERAGE_ROOTS_MESSAGE,
+            file: 'ark.config.json',
+            line: 1,
+            severity: 'error',
+            failsStrict: true,
+            freezable: false,
+        },
+    ];
 }

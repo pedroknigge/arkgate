@@ -549,6 +549,77 @@ describe('LD05 layer description skill deepen (no /ark-describe)', () => {
     expect(body).toMatch(/No `?\/ark-owners`/);
   });
 
+  it('ark-adopt points required-gates trees at a short decision note without a new skill', () => {
+    const body = readSkill('ark-adopt');
+    expect(body).toContain('## Decision notes (process)');
+    expect(body).toContain('--require-gates');
+    expect(body).toContain('docs/adr/');
+    expect(body).toMatch(/Not every change|not on every file/i);
+    expect(body).toMatch(/No `?\/ark-adr`|Do \*\*not\*\* invent `\/ark-adr`/);
+  });
+
+  it('ark-adopt and ark-explore point at a states/transitions table without a new skill', () => {
+    const adopt = readSkill('ark-adopt');
+    expect(adopt).toContain('## States and transitions (process)');
+    expect(adopt).toContain('docs/domain.md');
+    expect(adopt).toMatch(/flag soup/i);
+    expect(adopt).toMatch(/No `?\/ark-states`|Do \*\*not\*\* invent `\/ark-states`/);
+    const explore = readSkill('ark-explore');
+    expect(explore).toContain('statesTransitions');
+    expect(explore).toContain('statusTransitionCatalog');
+    expect(explore).toMatch(/No `?\/ark-states`/);
+  });
+
+  it('ark-adopt, ark-coverage, and ark-explore point at invariantTestsPath without a new skill', () => {
+    const adopt = readSkill('ark-adopt');
+    expect(adopt).toContain('invariantTestsPath');
+    expect(adopt).toContain('INVARIANT_TESTS_PATH_MISSING');
+    const coverage = readSkill('ark-coverage');
+    expect(coverage).toContain('INVARIANT_TESTS_PATH_MISSING');
+    const explore = readSkill('ark-explore');
+    expect(explore).toContain('invariantTestsPath');
+  });
+
+  it('ark-adopt, ark-coverage, ark-explore, and ark-autopilot point at coverageRoots when enforced', () => {
+    const adopt = readSkill('ark-adopt');
+    expect(adopt).toContain('invariantCoverageRoots');
+    expect(adopt).toContain('INVARIANT_COVERAGE_ROOTS_MISSING');
+    const coverage = readSkill('ark-coverage');
+    expect(coverage).toContain('INVARIANT_COVERAGE_ROOTS_MISSING');
+    const explore = readSkill('ark-explore');
+    expect(explore).toContain('invariantCoverageRoots');
+    const autopilot = readSkill('ark-autopilot');
+    expect(autopilot).toContain('coverage.coverageRoots');
+    expect(autopilot).toMatch(/canPromoteInvariant/);
+  });
+
+  it('ark-explore, ark-place, and ark-adopt point at noDomainFrontend without a new skill', () => {
+    const explore = readSkill('ark-explore');
+    expect(explore).toContain('noDomainFrontend');
+    expect(explore).toMatch(/No `?\/ark-domain`/);
+    const place = readSkill('ark-place');
+    expect(place).toContain('noDomainFrontend');
+    expect(place).toMatch(/Domain rule/);
+    const adopt = readSkill('ark-adopt');
+    expect(adopt).toContain('noDomainFrontend');
+    expect(adopt).toMatch(/empty Domain house/);
+  });
+
+  it('ark-explore, ark-place, ark-adopt, and ark-autopilot point at prototypeShortcuts without a new skill', () => {
+    const explore = readSkill('ark-explore');
+    expect(explore).toContain('prototypeShortcuts');
+    expect(explore).toMatch(/No `?\/ark-prototype`/);
+    const place = readSkill('ark-place');
+    expect(place).toContain('prototypeShortcuts');
+    expect(place).toMatch(/Persistence\s+adapter/);
+    const adopt = readSkill('ark-adopt');
+    expect(adopt).toContain('prototypeShortcuts');
+    expect(adopt).toMatch(/Persistence \/ Domain/);
+    const autopilot = readSkill('ark-autopilot');
+    expect(autopilot).toContain('prototypeShortcuts');
+    expect(autopilot).toMatch(/file-store|admin literal/);
+  });
+
   it('ark-place prints owners next to layer name and globs when present', () => {
     const body = readSkill('ark-place');
     expect(body).toContain('## Layer owners (process)');

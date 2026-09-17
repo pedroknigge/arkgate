@@ -4,51 +4,52 @@
   "groups": [
     {
       "id": "config-loading",
+      "note": "4.8.4 pins (467–473 version parse, 493–551 walk/load/parse) drifted onto validateLayerOwners and JSDoc after LO01 owners + trustBoundary. Retargeted to the same migrateArkConfig / load / JSON.parse decisions. Skip 546 (equivalent typeof guard).",
       "targets": [
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 493,
-          "endLine": 494
+          "startLine": 542,
+          "endLine": 545
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 499,
-          "endLine": 500
+          "startLine": 547,
+          "endLine": 548
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 509,
-          "endLine": 511
+          "startLine": 568,
+          "endLine": 569
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 522,
-          "endLine": 522
+          "startLine": 574,
+          "endLine": 575
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 529,
-          "endLine": 529
+          "startLine": 584,
+          "endLine": 586
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 538,
-          "endLine": 540
+          "startLine": 597,
+          "endLine": 597
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 551,
-          "endLine": 551
+          "startLine": 604,
+          "endLine": 604
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 467,
-          "endLine": 470
+          "startLine": 613,
+          "endLine": 616
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 472,
-          "endLine": 473
+          "startLine": 627,
+          "endLine": 627
         }
       ]
     },
@@ -78,7 +79,7 @@
         {
           "file": "bin/lib/write-path-detect.mjs",
           "startLine": 11,
-          "endLine": 96
+          "endLine": 118
         }
       ]
     },
@@ -94,12 +95,12 @@
     },
     {
       "id": "empty-analysis-refusal",
-      "note": "A verdict over zero governed files is a false green, and the refusal is one condition plus one sentence. Unpinned, a mutant could flip the greenfield exemption or the moved-root branch and ark-check would silently pass an empty analysis again.",
+      "note": "A verdict over zero governed files is a false green, and the refusal is one condition plus one sentence. Unpinned, a mutant could flip the greenfield exemption or the moved-root branch and ark-check would silently pass an empty analysis again. 4.8.4 pinned 74-114 (the whole function); classifiedFileCount growth left the exemption at 115 unpinned — retargeted to the function body.",
       "targets": [
         {
           "file": "bin/lib/analysis-completeness.mjs",
-          "startLine": 74,
-          "endLine": 114
+          "startLine": 81,
+          "endLine": 141
         }
       ]
     },
@@ -159,12 +160,12 @@
     },
     {
       "id": "policy-delta-ack-match",
-      "note": "DF04: policyDeltaAcknowledgementMatches hash + finding-id set equality.",
+      "note": "DF04: policyDeltaAcknowledgementMatches hash + finding-id set equality. AP02 (#264) inserted adrPath JSDoc, ADR_PATH_NEXT_ACTION, and allow-added above the helper, so 934-963 landed on classifyArkPolicyDelta's compare/sort tail plus the function signature. Retargeted to the same helper body.",
       "targets": [
         {
           "file": "src/domain/policyDelta.ts",
-          "startLine": 934,
-          "endLine": 963
+          "startLine": 956,
+          "endLine": 985
         }
       ]
     },
@@ -174,24 +175,24 @@
       "targets": [
         {
           "file": "src/domain/invariantCoverage.ts",
-          "startLine": 347,
-          "endLine": 380
+          "startLine": 386,
+          "endLine": 427
         }
       ]
     },
     {
       "id": "invariant-coverage-message-honesty",
-      "note": "The coverage verdict is only as good as its sentence: formatCoverageDiscards and budgetDetail carry every discard reason and the knob that raises the cap. Unpinned, a mutant could silence a discard clause and no gate would notice.",
+      "note": "The coverage verdict is only as good as its sentence: formatCoverageDiscards and budgetDetail carry every discard reason and the knob that raises the cap. IT01/CR01 (#255/#257) inserted tests-path and coverageRoots collectors above the helper, so 127-146 landed on InvariantCoverageStats JSDoc and 213-217 on symbolPresent. Retargeted to the same formatCoverageDiscards / budgetDetail decisions.",
       "targets": [
         {
           "file": "src/domain/invariantCoverage.ts",
-          "startLine": 127,
-          "endLine": 146
+          "startLine": 165,
+          "endLine": 184
         },
         {
           "file": "src/domain/invariantCoverage.ts",
-          "startLine": 213,
-          "endLine": 217
+          "startLine": 251,
+          "endLine": 255
         }
       ]
     },

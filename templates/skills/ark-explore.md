@@ -22,6 +22,39 @@ one bounded decision needs 2–3 enforceable options.
 ## Checklist
 
 - Doctor #1: if ENFORCE + empty plan A and gates are already installed → **Shape** (`/ark-explore` then `/ark-autopilot`). Do not say install-agent-gates.
+- When `--require-gates` / adopted-strict is on and doctor JSON has `adrPresence`,
+  the next step is a short note under `docs/adr/` (or `docs/decisions/`). Soft.
+  Not every change. Off when require-gates is off. No `/ark-adr`. When
+  `policyDelta` needs `--policy-ack` (weaken, new layer, or new allow edge),
+  the ack must name that note as `adrPath` — a reason alone is not enough.
+- When doctor JSON has `statesTransitions` or `statusTransitionCatalog`, the
+  next step is a short states → transitions table (or one link) on the domain
+  doc already in play. Use catalog names when present. Soft. Silent when that
+  doc is absent or Domain has no status vocabulary. No `/ark-states`. Do not
+  invent states.
+- When doctor JSON has `noDomainFrontend`, Domain is empty and the UI holds the
+  rules. Next: one Domain file (`/ark-place`) then one small refactor
+  (`/ark-autopilot`). Soft. Silent when there is no frontend or Domain already
+  has files. No `/ark-domain`. Do not invent a Domain house.
+- When doctor JSON has `prototypeShortcuts`, SQLite / a JSON-file store is
+  standing in for Persistence, or admin / god-mode literals sit outside Domain
+  (or an auth tag). Next: one Persistence adapter or Domain policy file
+  (`/ark-place`) then one small refactor (`/ark-autopilot`). Soft. Silent when
+  those houses are absent, the shortcut is already in the right house, or there
+  are no such markers. No `/ark-prototype`. Do not invent a Persistence house.
+- When the tree is adopted and doctor JSON has `invariantTestsPath` (or the
+  check names `INVARIANT_TESTS_PATH_MISSING`), the next step is
+  `coverage.testGlobs` or `coverage.coverageRoots` on a real tests folder.
+  Fail-closed. Silent when not adopted, the catalog is empty, or every
+  invariant sets coverage.test false. Handoff
+  `/ark-adopt` to write the path. No new skill.
+- When any invariant is enforced and doctor JSON has `invariantCoverageRoots`
+  (or the check names `INVARIANT_COVERAGE_ROOTS_MISSING`), the next step is
+  `coverage.coverageRoots` on the folder the test runner uses. Fail-closed.
+  `testGlobs` alone is not enough. Silent when no invariant is enforced.
+  Handoff `/ark-adopt` to write the roots. No new skill.
+- A doctor green / Healthy line must name a file, config key, or test.
+  Uncited green is a lie — treat it as unfinished. No `/ark-cite`.
 - Distinguish **missing** skills vs **stale** catalog. Installed ≠ stale.
 - Hook green is not tree green (scripted edits bypass PreToolUse).
 - Bug / false green / false red / missing doc / improvable behavior **in ArkGate itself** → draft one upstream GitHub issue (`pedroknigge/arkgate` or the installed package `repository.url`), **ask the human to confirm send**, then `gh issue create`. Never auto-file. Never file ArkGate defects on the consumer product repo.

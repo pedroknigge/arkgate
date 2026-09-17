@@ -255,7 +255,7 @@ describe('collectRepoShapeSignals — JavaScript / serverless layouts', () => {
 
     const rec = runRecommendJson(root);
     expect(rec.archetype).toBe('crud-product');
-    expect(rec.firstCommand).toContain('init --archetype crud-product');
+    expect(rec.firstCommand).toContain('start --apply --archetype crud-product');
   });
 
   it('does not flag Nest from bare *.service.ts (Next/Node naming false positive)', () => {
