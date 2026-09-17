@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-17  
 **Auditor:** Cloud agent (pstack how / figure-it-out; explore before prescribe)  
-**Tree:** `main` tip `2aaf79b` — includes merged [#271](https://github.com/pedroknigge/arkgate/pull/271) (closes [#269](https://github.com/pedroknigge/arkgate/issues/269))  
+**Tree:** `main` tip `4a11295` — includes merged [#271](https://github.com/pedroknigge/arkgate/pull/271) (closes [#269](https://github.com/pedroknigge/arkgate/issues/269)) and merged [#272](https://github.com/pedroknigge/arkgate/pull/272) (closes [#270](https://github.com/pedroknigge/arkgate/issues/270))  
 **Package:** tree `arkgate@4.8.17` · npm `dist-tags.latest` **4.8.17** (live `npm view`)  
 **Scope:** Contener · Guiar · Ordenar across core Layers + ArkRules + ArkRun + ArkOrder, plus skills vs product capacity  
 **Method:** falsifiable questions first; claim → evidence → VERIFIED / NOT VERIFIED / INCONCLUSIVE  
@@ -21,7 +21,7 @@ Companion trail: [2026-09-17-pstack-deep-product-audit.tsv](2026-09-17-pstack-de
 - **Ordenar is two products wearing one star.** North-star copy says “order leftover mess.” The first-class door `/ark-order` is the billing-valve extra. Leftover folders stay `/ark-explore` then `/ark-autopilot`. Compact doctor and `start` preview **advertise ArkOrder while the extra is off.** That is tested product copy, and it violates a strict reading of “silent when absent.”
 - **ArkRules is not optional in the start path.** `start --apply` writes `arkRules` + four `arkrules/*.json` templates (advisory). Run and Order stay off. Stranger UX: “three optional add-ons” is a lie for Rules.
 - **Skills cover 100% of ADR 0036 capacity (four planes + Contener · Guiar · Ordenar).** `npm run check:agent-skills` passes (14 names, 9 first-class, 5 stubs). They do **not** cover 100% of the 16-row package surface. Dashboard, ESLint, `--watch`, and compact-day-zero-without-skills are doors the CLI has and the catalog does not. ArkRules has no dedicated `/ark-rules` (by design). That asymmetry is the bug the bar asked for.
-- **Biggest 1-minute stranger risks (open):** [#270](https://github.com/pedroknigge/arkgate/issues/270) packed README still says npm latest is 4.8.16 (false; fix in flight [#272](https://github.com/pedroknigge/arkgate/pull/272)); [#268](https://github.com/pedroknigge/arkgate/issues/268) “Start in one minute” leads with `npm install -D arkgate` (hard-fail on `workspace:*`) and install-fail recovery still dumps host pnpm maturity internals.
+- **Biggest 1-minute stranger risks (open):** [#268](https://github.com/pedroknigge/arkgate/issues/268) “Start in one minute” leads with `npm install -D arkgate` (hard-fail on `workspace:*`) and install-fail recovery still dumps host pnpm maturity internals. [#270](https://github.com/pedroknigge/arkgate/issues/270) packed-README dual-truth is **closed** via merged [#272](https://github.com/pedroknigge/arkgate/pull/272).
 - **#269 / #271 closed the monorepo Domain vacuum.** Live preset on a `api/` + `client/` + `packages/schema` fixture: DomainModel has **no** `api/**` / `client/**`. Residual: tree-wide `**/domain/**` remains; doctor repair copy is hardcoded to “not `api/**`.”
 - **Maintainer identity is stale in more than README.** `ROADMAP.md` still has **two** `doing` rows (`RL817` and `UC01`) while npm already published 4.8.17 and UC01’s code landed in [#233](https://github.com/pedroknigge/arkgate/pull/233). Claims-matrix identity is still 4.8.13 / 4.8.11. Dual-truth is a process smell, not only a packed-README bug.
 - **Parked sacred residuals are honest:** `Z09` / `RB-11` and `K01` (durability) stay parked. Soft hosts stay advisory. Do not board those as engineering `doing`.
@@ -147,7 +147,7 @@ Residual classification risk: `**/domain/**` is still tree-wide. An app that nam
 |----|-------|---------------------------|
 | [#269](https://github.com/pedroknigge/arkgate/issues/269) | **Closed** | Merged as [#271](https://github.com/pedroknigge/arkgate/pull/271) at `2aaf79b`. Preset leak VERIFIED fixed. Doctor #1 for huge Domain dual-match VERIFIED present. Residual: heuristic + copy over-fire (this mother tree). |
 | [#271](https://github.com/pedroknigge/arkgate/pull/271) | **Merged** | Same commit. Commit message says “(#269)”; GitHub PR number is 271. |
-| [#270](https://github.com/pedroknigge/arkgate/issues/270) | **Open** | VERIFIED on this tree: README banner and CHANGELOG `## 4.8.17` still say npm latest is 4.8.16. Live `npm view arkgate version` → `4.8.17`. Fix PR [#272](https://github.com/pedroknigge/arkgate/pull/272) open (not this audit). |
+| [#270](https://github.com/pedroknigge/arkgate/issues/270) | **Closed** | Closed via merged [#272](https://github.com/pedroknigge/arkgate/pull/272) at `4a11295`. Packed front-door “latest remains older” pin refused on the publish path. Already-published `arkgate@4.8.17` tarball is a separate residual until the next pack. |
 | [#268](https://github.com/pedroknigge/arkgate/issues/268) | **Open** (UX/docs; exit-code claim withdrawn) | Exit-non-zero on install fail VERIFIED in code + tests. Remaining: `npm install -D arkgate` on `workspace:*`; maturity-dump recovery; doctor #1 after failed install still “make CI required.” |
 | [#233](https://github.com/pedroknigge/arkgate/pull/233) / draft [#234](https://github.com/pedroknigge/arkgate/pull/234) | Merged / stale draft | UC01 **code** is on `main`. ROADMAP row still `doing`. Draft #234 only flips the row. |
 
@@ -315,7 +315,7 @@ Falsifiable fail: *a stranger cannot trust the first screen or #1 in about a min
 
 | Pin | First screen says | Reality (this run) | Verdict |
 |-----|-------------------|--------------------|---------|
-| npm latest | README / CHANGELOG / `docs/README.md`: 4.8.17 prepared, latest **4.8.16** | `npm view` → **4.8.17** | **FAIL** (#270). #272 in flight. |
+| npm latest | Audit-time README / CHANGELOG said latest **4.8.16** | `npm view` → **4.8.17**. [#270](https://github.com/pedroknigge/arkgate/issues/270) **closed** via merged [#272](https://github.com/pedroknigge/arkgate/pull/272) | **CLOSED** (#272 on `main`) |
 | Start in one minute | `npm install -D arkgate typescript` | `workspace:*` monorepos → `EUNSUPPORTEDPROTOCOL` | **FAIL** (#268.1) |
 | Install-fail recovery | Generic “Package install failed (exit N)” + replay command + `npx --package=arkgate arkgate-check --doctor` | Honest exit code (not 0). No one-liner for `minimumReleaseAge` | **PARTIAL** (#268.2) |
 | Doctor after failed install | Same #1 as not-adopted: make CI required | Package may be unresolved | **LIKELY FAIL** (#268.3); not re-dogfooded here |
@@ -336,7 +336,7 @@ Recovery copy that *is* honest: `arkPackageRecoveryCommand` never emits bare `np
 
 | Command | Result |
 |---------|--------|
-| `git fetch origin main` / `git log origin/main` | Tip `2aaf79b` = local `main`. #271 content is this commit (message `#269`). |
+| `git fetch origin main` / `git log origin/main` | Tip `4a11295` includes #271 (`2aaf79b`) and #272 (`4a11295`, closes #270). |
 | `npm view arkgate version` / `dist-tags` | `4.8.17` / `{ latest: "4.8.17" }` |
 | `node bin/ark.mjs --version` / `--help` | `4.8.17`; start / doctor / dashboard / report |
 | `node bin/ark-check.mjs --help` / `--help --all` | Doctor one-light; `--strict-merge`; `--sensors`; unclassified stays red under require-gates |
@@ -348,7 +348,7 @@ Recovery copy that *is* honest: `arkPackageRecoveryCommand` never emits bare `np
 | Live small Next dual `{count:8}` | `false` (CI-required stays #1). |
 | Live `start --apply --skip-package-manager` 4-file fixture | Exit 0. 11 mutations. `arkRules` yes; `arkRun`/`arkOrder` no. Doctor #1 = make CI required. ArkRules + ArkOrder breaths. `--sensors` lists all three planes. |
 | `npm test` / `npm ci` | **Not run.** This VM has **no `node_modules`**. Full suite INCONCLUSIVE here. Targeted Node imports of `bin/lib` do not need vitest. |
-| GitHub issues/PRs | Open: #268, #270. Merged: #271/#269, #233. Open PRs: #272 (docs/latest), #245 Dependabot, #244 field stats, #234 draft UC01 row. |
+| GitHub issues/PRs | Open: #268. Closed: #270 via merged #272. Merged: #271/#269, #272/#270, #233. Open PRs: #245 Dependabot, #244 field stats, #234 draft UC01 row. |
 
 ### 8.2 VERIFIED table (hypothesis loop)
 
@@ -364,7 +364,7 @@ Recovery copy that *is* honest: `arkPackageRecoveryCommand` never emits bare `np
 | Q8 | Extra off ⇒ start does not write extra keys | Live apply: no Run/Order; **yes Rules** | **VERIFIED** for Run/Order. **FAIL** for Rules. |
 | Q9 | Skills when/not-when/handoff for all three extras | Capacity test + skill bodies | **VERIFIED** (Rules folded, not dedicated) |
 | Q10 | ArkOrder killer-path without ADRs | Skill + arkorder.md breath | **PARTIAL** |
-| H1 | npm latest is 4.8.16 | `npm view` 4.8.17 vs README banner | **FALSE** (#270) |
+| H1 | npm latest is 4.8.16 | Audit-time banner vs `npm view` 4.8.17; #270 closed via #272 on `main` | **FALSE at audit; CLOSED via #272** |
 | H2 | #271 fixed Domain vacuum | Live preset patterns | **TRUE** |
 | H3 | #271 doctor #1 is safe on this mother tree | 24 intentional dual-lists | **FALSE** (over-fire) |
 | H4 | Sacred silence when extras absent | product-copy + start + sensors | **FALSE** as stated; **TRUE** for gate findings |
@@ -382,7 +382,7 @@ Board these as Holding candidates. No target-repo identities. No code in this PR
 
 | ID | Title (one line) |
 |----|------------------|
-| H-P0-1 | Packed front doors must not claim npm latest is older than the tarball they ship (#270; #272 already open) |
+| H-P0-1 | ~~Packed front doors must not claim npm latest is older than the tarball~~ **Landed** on `main` via [#272](https://github.com/pedroknigge/arkgate/pull/272) (closes #270). Keep only as a no-regress ratchet. |
 | H-P0-2 | Start-in-one-minute must not lead with `npm install -D arkgate` on `workspace:*` monorepos (#268.1) |
 | H-P0-3 | Dual-match doctor #1 must not fire on intentional file+glob dual-lists, and must not hardcode `api/**` |
 | H-P0-4 | ROADMAP one-`doing` + release identity: close stale `RL817` / `UC01` rows (queue hygiene, not a product diff) |
@@ -424,7 +424,7 @@ Do **not** board `Z09` / `K01` / host hardness for OpenCode as Holding product w
 - **Hook vs CI on a real host PreToolUse:** not exercised in this VM (no Cursor hook session). Relies on code + existing tests.
 - **Field 265 dual-match pile-up:** #271 tests a fixture, not the original anonymized monorepo. Residual risk: `**/domain/**` + application `domain/` folders.
 - **Why mother doctor exits 2** vs fixture doctor exit 0, both “analysis unavailable”: not isolated. Treat doctor exit codes as **not a stranger contract** until someone writes the table.
-- **#272:** may land the #270 pin before this report is read. The *class* of bug (prepare-banner surviving publish) remains a Holding item even if 4.8.17 copy is patched.
+- **#270 / #272:** **closed / merged** on `main` (`4a11295`). The class of bug (prepare-banner surviving publish) is now a no-regress ratchet, not an open issue.
 - **Sales-stats #244 / Dependabot #245:** open; not product-capacity. Hygiene only.
 - **Claims matrix “98 truth score”:** stale identity; not re-scored. Do not quote it as current.
 - **Parked:** `Z09` retained-adoption, `K01` durability, scanner bypass residuals in ROADMAP audit baseline. Out of this 1-minute stranger bar.
@@ -436,14 +436,14 @@ Do **not** board `Z09` / `K01` / host hardness for OpenCode as Holding product w
 What would make Contener / Guiar / Ordenar fail for a stranger in ~1 minute?
 
 1. The first install command dies on a normal monorepo.
-2. The version banner on the package they just installed is wrong.
+2. The version banner on the package they just installed is wrong. **Closed on `main` via #272** (already-published 4.8.17 tarball is a residual until next pack).
 3. Doctor #1 is the wrong problem (or a generic `api/**` sermon).
 4. Governed % looks green while the layer map is a lie.
 5. An extra they never asked for is on (Rules) or advertised (Order).
 6. A skill they invoke does not exist for the CLI they just saw (`dashboard`).
 7. Write lands locally and CI fails, or the reverse, with no sentence that says why.
 
-Items 1–3 are live. Item 4 is fixed for the #269 shape and still live for intentional dual-lists and `**/domain/**`. Item 5 is live by design. Item 6 is live for dashboard. Item 7 is documented ratchet.
+Item 1 is live (#268). Item 2 is **closed via #272**. Item 3 is live. Item 4 is fixed for the #269 shape and still live for intentional dual-lists and `**/domain/**`. Item 5 is live by design. Item 6 is live for dashboard. Item 7 is documented ratchet.
 
 ## Appendix B — Files most cited
 

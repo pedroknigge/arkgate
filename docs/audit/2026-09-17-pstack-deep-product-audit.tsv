@@ -9,7 +9,7 @@ Q7	Extra off => zero extra residual on doctor/status/report	Sensors early-return
 Q8	Extra off => start does not write extra keys	Live start --apply fixture: no arkRun/arkOrder; HAS arkRules + 4 templates	FAIL_FOR_RULES	Run/Order pass
 Q9	Skills when/not-when/handoff for all three extras	npm run check:agent-skills exit 0; ARK_SKILL_CAPACITY	VERIFIED	Rules folded; no /ark-rules
 Q10	ArkOrder adoptable without ADR 0029/0034	templates/agent-skills/ark-order/SKILL.md + docs/arkorder.md breath	PARTIAL	Full valve physics still ADR-linked
-H1	Packed README npm latest is 4.8.16	npm view 4.8.17 vs README.md:42 and CHANGELOG.md:117	FALSE	Issue #270; PR #272 open
+H1	Packed README npm latest is 4.8.16	Audit-time banner vs npm view 4.8.17; #270 closed via merged #272 at 4a11295	CLOSED	Issue #270 CLOSED; PR #272 MERGED
 H2	#271 removed whole-app Domain globs	Live preset patterns; no api/** client/**	TRUE	Closes #269 shape
 H3	#271 doctor #1 safe on mother tree	24 intentional Domain+Tooling dual-lists; overlappingGlobNextAction hardcodes api/**	FALSE	Over-fire
 H4	Add-ons silent when absent	product-copy.mjs ArkOrder speaks when off; start writes ArkRules; --sensors lists all planes	FALSE_VS_SACRED	TRUE for gate findings
