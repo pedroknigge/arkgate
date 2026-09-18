@@ -44,6 +44,10 @@ advisory-local / hard-CI split is a deliberate trade-off: local surfaces optimiz
 while a required merge status is the one boundary a repository can make every write path share.
 Prefer fail-closed honesty over fake hard guarantees on advisory hosts.
 
+**Write-gate order:** install and trust the host pre-hook first (hard when the host
+can do it). MCP `ark_prepare_write` is fallback when that path is missing or
+fail-open. OpenCode is MCP-only. Required CI is always the merge line.
+
 Everything below uses the same `ark.config.json` as `arkgate-check` / `ark-check` (CI) — one
 rules file shared by every surface. From **4.0**, optional **ArkRules** (`arkRules` map +
 `arkrules/*.json`) ride the **same** write path, doctor, and CI adapter; absence of ArkRules
@@ -350,9 +354,9 @@ alwaysApply: true
 ---
 
 Before trusting Ark MCP evidence, call `ark_identity` with `project.expectedRoot`
-set to the exact project root. Then call `ark_manifest`. Before writing TypeScript,
-prefer MCP `ark_prepare_write` / `validate_code` when available; the project
-`.cursor/hooks.json` hard gate still blocks invalid Write/StrReplace.
+set to the exact project root. Then call `ark_manifest`. The write gate is the project `.cursor/hooks.json` pre-hook when installed,
+trusted, and `failClosed`. Call MCP `ark_prepare_write` / `validate_code` only
+as fallback if that hook is missing or fail-open.
 ```
 
 Your repository backstop remains CI: `ark-check` fails its check on anything that slips

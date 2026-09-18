@@ -128,6 +128,8 @@ describe('canonical public host support matrix', () => {
     expect(rendered).not.toMatch(/PreToolUse for listed ops \(PreToolUse/);
     expect(rendered).toMatch(/OpenAI Codex.*\*\*Hard\*\*/);
     expect(rendered).toMatch(/OpenCode.*Advisory \/ best-effort/);
+    expect(rendered).toMatch(/Write-gate order:.*pre-hook first/i);
+    expect(rendered).toMatch(/MCP prepare is fallback/i);
   });
 
   it('doctorWritePathHonestyMessage covers host × hardWrite combinations', () => {

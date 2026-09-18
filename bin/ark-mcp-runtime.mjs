@@ -2037,8 +2037,8 @@ export async function runArkMcp({ hookInput } = {}) {
         'When the matched layer has layers[].description, the JSON includes description; the field is omitted when absent. ' +
         'When the matched layer has layers[].trustBoundary (public|auth|admin|internal), the JSON includes trustBoundary; omitted when absent. ' +
         'When the matched layer has layers[].owners, the JSON includes owners; omitted when absent. ' +
-        'Call BEFORE writing a new file. ' +
-        'Prefer ark_prepare_write when you already have the source snippet (place+validate+autoPatch in one call).',
+        'Call BEFORE writing a new file to learn the layer. ' +
+        'Prefer ark_prepare_write only as fallback when the host has no hard pre-hook (or that hook is missing / fail-open) and you already have the source snippet.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -2061,7 +2061,7 @@ export async function runArkMcp({ hookInput } = {}) {
         'constrain (layer, mayImport, mustNotImport, forbiddenGlobals) + validate source + optional ' +
         'mechanical-safe autoPatch + judgmentBrief when judgment is needed + contentHash for host commit. ' +
         'Also returns the versioned new/worsened designDelta for the proposed full file. ' +
-        'Composes ark_place + write-gate — call BEFORE Write/Edit when you have the snippet. ' +
+        'Composes ark_place + write-gate. Fallback when the host has no trusted hard pre-hook (or that hook is fail-open). When a hard hook is installed, the host already gates the write; this tool stays available but is not the primary gate. ' +
         'When the matched layer has layers[].description, the JSON includes description; the field is omitted when absent. ' +
         'When the matched layer has layers[].trustBoundary (public|auth|admin|internal), the JSON includes trustBoundary; omitted when absent. ' +
         'When the matched layer has layers[].owners, the JSON includes owners; omitted when absent. ' +

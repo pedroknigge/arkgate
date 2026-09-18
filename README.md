@@ -204,7 +204,7 @@ Codex hard write covers only a complete local `apply_patch`; Cursor covers only 
 installed + trusted, while shell/direct
 filesystem writes, hosted or specialized opt-out paths, and human edits still rely on CI.
 
-This table describes the supported profile **after its files are installed and the host loads/trusts them**. A hard local boundary covers only the listed hook operations; alternate tools, direct filesystem writes, and human edits still rely on CI. MCP validation is advisory because the agent must call it. The CI check blocks a merge only when the repository makes that status required. Repair **envelopes** may be emitted without reinjection being guaranteed; silent auto-apply never happens. Run `arkgate-check --doctor` (or `ark-check --doctor`) for the evidence actually detected in the current repository.
+This table describes the supported profile **after its files are installed and the host loads/trusts them**. A hard local boundary covers only the listed hook operations; alternate tools, direct filesystem writes, and human edits still rely on CI. **Write-gate order:** install and trust the host pre-hook first. MCP prepare is fallback when that path is missing or fail-open. MCP validation is advisory because the agent must call it. The CI check blocks a merge only when the repository makes that status required. Repair **envelopes** may be emitted without reinjection being guaranteed; silent auto-apply never happens. Run `arkgate-check --doctor` (or `ark-check --doctor`) for the evidence actually detected in the current repository.
 <!-- arkgate-host-support:end -->
 
 #### Why required CI is the hard line

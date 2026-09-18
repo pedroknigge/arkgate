@@ -25,6 +25,7 @@ import {
 import {
   codexHooks,
   codexProjectConfig,
+  cursorHooks,
 } from '../../../bin/lib/hook-templates.mjs';
 
 const roots: string[] = [];
@@ -383,7 +384,13 @@ jobs:
       },
       '.cursor/mcp.json'
     );
+    expect(missingGates(cursor)).toContain('compact host registration (cursor)');
+    writeFile(cursor, '.cursor/hooks.json', cursorHooks(cursor));
     expect(missingGates(cursor)).not.toContain('compact host registration (cursor)');
+    const failOpen = JSON.parse(fs.readFileSync(path.join(cursor, '.cursor/hooks.json'), 'utf8'));
+    delete failOpen.hooks.preToolUse[0].failClosed;
+    writeJson(cursor, '.cursor/hooks.json', failOpen);
+    expect(missingGates(cursor)).toContain('compact host registration (cursor)');
 
     const unknown = temporaryRoot('ark-compact-unknown-');
     writeFile(unknown, 'AGENTS.md', '<!-- arkgate:compact-router host=unknown -->\n');

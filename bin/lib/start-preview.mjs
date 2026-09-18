@@ -40,8 +40,8 @@ const COMPACT_HOST_TEMPLATES = {
     ['.mcp.json', mcpJson(root)],
   ],
   cursor: (root) => [
-    ['.cursor/mcp.json', mcpJson(root)],
     ['.cursor/hooks.json', cursorHooks(root)],
+    ['.cursor/mcp.json', mcpJson(root)],
   ],
   codex: (root) => [
     ['.codex/hooks.json', codexHooks(root)],
@@ -81,6 +81,17 @@ function normalizedContent(content, shadowRoot, root) {
 
 function digest(content) {
   return `sha256:${crypto.createHash('sha256').update(content ?? Buffer.alloc(0)).digest('hex')}`;
+}
+
+function writeGateOrderGuarantee(tools) {
+  const host = typeof tools === 'string' ? tools.trim().toLowerCase() : '';
+  if (host === 'opencode') {
+    return 'Write gate: MCP prepare only (this host has no hard pre-hook). Required CI is the merge line.';
+  }
+  if (['claude', 'grok', 'antigravity', 'cursor', 'codex'].includes(host)) {
+    return 'Write gate: host pre-hook first; MCP prepare is fallback if that hook is missing or fail-open.';
+  }
+  return 'Write gate: host pre-hook first when the host has one; MCP prepare is fallback. Required CI is the merge line.';
 }
 
 function change(pathname, before, after) {
@@ -503,6 +514,7 @@ export async function planStart(args, helpers) {
       commands: commands(root, args, helpers),
       hostGuarantees: [
         args.requireWriteHook ? `Hard-write hook verified for ${args.requireWriteHook}` : 'shared CI merge gate will be installed',
+        writeGateOrderGuarantee(args.tools),
         'preview phase performs no writes in the target project',
         'apply writes the exact bytes identified by each afterHash',
         ...(codexSelected

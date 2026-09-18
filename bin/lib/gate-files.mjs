@@ -152,9 +152,30 @@ export function isCompactRouterAgentsContent(text) {
   return typeof text === 'string' && COMPACT_ROUTER.test(text);
 }
 
+function hasCursorFailClosedHook(root) {
+  try {
+    const parsed = readJson(path.join(root, '.cursor', 'hooks.json'));
+    const entries = Array.isArray(parsed?.hooks?.preToolUse) ? parsed.hooks.preToolUse : [];
+    return entries.some(
+      (entry) =>
+        entry &&
+        typeof entry === 'object' &&
+        entry.failClosed === true &&
+        typeof entry.command === 'string' &&
+        /(?:^|\s)--hook(?:\s|$)/.test(entry.command)
+    );
+  } catch {
+    return false;
+  }
+}
+
+function hasCursorCompactRegistration(root) {
+  return hasArkMcpRegistration(root, '.cursor/mcp.json') && hasCursorFailClosedHook(root);
+}
+
 function hasCompactHostRegistration(root, host) {
   if (host === 'none') return hasArkMcpRegistration(root);
-  if (host === 'cursor') return hasArkMcpRegistration(root, '.cursor/mcp.json');
+  if (host === 'cursor') return hasCursorCompactRegistration(root);
   if (host === 'codex') return hasCodexCompactRegistration(root);
   const files = COMPACT_HOST_FILES[host];
   return Boolean(files) && files.every((relativePath) => fs.existsSync(path.join(root, relativePath)));
