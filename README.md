@@ -76,9 +76,12 @@ npx --package=arkgate arkgate-check --doctor --all  # full details
 `arkgate-check` is a command in the `arkgate` package, not its own npm package. After a local install, `npx arkgate-check --doctor` also works.
 
 `start --apply` refuses when projected governed coverage is below 50% or
-shape confidence is weak (below 0.6 with coverage under 80%). That lock is
-deliberate. Lock the shape with `--archetype <id>`, `--preset <name>`, or
-`--force`, or inspect ranked shapes with `npx arkgate-check --recommend`.
+shape confidence is weak (below 0.6 with coverage under 80%), or when the
+planned write is too big for compact start (more than 8 gate files or 32 KB).
+That lock is deliberate. Coverage/shape: lock with `--archetype <id>`,
+`--preset <name>`, or `--force`. Size: `--force` does not unlock. Next:
+`npx arkgate-check --init`. Or inspect ranked shapes with
+`npx arkgate-check --recommend`.
 
 That is the product. Stuck? Run status (`--doctor`) and do action **#1**.
 

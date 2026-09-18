@@ -63,7 +63,9 @@ describe('renderStartPreview direct output coverage', () => {
     expect(output).not.toContain('Host guarantees:');
     expect(output).toContain('Unresolved decisions:');
     expect(output).toContain('Classify three remaining files.');
-    expect(output).toContain('Apply this plan with: arkgate start --apply');
+    expect(output).not.toContain('Apply this plan with: arkgate start --apply');
+    expect(output).toContain('too big for compact start');
+    expect(output).toContain('arkgate-check --init');
     expect(output).toContain(START_APPLY_REFUSE_FOOTER);
     expect(output).toContain('--archetype');
     expect(output).toContain('--preset');

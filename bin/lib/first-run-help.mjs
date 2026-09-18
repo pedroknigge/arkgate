@@ -12,6 +12,7 @@ ${NORTH_STAR_ONE_LINE}
   arkgate start              preview (no writes)
   arkgate start --apply      write host + CI setup
                              (refuses weak coverage/shape; lock with --archetype/--preset/--force)
+                             (refuses a plan too big for compact start; next: arkgate-check --init)
   arkgate-check --doctor     status — one next step
                              (if missing: npx --package=arkgate arkgate-check --doctor)
 
@@ -70,6 +71,7 @@ Options:
   --yes        Non-interactive defaults: create config if needed, install gate templates, run strict check.
                (Also the implicit default when stdin/stdout are not a TTY — agents never hang on prompts.)
   --force      Allow generated files to overwrite existing files.
+               Unlocks weak coverage/shape on start --apply. Does not unlock a plan too big for compact start.
   --no-strict  Skip the final strict ark-check run.
   --install    Pin and install arkgate as a project devDependency (default for start).
   --no-install Skip adding/installing arkgate as a project devDependency (start/upgrade).

@@ -122,6 +122,73 @@ export function setupBudget(changes) {
   };
 }
 
+/** One next write when compact start is the wrong size. `--force` does not unlock. */
+export const START_SETUP_BUDGET_NEXT = 'arkgate-check --init';
+
+function formatSetupKb(bytes) {
+  return `${Math.max(1, Math.round(Number(bytes) / 1024))} KB`;
+}
+
+/**
+ * Compact-start size lock. `--force` unlocks coverage/shape only — never this.
+ * @param {object|null|undefined} setupBudget
+ * @param {{ force?: boolean }} [options]
+ */
+export function evaluateStartSetupBudgetGate(setupBudget, { force = false } = {}) {
+  if (!setupBudget || setupBudget.ok) {
+    return { ok: true, forceIgnored: Boolean(force) };
+  }
+  const reasons = [];
+  const maxFiles = setupBudget.maxFiles ?? 8;
+  const maxBytes = setupBudget.maxBytes ?? 32 * 1024;
+  const gateFiles =
+    typeof setupBudget.gateFiles === 'number' ? setupBudget.gateFiles : setupBudget.files;
+  if (typeof gateFiles === 'number' && gateFiles > maxFiles) {
+    reasons.push(`${gateFiles} gate files (max ${maxFiles})`);
+  }
+  if (typeof setupBudget.bytes === 'number' && setupBudget.bytes >= maxBytes) {
+    reasons.push(`${formatSetupKb(setupBudget.bytes)} (max ${formatSetupKb(maxBytes)})`);
+  }
+  if (reasons.length === 0) {
+    reasons.push('the planned write is larger than compact start allows');
+  }
+  return {
+    ok: false,
+    reasons,
+    nextAction: START_SETUP_BUDGET_NEXT,
+    forceBypasses: false,
+    setupBudget,
+  };
+}
+
+/**
+ * Human refuse / preview warning. Avoids the first-run phrase "Compact setup budget".
+ * @param {object|null|undefined} setupBudget
+ * @param {{ applying?: boolean }} [options]
+ */
+export function formatStartSetupBudgetRefuse(setupBudget, { applying = true } = {}) {
+  const gate = evaluateStartSetupBudgetGate(setupBudget);
+  if (gate.ok) return '';
+  const facts = gate.reasons.map((reason) => `  • ${reason}`).join('\n');
+  const next = `--force does not unlock this. Next: ${gate.nextAction}`;
+  if (applying) {
+    return `Refusing ark start --apply: this plan is too big for compact start.\n${facts}\n${next}`;
+  }
+  return `This plan is too big for compact start.\n${facts}\nApply will refuse. ${next}`;
+}
+
+/** Apply-path emit: JSON envelope or human refuse. Call before any “writing…” copy. */
+export function emitStartSetupBudgetRefuse(preview, json) {
+  const gate = evaluateStartSetupBudgetGate(preview.setupBudget);
+  if (json) {
+    console.log(
+      JSON.stringify({ ok: false, error: 'start-setup-budget-gate', ...gate, preview }, null, 2)
+    );
+    return;
+  }
+  console.error(formatStartSetupBudgetRefuse(preview.setupBudget, { applying: true }));
+}
+
 function commands(root, args, helpers) {
   if (args.removeHost) {
     return [`ark start --root ${root} --tools ${args.removeHost} --apply`];
@@ -160,6 +227,7 @@ export function formatStartPackageInstallFailure({ exitStatus, installCommand })
  */
 export function renderStartPreview(preview, options = {}) {
   const applying = options.applying === true;
+  const budgetOk = preview.setupBudget?.ok !== false;
   if (applying) {
     console.log(
       preview.changes.length === 0
@@ -170,7 +238,11 @@ export function renderStartPreview(preview, options = {}) {
     console.log('Ark start preview — no files were changed.');
   }
   if (!applying) {
-    console.log('Apply this plan with: arkgate start --apply');
+    if (budgetOk) {
+      console.log('Apply this plan with: arkgate start --apply');
+    } else {
+      console.log(formatStartSetupBudgetRefuse(preview.setupBudget, { applying: false }));
+    }
   }
   if (preview.analysis) {
     console.log(`Your project looks like: ${preview.analysis.label}.`);
@@ -208,8 +280,8 @@ export function renderStartPreview(preview, options = {}) {
 }
 
 export function applyStartPreview(root, preview) {
-  if (!preview.setupBudget?.ok) {
-    throw new Error('Refusing to apply a start plan that exceeds the compact setup budget.');
+  if (!evaluateStartSetupBudgetGate(preview.setupBudget).ok) {
+    throw new Error(formatStartSetupBudgetRefuse(preview.setupBudget, { applying: true }));
   }
   for (const change of preview.changes) {
     const target = path.join(root, change.path);

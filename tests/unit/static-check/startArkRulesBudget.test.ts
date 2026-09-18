@@ -8,7 +8,12 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
-import { setupBudget } from '../../../bin/lib/start-preview.mjs';
+import {
+  applyStartPreview,
+  evaluateStartSetupBudgetGate,
+  formatStartSetupBudgetRefuse,
+  setupBudget,
+} from '../../../bin/lib/start-preview.mjs';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const ARK = path.join(REPO, 'bin', 'ark.mjs');
@@ -93,6 +98,52 @@ describe('setupBudget pure contract', () => {
     expect(budget.files).toBe(1);
     expect(budget.gateFiles).toBe(1);
     expect(budget.ok).toBe(true);
+  });
+});
+
+describe('#274 compact start size refuse', () => {
+  it('names gate-file and byte overruns; --force does not bypass', () => {
+    const over = {
+      files: 11,
+      gateFiles: 11,
+      arkrulesFiles: 0,
+      bytes: 45_000,
+      maxFiles: 8,
+      maxBytes: 32 * 1024,
+      ok: false as const,
+    };
+    const gate = evaluateStartSetupBudgetGate(over, { force: true });
+    expect(gate.ok).toBe(false);
+    expect(gate.forceBypasses).toBe(false);
+    expect(gate.nextAction).toBe('arkgate-check --init');
+    expect(gate.reasons.join('\n')).toMatch(/11 gate files \(max 8\)/);
+    expect(gate.reasons.join('\n')).toMatch(/KB \(max 32 KB\)/);
+    const human = formatStartSetupBudgetRefuse(over, { applying: true });
+    expect(human).toMatch(/Refusing ark start --apply/);
+    expect(human).toMatch(/too big for compact start/);
+    expect(human).toMatch(/--force does not unlock this/);
+    expect(human).toMatch(/Next: arkgate-check --init/);
+    expect(human).not.toMatch(/writing /);
+    expect(human).not.toMatch(/Compact setup budget/);
+  });
+
+  it('applyStartPreview throws the numbered refuse, not a silent write', () => {
+    const root = createFixture();
+    expect(() =>
+      applyStartPreview(root, {
+        setupBudget: {
+          files: 11,
+          gateFiles: 11,
+          arkrulesFiles: 0,
+          bytes: 45_000,
+          maxFiles: 8,
+          maxBytes: 32 * 1024,
+          ok: false,
+        },
+        changes: [],
+      })
+    ).toThrow(/too big for compact start[\s\S]*Next: arkgate-check --init/);
+    expect(fs.existsSync(path.join(root, 'ark.config.json'))).toBe(false);
   });
 });
 
