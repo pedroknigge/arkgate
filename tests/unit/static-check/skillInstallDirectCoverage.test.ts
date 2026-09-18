@@ -756,6 +756,32 @@ describe('stale canonical catalog after package move (#278)', () => {
     expect(actions.join('\n')).not.toMatch(/\/ark-explore/);
   });
 
+  it('doctor JSON reports the catalog gap and names skills-only', () => {
+    const { root } = staleCanonicalRoot();
+    const stdout = execFileSync(
+      process.execPath,
+      [
+        path.resolve('bin/ark-check.mjs'),
+        '--root',
+        root,
+        '--config',
+        'ark.config.json',
+        '--doctor',
+        '--json',
+        '--no-cache',
+      ],
+      { encoding: 'utf8', stdio: 'pipe' }
+    );
+    const payload = JSON.parse(stdout) as {
+      doctor: { skillGaps?: Array<{ tool: string; stale: number }> };
+    };
+    expect(payload.doctor.skillGaps).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ tool: SKILL_CANONICAL_TOOL, stale: 1 }),
+      ])
+    );
+  });
+
   it('skills-only --force refreshes the catalog and leaves ark.config.json', () => {
     const { root, staleName } = staleCanonicalRoot();
     const beforeConfig = fs.readFileSync(path.join(root, 'ark.config.json'), 'utf8');
