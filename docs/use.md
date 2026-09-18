@@ -154,7 +154,9 @@ That is **Shape** work (plan B) — suggested, never auto-applied as silent magi
 `--contract-session` (stewards own loosen / baseline-grow). Checkout honesty:
 `npx arkgate status --vs origin/dev`.
 
-Install skills only when you want that guided path:
+Install skills only when you want that guided path. After a package bump, a
+teammate who already has Ark installed can keep **old skills**. Doctor warns;
+refresh the catalog only — do not re-adopt or rewrite `ark.config.json`:
 
 ```bash
 npx arkgate-check --install-agent-gates --skills-only --force

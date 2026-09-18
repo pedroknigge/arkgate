@@ -130,9 +130,26 @@ export function collectDoctorNextActions(ctx) {
   if (ctx.layerOwners?.required && ctx.layerOwners.nextAction) {
     actions.push(ctx.layerOwners.nextAction);
   }
+  const humanSkillGaps = skillGapsForActiveHost(ctx.skillGaps ?? []);
+  const legacyCodex = humanSkillGaps.some((g) => g.tool === 'codex' && g.legacyPromptsOnly);
+  const remainingGaps = humanSkillGaps.filter(
+    (g) => !(g.tool === 'codex' && (g.legacyPromptsOnly || g.legacyAdvisory))
+  );
+  const remMiss = remainingGaps.reduce((s, g) => s + g.missing, 0);
+  const remStale = remainingGaps.reduce((s, g) => s + g.stale, 0);
+  if (legacyCodex) {
+    actions.push('install Codex SKILL.md catalog (--install-agent-gates --skills-only --tools codex --force)');
+  }
+  if (remMiss > 0) {
+    actions.push('install missing /ark-* skills (--install-agent-gates --skills-only --force)');
+  } else if (remStale > 0) {
+    actions.push('refresh stale /ark-* skills (--install-agent-gates --skills-only --force) — gates are installed, catalog is stale');
+  }
   const enforceEmptyPlan =
     ctx.operatingMode === 'enforce' && planAEmpty && gatesInstalled && !notAdopted;
-  if (enforceEmptyPlan) {
+  // Stale/missing doors outrank the Shape nudge — a colleague on an old catalog
+  // must see skills-only refresh as #1, not leftover-design explore.
+  if (enforceEmptyPlan && remMiss === 0 && remStale === 0 && !legacyCodex) {
     actions.push(
       ctx.postGreenPath?.action ||
         '/ark-explore, then one small refactor with /ark-autopilot and your OK'
@@ -194,21 +211,6 @@ export function collectDoctorNextActions(ctx) {
           ? `Remove the skippable if: in ${file}, or write .ark/adoption-stance.json with stance: advisory-only`
           : 'Remove the skippable if:, or write .ark/adoption-stance.json with stance: advisory-only')
     );
-  }
-  const humanSkillGaps = skillGapsForActiveHost(ctx.skillGaps);
-  const legacyCodex = humanSkillGaps.some((g) => g.tool === 'codex' && g.legacyPromptsOnly);
-  const remainingGaps = humanSkillGaps.filter(
-    (g) => !(g.tool === 'codex' && (g.legacyPromptsOnly || g.legacyAdvisory))
-  );
-  const remMiss = remainingGaps.reduce((s, g) => s + g.missing, 0);
-  const remStale = remainingGaps.reduce((s, g) => s + g.stale, 0);
-  if (legacyCodex) {
-    actions.push('install Codex SKILL.md catalog (--install-agent-gates --skills-only --tools codex --force)');
-  }
-  if (remMiss > 0) {
-    actions.push('install missing /ark-* skills (--install-agent-gates --skills-only --force)');
-  } else if (remStale > 0) {
-    actions.push('refresh stale /ark-* skills (--install-agent-gates --skills-only --force) — gates are installed, catalog is stale');
   }
   if (ctx.codexHomeGap && ctx.codexConcernActive && ctx.codexHomeGap.duplicateHome) {
     actions.push(

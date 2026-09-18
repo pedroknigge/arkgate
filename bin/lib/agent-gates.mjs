@@ -106,6 +106,8 @@ export {
   assessSkillCatalogParity,
   detectSkillGaps,
   skillGapsForActiveHost,
+  skillGapToolLabel,
+  SKILL_CANONICAL_TOOL,
   agentsMdSkillRefs,
   verifyHostSkillCatalog,
   printSkillAndCodexGapHints,

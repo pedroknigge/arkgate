@@ -98,6 +98,7 @@ Never invent gate verdicts from these suggestions. Missing residual is honest em
 | Conflicted managed assets | Still need `--accept-conflicts`. Never silent overwrite of true edits. |
 | Multiple checkouts / monorepo packages | One `expectedRoot` per project; upgrade **each** pin; restart MCP after bump; prefer project-local CLI until identity matched **and** process version aligns. |
 | Stale `~/.claude/skills`, `~/.grok/skills`, or `~/.gemini/config/skills` | Shared homes should be the newest ArkGate on the machine (additive; never downgrade). Refresh: `--install-agent-gates --skills-only --agent-homes --force`. Project skills may lag with the pin. Antigravity’s global catalog still refreshes when the project `.agents/skills` already exists. |
+| Package moved; teammate still has old `/ark-*` skills | Doctor and `ark-check` warn. Refresh **skills only** (no re-adopt, no layers rewrite): `--install-agent-gates --skills-only --force`. |
 | Active host not in `--tools` / manifest | Preview `hostSelection` notes it and suggests `--tools` expansion. |
 
 **Post-apply:** read `postUpgradeChecks` (advisory). Confirm pin↔CLI, run doctor (compass + deepModuleCoach),
