@@ -6,12 +6,6 @@ in the immutable pre-2.0 archive linked below.
 ## Unreleased
 
 ### Added
-- Doctor and `ark-check` warn when installed `/ark-*` skills are behind this
-  package (canonical `.agents/skills` included, even with no host marker dir).
-  Primary next action is skills-only refresh
-  (`--install-agent-gates --skills-only --force`) — not a full re-adopt.
-  Detection reuses the existing content-identity + `arkVersion` stamp. No new
-  command, skill name, or version bump.
 - Soft doctor residual when Domain is declared but empty and the UI holds the
   rules (`noDomainFrontend`). Projects empty Domain + presentation share, or
   the existing `domain-logic-in-ui` smell. Friendly next step: one Domain file
@@ -72,32 +66,6 @@ in the immutable pre-2.0 archive linked below.
   Required CI is still the shared merge line. No new skill, schema, or host.
 
 ### Fixed
-- Cold `arkgate start --apply` now refuses a plan that is too big for compact
-  start **before** any “writing…” copy, names the file/byte numbers, and prints
-  one next action (`arkgate-check --init`). `--force` still unlocks weak
-  coverage/shape only — it does not unlock the size lock. Mature
-  `--recommend` `firstCommand` is `--init`, not a cold `start --apply` that
-  cannot succeed. README / help document the size refuse next to coverage/shape
-  ([#274](https://github.com/pedroknigge/arkgate/issues/274)).
-- `doctorResidentWarm` CI ceiling is 800ms after main already missed 680ms
-  on docs-only heads (p95 697–707ms). Same miss as #270 / the audit tip.
-  Still far below one-shot doctor. No new skill or schema.
-- Doctor #1 no longer treats intentional Domain+Tooling file+glob dual-lists
-  (generated CLI listed on Domain under Tooling `bin/**`) as a glob leak, and
-  overlapping-glob copy names the tree's real roots/samples instead of a
-  canned `api/**` sermon. Over-broad Domain wildcards and huge dual-match
-  pile-ups still surface #1. No new skill, schema, or flag.
-- Packed README / docs hub no longer claim npm `latest` remains an older
-  version than this tarball. `check:package-files` and the packed-artifact
-  path refuse that pin
-  ([#270](https://github.com/pedroknigge/arkgate/issues/270)).
-- Monorepo `arkgate start` no longer puts whole-app roots (`api/**`,
-  `client/**`) on DomainModel next to the finer globs. Domain stays
-  package-scoped (`packages/*/src/**`, `**/domain/**`). When dual-match
-  is huge, doctor #1 is “fix overlapping layer globs” with one example,
-  not only “make CI required”
-  (issue [#269](https://github.com/pedroknigge/arkgate/issues/269)).
-  Add-ons stay silent when off. No new skill, schema, or flag.
 - Write hook and `ark-check` now agree on overlapping layer globs: the hook
   probes the same specifier extensions as `ark-check` and classifies with
   `layerForRelativePath` (explicit `money.ts` beats `src/lib/**`). Field
@@ -127,6 +95,62 @@ in the immutable pre-2.0 archive linked below.
   `@2` pin (issue [#211](https://github.com/pedroknigge/arkgate/issues/211)).
   Existing configs keep whatever URL they already have. Editor completion
   matches the 4.x line you just installed.
+
+## 4.8.18 — 2026-09-18
+
+**Patch** over **4.8.17**. Daily accumulate (2026-09-18 ART) of the six
+ships that landed after 4.8.17 published: monorepo DomainModel globs
+([#269](https://github.com/pedroknigge/arkgate/pull/269)), packed
+README latest-truth
+([#270](https://github.com/pedroknigge/arkgate/issues/270) /
+[#272](https://github.com/pedroknigge/arkgate/pull/272)), deep pstack
+audit ([#273](https://github.com/pedroknigge/arkgate/pull/273)), doctor
+#1 dual-match honesty
+([#275](https://github.com/pedroknigge/arkgate/pull/275)), compact-start
+size refuse ([#274](https://github.com/pedroknigge/arkgate/pull/274)),
+and stale-skill Guiar
+([#278](https://github.com/pedroknigge/arkgate/pull/278)).
+**Write. Check. Ship.** **No required config migration.** No
+`schemaVersion` bump. Does not close `K01` / `Z09`. This mother
+`ark.config.json` still does **not** turn `arkOrder` on.
+
+**Status: published** (npm `latest` is **4.8.18**).
+
+### Added
+- Doctor and `ark-check` warn when installed `/ark-*` skills are behind
+  this package (canonical `.agents/skills` included, even with no host
+  marker dir). Primary next action is skills-only refresh
+  (`--install-agent-gates --skills-only --force`) — not a full re-adopt
+  ([#278](https://github.com/pedroknigge/arkgate/pull/278)).
+- Maintainer pstack audit report (core + add-ons) at
+  `docs/audit/2026-09-17-pstack-deep-product-audit.md`
+  ([#273](https://github.com/pedroknigge/arkgate/pull/273)). Report
+  only. No product code.
+
+### Fixed
+- Monorepo `arkgate start` no longer puts whole-app roots (`api/**`,
+  `client/**`) on DomainModel next to the finer globs. Domain stays
+  package-scoped (`packages/*/src/**`, `**/domain/**`). When dual-match
+  is huge, doctor #1 is “fix overlapping layer globs” with one example,
+  not only “make CI required”
+  ([#269](https://github.com/pedroknigge/arkgate/pull/269)).
+- Packed README / docs hub no longer pin npm `latest` to an older
+  version than this tarball. `check:package-files` and the
+  packed-artifact path refuse that waiting-room pin
+  ([#270](https://github.com/pedroknigge/arkgate/issues/270) /
+  [#272](https://github.com/pedroknigge/arkgate/pull/272)).
+- Doctor #1 no longer treats intentional Domain+Tooling file+glob
+  dual-lists as a glob leak, and overlapping-glob copy names the tree's
+  real roots instead of a canned `api/**` sermon
+  ([#275](https://github.com/pedroknigge/arkgate/pull/275)).
+- `doctorResidentWarm` CI ceiling is 800ms after docs-only main already
+  missed 680ms (p95 697–707ms). Same miss as #270 / the audit tip
+  ([#275](https://github.com/pedroknigge/arkgate/pull/275)).
+- Cold `arkgate start --apply` now refuses a plan that is too big for
+  compact start **before** any “writing…” copy, names the file/byte
+  numbers, and prints one next action (`arkgate-check --init`).
+  `--force` does not unlock the size lock
+  ([#274](https://github.com/pedroknigge/arkgate/pull/274)).
 
 ## 4.8.17 — 2026-09-17
 
