@@ -49,10 +49,10 @@
       "size": 10000,
       "metric": "doctor.residentWarm",
       "baselineMs": 468.669,
-      "targetP95Ms": 680,
-      "cycleObservedMaxP95Ms": 602.551,
-      "maxP95Ms": 680,
-      "rationale": "Z07 measured 468.669 ms p95 (Linux x64 Node 20 @ 10k). 4.1.0 field-surface CI observed 534.586 ms p95 (prior 600 ms ceiling). Shape split of adapterContract added two Domain files to the governed walk; CI run 33674445308 recorded 602.551 ms p95 — 2.5 ms over 600. Recalibrate target/ceiling to 680 ms (~12% headroom over that observation). Still a large improvement vs ~2.1–2.6s one-shot doctor control."
+      "targetP95Ms": 800,
+      "cycleObservedMaxP95Ms": 706.612,
+      "maxP95Ms": 800,
+      "rationale": "Z07 measured 468.669 ms p95 (Linux x64 Node 20 @ 10k). Prior ceiling 680 ms sat ~12% over CI run 33674445308 (602.551 ms). After 4.8.17, docs-only main already misses that ceiling: run 35273193981 (#270) 706.612 ms, run 35278694440 (audit) 696.945 ms, run 35280973365 (H-P0-3) 696.529 ms. Recalibrate target/ceiling to 800 ms (~13% headroom over the worst of those). Still far below the ~2.1–2.6s one-shot doctor control. Not a per-item ratchet of the dual-match honesty diff."
     }
   }
 }

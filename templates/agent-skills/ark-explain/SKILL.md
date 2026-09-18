@@ -198,6 +198,9 @@ when residual signals remain.
    unverified/non-authoritative.
 2. **If asked generally** ("explain the architecture"), produce a guided tour:
    - Operating mode + governed% (honest: low coverage means green checks almost nothing).
+   - Dual-match: exact Domain file listings under another layer glob are
+     intentional. Trust doctor #1. Glob-repair #1 names this tree's overlapping
+     roots, not a canned `api/**`.
    - Each major layer: name, purpose, one real file from this repo, file count if known.
    - Dependency direction in one short diagram (ASCII is fine).
    - Enforcement points that are actually on: write gate, CI, ESLint, baseline.

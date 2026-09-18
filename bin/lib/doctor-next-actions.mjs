@@ -2,7 +2,7 @@
  * Rank doctor next actions from already-computed facts (no I/O).
  * Lets the human printer show light + #1 before honesty/compass sections.
  */
-import { arkCommand } from '../ark-shared.mjs';
+import { arkCommand, globToRegExp } from '../ark-shared.mjs';
 import { skillGapsForActiveHost } from './agent-gates.mjs';
 import { agentHomeConcernIsActive, agentHomeRefreshCommand } from './agent-homes.mjs';
 import { mergePostGreenTopActions } from './post-green-path.mjs';
@@ -24,16 +24,74 @@ const DUAL_MATCH_REPAIR_ABSOLUTE = 50;
 /** Share of in-scope files that match two+ layers. */
 const DUAL_MATCH_REPAIR_SHARE = 0.1;
 
+function isWildcardPattern(pattern) {
+  return /[*?]/.test(String(pattern ?? ''));
+}
+
+function posixRel(file) {
+  return String(file ?? '').split(/\\/).join('/');
+}
+
+function layerPatterns(cov, layerName) {
+  const rows = Array.isArray(cov?.layers) ? cov.layers : [];
+  const row = rows.find((layer) => layer?.name === layerName);
+  return Array.isArray(row?.patterns) ? row.patterns : [];
+}
+
+function fileMatchesWildcardPatterns(file, patterns) {
+  const rel = posixRel(file);
+  return patterns.some((pattern) => isWildcardPattern(pattern) && globToRegExp(pattern).test(rel));
+}
+
+/**
+ * Domain overlap is a glob leak when Domain matched the sample via a wildcard.
+ * Exact-file Domain listings under another layer glob (mother generated CLI)
+ * are intentional dual-lists, not a repair. No layer patterns → keep the
+ * Domain-sample shortcut so older #269 fixtures still fire.
+ */
+function domainSampleIsGlobLeak(row, cov) {
+  if (!(row?.layers ?? []).includes('DomainModel')) return false;
+  const patterns = layerPatterns(cov, 'DomainModel');
+  if (patterns.length === 0) return true;
+  return fileMatchesWildcardPatterns(row.file, patterns);
+}
+
+/** Overlapping roots from matching Domain wildcards, else sample path prefixes. */
+export function overlappingRootsFromCoverage(cov) {
+  const samples = Array.isArray(cov?.dualMembership?.samples) ? cov.dualMembership.samples : [];
+  const domainPatterns = layerPatterns(cov, 'DomainModel');
+  const fromPatterns = [];
+  for (const row of samples) {
+    const rel = posixRel(row?.file);
+    for (const pattern of domainPatterns) {
+      if (isWildcardPattern(pattern) && globToRegExp(pattern).test(rel)) {
+        fromPatterns.push(pattern);
+      }
+    }
+  }
+  if (fromPatterns.length > 0) {
+    return [...new Set(fromPatterns)].slice(0, 2);
+  }
+  const derived = [];
+  for (const row of samples) {
+    const first = posixRel(row?.file).split('/').filter(Boolean)[0];
+    if (first) derived.push(`${first}/**`);
+  }
+  return [...new Set(derived)].slice(0, 2);
+}
+
 /**
  * Dual-match is a lying layer map when it is large — especially Domain
  * overlapping Presentation/Application after over-broad monorepo start globs.
+ * Intentional file+glob dual-lists (exact Domain files under Tooling `bin/**`)
+ * do not steal doctor #1.
  */
 export function dualMatchNeedsGlobRepair(cov) {
   const count = Number(cov?.dualMembership?.count) || 0;
   if (count < DUAL_MATCH_REPAIR_FLOOR) return false;
   const total = Number(cov?.totalFiles ?? cov?.governed?.totalFiles) || 0;
   const samples = Array.isArray(cov?.dualMembership?.samples) ? cov.dualMembership.samples : [];
-  const domainOverlap = samples.some((row) => (row.layers ?? []).includes('DomainModel'));
+  const domainOverlap = samples.some((row) => domainSampleIsGlobLeak(row, cov));
   if (domainOverlap) return true;
   if (total > 0 && count / total >= DUAL_MATCH_REPAIR_SHARE) return true;
   return count >= DUAL_MATCH_REPAIR_ABSOLUTE;
@@ -46,8 +104,10 @@ export function overlappingGlobNextAction(cov) {
   const example =
     sample?.file && layers.length > 1
       ? `${sample.file} matches ${layers.join(' + ')}`
-      : 'api/** covering the same files as **/app/**';
-  return `Fix overlapping layer globs — ${count} files match more than one layer (e.g. ${example}). Narrow DomainModel to package-scoped paths (packages/*/src/domain/**), not whole-app roots like api/**. Then /ark-adopt`;
+      : 'the same files match two layer globs';
+  const roots = overlappingRootsFromCoverage(cov);
+  const rootPhrase = roots.length > 0 ? roots.join(', ') : 'the overlapping globs';
+  return `Fix overlapping layer globs — ${count} files match more than one layer (e.g. ${example}). Narrow overlapping roots like ${rootPhrase}. Then /ark-adopt`;
 }
 
 export function collectDoctorNextActions(ctx) {
