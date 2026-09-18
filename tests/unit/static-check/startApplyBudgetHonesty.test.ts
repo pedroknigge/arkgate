@@ -2,6 +2,7 @@
  * #274 — compact start size refuse is stranger-clear Contener first-run.
  */
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
