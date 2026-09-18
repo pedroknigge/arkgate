@@ -905,7 +905,7 @@ export function renderHtmlReport({
     );
   } else {
     skillsParts.push(
-      `<div class="pill warn">${actionableSkillGaps.length} skill gap(s) — run ark upgrade / --install-agent-gates</div>`
+      `<div class="pill warn">${actionableSkillGaps.length} skill gap(s) — refresh skills only: ark-check --install-agent-gates --skills-only --force</div>`
     );
   }
   if (legacyAdvisoryOnly) {

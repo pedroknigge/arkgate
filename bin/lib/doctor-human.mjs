@@ -11,7 +11,7 @@ import { printDoctorAdvisories, printCompactExtraDoctorLines } from './doctor-ad
 import { designDeltaDoctorLines } from './design-delta.mjs';
 import { enforcementDoctorLines } from './enforcement-state.mjs';
 import { analysisIncompleteStatement } from './analysis-completeness.mjs';
-import { skillGapsForActiveHost, detectCodexHomeGap, codexConcernIsActive } from './agent-gates.mjs';
+import { skillGapsForActiveHost, detectCodexHomeGap, codexConcernIsActive, skillGapToolLabel } from './agent-gates.mjs';
 import { agentHomeConcernIsActive } from './agent-homes.mjs';
 import { layerGuidanceLine } from './layer-description.mjs';
 import {
@@ -467,7 +467,7 @@ export function printDoctorDetailsHuman(view) {
   if (remMiss + remStale > 0) {
     line(
       warn,
-      `${remMiss} missing / ${remStale} content-behind-package /ark-* skill(s) for ${remainingGaps.map((g) => g.tool).join(', ')}`
+      `${remMiss} missing / ${remStale} content-behind-package /ark-* skill(s) for ${remainingGaps.map((g) => skillGapToolLabel(g.tool)).join(', ')}`
     );
   }
   const codexHomeGap = detectCodexHomeGap(root);

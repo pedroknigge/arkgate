@@ -261,7 +261,21 @@ export const SKILL_TOOL_TARGETS = {
   windsurf: (name) => `.windsurf/workflows/${name}.md`,
   cline: (name) => `.clinerules/workflows/${name}.md`,
   copilot: (name) => `.github/prompts/${name}.prompt.md`,
+  // Catalog-only gap: `.agents/skills` exists without a host marker that reads it.
+  agents: (name) => canonicalSkillPath(name),
 };
+
+/** Synthetic detectSkillGaps tool when only the canonical catalog is present. */
+export const SKILL_CANONICAL_TOOL = 'agents';
+
+export function skillGapToolLabel(tool) {
+  return tool === SKILL_CANONICAL_TOOL ? SKILL_CANONICAL_DIR : String(tool ?? '');
+}
+
+export function skillTargetIsCanonical(tool) {
+  const target = SKILL_TOOL_TARGETS[tool];
+  return typeof target === 'function' && target('ark-place') === canonicalSkillPath('ark-place');
+}
 
 /** Hosts whose catalog is the project `.agents/skills` tree (write once). */
 export function usesCanonicalSkillCatalog(tool) {
@@ -1086,9 +1100,31 @@ export function detectSkillGaps(root) {
   if (fs.existsSync(path.join(root, '.cursor'))) detected.push('cursor');
   if (fs.existsSync(path.join(root, '.codex'))) detected.push('codex');
   if (fs.existsSync(path.join(root, '.grok'))) detected.push('grok');
+  // Same markers as resolveTools — Antigravity/OpenCode read or link the catalog.
+  if (
+    fs.existsSync(path.join(root, '.agents', 'hooks.json')) ||
+    fs.existsSync(path.join(root, '.agents', 'mcp_config.json'))
+  ) {
+    detected.push('antigravity');
+  }
+  if (
+    fs.existsSync(path.join(root, 'opencode.json')) ||
+    fs.existsSync(path.join(root, 'opencode.jsonc')) ||
+    fs.existsSync(path.join(root, '.opencode'))
+  ) {
+    detected.push('opencode');
+  }
   if (fs.existsSync(path.join(root, '.windsurf'))) detected.push('windsurf');
   if (fs.statSync(path.join(root, '.clinerules'), { throwIfNoEntry: false })?.isDirectory()) {
     detected.push('cline');
+  }
+  // One-catalog trees may have `.agents/skills` and no host marker dir.
+  // Without this, a colleague who `npm install`s a new pin keeps stale doors silently.
+  if (
+    fs.existsSync(path.join(root, SKILL_CANONICAL_DIR)) &&
+    !detected.some((tool) => skillTargetIsCanonical(tool))
+  ) {
+    detected.push(SKILL_CANONICAL_TOOL);
   }
   const version = arkPackageVersion();
   const gaps = [];
@@ -1150,7 +1186,9 @@ export function detectSkillGaps(root) {
 export function skillGapsForActiveHost(skillGaps, env = process.env) {
   const activeHost = detectActiveAgentHost(env);
   if (!activeHost) return skillGaps ?? [];
-  return (skillGaps ?? []).filter((gap) => gap.tool === activeHost);
+  return (skillGaps ?? []).filter(
+    (gap) => gap.tool === activeHost || gap.tool === SKILL_CANONICAL_TOOL
+  );
 }
 
 /**
@@ -1174,7 +1212,7 @@ export function printSkillAndCodexGapHints(root, opts) {
     );
     const missingTotal = remaining.reduce((sum, gap) => sum + gap.missing, 0);
     const staleTotal = remaining.reduce((sum, gap) => sum + gap.stale, 0);
-    const tools = remaining.map((gap) => gap.tool).join(', ');
+    const tools = remaining.map((gap) => skillGapToolLabel(gap.tool)).join(', ');
     if (legacyCodex) {
       console.log(
         color.yellow(
@@ -1200,9 +1238,9 @@ export function printSkillAndCodexGapHints(root, opts) {
     }
     if (staleTotal > 0) {
       console.log(
-        color.dim(
+        color.yellow(
           `${staleTotal} /ark-* skill(s) content behind this Ark package for ${tools}. ` +
-            `Refresh: ${arkCommand(root, 'ark-check', '--install-agent-gates --skills-only --force')}`
+            `Refresh skills only (do not re-adopt): ${arkCommand(root, 'ark-check', '--install-agent-gates --skills-only --force')}`
         )
       );
     }

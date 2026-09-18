@@ -512,6 +512,10 @@ lag the installed package. Temp/upgrade `--root` never mutates default user home
 sessions treat a stale Claude home as urgent because Cursor loads `~/.claude/skills`.
 Antigravity sessions treat a stale `~/.gemini/config/skills` catalog as urgent.
 
+Project `.agents/skills` can also lag after a teammate `npm install`s a new pin without
+`ark upgrade`. Doctor and `ark-check` warn (content identity + `arkVersion`). Next action
+is skills-only refresh — not a full re-adopt.
+
 ```bash
 npx arkgate-check --install-agent-gates --skills-only --agent-homes --force
 ```

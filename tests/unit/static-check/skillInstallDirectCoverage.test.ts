@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -5,6 +6,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   KNOWN_TOOLS,
+  SKILL_CANONICAL_DIR,
+  SKILL_CANONICAL_TOOL,
   SKILL_TOOL_TARGETS,
   agentsMdSkillRefs,
   arkPackageVersion,
@@ -24,13 +27,16 @@ import {
   resolveTools,
   skillContentIdentity,
   skillContentMatchesTemplate,
+  skillGapToolLabel,
   skillGapsForActiveHost,
+  skillTargetIsCanonical,
   skillTemplateBodies,
   skillTemplateNames,
   skillTemplates,
   stampSkill,
   verifyHostSkillCatalog,
 } from '../../../bin/lib/skill-install.mjs';
+import { collectDoctorNextActions } from '../../../bin/lib/doctor-next-actions.mjs';
 
 const originalCodexHome = process.env.CODEX_HOME;
 const temporaryRoots: string[] = [];
@@ -46,6 +52,29 @@ function write(root: string, relativePath: string, content = '') {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, content);
   return file;
+}
+
+function runSkillsOnlyRefresh(root: string) {
+  try {
+    const stdout = execFileSync(
+      process.execPath,
+      [
+        path.resolve('bin/ark-check.mjs'),
+        '--install-agent-gates',
+        '--root',
+        root,
+        '--skills-only',
+        '--force',
+        '--tools',
+        'cursor',
+      ],
+      { encoding: 'utf8', stdio: 'pipe' }
+    );
+    return { status: 0, stdout, stderr: '' };
+  } catch (error) {
+    const e = error as { status?: number; stdout?: string; stderr?: string };
+    return { status: e.status ?? 1, stdout: e.stdout ?? '', stderr: e.stderr ?? '' };
+  }
 }
 
 function writeAbsolute(file: string, content = '') {
@@ -644,9 +673,100 @@ describe('skill-install direct module contract', () => {
     const deferred = log.mock.calls.flat().join('\n');
     expect(deferred).toContain('4 /ark-* skill');
     expect(deferred).toContain('5 /ark-* skill');
+    expect(deferred).toContain('YELLOW:');
+    expect(deferred).toContain('Refresh skills only');
     expect(deferred).toContain('invalid catalog metadata');
     expect(deferred).toContain('Deferred unless you use Codex');
 
     expect(Object.keys(skillTemplateBodies()).sort()).toEqual(skillTemplateNames().sort());
+  });
+});
+
+describe('stale canonical catalog after package move (#278)', () => {
+  function staleCanonicalRoot() {
+    const root = temporaryRoot('ark-278-stale-');
+    write(root, 'AGENTS.md', '# ArkGate\nUse /ark-place.\n');
+    write(root, 'ark.config.json', '{"schemaVersion":"1.3","layers":[]}\n');
+    const first = skillTemplates()[0];
+    write(
+      root,
+      `${SKILL_CANONICAL_DIR}/${first[0]}/SKILL.md`,
+      stampSkill(`${first[1]}\nlocal-stale-body\n`, '0.0.1')
+    );
+    for (const [name, template] of skillTemplates().slice(1)) {
+      write(root, `${SKILL_CANONICAL_DIR}/${name}/SKILL.md`, stampSkill(template, '0.0.1'));
+    }
+    return { root, staleName: first[0] };
+  }
+
+  it('detects .agents/skills without a host marker dir', () => {
+    const { root } = staleCanonicalRoot();
+    const gaps = detectSkillGaps(root);
+    expect(gaps).toEqual([
+      expect.objectContaining({ tool: SKILL_CANONICAL_TOOL, missing: 0, stale: 1 }),
+    ]);
+    expect(skillGapToolLabel(SKILL_CANONICAL_TOOL)).toBe(SKILL_CANONICAL_DIR);
+    expect(skillTargetIsCanonical('cursor')).toBe(true);
+    expect(skillTargetIsCanonical('claude')).toBe(false);
+  });
+
+  it('does not double-count when .cursor already reads the catalog', () => {
+    const { root } = staleCanonicalRoot();
+    fs.mkdirSync(path.join(root, '.cursor'), { recursive: true });
+    const tools = detectSkillGaps(root).map((gap) => gap.tool);
+    expect(tools).toContain('cursor');
+    expect(tools).not.toContain(SKILL_CANONICAL_TOOL);
+  });
+
+  it('keeps matching bodies off the stale list (lagging stamp only)', () => {
+    const root = temporaryRoot('ark-278-current-');
+    write(root, 'AGENTS.md', '# ArkGate\n');
+    const version = arkPackageVersion();
+    for (const [name, template] of skillTemplates()) {
+      write(root, `${SKILL_CANONICAL_DIR}/${name}/SKILL.md`, stampSkill(template, version));
+    }
+    expect(detectSkillGaps(root)).toEqual([]);
+  });
+
+  it('includes catalog gaps for any active host and ranks skills-only as #1', () => {
+    const catalogGap = { tool: SKILL_CANONICAL_TOOL, missing: 0, stale: 3 };
+    expect(skillGapsForActiveHost([catalogGap], { ARK_ACTIVE_HOST: 'grok' })).toEqual([
+      catalogGap,
+    ]);
+    const actions = collectDoctorNextActions({
+      operatingMode: 'enforce',
+      activeCount: 0,
+      gatesMissing: [],
+      analysisComplete: true,
+      designSmells: [],
+      postGreenPath: null,
+      coverageHonesty: { greenIsNotEnforcement: false, worseThanNoGate: false },
+      cov: { suggestions: [] },
+      skillGaps: [catalogGap],
+      agentHomeGaps: [],
+      staleRunners: [],
+      adoption: { gaps: [] },
+      designFitness: {},
+      adopted: 'required-merge',
+      root: '/tmp',
+    });
+    expect(actions[0]).toMatch(/--skills-only --force/);
+    expect(actions[0]).toMatch(/stale/);
+    expect(actions.join('\n')).not.toMatch(/\/ark-adopt/);
+    expect(actions.join('\n')).not.toMatch(/\/ark-explore/);
+  });
+
+  it('skills-only --force refreshes the catalog and leaves ark.config.json', () => {
+    const { root, staleName } = staleCanonicalRoot();
+    const beforeConfig = fs.readFileSync(path.join(root, 'ark.config.json'), 'utf8');
+    const result = runSkillsOnlyRefresh(root);
+    expect(result.status, result.stderr || result.stdout).toBe(0);
+    expect(fs.readFileSync(path.join(root, 'ark.config.json'), 'utf8')).toBe(beforeConfig);
+    expect(detectSkillGaps(root)).toEqual([]);
+    const refreshed = fs.readFileSync(
+      path.join(root, SKILL_CANONICAL_DIR, staleName, 'SKILL.md'),
+      'utf8'
+    );
+    expect(refreshed).not.toContain('local-stale-body');
   });
 });

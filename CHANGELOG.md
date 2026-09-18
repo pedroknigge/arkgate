@@ -6,6 +6,12 @@ in the immutable pre-2.0 archive linked below.
 ## Unreleased
 
 ### Added
+- Doctor and `ark-check` warn when installed `/ark-*` skills are behind this
+  package (canonical `.agents/skills` included, even with no host marker dir).
+  Primary next action is skills-only refresh
+  (`--install-agent-gates --skills-only --force`) — not a full re-adopt.
+  Detection reuses the existing content-identity + `arkVersion` stamp. No new
+  command, skill name, or version bump.
 - Soft doctor residual when Domain is declared but empty and the UI holds the
   rules (`noDomainFrontend`). Projects empty Domain + presentation share, or
   the existing `domain-logic-in-ui` smell. Friendly next step: one Domain file

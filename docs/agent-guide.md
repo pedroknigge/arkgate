@@ -55,6 +55,11 @@ feature work. Full `/ark-*` skills are **expert depth** and label residual **`[L
 npx ark-check --install-agent-gates --skills-only --force
 ```
 
+After the pin moves, a teammate who already has `arkgate` installed can keep a
+**stale** `.agents/skills` catalog (version stamp or content hash behind the
+package). Doctor and a plain `ark-check` warn. Primary next action is that
+same skills-only refresh — not `/ark-adopt` and not a full gate rewrite.
+
 ### Write-path honesty
 
 Claude/Grok/Antigravity/Cursor can hard-block listed PreToolUse / preToolUse ops when installed
@@ -892,6 +897,7 @@ Filter: **Contener · Guiar · Ordenar** — contain the write, guide the next s
 
 ```bash
 # Ark — expert skill pack (preferred when you also want gates)
+# Same command refreshes a stale catalog after the package moved (doctor warns).
 npx ark-check --install-agent-gates --skills-only --force
 
 # Ecosystem — from installed package or a git checkout
