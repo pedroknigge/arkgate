@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { compactAgentInstructions, cursorRule } from '../../../bin/lib/ci-and-commands.mjs';
+import { renderStartPreview } from '../../../bin/lib/start-preview.mjs';
 import { missingGates } from '../../../bin/lib/gate-files.mjs';
 import { renderHostSupportMatrixMarkdown } from '../../../bin/lib/host-support-matrix.mjs';
 import { writePathModeHint } from '../../../bin/lib/html-report-depth.mjs';
@@ -73,5 +74,33 @@ describe('PH01 pre-hook first, MCP prepare fallback', () => {
     expect(compactAgentInstructions(root, 'cursor')).toMatch(/fallback if that hook is missing or fail-open/i);
     expect(renderHostSupportMatrixMarkdown()).toMatch(/Write-gate order:/);
     expect(writePathModeHint('mcp-only')).toMatch(/Fell back to MCP prepare/i);
+  });
+
+  it('prints write-gate order on the human start preview', () => {
+    const lines: string[] = [];
+    const log = console.log;
+    console.log = (value = '') => {
+      lines.push(String(value));
+    };
+    try {
+      renderStartPreview({
+        root: '/tmp/ph01',
+        analysis: { label: 'fixture' },
+        projectedCoverage: { percent: 90, classifiedFiles: 1, totalFiles: 1 },
+        setupBudget: { files: 4, arkrulesFiles: 0, bytes: 100, maxFiles: 8, maxBytes: 32 * 1024, ok: true },
+        changes: [],
+        commands: [],
+        hostGuarantees: [
+          'shared CI merge gate will be installed',
+          'Write gate: host pre-hook first; MCP prepare is fallback if that hook is missing or fail-open.',
+        ],
+        unresolvedDecisions: [],
+      });
+    } finally {
+      console.log = log;
+    }
+    expect(lines.join('\n')).toMatch(
+      /Write gate: host pre-hook first; MCP prepare is fallback if that hook is missing or fail-open/
+    );
   });
 });

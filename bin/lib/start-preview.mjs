@@ -274,6 +274,10 @@ export function renderStartPreview(preview, options = {}) {
   if (preview.runtimeActivation) {
     console.log('Host: Codex is configured but not verified yet. Restart the host, then confirm this project.');
   }
+  const writeGateOrder = (preview.hostGuarantees || []).find((line) =>
+    String(line).startsWith('Write gate:')
+  );
+  if (writeGateOrder) console.log(writeGateOrder);
   if (preview.unresolvedDecisions.length > 0) {
     console.log('Unresolved decisions:');
     for (const decision of preview.unresolvedDecisions) console.log(`  ${decision}`);
