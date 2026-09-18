@@ -24,6 +24,8 @@ import { pinArkgateDevDependency, FALSE_GREEN_GAP_ID } from './lib/field-install
 import { validateHardWriteRequest } from './lib/enforcement-profiles.mjs';
 import {
   applyStartPreview,
+  emitStartSetupBudgetRefuse,
+  evaluateStartSetupBudgetGate,
   formatStartPackageInstallFailure,
   planStart,
   renderStartPreview,
@@ -468,6 +470,10 @@ async function start(args) {
           for (const choice of gate.choices ?? []) console.error(`  • ${choice}`);
           renderStartPreview(preview);
         }
+        return 2;
+      }
+      if (!evaluateStartSetupBudgetGate(preview.setupBudget).ok) {
+        emitStartSetupBudgetRefuse(preview, args.json);
         return 2;
       }
     }

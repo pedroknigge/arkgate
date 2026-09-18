@@ -1740,7 +1740,12 @@ export function buildArchitectureRecommendation(root, options = {}) {
     // a thin slice and can mis-flag framework internals, so steer these to the adoption flow.
     mature: signals.sourceFileCount >= MATURE_REPO_FILE_THRESHOLD,
     initCommand: `${arkCommand(root, 'ark', `init --archetype ${result.archetype} --yes`)}`,
-    firstCommand: `${arkCommand(root, 'ark', `start --apply --archetype ${result.archetype}`)}`,
+    // Greenfield: compact start. Mature: `--init` writes the rules file without the
+    // compact-start size lock that cold `start --apply` can hit on large trees.
+    firstCommand:
+      signals.sourceFileCount >= MATURE_REPO_FILE_THRESHOLD
+        ? arkCommand(root, 'ark-check', '--init')
+        : `${arkCommand(root, 'ark', `start --apply --archetype ${result.archetype}`)}`,
     adoptCommand: arkCommand(root, 'ark-check', '--recommend --write-plan'),
     recommendCommand: arkCommand(root, 'ark-check', '--recommend'),
     checkCommand: arkCommand(root, 'ark-check', '--root . --config ark.config.json --strict-config'),
@@ -1817,10 +1822,11 @@ export function resolveStartInitPreset(root, rec = {}, archetype = rec.archetype
   return preset ?? null;
 }
 
-/** One-minute / preview footer when the coverage·confidence gate may refuse apply. */
+/** One-minute / preview footer when apply may refuse (coverage·shape or compact size). */
 export const START_APPLY_REFUSE_FOOTER = [
-  'If apply refuses (coverage below 50% or weak shape), that lock is deliberate.',
-  'Lock the shape: --archetype <id>  ·  --preset <name>  ·  --force',
+  'If apply refuses (coverage below 50%, weak shape, or too big for compact start), that lock is deliberate.',
+  'Coverage/shape: --archetype <id>  ·  --preset <name>  ·  --force',
+  'Too big for compact start: --force does not unlock. Next: arkgate-check --init',
   'Inspect ranked shapes: arkgate-check --recommend',
 ].join('\n');
 

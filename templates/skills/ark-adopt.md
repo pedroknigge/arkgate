@@ -302,9 +302,10 @@ feature dirs, plan clusters), you **may** dispatch **subagents**:
 - **Brownfield:** this skill — match config to reality; do not force a starter preset.
 - **Deep map only:** `/ark-explore`.
 - **Default path:** `ark start` → **`/ark-adopt`** → `/ark-place` / `/ark-autopilot`.
-  `start --apply` may refuse (coverage below 50% or weak shape) — that lock is
-  deliberate. Lock the shape with `--archetype`, `--preset`, or `--force`, or
-  inspect ranked shapes with `ark-check --recommend`.
+  `start --apply` may refuse (coverage below 50%, weak shape, or too big for
+  compact start) — that lock is deliberate. Coverage/shape: `--archetype`,
+  `--preset`, or `--force`. Size: `--force` does not unlock; next
+  `arkgate-check --init`. Or inspect ranked shapes with `ark-check --recommend`.
 
 ## Anti-wrapper rule (mandatory)
 

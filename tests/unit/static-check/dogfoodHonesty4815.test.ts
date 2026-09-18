@@ -127,6 +127,9 @@ describe('#246 start --apply refuse pointers stay on the one-minute path', () =>
       expect(text).toMatch(/--force/);
       expect(text).toMatch(/arkgate-check --recommend|ark-check --recommend/);
       expect(text).toMatch(/deliberate|refuses/);
+      expect(text).toMatch(/too big for compact start|8 gate files|32 KB/);
+      expect(text).toMatch(/arkgate-check --init|ark-check --init/);
+      expect(text).toMatch(/does not unlock/);
     }
   });
 
@@ -142,6 +145,9 @@ describe('#246 start --apply refuse pointers stay on the one-minute path', () =>
     expect(blob).toMatch(/--preset/);
     expect(blob).toMatch(/--force/);
     expect(blob).toMatch(/--recommend/);
+    expect(blob).toMatch(/too big for compact start/);
+    expect(blob).toMatch(/arkgate-check --init/);
+    expect(blob).toMatch(/does not unlock/);
   });
 
   it('recommend firstCommand is start --apply --archetype, not ark init', () => {

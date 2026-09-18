@@ -66,6 +66,13 @@ in the immutable pre-2.0 archive linked below.
   Required CI is still the shared merge line. No new skill, schema, or host.
 
 ### Fixed
+- Cold `arkgate start --apply` now refuses a plan that is too big for compact
+  start **before** any “writing…” copy, names the file/byte numbers, and prints
+  one next action (`arkgate-check --init`). `--force` still unlocks weak
+  coverage/shape only — it does not unlock the size lock. Mature
+  `--recommend` `firstCommand` is `--init`, not a cold `start --apply` that
+  cannot succeed. README / help document the size refuse next to coverage/shape
+  ([#274](https://github.com/pedroknigge/arkgate/issues/274)).
 - `doctorResidentWarm` CI ceiling is 800ms after main already missed 680ms
   on docs-only heads (p95 697–707ms). Same miss as #270 / the audit tip.
   Still far below one-shot doctor. No new skill or schema.
