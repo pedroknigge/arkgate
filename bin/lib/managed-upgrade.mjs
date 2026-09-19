@@ -17,6 +17,7 @@ import {
   arkPackageVersion,
   detectActiveAgentHost,
   normalizeToolsList,
+  planSkillInstall,
   skillContentIdentity,
 } from './skill-install.mjs';
 
@@ -396,8 +397,11 @@ function summaryFor(assets, manifestChanged) {
   for (const asset of assets) states[asset.state] = (states[asset.state] ?? 0) + 1;
   const applying = assets.filter((asset) => asset.willApply);
   const wouldWrite = applying.length;
-  // Public-summary compatibility: stamp-only writes are no longer scheduled.
-  const metadataRefresh = 0;
+  // Same-body stamp drift (arkVersion / description prefix) stays state=current
+  // and is scheduled via planSkillInstall stamp-refresh — not a second pipeline.
+  const metadataRefresh = applying.filter(
+    (asset) => asset.state === 'current' && asset.reason === 'stamp-refresh'
+  ).length;
   const customizedPreserved = assets.filter((asset) => asset.state === 'customized').length;
   const fileChanges = applying.length;
   return {
@@ -477,9 +481,23 @@ export function planManagedUpgrade(root, options = {}) {
       refreshSkills &&
       catalogAsset.kind === 'skill' &&
       classified.state === 'customized';
+    // HS01 / #284: identity-current skill whose arkVersion / description prefix
+    // lagged the package — reuse planSkillInstall stamp-refresh, do not reclassify.
+    const stampRefresh =
+      !unparsedScope &&
+      catalogAsset.kind === 'skill' &&
+      classified.state === 'current' &&
+      currentScoped != null &&
+      planSkillInstall({
+        existingContent: currentScoped,
+        targetContent: desiredScoped,
+        packageVersion: catalog.version ?? arkPackageVersion(),
+        scope: 'repo',
+      }).reason === 'stamp-refresh';
     const canApply =
       classified.state === 'stale' ||
       skillRefresh ||
+      stampRefresh ||
       (classified.state === 'missing' && (!recorded || accepted)) ||
       (classified.state === 'conflicted' && accepted);
     const blocked = classified.requiresConsent && !accepted && !skillRefresh;
@@ -490,7 +508,11 @@ export function planManagedUpgrade(root, options = {}) {
       kind: catalogAsset.kind,
       scope: catalogAsset.scope,
       ...classified,
-      ...(unparsedScope ? { reason: 'unparsed managed TOML scope preserved' } : {}),
+      ...(unparsedScope
+        ? { reason: 'unparsed managed TOML scope preserved' }
+        : stampRefresh
+          ? { reason: 'stamp-refresh' }
+          : {}),
       action: canApply ? (currentScoped == null ? 'create' : 'update') : 'none',
       willApply: canApply,
       blocked,
@@ -970,8 +992,11 @@ export function renderManagedUpgrade(plan, options = {}) {
   const customizedPreserved = summary.customizedPreserved ?? summary.states?.customized ?? 0;
   const blocked = summary.blocked ?? 0;
   console.log(
-    `Managed assets: ${managedAssets}; would write: ${wouldWrite}; ` +
-      `customized preserved: ${customizedPreserved}; blocked conflicts/deletions: ${blocked}.`
+    `Managed assets: ${managedAssets}; would write: ${wouldWrite}` +
+      (summary.metadataRefresh
+        ? `; metadata refresh: ${summary.metadataRefresh}`
+        : '') +
+      `; customized preserved: ${customizedPreserved}; blocked conflicts/deletions: ${blocked}.`
   );
   const honesty =
     plan.selfService ??

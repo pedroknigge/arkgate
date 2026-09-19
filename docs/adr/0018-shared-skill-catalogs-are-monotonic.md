@@ -25,8 +25,11 @@ root or architecture contract.
 
 - Repository catalogs remain repository-owned. Each repo may use the skill bodies bundled with
   its locally installed ArkGate version without changing another repo.
-- Managed upgrade compares normalized skill content, not the generated ArkGate version stamp.
-  An unchanged body is a no-op; metadata-only version changes do not rewrite the file.
+- Managed upgrade compares normalized skill content for **state** (body-match stays
+  `current`, never `stale`). Same-body `arkVersion` / description-prefix drift is
+  `stamp-refresh` via `planSkillInstall` — a metadata-only write so the picker
+  matches the installed package ([#284](https://github.com/pedroknigge/arkgate/issues/284)).
+  This is not a second upgrade pipeline and does not rewrite the instructional body.
 - `$CODEX_HOME/skills` is one shared catalog. ArkGate 4.2.0+ installation is monotonic there: an
   older bundled skill cannot replace a newer managed skill, including when the caller passes
   `--force`.
@@ -53,7 +56,9 @@ root or architecture contract.
 
 ## Consequences
 
-- Updating several repositories on one computer no longer causes stamp-only churn in every repo.
+- Repo-local upgrade may refresh stamps so displayed `arkgate@` matches the pin;
+  home catalogs still do not churn from an older package. Body-identical stubs
+  no longer lie about the installed version.
 - Running an older bundled source through a 4.2.0+ installer cannot downgrade the optional
   shared Codex skill catalog.
 - If a process stops after changing skills but before committing the catalog, the durable journal

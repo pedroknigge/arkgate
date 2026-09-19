@@ -202,14 +202,13 @@ describe('Z06 managed-content upgrade', () => {
     expect(report.assets.find((asset) => asset.path.endsWith('ark-upgrade/SKILL.md'))?.state).toBe(
       'current'
     );
-    // Content matches package — stamp lag alone is not a planned content write.
-    expect(report.summary.wouldWrite).toBe(0);
+    // Preview stays read-only; same-body stamp lag is a metadata-only write (issue #284).
+    expect(report.summary.wouldWrite).toBeGreaterThan(0);
+    expect(report.summary.metadataRefresh).toBeGreaterThan(0);
     expect(report.summary.managedAssets).toBeGreaterThan(0);
     expect(typeof report.summary.customizedPreserved).toBe('number');
-    expect(report.nothingToApply).toBe(true);
-    // nextCommand remains available for digest-bound manifest adoption; human copy does not urge it.
+    expect(report.nothingToApply).toBeUndefined();
     expect(report.nextCommand).toMatch(/--plan-digest /);
-    expect(report.summary.metadataRefresh).toBe(0);
     expect(snapshot(root)).toEqual(before);
     expect(fs.readFileSync(path.join(codexHome, 'skills/ark-upgrade/SKILL.md'), 'utf8')).toBe(
       'user-owned Codex home skill\n'
@@ -221,9 +220,8 @@ describe('Z06 managed-content upgrade', () => {
       { ...process.env, CODEX_HOME: codexHome, ARK_ACTIVE_HOST: 'claude' }
     );
     expect(human.status, human.stderr || human.stdout).toBe(0);
-    expect(human.stdout).toMatch(/Nothing to apply — managed content matches arkgate@/);
-    expect(human.stdout).not.toMatch(/Apply the exact preview with:/);
-    expect(human.stdout).not.toMatch(/stamp-only apply|optional stamp refresh/i);
+    expect(human.stdout).toMatch(/metadata refresh: \d+/);
+    expect(human.stdout).toMatch(/Apply the exact preview with:/);
   });
 
   it('doctor skillGaps.stale is 0 when skill body matches template with lagging arkVersion', () => {
@@ -234,10 +232,10 @@ describe('Z06 managed-content upgrade', () => {
       fs.readFileSync(skill, 'utf8').replace(/^arkVersion:.*$/m, 'arkVersion: 0.0.0-old')
     );
     const plan = planManagedUpgrade(root, { tools: 'claude' });
-    expect(plan.assets.find((a) => a.path === '.agents/skills/ark-upgrade/SKILL.md')?.state).toBe(
-      'current'
-    );
-    expect(plan.summary.wouldWrite).toBe(0);
+    const skillAsset = plan.assets.find((a) => a.path === '.agents/skills/ark-upgrade/SKILL.md');
+    expect(skillAsset?.state).toBe('current');
+    expect(skillAsset?.reason).toBe('stamp-refresh');
+    expect(plan.summary.metadataRefresh).toBeGreaterThan(0);
 
     const doctor = run(ARK_CHECK, [
       '--root', root, '--config', 'ark.config.json', '--doctor', '--json', '--no-cache',
@@ -249,28 +247,31 @@ describe('Z06 managed-content upgrade', () => {
     expect(gaps?.some((gap) => gap.tool === 'claude' && gap.stale > 0) ?? false).toBe(false);
   });
 
-  it('does not rewrite a skill when only arkVersion metadata differs', () => {
+  it('refreshes arkVersion metadata only when the skill body is unchanged', () => {
     const root = fixture();
     const skill = path.join(root, '.agents/skills/ark-upgrade/SKILL.md');
-    fs.writeFileSync(
-      skill,
-      fs.readFileSync(skill, 'utf8').replace(/^arkVersion:.*$/m, 'arkVersion: 0.0.0-old')
-    );
+    const before = fs.readFileSync(skill, 'utf8');
+    const bodyAfterFrontmatter = before.replace(/^---[\s\S]*?---\n/, '');
+    fs.writeFileSync(skill, before.replace(/^arkVersion:.*$/m, 'arkVersion: 0.0.0-old'));
     const applied = applyUpgrade(root, 'claude');
     expect(applied.status, applied.stderr || applied.stdout).toBe(0);
     const report = JSON.parse(applied.stdout) as {
-      assets: Array<{ path: string; state: string; action: string }>;
+      assets: Array<{ path: string; state: string; action: string; reason?: string }>;
       summary: { metadataRefresh: number };
     };
     expect(report.assets).toContainEqual(
       expect.objectContaining({
         path: '.agents/skills/ark-upgrade/SKILL.md',
         state: 'current',
-        action: 'none',
+        action: 'update',
+        reason: 'stamp-refresh',
       })
     );
-    expect(report.summary.metadataRefresh).toBe(0);
-    expect(fs.readFileSync(skill, 'utf8')).toContain('arkVersion: 0.0.0-old');
+    expect(report.summary.metadataRefresh).toBeGreaterThan(0);
+    const after = fs.readFileSync(skill, 'utf8');
+    expect(after).not.toContain('arkVersion: 0.0.0-old');
+    expect(after).toMatch(/^arkVersion: \d+\.\d+\.\d+/m);
+    expect(after.replace(/^---[\s\S]*?---\n/, '')).toBe(bodyAfterFrontmatter);
 
     const doctor = run(ARK_CHECK, [
       '--root', root, '--config', 'ark.config.json', '--doctor', '--json', '--no-cache',
@@ -280,6 +281,79 @@ describe('Z06 managed-content upgrade', () => {
       doctor: { skillGaps: Array<{ tool: string; stale: number }> };
     }).doctor.skillGaps;
     expect(gaps.some((gap) => gap.tool === 'claude' && gap.stale > 0)).toBe(false);
+  });
+
+  it('metadata-refreshes unchanged redirect-stub stamps to the installed package version', () => {
+    const root = fixture();
+    const stubs = ['ark-architect', 'ark-contract', 'ark-fix', 'ark-loop', 'ark-think'] as const;
+    const packageVersion = JSON.parse(fs.readFileSync('package.json', 'utf8')).version as string;
+    const bodies = new Map<string, string>();
+    for (const name of stubs) {
+      const skill = path.join(root, `.agents/skills/${name}/SKILL.md`);
+      const original = fs.readFileSync(skill, 'utf8');
+      bodies.set(name, original.replace(/^---[\s\S]*?---\n/, ''));
+      fs.writeFileSync(
+        skill,
+        original
+          .replace(/^arkVersion:.*$/m, 'arkVersion: 4.8.14')
+          .replace(/arkgate@[A-Za-z0-9._+-]+\. /, 'arkgate@4.8.14. ')
+      );
+    }
+
+    const preview = run(ARK, [
+      'upgrade', '--root', root, '--tools', 'claude', '--no-install', '--no-strict', '--json',
+    ]);
+    expect(preview.status, preview.stderr || preview.stdout).toBe(0);
+    const previewReport = JSON.parse(preview.stdout) as {
+      planDigest: string;
+      assets: Array<{ path: string; state: string; action: string; reason?: string; willApply: boolean }>;
+      summary: { metadataRefresh: number; wouldWrite: number };
+    };
+    expect(previewReport.summary.metadataRefresh).toBeGreaterThanOrEqual(stubs.length);
+    expect(previewReport.summary.wouldWrite).toBeGreaterThanOrEqual(stubs.length);
+    for (const name of stubs) {
+      expect(previewReport.assets).toContainEqual(
+        expect.objectContaining({
+          path: `.agents/skills/${name}/SKILL.md`,
+          state: 'current',
+          action: 'update',
+          willApply: true,
+          reason: 'stamp-refresh',
+        })
+      );
+    }
+
+    const applied = run(ARK, [
+      'upgrade', '--root', root, '--tools', 'claude', '--no-install', '--no-strict',
+      '--apply', '--plan-digest', previewReport.planDigest, '--json',
+    ]);
+    expect(applied.status, applied.stderr || applied.stdout).toBe(0);
+    const appliedReport = JSON.parse(applied.stdout) as {
+      applied: boolean;
+      summary: { metadataRefresh: number };
+    };
+    expect(appliedReport.applied).toBe(true);
+    expect(appliedReport.summary.metadataRefresh).toBeGreaterThanOrEqual(stubs.length);
+
+    for (const name of stubs) {
+      const after = fs.readFileSync(path.join(root, `.agents/skills/${name}/SKILL.md`), 'utf8');
+      expect(after).toContain(`arkVersion: ${packageVersion}`);
+      expect(after).toContain(`arkgate@${packageVersion}. `);
+      expect(after).not.toContain('arkVersion: 4.8.14');
+      expect(after).not.toContain('arkgate@4.8.14. ');
+      expect(after.replace(/^---[\s\S]*?---\n/, '')).toBe(bodies.get(name));
+    }
+
+    const stable = run(ARK, [
+      'upgrade', '--root', root, '--tools', 'claude', '--no-install', '--no-strict', '--json',
+    ]);
+    expect(stable.status, stable.stderr || stable.stdout).toBe(0);
+    const stableReport = JSON.parse(stable.stdout) as {
+      summary: { metadataRefresh: number; wouldWrite: number; changed: number };
+    };
+    expect(stableReport.summary.metadataRefresh).toBe(0);
+    expect(stableReport.summary.wouldWrite).toBe(0);
+    expect(stableReport.summary.changed).toBe(0);
   });
 
   it('upgrades an exact published 3.7 skill body but preserves any edit to it', () => {

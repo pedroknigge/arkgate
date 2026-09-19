@@ -486,8 +486,9 @@ export function skillContentMatchesTemplate(installedContent, templateContent) {
  * Repo catalogs belong to that repo's installed package, so an explicit --force
  * may move them in either direction. Codex home is shared by every repo on the
  * machine: a package older than the installed home stamp must never win, even
- * under --force. In both scopes a version-stamp-only difference is a no-op; the
- * skill body is the capability contract.
+ * under --force. In both scopes a version-stamp-only difference is
+ * `stamp-refresh` (write without --force) so the picker shows this package;
+ * the skill body is the capability contract.
  *
  * @param {{
  *   existingContent?: string|null,
