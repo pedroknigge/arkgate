@@ -875,12 +875,61 @@ const SKIP_DIR_NAMES = new Set([
   '__pycache__',
 ]);
 
+/**
+ * Non-product trees — same convention as the governed check walk
+ * (`isSkippedSourceDir` in scan-files). Start/recommend/discovery must not
+ * treat playground, fixtures, scaffolds, or tests as production architecture.
+ */
+export const NON_PRODUCT_SOURCE_DIR_NAMES = new Set([
+  'bench',
+  'benches',
+  'benchmark',
+  'benchmarks',
+  'docs',
+  'documentation',
+  'example',
+  'examples',
+  'fixture',
+  'fixtures',
+  'testdata',
+  'playground',
+  'scaffold',
+  'scaffolds',
+  '__tests__',
+  '__mocks__',
+  'e2e',
+  'test',
+  'tests',
+]);
+
+export function isNonProductSourceDirName(name) {
+  return NON_PRODUCT_SOURCE_DIR_NAMES.has(name);
+}
+
+export function isNonProductRelativePath(relPath) {
+  return String(relPath)
+    .split(/[/\\]/)
+    .filter(Boolean)
+    .some((token) => NON_PRODUCT_SOURCE_DIR_NAMES.has(token.toLowerCase()));
+}
+
+/** Check-walk skip: vendor/build plus non-product fixture trees. */
+export function isSkippedSourceDir(name) {
+  return (
+    name === 'node_modules' ||
+    name === 'dist' ||
+    name === 'coverage' ||
+    NON_PRODUCT_SOURCE_DIR_NAMES.has(name)
+  );
+}
+
 function dirHasTsSources(dir, maxDepth) {
   try {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
       if (entry.isFile() && /\.(tsx?|jsx?|mts|cts)$/i.test(entry.name)) return true;
       if (!entry.isDirectory()) continue;
       if (SKIP_DIR_NAMES.has(entry.name) || entry.name.startsWith('.')) continue;
+      if (isSkippedSourceDir(entry.name)) continue;
       if (maxDepth > 0 && dirHasTsSources(path.join(dir, entry.name), maxDepth - 1)) return true;
     }
   } catch {
@@ -918,8 +967,14 @@ export function detectTsPackageRoots(root, options = {}) {
     for (const entry of entries) {
       if (!entry.isDirectory()) continue;
       if (SKIP_DIR_NAMES.has(entry.name) || entry.name.startsWith('.')) continue;
-      // Skip agent skill asset trees (not app code).
-      if (entry.name === 'skills' || entry.name === 'templates' || entry.name === 'fixtures') continue;
+      // Skip agent skill asset trees and non-product fixture/playground/test trees.
+      if (
+        entry.name === 'skills' ||
+        entry.name === 'templates' ||
+        isSkippedSourceDir(entry.name)
+      ) {
+        continue;
+      }
       const childRel = rel ? `${rel}/${entry.name}` : entry.name;
       visit(path.join(abs, entry.name), childRel, depth + 1);
     }
@@ -944,7 +999,7 @@ export function resolveIncludeRoots(root) {
   const workspaces = detectWorkspaces(root);
   const tsRoots = detectTsPackageRoots(root);
   if (workspaces.length === 0) {
-    if (tsRoots.length > 0) return tsRoots.filter((r) => r !== '.');
+    if (tsRoots.length > 0) return tsRoots.filter((r) => r !== '.' && !isNonProductRelativePath(r));
     return [];
   }
   // Workspaces present: keep them, add TS package roots not covered by a workspace prefix
@@ -960,7 +1015,7 @@ export function resolveIncludeRoots(root) {
       if (fs.existsSync(path.join(root, tr, 'package.json'))) merged.add(tr);
     }
   }
-  return [...merged];
+  return [...merged].filter((entry) => !isNonProductRelativePath(entry));
 }
 
 function isSourceFile(name) {
@@ -982,12 +1037,29 @@ function readJsonc(file) {
 
 function packageRole(rel, pkg) {
   const tokens = rel.toLowerCase().split('/');
-  if (tokens.some((token) => ['docs', 'documentation', 'website', 'examples', 'example', 'tests', 'test', 'fixtures'].includes(token))) {
-    return tokens.some((token) => token.startsWith('doc') || token === 'website')
-      ? 'docs'
-      : tokens.some((token) => token.startsWith('test') || token === 'fixtures')
-        ? 'test'
-        : 'example';
+  if (tokens.some((token) => ['docs', 'documentation', 'website'].includes(token))) {
+    return 'docs';
+  }
+  if (
+    tokens.some((token) =>
+      [
+        'tests',
+        'test',
+        'fixtures',
+        'fixture',
+        'testdata',
+        'e2e',
+        '__tests__',
+        'playground',
+        'scaffold',
+        'scaffolds',
+      ].includes(token)
+    )
+  ) {
+    return 'test';
+  }
+  if (tokens.some((token) => ['examples', 'example'].includes(token))) {
+    return 'example';
   }
   if (pkg?.bin) return 'cli';
   if (pkg?.exports || pkg?.main || pkg?.module || pkg?.types || pkg?.typings) return 'library';
@@ -1025,9 +1097,18 @@ export function discoverRepoUnits(root) {
     for (const name of ['tsconfig.json', 'jsconfig.json']) {
       const config = readJsonc(path.join(abs, name));
       const rootDir = config?.compilerOptions?.rootDir;
-      if (typeof rootDir === 'string') roots.add(normalizeRel(rootDir));
+      if (typeof rootDir === 'string' && !/\.(json|jsonc)$/i.test(rootDir)) {
+        const normalizedRootDir = normalizeRel(rootDir);
+        if (!isNonProductRelativePath(normalizedRootDir)) roots.add(normalizedRootDir);
+      }
       for (const ref of config?.references ?? []) {
-        if (typeof ref?.path === 'string') roots.add(normalizeRel(ref.path).replace(/^\.\//, ''));
+        if (typeof ref?.path !== 'string') continue;
+        const relRef = normalizeRel(ref.path).replace(/^\.\//, '');
+        // Project references often point at tsconfig.app.json — that is not a source root.
+        if (!relRef || relRef === '.' || /\.(json|jsonc)$/i.test(relRef)) continue;
+        if (isNonProductRelativePath(relRef)) continue;
+        const absRef = path.join(abs, relRef);
+        if (fs.statSync(absRef, { throwIfNoEntry: false })?.isDirectory()) roots.add(relRef);
       }
     }
     for (const dir of entrypointDirs(pkg)) {
@@ -1067,6 +1148,7 @@ function walkSourceFiles(dir, files = [], depth = 0) {
     // `.github/workflows/` CI dir must not read as an app "workflows"/saga signal, and Ark's
     // own installed `.claude`/`.codex` dirs must not perturb a re-run's recommendation.
     if (entry.name === 'node_modules' || entry.name === 'dist' || entry.name.startsWith('.')) continue;
+    if (isSkippedSourceDir(entry.name)) continue;
     walkSourceFiles(path.join(dir, entry.name), files, depth + 1);
   }
   return files;
@@ -1105,6 +1187,7 @@ function dirExistsAnywhere(root, names) {
       // Skip node_modules/dist and ALL dot-dirs so `.github/workflows/` (CI YAML) can't be read
       // as an app "workflows"/saga signal, and Ark's own `.claude`/`.codex` don't self-perturb.
       if (entry.name === 'node_modules' || entry.name === 'dist' || entry.name.startsWith('.')) continue;
+      if (isSkippedSourceDir(entry.name)) continue;
       if (names.has(entry.name)) return true;
       const child = rel === '.' ? entry.name : `${rel}/${entry.name}`;
       if (child.split('/').length < 8) queue.push(child);
@@ -1139,7 +1222,14 @@ export function collectRepoShapeSignals(root) {
   const pkg = readPackageJson(root);
   const repoUnits = discoverRepoUnits(root);
   const workspaceDirs = detectWorkspaces(root);
-  const workspaces = workspaceDirs.length > 0;
+  // Manifest presence is workspace evidence even when globs parse to no dirs
+  // (pnpm-workspace.yaml without package.json#workspaces is the common case).
+  const workspaces =
+    workspaceDirs.length > 0 ||
+    isPnpmWorkspaceRoot(root) ||
+    isNpmYarnWorkspaceRoot(root) ||
+    fs.existsSync(path.join(root, 'rush.json')) ||
+    fs.existsSync(path.join(root, 'lerna.json'));
   // Include frontend/web/client — common Next monorepo app folders.
   const candidateScanDirs = repoUnits
     .filter((unit) => !['docs', 'example', 'test'].includes(unit.role))
@@ -1362,7 +1452,10 @@ export function collectRepoShapeSignals(root) {
 }
 
 const SIGNAL_WHY = {
-  workspaces: (signals) => `workspace roots declared (${signals.workspaceDirs.join(', ')})`,
+  workspaces: (signals) =>
+    signals.workspaceDirs?.length
+      ? `workspace roots declared (${signals.workspaceDirs.join(', ')})`
+      : 'workspace manifest present (pnpm-workspace.yaml, package.json workspaces, rush, or lerna)',
   tinyTree: (signals) => `few source files (${signals.sourceFileCount})`,
   ui: () => 'UI directories or multiple TSX files present',
   uiHeavy: () => 'substantial UI surface (multiple TSX files)',
@@ -1398,7 +1491,10 @@ const SIGNAL_WHY = {
 };
 
 const NEGATIVE_SIGNAL_WHY = {
-  workspaces: () => 'not a workspace monorepo (penalized for this shape)',
+  workspaces: (signals) =>
+    signals.workspaces
+      ? `workspace monorepo (${signals.workspaceDirs?.join(', ') || 'manifest present'}; this shape prefers a single package)`
+      : 'not a workspace monorepo (penalized for this shape)',
   cli: () => 'CLI bin entry present (penalized for this shape)',
   ui: () => 'UI directories present (penalized for this shape)',
   uiHeavy: () => 'heavy UI surface (penalized for this shape)',
