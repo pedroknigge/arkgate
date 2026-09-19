@@ -11,8 +11,17 @@ import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { pinArkgateDevDependency } from '../../../bin/lib/field-install.mjs';
 import { arkPackageRecoveryCommand } from '../../../bin/lib/package-manager.mjs';
-import { formatStartPackageInstallFailure } from '../../../bin/lib/start-preview.mjs';
+import {
+  explainPnpmMaturityBlock,
+  formatStartPackageInstallFailure,
+} from '../../../bin/lib/start-preview.mjs';
 import { setupUsage } from '../../../bin/lib/first-run-help.mjs';
+import {
+  PACKAGE_UNRESOLVED_NEXT_ACTION,
+  collectDoctorNextActions,
+  preferredDoctorPrimaryNextAction,
+} from '../../../bin/lib/doctor-next-actions.mjs';
+import { ADOPTED_NOT, NOT_ADOPTED_NEXT_ACTION } from '../../../bin/lib/adoption-stance.mjs';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const ARK = path.join(REPO, 'bin', 'ark.mjs');
@@ -75,6 +84,32 @@ describe('formatStartPackageInstallFailure', () => {
     expect(text).not.toMatch(/(?:^|[\s`])npx arkgate-check(?:\s|$)/);
     expect(text).not.toMatch(/Applied \d+ start mutation/);
   });
+
+  it('replaces pnpm maturity internals with a one-liner (#268)', () => {
+    const dump = [
+      'Progress: resolved 1, reused 0, downloaded 0, added 0',
+      'ERR_PNPM_NO_MATURE_MATCHING_VERSION  No matching version found for arkgate@^4.8.18 published by now within 7 days waiting period (minimumReleaseAge).',
+      'Time to become mature: 6 days 23 hours',
+      'The following packages failed the maturity check:',
+      '  arkgate  4.8.18  published 1h ago  wait 7d',
+      'If you need this package, add it to minimumReleaseAgeExclude.',
+    ].join('\n');
+    expect(explainPnpmMaturityBlock(dump)).toBe(
+      'This repo blocks packages younger than 7 days — pin an older release or exclude arkgate temporarily.'
+    );
+    const text = formatStartPackageInstallFailure({
+      exitStatus: 1,
+      installCommand: 'pnpm add -D arkgate@^4.8.18 -w',
+      hostOutput: dump,
+    });
+    expect(text).toMatch(/This repo blocks packages younger than 7 days/);
+    expect(text).toMatch(/pin an older release or exclude arkgate temporarily/);
+    expect(text).toContain('pnpm add -D arkgate@^4.8.18 -w');
+    expect(text).not.toMatch(/Time to become mature/);
+    expect(text).not.toMatch(/minimumReleaseAgeExclude/);
+    expect(text).not.toMatch(/The following packages failed the maturity check/);
+    expect(explainPnpmMaturityBlock('yarn: simulated install fail')).toBeNull();
+  });
 });
 
 describe('pinArkgateDevDependency bumps an older caret to this CLI', () => {
@@ -127,6 +162,42 @@ describe('pinArkgateDevDependency bumps an older caret to this CLI', () => {
 });
 
 describe('start --apply install fail is not green (#258)', () => {
+  it('prints the maturity one-liner and hides pnpm internals when add fails (#268)', () => {
+    const root = layeredFixture('ark-apply-pnpm-mature-');
+    write(root, 'pnpm-workspace.yaml', 'packages: []\n');
+    write(root, 'pnpm-lock.yaml', 'lockfileVersion: "9.0"\n');
+    const fakeBin = path.join(root, '.fake-bin');
+    fs.mkdirSync(fakeBin, { recursive: true });
+    fs.writeFileSync(
+      path.join(fakeBin, 'pnpm'),
+      [
+        '#!/bin/sh',
+        'echo "Progress: resolved 1, reused 0, downloaded 0, added 0" >&2',
+        'echo "ERR_PNPM_NO_MATURE_MATCHING_VERSION  No matching version found for arkgate published within 7 days waiting period (minimumReleaseAge)." >&2',
+        'echo "Time to become mature: 6 days 23 hours" >&2',
+        'echo "The following packages failed the maturity check:" >&2',
+        'echo "  arkgate  wait 7d" >&2',
+        'exit 1',
+        '',
+      ].join('\n'),
+      { mode: 0o755 }
+    );
+
+    const result = spawnSync(process.execPath, [ARK, 'start', '--root', root, '--apply', '--yes', '--no-strict', '--tools', 'claude'], {
+      encoding: 'utf8',
+      env: { ...process.env, PATH: `${fakeBin}${path.delimiter}${process.env.PATH ?? ''}` },
+    });
+    const out = `${result.stdout ?? ''}\n${result.stderr ?? ''}`;
+
+    expect(result.status, out).not.toBe(0);
+    expect(out).toMatch(/This repo blocks packages younger than 7 days/);
+    expect(out).toMatch(/pin an older release or exclude arkgate temporarily/);
+    expect(out).toMatch(/Package install failed \(exit 1\)/);
+    expect(out).toMatch(/pnpm add -D arkgate@/);
+    expect(out).not.toMatch(/Time to become mature/);
+    expect(out).not.toMatch(/The following packages failed the maturity check/);
+  });
+
   it('exits non-zero and prints yarn add + recoverable doctor when yarn fails', () => {
     const root = layeredFixture('ark-apply-yarn-fail-');
     write(root, 'yarn.lock', '# yarn lockfile v1\n');
@@ -153,6 +224,16 @@ describe('start --apply install fail is not green (#258)', () => {
       devDependencies?: { arkgate?: string };
     };
     expect(pkg.devDependencies?.arkgate).toBe(`^${CLI_VERSION}`);
+
+    const doctor = spawnSync(
+      process.execPath,
+      [path.join(REPO, 'bin/ark-check.mjs'), '--root', root, '--doctor', '--json'],
+      { encoding: 'utf8' }
+    );
+    expect(doctor.status, `${doctor.stdout}\n${doctor.stderr}`).toBe(0);
+    const payload = JSON.parse(doctor.stdout) as { doctor?: { primaryNextAction?: string } };
+    expect(payload.doctor?.primaryNextAction).toBe(PACKAGE_UNRESOLVED_NEXT_ACTION);
+    expect(payload.doctor?.primaryNextAction).not.toMatch(/required GitHub status/i);
   });
 
   it('start --apply --skip-package-manager bumps an older pin to this CLI', () => {
@@ -185,5 +266,80 @@ describe('first-contact copy does not teach a 404 doctor command', () => {
       const text = fs.readFileSync(path.join(REPO, rel), 'utf8');
       expect(text, rel).toContain('npx --package=arkgate arkgate-check --doctor');
     }
+  });
+
+  it('one-minute path leads with npx, not npm install -D arkgate (#268)', () => {
+    for (const rel of ['README.md', 'docs/use.md', 'docs/develop.md']) {
+      const text = fs.readFileSync(path.join(REPO, rel), 'utf8');
+      const heading = rel === 'docs/develop.md' ? '## Default integration' : /## (?:Start in one minute|In one minute)/;
+      const from = typeof heading === 'string' ? text.indexOf(heading) : text.search(heading);
+      expect(from, rel).toBeGreaterThanOrEqual(0);
+      const fence = text.slice(from).match(/```bash\n([\s\S]*?)```/);
+      expect(fence, rel).toBeTruthy();
+      const block = fence?.[1] ?? '';
+      expect(block, rel).toMatch(/^npx arkgate start/m);
+      expect(block, rel).not.toMatch(/^npm install -D arkgate/m);
+      expect(text, rel).toMatch(/pnpm add -w/);
+      expect(text, rel).toMatch(/workspace:\*/);
+    }
+  });
+});
+
+function nextActionsCtx(extra: Record<string, unknown> = {}) {
+  return {
+    operatingMode: 'enforce',
+    activeCount: 0,
+    gatesMissing: [],
+    analysisComplete: true,
+    designSmells: [],
+    postGreenPath: null,
+    coverageHonesty: { greenIsNotEnforcement: false, worseThanNoGate: false },
+    cov: { suggestions: [] },
+    skillGaps: [],
+    agentHomeGaps: [],
+    staleRunners: [],
+    adoption: { gaps: [] },
+    designFitness: {},
+    adopted: ADOPTED_NOT,
+    root: '/tmp',
+    ...extra,
+  };
+}
+
+describe('doctor #1 after unresolved package (#268)', () => {
+  it('leads with install, not make CI required, when the pin is present and unresolved', () => {
+    const pinned = { packageInstalled: false, packageVersionTruth: { code: 'PACKAGE_PIN_MATCHES' } };
+    const actions = collectDoctorNextActions(nextActionsCtx(pinned));
+    expect(actions[0]).toBe(PACKAGE_UNRESOLVED_NEXT_ACTION);
+    expect(actions).toContain(NOT_ADOPTED_NEXT_ACTION);
+    expect(actions[0]).not.toBe(NOT_ADOPTED_NEXT_ACTION);
+    expect(preferredDoctorPrimaryNextAction({ adopted: ADOPTED_NOT, ...pinned })).toBe(
+      PACKAGE_UNRESOLVED_NEXT_ACTION
+    );
+  });
+
+  it('keeps make CI required when there is no pin, or self-host', () => {
+    expect(collectDoctorNextActions(nextActionsCtx())[0]).toBe(NOT_ADOPTED_NEXT_ACTION);
+    expect(collectDoctorNextActions(nextActionsCtx({ packageInstalled: true }))[0]).toBe(
+      NOT_ADOPTED_NEXT_ACTION
+    );
+    expect(
+      collectDoctorNextActions(
+        nextActionsCtx({
+          packageInstalled: false,
+          packageVersionTruth: { code: 'PACKAGE_PIN_ABSENT' },
+        })
+      )[0]
+    ).toBe(NOT_ADOPTED_NEXT_ACTION);
+    expect(
+      collectDoctorNextActions(
+        nextActionsCtx({
+          packageInstalled: false,
+          selfHost: true,
+          packageVersionTruth: { code: 'PACKAGE_PIN_MATCHES' },
+        })
+      )[0]
+    ).toBe(NOT_ADOPTED_NEXT_ACTION);
+    expect(preferredDoctorPrimaryNextAction({ adopted: ADOPTED_NOT })).toBe(NOT_ADOPTED_NEXT_ACTION);
   });
 });

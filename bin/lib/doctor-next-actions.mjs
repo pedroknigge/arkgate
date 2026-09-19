@@ -9,6 +9,36 @@ import { mergePostGreenTopActions } from './post-green-path.mjs';
 import { ADOPTED_NOT, NOT_ADOPTED_NEXT_ACTION } from './adoption-stance.mjs';
 import { REQUIRED_GATE_WORKFLOW } from './gate-files.mjs';
 
+/** Package pin may exist; local resolve still failed. Lead with install, not CI. */
+export const PACKAGE_UNRESOLVED_NEXT_ACTION =
+  'Install arkgate in this project first (npx --package=arkgate, or pnpm add -D arkgate -w / yarn add -D arkgate -W at a workspace root), then re-run --doctor';
+
+export function packageUnresolvedNextAction(ctx) {
+  if (ctx?.packageInstalled !== false || ctx?.selfHost === true) return null;
+  const code = ctx?.packageVersionTruth?.code;
+  if (code === 'PACKAGE_PIN_SELF_HOST' || code === 'PACKAGE_PIN_ABSENT') return null;
+  // Failed start --apply: pin is in package.json, node_modules did not resolve.
+  if (code === 'PACKAGE_PIN_MATCHES' || code === 'PACKAGE_PIN_BEHIND_CLI' || ctx?.packagePinned === true) {
+    return PACKAGE_UNRESOLVED_NEXT_ACTION;
+  }
+  return null;
+}
+
+/** Compact doctor JSON #1 — same rank as collectDoctorNextActions when package is missing. */
+export function preferredDoctorPrimaryNextAction({
+  adopted,
+  packageInstalled,
+  selfHost,
+  packageVersionTruth,
+  postGreenPath,
+  dualTruthNext,
+} = {}) {
+  return (
+    packageUnresolvedNextAction({ packageInstalled, selfHost, packageVersionTruth }) ||
+    (adopted === 'not-adopted' ? NOT_ADOPTED_NEXT_ACTION : postGreenPath?.action ?? dualTruthNext ?? null)
+  );
+}
+
 function missingGateFiles(ctx) {
   const list = Array.isArray(ctx.gatesMissing) ? ctx.gatesMissing : [];
   if (ctx.ciNotFailClosed) {
@@ -119,6 +149,8 @@ export function collectDoctorNextActions(ctx) {
   if (notAdopted || ctx.adopted === ADOPTED_NOT || ctx.adopted == null) {
     actions.push(ctx.notAdoptedNextAction || NOT_ADOPTED_NEXT_ACTION);
   }
+  const resolvePkg = packageUnresolvedNextAction(ctx);
+  if (resolvePkg) actions.push(resolvePkg);
   const nudge = ctx.stewardNudge;
   if (
     nudge &&
@@ -258,6 +290,9 @@ export function collectDoctorNextActions(ctx) {
   const unique = mergePostGreenTopActions(actions, ctx.postGreenPath);
   if (ctx.designFitness.designWeak && unique.length === 0 && ctx.postGreenPath) {
     unique.push(ctx.postGreenPath.action);
+  }
+  if (resolvePkg) {
+    return [resolvePkg, ...unique.filter((a) => a !== resolvePkg)];
   }
   if (overlapAction) {
     return [overlapAction, ...unique.filter((a) => a !== overlapAction)];

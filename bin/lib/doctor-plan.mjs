@@ -13,7 +13,7 @@ import * as arkShared from '../ark-shared.mjs';
 import { summarizeRulesUnderContract } from './rules-under-contract.mjs';
 import { describePackageVersionDualTruth } from './field-install.mjs';
 import { detectAgentHomeGaps } from './agent-homes.mjs';
-import { collectDoctorNextActions } from './doctor-next-actions.mjs';
+import { collectDoctorNextActions, preferredDoctorPrimaryNextAction } from './doctor-next-actions.mjs';
 import { printDoctorCompactHuman, printDoctorDetailsHuman } from './doctor-human.mjs';
 import { collectLayerOwnerResidual, layerGuidanceLine, placementDescriptionFields } from './layer-description.mjs';
 import { collectAdrPresenceResidual, printAdrPresenceHint } from './adr-presence.mjs';
@@ -653,6 +653,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   const statusTransitionCatalog = collectStatusTransitionCatalogResidual({ root, config, files, statesTransitions });
   const noDomainFrontend = collectNoDomainFrontendResidual({ config, coverage: cov, designSmells });
   const { invariantCoverageRoots, invariantTestsPath } = collectInvariantCoverageResiduals({ adopted: isAdopted(adopted) || options.requireGates === true, coverage: config?.coverage, config, root });
+  const selfHost = packageVersionTruth?.selfHost === true || packageVersionTruth?.code === 'PACKAGE_PIN_SELF_HOST';
   const { coverageHonesty, baselineHonesty, writePathHonesty, productHonesty } =
     computeDoctorEnforcementHonesty({
       governedPercent: cov.governed.percent,
@@ -681,13 +682,10 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
         : rulesUnderContract?.active === true || arkRun?.active === true || doctorAdvisories.arkOrder?.active === true
           ? { active: true, extraMergeTeeth: arkRun?.extraMergeTeeth === true || doctorAdvisories.arkOrder?.extraMergeTeeth === true }
           : null,
-      primaryNextAction:
-        adopted === 'not-adopted' ? NOT_ADOPTED_NEXT_ACTION : postGreenPath?.action ?? dualTruthNext,
+      primaryNextAction: preferredDoctorPrimaryNextAction({ adopted, packageInstalled, selfHost, packageVersionTruth, postGreenPath, dualTruthNext }),
       operatingMode,
       packageInstalled,
-      selfHost:
-        packageVersionTruth?.selfHost === true ||
-        packageVersionTruth?.code === 'PACKAGE_PIN_SELF_HOST',
+      selfHost,
       nativeFailClosed: writePath.nativeFailClosed,
       nativeFailClosedPolicy: writePath.nativeFailClosedPolicy,
       adopted,
@@ -752,7 +750,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
             adoptionStance: adopted,
             ...(adopted === 'not-adopted'
               ? {
-                  primaryNextAction: NOT_ADOPTED_NEXT_ACTION,
+                  primaryNextAction: productHonesty.primaryNextAction || NOT_ADOPTED_NEXT_ACTION,
                   ...(postGreenPath ? DESIGN_WEAK_HONESTY_FLAGS : {}),
                 }
               : postGreenPath
@@ -908,7 +906,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     coverageHonesty,
     cov,
     packageVersionTruth,
-    dualTruthNext,
+    dualTruthNext, packageInstalled, selfHost,
     activeCount,
     writePath,
     gatesMissing,

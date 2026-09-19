@@ -66,6 +66,12 @@ in the immutable pre-2.0 archive linked below.
   Required CI is still the shared merge line. No new skill, schema, or host.
 
 ### Fixed
+- Stranger start path no longer leads with `npm install -D arkgate` (hard-fail
+  on `workspace:*`). Docs lead with `npx arkgate start`; `start --apply` already
+  pins with `pnpm add -w` / `yarn add -W`. pnpm `minimumReleaseAge` recovery is
+  a one-liner instead of host maturity internals. Doctor after a failed install
+  leads with resolve the package, not "make CI required"
+  ([#268](https://github.com/pedroknigge/arkgate/issues/268)).
 - Write hook and `ark-check` now agree on overlapping layer globs: the hook
   probes the same specifier extensions as `ark-check` and classifies with
   `layerForRelativePath` (explicit `money.ts` beats `src/lib/**`). Field
