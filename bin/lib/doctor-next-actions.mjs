@@ -14,7 +14,11 @@ export const PACKAGE_UNRESOLVED_NEXT_ACTION =
   'Install arkgate in this project first (npx --package=arkgate, or pnpm add -D arkgate -w / yarn add -D arkgate -W at a workspace root), then re-run --doctor';
 
 export function packageUnresolvedNextAction(ctx) {
-  if (ctx?.packageInstalled === false && ctx?.selfHost !== true) {
+  if (ctx?.packageInstalled !== false || ctx?.selfHost === true) return null;
+  const code = ctx?.packageVersionTruth?.code;
+  if (code === 'PACKAGE_PIN_SELF_HOST' || code === 'PACKAGE_PIN_ABSENT') return null;
+  // Failed start --apply: pin is in package.json, node_modules did not resolve.
+  if (code === 'PACKAGE_PIN_MATCHES' || code === 'PACKAGE_PIN_BEHIND_CLI' || ctx?.packagePinned === true) {
     return PACKAGE_UNRESOLVED_NEXT_ACTION;
   }
   return null;
@@ -25,11 +29,12 @@ export function preferredDoctorPrimaryNextAction({
   adopted,
   packageInstalled,
   selfHost,
+  packageVersionTruth,
   postGreenPath,
   dualTruthNext,
 } = {}) {
   return (
-    packageUnresolvedNextAction({ packageInstalled, selfHost }) ||
+    packageUnresolvedNextAction({ packageInstalled, selfHost, packageVersionTruth }) ||
     (adopted === 'not-adopted' ? NOT_ADOPTED_NEXT_ACTION : postGreenPath?.action ?? dualTruthNext ?? null)
   );
 }
