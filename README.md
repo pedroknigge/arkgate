@@ -66,14 +66,13 @@ Full map: **[docs/README.md](docs/README.md)**
 ## Start in one minute
 
 ```bash
-npm install -D arkgate typescript
 npx arkgate start                 # preview files + commands
 npx arkgate start --apply         # compact config + host router + CI plan
 npx --package=arkgate arkgate-check --doctor        # status — one next step
 npx --package=arkgate arkgate-check --doctor --all  # full details
 ```
 
-`arkgate-check` is a command in the `arkgate` package, not its own npm package. After a local install, `npx arkgate-check --doctor` also works.
+`start --apply` pins arkgate with this repo's package manager (`pnpm add -w` / `yarn add -W` at a workspace root). Do not run `npm install -D arkgate` at a `workspace:*` root — npm rejects that protocol. After a local install, `npx arkgate-check --doctor` also works. `arkgate-check` is a command in the `arkgate` package, not its own npm package.
 
 `start --apply` refuses when projected governed coverage is below 50% or
 shape confidence is weak (below 0.6 with coverage under 80%), or when the
