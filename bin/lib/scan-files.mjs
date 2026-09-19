@@ -4,7 +4,9 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { isScanExcludedRelative } from '../ark-shared.mjs';
+import { isScanExcludedRelative, isSkippedSourceDir } from '../ark-shared.mjs';
+
+export { isSkippedSourceDir };
 
 export const SOURCE_FILE_NAME = /\.[cm]?[tj]sx?$/;
 
@@ -16,31 +18,6 @@ export const TEST_FILE_NAME =
 
 export function isGovernableSourceFile(name) {
   return SOURCE_FILE_NAME.test(name) && !name.endsWith('.d.ts') && !TEST_FILE_NAME.test(name);
-}
-
-export function isSkippedSourceDir(name) {
-  return (
-    name === 'node_modules' ||
-    name === 'dist' ||
-    name === 'coverage' ||
-    name === 'bench' ||
-    name === 'benches' ||
-    name === 'benchmark' ||
-    name === 'benchmarks' ||
-    name === 'docs' ||
-    name === 'documentation' ||
-    name === 'example' ||
-    name === 'examples' ||
-    name === 'fixture' ||
-    name === 'fixtures' ||
-    name === 'playground' ||
-    name === '__tests__' ||
-    name === '__mocks__' ||
-    name === 'e2e' ||
-    // Top-level style Nest/Jest folders (not "testing" helpers inside src)
-    name === 'test' ||
-    name === 'tests'
-  );
 }
 
 function isInsideRoot(root, target) {

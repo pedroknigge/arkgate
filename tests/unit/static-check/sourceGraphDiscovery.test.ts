@@ -79,7 +79,8 @@ describe('source/graph-first recommendation discovery', () => {
     });
     const recommendation = buildArchitectureRecommendation(root);
     expect(recommendation.archetype).not.toBe('crud-product');
-    expect(recommendation.signals.packageUnits.find((unit: { root: string }) => unit.root === 'docs').role).toBe('docs');
+    // Docs / playground / fixture trees are skipped at discovery (same list as the check walk).
+    expect(recommendation.signals.packageUnits.find((unit: { root: string }) => unit.root === 'docs')).toBeUndefined();
     expect(recommendation.signals.nextFramework).toBe(false);
     expect(recommendation.evidence.every((item: { effect: string }) => ['positive', 'negative'].includes(item.effect))).toBe(true);
   });
