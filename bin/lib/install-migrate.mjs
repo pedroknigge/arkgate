@@ -200,10 +200,9 @@ export function buildManagedAssetCatalog({ root, tools, compact = false, skillsO
       })
     );
     if (selectedTools.has('cursor')) {
-      add('.cursor/mcp.json', mcpJson(root));
-      // whole-file for managed upgrade/manifest (json-merge is install-time only via
-      // mergeCursorArkHook below — same pattern as Antigravity hooks).
+      // Write-gate order: pre-hook first, MCP prepare as fallback + identity.
       add('.cursor/hooks.json', cursorHooks(root));
+      add('.cursor/mcp.json', mcpJson(root));
       if (!compact) add('.cursor/rules/ark.mdc', cursorRule(root));
     }
     if (selectedTools.has('claude')) add('.claude/settings.json', claudeSettings(root));
@@ -213,8 +212,8 @@ export function buildManagedAssetCatalog({ root, tools, compact = false, skillsO
       if (!compact) add('docs/ark-codex-config.toml', codexTomlSnippet(root));
     }
     if (selectedTools.has('grok')) {
-      add('.grok/config.toml', grokProjectConfig(root));
       add('.grok/hooks/ark-write-gate.json', grokHooks(root));
+      add('.grok/config.toml', grokProjectConfig(root));
     }
     if (selectedTools.has('antigravity')) {
       add('.agents/hooks.json', antigravityHooks(root));

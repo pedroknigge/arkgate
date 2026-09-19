@@ -141,8 +141,9 @@ export function detectWritePathCapabilities(root, explicitHost, attempt) {
           ? 'OpenCode local write is advisory (MCP + optional experimental plugin — not a hard boundary; ' +
             'not equivalent to Claude/Grok/Antigravity PreToolUse hard-write). ' +
             'The hard merge backstop is a required GitHub status context running --strict-merge.'
-          : `Active host ${activeHost} has advisory prepare-write/autoPatch tools, ` +
-            'but no hard write boundary; CI can report failure, while merge blocking requires provider policy.';
+          : `Fell back to MCP prepare: active host ${activeHost} has no hard pre-hook. ` +
+            'Advisory prepare-write/autoPatch is the local write surface. ' +
+            'Next: install and trust the host write hook, or keep required CI as the merge line.';
     gap = {
       id: 'write-path-mcp-only',
       severity: 'info',

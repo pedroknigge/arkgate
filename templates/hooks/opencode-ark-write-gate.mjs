@@ -8,8 +8,8 @@
  *
  * Honesty: OpenCode plugin hooks are **not** a complete hard write boundary
  * (subagent and alternate tool paths may bypass). Never treat this plugin as
- * Claude/Grok/Antigravity PreToolUse hard-write. Prefer MCP `ark_prepare_write`
- * + required merge status.
+ * Claude/Grok/Antigravity PreToolUse hard-write. This host has no hard pre-hook,
+ * so MCP `ark_prepare_write` is the local write fallback + required merge status.
  *
  * This file is a gallery template shipped with arkgate — not auto-installed.
  */

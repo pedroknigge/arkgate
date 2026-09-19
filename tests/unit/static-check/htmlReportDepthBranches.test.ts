@@ -21,7 +21,7 @@ describe('html-report-depth branch matrix', () => {
   it('covers writePathModeHint and inventory edge cases', () => {
     expect(writePathModeHint('repair')).toMatch(/repair/i);
     expect(writePathModeHint('reject-only')).toMatch(/without repair/i);
-    expect(writePathModeHint('mcp-only')).toMatch(/Advisory MCP/i);
+    expect(writePathModeHint('mcp-only')).toMatch(/Fell back to MCP|Advisory MCP/i);
     expect(writePathModeHint('none')).toMatch(/No hard write/i);
     expect(writePathModeHint('weird')).toMatch(/Session write-path/i);
     expect(writePathModeHint(undefined)).toMatch(/Session write-path|No hard write/i);

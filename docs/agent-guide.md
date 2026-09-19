@@ -67,7 +67,9 @@ and trusted (Cursor: `Write` / `StrReplace` via `.cursor/hooks.json`). Codex CLI
 ChatGPT Desktop/App Server can hard-block a complete `apply_patch` through a trusted
 `.codex/hooks.json`; installed files stay unverified until a fresh covered invocation. Hosted
 tools, specialized opt-out paths, shell/direct writes, incomplete patch reconstruction, and
-OpenCode remain CI-backed or advisory. For every host, the repository-wide hard boundary is a
+OpenCode remain CI-backed or advisory. Write-gate order: host pre-hook first when
+the host has one; MCP `ark_prepare_write` is fallback if that hook is missing or
+fail-open. For every host, the repository-wide hard boundary is a
 **required GitHub status context** that runs `arkgate-check --strict-merge` (alias
 `ark-check --strict-merge`) — the CLI name is not the status context name. Soft-write or
 unverified-hook evidence alone does not mean the project is unfinished. See

@@ -289,8 +289,9 @@ describe('detectWritePathCapabilities (shipped write-path-detect.mjs)', () => {
         severity: 'info',
         host: 'claude',
         message:
-          'Active host claude has advisory prepare-write/autoPatch tools, ' +
-          'but no hard write boundary; CI can report failure, while merge blocking requires provider policy.',
+          'Fell back to MCP prepare: active host claude has no hard pre-hook. ' +
+          'Advisory prepare-write/autoPatch is the local write surface. ' +
+          'Next: install and trust the host write hook, or keep required CI as the merge line.',
         fix: 'npx ark-check --install-agent-gates --tools claude',
       });
     } finally {

@@ -191,7 +191,10 @@ export function collectAdoptionGaps(root, config, coverage) {
         host: 'cursor',
         dir: '.cursor',
         skill: (n) => path.join(root, '.cursor', 'commands', `${n}.md`),
-        extras: [['.cursor/mcp.json', 'MCP config']],
+        extras: [
+          ['.cursor/hooks.json', 'write-gate hook'],
+          ['.cursor/mcp.json', 'MCP config (fallback)'],
+        ],
         toolsFlag: 'cursor',
       },
       {

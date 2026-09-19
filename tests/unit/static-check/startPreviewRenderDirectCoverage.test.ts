@@ -40,7 +40,11 @@ describe('renderStartPreview direct output coverage', () => {
         { action: 'delete', path: '.legacy-ark', afterHash: null },
       ],
       commands: ['npm install arkgate', 'ark-check --init'],
-      hostGuarantees: ['shared CI merge gate', 'exact bytes on apply'],
+      hostGuarantees: [
+        'shared CI merge gate',
+        'Write gate: host pre-hook first; MCP prepare is fallback if that hook is missing or fail-open.',
+        'exact bytes on apply',
+      ],
       unresolvedDecisions: ['Classify three remaining files.'],
     });
 
@@ -61,6 +65,7 @@ describe('renderStartPreview direct output coverage', () => {
     expect(output).toContain('/ark-order');
     expect(output).not.toContain('Commands in the approved setup plan:');
     expect(output).not.toContain('Host guarantees:');
+    expect(output).toContain('Write gate: host pre-hook first; MCP prepare is fallback if that hook is missing or fail-open.');
     expect(output).toContain('Unresolved decisions:');
     expect(output).toContain('Classify three remaining files.');
     expect(output).not.toContain('Apply this plan with: arkgate start --apply');

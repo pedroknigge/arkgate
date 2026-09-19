@@ -21,6 +21,8 @@ right house. Skills never enforce — CLI / hooks / CI do.
 ## Checklist
 
 - `filePath` is known before the call. Description alone is not a path.
+- Host write gate: prefer the installed pre-hook. MCP `ark_prepare_write` is
+  fallback when that hook is missing or fail-open. Skills never enforce.
 - Golden pattern is load-bearing when present. Adopt generates it.
 - An included file that matches no layer is not a pass. The write gate denies it
   (`CONFIG_UNCLASSIFIED_FILES`). Place it in a layer folder, or send include/layer

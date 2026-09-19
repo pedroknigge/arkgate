@@ -494,6 +494,17 @@ Does not close `Z09` / `K01`.
 |---:|---|---|---:|---|---|
 | 292 | `RL818` | `doing` | S | RL817 | Prepare **4.8.18** (daily accumulate #269, #270/#272, #273, #275, #274, #278). After merge: annotated tag `v4.8.18` + GitHub Release + `gh workflow run publish-npm.yml -f tag=v4.8.18 -f dry_run=false`. Does not close `Z09` / `K01` |
 
+### Patch — pre-hook write gate first, MCP prepare fallback (issue #277)
+
+Contener: prefer the host PreToolUse / pre-hook write path. MCP `ark_prepare_write`
+is fallback when that native path is missing or fail-open. Reuse the existing
+`writePath.mode` ladder (`repair` / `reject-only` / `mcp-only`). No new schema.
+Does not weaken `--strict-merge`. Does not close `Z09` / `K01`.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 293 | `PH01` | `doing` | S | WG01 | Host pre-hook first; MCP prepare fallback; compact Cursor requires the fail-closed hook; doctor/start name the fallback; host matrix documents hard vs advisory vs MCP-only. #277 |
+
 ### Patch — write-gate fail-closed host parity
 
 Host-neutral fail-closed write: where a host exposes a native “deny when the

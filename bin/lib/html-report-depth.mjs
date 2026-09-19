@@ -224,7 +224,7 @@ export function writePathModeHint(mode) {
     case 'reject-only':
       return 'Hard write boundary without repair payload; edits can be blocked without guided re-entry.';
     case 'mcp-only':
-      return 'Advisory MCP only — prepare-write/autoPatch available, no hard PreToolUse for this host.';
+      return 'Fell back to MCP prepare — advisory prepare-write/autoPatch; no hard PreToolUse for this host.';
     case 'none':
       return 'No hard write boundary or advisory MCP for the active host (or host is unknown in this process).';
     default:

@@ -147,6 +147,8 @@ export function printDoctorCompactHuman(view) {
     if (skippableCi) line(warn, skippableCi);
     else if (writePathHonesty?.nativeFailClosed === false) {
       line(warn, writePathHonesty.message || 'Write hook is fail-open — if the checker cannot run, the write still lands.');
+    } else if (listedMissing.length === 0 && writePath.gap?.id === 'write-path-mcp-only') {
+      line(warn, writePath.gap.message || 'Fell back to MCP prepare; required CI is the merge boundary.');
     } else if (listedMissing.length === 0 && (writePath.gap || writePathHonesty?.softWriteHost)) {
       line(warn, 'Local writes are advisory; required CI is the merge boundary.');
     }
