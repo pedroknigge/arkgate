@@ -503,7 +503,7 @@ Does not weaken `--strict-merge`. Does not close `Z09` / `K01`.
 
 | Order | ID | Status | Size | Depends on | Outcome |
 |---:|---|---|---:|---|---|
-| 292 | `PH01` | `doing` | S | WG01 | Host pre-hook first; MCP prepare fallback; compact Cursor requires the fail-closed hook; doctor/start name the fallback; host matrix documents hard vs advisory vs MCP-only. #277 |
+| 293 | `PH01` | `doing` | S | WG01 | Host pre-hook first; MCP prepare fallback; compact Cursor requires the fail-closed hook; doctor/start name the fallback; host matrix documents hard vs advisory vs MCP-only. #277 |
 
 ### Patch — write-gate fail-closed host parity
 
