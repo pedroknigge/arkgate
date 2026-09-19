@@ -224,6 +224,16 @@ describe('start --apply install fail is not green (#258)', () => {
       devDependencies?: { arkgate?: string };
     };
     expect(pkg.devDependencies?.arkgate).toBe(`^${CLI_VERSION}`);
+
+    const doctor = spawnSync(
+      process.execPath,
+      [path.join(REPO, 'bin/ark-check.mjs'), '--root', root, '--doctor', '--json'],
+      { encoding: 'utf8' }
+    );
+    expect(doctor.status, `${doctor.stdout}\n${doctor.stderr}`).toBe(0);
+    const payload = JSON.parse(doctor.stdout) as { doctor?: { primaryNextAction?: string } };
+    expect(payload.doctor?.primaryNextAction).toBe(PACKAGE_UNRESOLVED_NEXT_ACTION);
+    expect(payload.doctor?.primaryNextAction).not.toMatch(/required GitHub status/i);
   });
 
   it('start --apply --skip-package-manager bumps an older pin to this CLI', () => {
@@ -297,23 +307,38 @@ function nextActionsCtx(extra: Record<string, unknown> = {}) {
 }
 
 describe('doctor #1 after unresolved package (#268)', () => {
-  it('leads with install, not make CI required, when the package is unresolved', () => {
-    const actions = collectDoctorNextActions(nextActionsCtx({ packageInstalled: false }));
+  it('leads with install, not make CI required, when the pin is present and unresolved', () => {
+    const pinned = { packageInstalled: false, packageVersionTruth: { code: 'PACKAGE_PIN_MATCHES' } };
+    const actions = collectDoctorNextActions(nextActionsCtx(pinned));
     expect(actions[0]).toBe(PACKAGE_UNRESOLVED_NEXT_ACTION);
     expect(actions).toContain(NOT_ADOPTED_NEXT_ACTION);
     expect(actions[0]).not.toBe(NOT_ADOPTED_NEXT_ACTION);
-    expect(preferredDoctorPrimaryNextAction({ adopted: ADOPTED_NOT, packageInstalled: false })).toBe(
+    expect(preferredDoctorPrimaryNextAction({ adopted: ADOPTED_NOT, ...pinned })).toBe(
       PACKAGE_UNRESOLVED_NEXT_ACTION
     );
   });
 
-  it('keeps make CI required when package resolve is unknown or self-host', () => {
+  it('keeps make CI required when there is no pin, or self-host', () => {
     expect(collectDoctorNextActions(nextActionsCtx())[0]).toBe(NOT_ADOPTED_NEXT_ACTION);
     expect(collectDoctorNextActions(nextActionsCtx({ packageInstalled: true }))[0]).toBe(
       NOT_ADOPTED_NEXT_ACTION
     );
     expect(
-      collectDoctorNextActions(nextActionsCtx({ packageInstalled: false, selfHost: true }))[0]
+      collectDoctorNextActions(
+        nextActionsCtx({
+          packageInstalled: false,
+          packageVersionTruth: { code: 'PACKAGE_PIN_ABSENT' },
+        })
+      )[0]
+    ).toBe(NOT_ADOPTED_NEXT_ACTION);
+    expect(
+      collectDoctorNextActions(
+        nextActionsCtx({
+          packageInstalled: false,
+          selfHost: true,
+          packageVersionTruth: { code: 'PACKAGE_PIN_MATCHES' },
+        })
+      )[0]
     ).toBe(NOT_ADOPTED_NEXT_ACTION);
     expect(preferredDoctorPrimaryNextAction({ adopted: ADOPTED_NOT })).toBe(NOT_ADOPTED_NEXT_ACTION);
   });
