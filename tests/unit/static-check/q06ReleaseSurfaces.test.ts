@@ -10,7 +10,7 @@ import { version } from '../../../src/version.ts';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 /** Tree package identity. */
-const CURRENT = '4.8.18';
+const CURRENT = '4.8.19';
 /** Version confirmed on npm `latest`. */
 const PUBLISHED_LATEST = '4.8.11';
 
@@ -138,7 +138,7 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
 
   it('keeps 4.8.11 published on npm latest and 4.8.10 as prior', () => {
     expect(PUBLISHED_LATEST).toBe('4.8.11');
-    expect(CURRENT).toBe('4.8.18');
+    expect(CURRENT).toBe('4.8.19');
     expect(read('docs/releases/4.8.9.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.8.9.md')).toMatch(/arkgate@4\.8\.9/);
     expect(read('docs/releases/4.8.9.md')).not.toMatch(/\*\*Status:\*\*\s*prepared/i);
@@ -196,7 +196,7 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
     expect(read('CONTRIBUTING.md')).toMatch(/Optional \(not gates\)/);
     expect(read('CONTRIBUTING.md')).not.toMatch(/Current release candidate:/);
     expect(read('CONTRIBUTING.md')).not.toMatch(/Prior published:/);
-    expect(read('docs/README.md')).toMatch(/Current published:.*4\.8\.18/s);
+    expect(read('docs/README.md')).toMatch(/Current published:.*4\.8\.19/s);
     expect(read('docs/README.md')).toMatch(/Prior published:.*4\.8\.11/s);
     expect(read('docs/README.md')).toMatch(/Prior published:.*4\.8\.10/s);
     expect(read('docs/README.md')).toMatch(/Prior:.*4\.6\.2/s);
@@ -421,7 +421,37 @@ describe('CHANGELOG + release note cover 4.8.18 daily accumulate', () => {
     expect(section).not.toMatch(/Status:\s*unreleased/i);
     expect(fs.existsSync(path.join(REPO, 'docs/releases/4.8.18.md'))).toBe(false);
     expect(read('ROADMAP.md')).toMatch(/\| 291 \| `RL817` \| `done`/);
-    expect(read('ROADMAP.md')).toMatch(/\| 292 \| `RL818` \| `doing`/);
+    expect(read('ROADMAP.md')).toMatch(/\| 292 \| `RL818` \| `done`/);
+  });
+});
+
+describe('CHANGELOG + release note cover 4.8.19 daily accumulate', () => {
+  it('records the published release without a waiting-room latest pin', () => {
+    const changelog = changelogText();
+    const section = changelogSection(changelog, '4.8.19', '4.8.18');
+    expect(section).toMatch(/Status:\s*published/i);
+    expect(section).toMatch(/npm `latest` is \*\*4\.8\.19\*\*/);
+    expect(section).toMatch(/Daily accumulate \(2026-09-20 ART\)/);
+    expect(section).not.toMatch(/latest remains/);
+    expect(section).toMatch(/#280/);
+    expect(section).toMatch(/#286/);
+    expect(section).toMatch(/#285|#284/);
+    expect(section).toMatch(/#287|#268/);
+    expect(section).toMatch(/#289|#288/);
+    expect(section).toMatch(/pre-hook|write-gate order|write gate/i);
+    expect(section).toMatch(/playground|workspace/);
+    expect(section).toMatch(/stamp-refresh|arkVersion/);
+    expect(section).toMatch(/npx arkgate start|install-fail|minimumReleaseAge/);
+    expect(section).toMatch(/uiHeavy|API-heavy monorepo/);
+    expect(section).toMatch(/No required config migration/i);
+    expect(section).toMatch(/Does not close\s*`K01`\s*\/\s*`Z09`/);
+    expect(section).toMatch(/does \*\*not\*\* turn `arkOrder` on/);
+    expect(section).not.toMatch(/Status:\s*prepared/i);
+    expect(section).not.toMatch(/No package version bump/);
+    expect(section).not.toMatch(/Status:\s*unreleased/i);
+    expect(fs.existsSync(path.join(REPO, 'docs/releases/4.8.19.md'))).toBe(false);
+    expect(read('ROADMAP.md')).toMatch(/\| 292 \| `RL818` \| `done`/);
+    expect(read('ROADMAP.md')).toMatch(/\| 294 \| `RL819` \| `doing`/);
   });
 });
 
