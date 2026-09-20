@@ -26,11 +26,13 @@ import {
   applyStartPreview,
   emitStartSetupBudgetRefuse,
   evaluateStartSetupBudgetGate,
-  formatStartPackageInstallFailure,
   planStart,
   renderStartPreview,
-  runStartPackageInstall,
 } from './lib/start-preview.mjs';
+import {
+  formatStartPackageInstallFailure,
+  runStartPackageInstall,
+} from './lib/start-install-recovery.mjs';
 import { runUpgradeCommand } from './lib/upgrade-command.mjs';
 import { detectActiveAgentHost } from './lib/skill-install.mjs';
 import { loadArkConfigContract } from './lib/config-contract.mjs';
@@ -509,6 +511,7 @@ async function start(args) {
               exitStatus: install.status,
               installCommand,
               hostOutput: `${install.stdout}\n${install.stderr}`,
+              packageVersion: cliVersion(),
             })
           );
           return install.status;
@@ -584,6 +587,7 @@ async function start(args) {
               exitStatus: installStatus,
               installCommand: `${command} ${commandArgs.join(' ')}`,
               hostOutput,
+              packageVersion: cliVersion(),
             })
           );
         }

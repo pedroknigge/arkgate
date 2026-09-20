@@ -12,9 +12,11 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { pinArkgateDevDependency } from '../../../bin/lib/field-install.mjs';
 import { arkPackageRecoveryCommand } from '../../../bin/lib/package-manager.mjs';
 import {
+  classifyStartInstallFailure,
   explainPnpmMaturityBlock,
   formatStartPackageInstallFailure,
-} from '../../../bin/lib/start-preview.mjs';
+  startInstallRecovery,
+} from '../../../bin/lib/start-install-recovery.mjs';
 import { setupUsage } from '../../../bin/lib/first-run-help.mjs';
 import {
   PACKAGE_UNRESOLVED_NEXT_ACTION,
@@ -69,6 +71,12 @@ describe('arkPackageRecoveryCommand', () => {
       /(?:^|[\s`])npx arkgate-check(?:\s|$)/
     );
   });
+
+  it('pins the package spec when Age blocked a local add', () => {
+    expect(arkPackageRecoveryCommand('arkgate-check', '--doctor', 'arkgate@4.8.18')).toBe(
+      'npx --package=arkgate@4.8.18 arkgate-check --doctor'
+    );
+  });
 });
 
 describe('formatStartPackageInstallFailure', () => {
@@ -85,7 +93,7 @@ describe('formatStartPackageInstallFailure', () => {
     expect(text).not.toMatch(/Applied \d+ start mutation/);
   });
 
-  it('replaces pnpm maturity internals with a one-liner (#268)', () => {
+  it('classifies Age stderr and does not replay the doomed add (#292)', () => {
     const dump = [
       'Progress: resolved 1, reused 0, downloaded 0, added 0',
       'ERR_PNPM_NO_MATURE_MATCHING_VERSION  No matching version found for arkgate@^4.8.18 published by now within 7 days waiting period (minimumReleaseAge).',
@@ -94,20 +102,35 @@ describe('formatStartPackageInstallFailure', () => {
       '  arkgate  4.8.18  published 1h ago  wait 7d',
       'If you need this package, add it to minimumReleaseAgeExclude.',
     ].join('\n');
+    expect(classifyStartInstallFailure(dump)).toMatchObject({
+      kind: 'pnpm-age',
+      ageWindow: '7 days',
+    });
     expect(explainPnpmMaturityBlock(dump)).toBe(
-      'This repo blocks packages younger than 7 days — pin an older release or exclude arkgate temporarily.'
+      'This repo waits before trusting new npm packages (pnpm Age — 7 days).'
     );
+    const recovery = startInstallRecovery({
+      exitStatus: 1,
+      installCommand: 'pnpm add -D arkgate@^4.8.18 -w',
+      hostOutput: dump,
+    });
+    expect(recovery.kind).toBe('pnpm-age');
+    expect(recovery.replayInstallCommand).toBeNull();
+    expect(recovery.primaryCommand).toBe('npx --package=arkgate@4.8.18 arkgate-check --doctor');
     const text = formatStartPackageInstallFailure({
       exitStatus: 1,
       installCommand: 'pnpm add -D arkgate@^4.8.18 -w',
       hostOutput: dump,
     });
-    expect(text).toMatch(/This repo blocks packages younger than 7 days/);
-    expect(text).toMatch(/pin an older release or exclude arkgate temporarily/);
-    expect(text).toContain('pnpm add -D arkgate@^4.8.18 -w');
+    expect(text).toMatch(/This repo waits before trusting new npm packages \(pnpm Age — 7 days\)/);
+    expect(text).toContain('npx --package=arkgate@4.8.18 arkgate-check --doctor');
+    expect(text).toMatch(/minimumReleaseAgeExclude in pnpm config or pnpm-workspace\.yaml/);
+    expect(text).toMatch(/CLI flag is not enough/);
+    expect(text).not.toContain('pnpm add -D arkgate@^4.8.18 -w');
+    expect(text).not.toMatch(/pin an older release or exclude arkgate temporarily/);
     expect(text).not.toMatch(/Time to become mature/);
-    expect(text).not.toMatch(/minimumReleaseAgeExclude/);
     expect(text).not.toMatch(/The following packages failed the maturity check/);
+    expect(classifyStartInstallFailure('yarn: simulated install fail').kind).toBe('generic');
     expect(explainPnpmMaturityBlock('yarn: simulated install fail')).toBeNull();
   });
 });
@@ -190,10 +213,13 @@ describe('start --apply install fail is not green (#258)', () => {
     const out = `${result.stdout ?? ''}\n${result.stderr ?? ''}`;
 
     expect(result.status, out).not.toBe(0);
-    expect(out).toMatch(/This repo blocks packages younger than 7 days/);
-    expect(out).toMatch(/pin an older release or exclude arkgate temporarily/);
-    expect(out).toMatch(/Package install failed \(exit 1\)/);
-    expect(out).toMatch(/pnpm add -D arkgate@/);
+    expect(result.stderr).toMatch(/This repo waits before trusting new npm packages \(pnpm Age — 7 days\)/);
+    expect(result.stderr).toContain(`npx --package=arkgate@${CLI_VERSION} arkgate-check --doctor`);
+    expect(result.stderr).toMatch(/minimumReleaseAgeExclude in pnpm config or pnpm-workspace\.yaml/);
+    expect(result.stderr).toMatch(/CLI flag is not enough/);
+    expect(result.stderr).toMatch(/Package install failed \(exit 1\)/);
+    expect(result.stderr).not.toMatch(/^\s*pnpm add /m);
+    expect(result.stderr).not.toMatch(/pin an older release or exclude arkgate temporarily/);
     expect(out).not.toMatch(/Time to become mature/);
     expect(out).not.toMatch(/The following packages failed the maturity check/);
   });
@@ -281,6 +307,8 @@ describe('first-contact copy does not teach a 404 doctor command', () => {
       expect(block, rel).not.toMatch(/^npm install -D arkgate/m);
       expect(text, rel).toMatch(/pnpm add -w/);
       expect(text, rel).toMatch(/workspace:\*/);
+      expect(text, rel).toMatch(/pnpm Age|minimumReleaseAge/);
+      expect(text, rel).toMatch(/minimumReleaseAgeExclude/);
     }
   });
 });

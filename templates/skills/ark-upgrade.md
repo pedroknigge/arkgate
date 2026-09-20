@@ -259,9 +259,11 @@ ArkGate has **always-on Layers** plus opt-in extras. The user chooses extras; yo
    If already current (`ALREADY_CURRENT`), retain the read-only preview and still read `whatsNew`
    + `skillDrift`.
 
-   For pnpm repositories with `minimumReleaseAge`, use the repository's existing
-   trusted first-party exception mechanism when the new release is still cooling
-   off, and prove `pnpm install --frozen-lockfile` succeeds.
+   For pnpm repositories with `minimumReleaseAge`, put the exception on
+   `minimumReleaseAgeExclude` in pnpm config or `pnpm-workspace.yaml` (a CLI
+   flag is not enough) when the new release is still cooling off, or keep using
+   `npx --package=arkgate@<pin>` until the package is mature. Prove
+   `pnpm install --frozen-lockfile` succeeds after a local add.
 
 4. **Apply only the reviewed candidate.** When there are no blocked assets, run
    the preview's **exact** `nextCommand` as emitted (JSON field / human “Apply the

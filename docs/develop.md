@@ -39,7 +39,7 @@ npx arkgate start --apply
 npx --package=arkgate arkgate-check --doctor
 ```
 
-`start --apply` pins arkgate with this repo's package manager (`pnpm add -w` / `yarn add -W` at a workspace root). Do not run `npm install -D arkgate` at a `workspace:*` root — npm rejects that protocol. `arkgate-check` is a command in the `arkgate` package. After a local install, `npx arkgate-check --doctor` also works.
+`start --apply` pins arkgate with this repo's package manager (`pnpm add -w` / `yarn add -W` at a workspace root). Do not run `npm install -D arkgate` at a `workspace:*` root — npm rejects that protocol. `arkgate-check` is a command in the `arkgate` package. After a local install, `npx arkgate-check --doctor` also works. If pnpm Age (`minimumReleaseAge`) blocks a brand-new release, keep using `npx --package=arkgate@<version>` — do not re-run the same add. Put arkgate on `minimumReleaseAgeExclude` in pnpm config or `pnpm-workspace.yaml` (a CLI flag is not enough), or wait until the package is mature.
 
 Make the import-rules check a **required** merge **status context** (GitHub/GitLab/etc.). The CLI
 command is `arkgate-check --strict-merge` / `ark-check --strict-merge` — the hard boundary is

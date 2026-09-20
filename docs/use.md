@@ -30,7 +30,7 @@ npx --package=arkgate arkgate-check --doctor        # status — one next step
 npx --package=arkgate arkgate-check --doctor --all  # full details
 ```
 
-`start --apply` pins arkgate with this repo's package manager (`pnpm add -w` / `yarn add -W` at a workspace root). Do not run `npm install -D arkgate` at a `workspace:*` root — npm rejects that protocol. After a local install, `npx arkgate-check --doctor` also works. `arkgate-check` is a command in the `arkgate` package, not its own npm package.
+`start --apply` pins arkgate with this repo's package manager (`pnpm add -w` / `yarn add -W` at a workspace root). Do not run `npm install -D arkgate` at a `workspace:*` root — npm rejects that protocol. After a local install, `npx arkgate-check --doctor` also works. `arkgate-check` is a command in the `arkgate` package, not its own npm package. If pnpm Age (`minimumReleaseAge`) blocks a brand-new release, keep using `npx --package=arkgate@<version>` — do not re-run the same add. Put arkgate on `minimumReleaseAgeExclude` in pnpm config or `pnpm-workspace.yaml` (a CLI flag is not enough), or wait until the package is mature.
 
 `start --apply` refuses when projected governed coverage is below 50% or
 shape confidence is weak (below 0.6 with coverage under 80%), or when the
