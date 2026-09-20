@@ -10,7 +10,7 @@ import {
   DEFAULT_DOMAIN_FORBIDDEN_GLOBALS,
   discoverRepoUnits,
   DEFAULT_INTENT_PREFIXES,
-  isUiApplicationSource,
+  monorepoRoleSourceGlobs,
   resolveIncludeRoots,
 } from '../ark-shared.mjs';
 import { withArkConfigMetadata } from './config-contract.mjs';
@@ -631,25 +631,18 @@ export const ARCHITECTURE_PRESETS = {
     // Turborepo: apps/ + packages/; Nx enterprise: apps/ + libs/ (+ packages/).
     if (include.length === 0) include = ['packages', 'apps', 'libs'];
     // Library Domain bags stay under packages/ or libs/ — never api/** or client/**.
-    const roleGlobs = (roles, domainScoped, uiMode) =>
-      !root
-        ? []
-        : units
-            .filter((unit) => roles.includes(unit.role) && !(domainScoped && unit.root === '.'))
-            .flatMap((unit) =>
-              (unit.sourceRoots ?? []).map((sourceRoot) => {
-                const base = unit.root === '.' ? sourceRoot : sourceRoot === '.' ? unit.root : `${unit.root}/${sourceRoot}`;
-                if (!base || base === '.') return null;
-                const uiSource = isUiApplicationSource(unit, sourceRoot);
-                if (uiMode === 'ui' && !uiSource) return null;
-                if (uiMode === 'not-ui' && uiSource) return null;
-                return `${base}/**`;
-              })
-            )
-            .filter((pattern) => pattern && (!domainScoped || /^(packages|libs)\//.test(pattern)));
-    const librarySourcePatterns = roleGlobs(['library'], true);
-    const applicationSourcePatterns = roleGlobs(['application', 'cli'], false, 'not-ui');
-    const uiApplicationSourcePatterns = roleGlobs(['application', 'cli'], false, 'ui');
+    const librarySourcePatterns = monorepoRoleSourceGlobs(units, ['library'], {
+      root,
+      domainScoped: true,
+    });
+    const applicationSourcePatterns = monorepoRoleSourceGlobs(units, ['application', 'cli'], {
+      root,
+      uiMode: 'not-ui',
+    });
+    const uiApplicationSourcePatterns = monorepoRoleSourceGlobs(units, ['application', 'cli'], {
+      root,
+      uiMode: 'ui',
+    });
     return presetWithOverlays(
       {
         include,
@@ -695,8 +688,6 @@ export const ARCHITECTURE_PRESETS = {
               '**/http/**',
               '**/routes/**',
               '**/hooks/**',
-              // UI application packages (web/, frontend/, client/, react/vue/svelte deps).
-              // Do not park those roots on ApplicationOrchestration (#288).
               ...uiApplicationSourcePatterns,
               // No bare **/lib/** — NEW-ADOPT-LIB-AS-PRESENTATION / NEW-APP-VACUUM-LIB.
             ],

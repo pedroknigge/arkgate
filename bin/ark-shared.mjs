@@ -1104,6 +1104,29 @@ export function isUiApplicationSource(unit, sourceRoot) {
   return sourcePathLooksLikeUi(base) || isUiPackageUnit(unit);
 }
 
+/**
+ * Monorepo start globs for package units by role. `uiMode: 'ui'` keeps only UI
+ * application roots (web/, frontend/, react/vue/svelte); `'not-ui'` drops them
+ * so they are not parked on ApplicationOrchestration (#288).
+ */
+export function monorepoRoleSourceGlobs(units, roles, { root, domainScoped = false, uiMode } = {}) {
+  if (!root || !Array.isArray(units)) return [];
+  return units
+    .filter((unit) => roles.includes(unit.role) && !(domainScoped && unit.root === '.'))
+    .flatMap((unit) =>
+      (unit.sourceRoots ?? []).map((sourceRoot) => {
+        const base =
+          unit.root === '.' ? sourceRoot : sourceRoot === '.' ? unit.root : `${unit.root}/${sourceRoot}`;
+        if (!base || base === '.') return null;
+        const uiSource = isUiApplicationSource(unit, sourceRoot);
+        if (uiMode === 'ui' && !uiSource) return null;
+        if (uiMode === 'not-ui' && uiSource) return null;
+        return `${base}/**`;
+      })
+    )
+    .filter((pattern) => pattern && (!domainScoped || /^(packages|libs)\//.test(pattern)));
+}
+
 function entrypointDirs(pkg) {
   const values = [];
   const add = (value) => {
