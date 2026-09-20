@@ -1066,6 +1066,44 @@ function packageRole(rel, pkg) {
   return 'application';
 }
 
+/** Path tokens already treated as UI app folders in discoverRepoUnits (root scan). */
+export const UI_PACKAGE_PATH_TOKENS = new Set(['web', 'frontend', 'client', 'ui']);
+
+const UI_PACKAGE_DEP_NAMES =
+  /^(react|react-dom|vue|svelte|preact|solid-js|next|@angular\/core|@sveltejs\/kit)$/i;
+
+/** True when a relative source path sits under a conventional UI package folder. */
+export function sourcePathLooksLikeUi(relPath) {
+  return String(relPath ?? '')
+    .toLowerCase()
+    .split(/[/\\]/)
+    .filter((token) => token && token !== '.')
+    .some((token) => UI_PACKAGE_PATH_TOKENS.has(token));
+}
+
+/**
+ * Application/CLI unit that is a UI surface (folder name or UI framework deps).
+ * Used so monorepo start does not park `web/**` on ApplicationOrchestration.
+ */
+export function isUiPackageUnit(unit) {
+  if (!unit || typeof unit !== 'object') return false;
+  if (sourcePathLooksLikeUi(unit.root)) return true;
+  const deps = unit.productionDeps ?? {};
+  return Object.keys(deps).some((name) => UI_PACKAGE_DEP_NAMES.test(String(name).split('/')[0]));
+}
+
+/** Source root of an application unit that should land on Presentation, not Application. */
+export function isUiApplicationSource(unit, sourceRoot) {
+  if (!unit) return sourcePathLooksLikeUi(sourceRoot);
+  const base =
+    unit.root === '.'
+      ? sourceRoot
+      : sourceRoot === '.' || !sourceRoot
+        ? unit.root
+        : `${unit.root}/${sourceRoot}`;
+  return sourcePathLooksLikeUi(base) || isUiPackageUnit(unit);
+}
+
 function entrypointDirs(pkg) {
   const values = [];
   const add = (value) => {
@@ -1490,6 +1528,19 @@ const SIGNAL_WHY = {
   expressLike: () => 'HTTP framework dependency (express/fastify/hono/…)',
 };
 
+/**
+ * Playbook labels that claim "without UI" are only honest when uiHeavy is false.
+ * Mirror of the #282 workspace negative-copy overlay: do not invent a new
+ * archetype — rewrite the one-minute label so it cannot contradict the sensors.
+ */
+export function honestArchetypeLabel(label, signals) {
+  if (typeof label !== 'string' || !signals?.uiHeavy) return label;
+  if (!/without UI/i.test(label)) return label;
+  if (signals.workspaces && signals.apiSurface) return 'API-heavy monorepo with UI packages';
+  if (signals.apiSurface) return 'API-heavy repository with a UI surface';
+  return 'Repository with a UI surface';
+}
+
 const NEGATIVE_SIGNAL_WHY = {
   workspaces: (signals) =>
     signals.workspaces
@@ -1678,7 +1729,7 @@ export function scoreArchetypes(signals, playbook) {
     );
     scored.push({
       id,
-      label: def.label,
+      label: honestArchetypeLabel(def.label, signals),
       preset: resolvePreset(def, signals),
       score,
       maxPositive: maxPositive || 1,
@@ -1814,6 +1865,7 @@ export function buildArchitectureRecommendation(root, options = {}) {
       })),
       workspaces: signals.workspaces,
       ui: signals.ui,
+      uiHeavy: signals.uiHeavy,
       apiSurface: signals.apiSurface,
       persistence: signals.persistence,
       jobs: signals.jobs,

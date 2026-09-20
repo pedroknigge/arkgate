@@ -10,6 +10,7 @@ import {
   DEFAULT_DOMAIN_FORBIDDEN_GLOBALS,
   discoverRepoUnits,
   DEFAULT_INTENT_PREFIXES,
+  isUiApplicationSource,
   resolveIncludeRoots,
 } from '../ark-shared.mjs';
 import { withArkConfigMetadata } from './config-contract.mjs';
@@ -630,7 +631,7 @@ export const ARCHITECTURE_PRESETS = {
     // Turborepo: apps/ + packages/; Nx enterprise: apps/ + libs/ (+ packages/).
     if (include.length === 0) include = ['packages', 'apps', 'libs'];
     // Library Domain bags stay under packages/ or libs/ — never api/** or client/**.
-    const roleGlobs = (roles, domainScoped) =>
+    const roleGlobs = (roles, domainScoped, uiMode) =>
       !root
         ? []
         : units
@@ -638,12 +639,17 @@ export const ARCHITECTURE_PRESETS = {
             .flatMap((unit) =>
               (unit.sourceRoots ?? []).map((sourceRoot) => {
                 const base = unit.root === '.' ? sourceRoot : sourceRoot === '.' ? unit.root : `${unit.root}/${sourceRoot}`;
-                return base === '.' ? null : `${base}/**`;
+                if (!base || base === '.') return null;
+                const uiSource = isUiApplicationSource(unit, sourceRoot);
+                if (uiMode === 'ui' && !uiSource) return null;
+                if (uiMode === 'not-ui' && uiSource) return null;
+                return `${base}/**`;
               })
             )
             .filter((pattern) => pattern && (!domainScoped || /^(packages|libs)\//.test(pattern)));
     const librarySourcePatterns = roleGlobs(['library'], true);
-    const applicationSourcePatterns = roleGlobs(['application', 'cli'], false);
+    const applicationSourcePatterns = roleGlobs(['application', 'cli'], false, 'not-ui');
+    const uiApplicationSourcePatterns = roleGlobs(['application', 'cli'], false, 'ui');
     return presetWithOverlays(
       {
         include,
@@ -689,6 +695,9 @@ export const ARCHITECTURE_PRESETS = {
               '**/http/**',
               '**/routes/**',
               '**/hooks/**',
+              // UI application packages (web/, frontend/, client/, react/vue/svelte deps).
+              // Do not park those roots on ApplicationOrchestration (#288).
+              ...uiApplicationSourcePatterns,
               // No bare **/lib/** — NEW-ADOPT-LIB-AS-PRESENTATION / NEW-APP-VACUUM-LIB.
             ],
             optional: true,
