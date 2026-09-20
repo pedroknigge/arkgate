@@ -29,6 +29,7 @@ import {
   formatStartPackageInstallFailure,
   planStart,
   renderStartPreview,
+  runStartPackageInstall,
 } from './lib/start-preview.mjs';
 import { runUpgradeCommand } from './lib/upgrade-command.mjs';
 import { detectActiveAgentHost } from './lib/skill-install.mjs';
@@ -211,11 +212,6 @@ function cliVersion() {
 
 // packageInstallArgv is imported from ark-shared (workspace-aware -w / -W).
 
-function runCommand(command, commandArgs, cwd) {
-  const result = spawnSync(command, commandArgs, { cwd, stdio: 'inherit', encoding: 'utf8' });
-  return result.status ?? 1;
-}
-
 function runArkCheck(args, options = {}) {
   const result = spawnSync(process.execPath, [arkCheck, ...args], {
     cwd: options.cwd,
@@ -282,13 +278,16 @@ export function ensureProjectArkgateDependency(root, opts = {}) {
   }
   const pinned = pinArkgateDevDependency(root);
   let installStatus = null;
+  let hostOutput = '';
   // Only run the package manager after a successful pin change — avoid surprise
   // network on every start when arkgate is already listed.
   if (runPm && pinned.changed) {
     const [command, commandArgs] = packageInstallArgv(root, pinned.version);
-    installStatus = runCommand(command, commandArgs, root);
+    const install = runStartPackageInstall(command, commandArgs, root);
+    installStatus = install.status;
+    hostOutput = `${install.stdout}\n${install.stderr}`;
   }
-  return { pinned, installStatus };
+  return { pinned, installStatus, hostOutput };
 }
 
 async function resolveArchetypeInteractive(rl, root) {
@@ -503,16 +502,16 @@ async function start(args) {
         const installCommand = `${command} ${commandArgs.join(' ')}`;
         if (!args.json) console.log(`Installing package: ${installCommand}`);
         // Keep stdout clean for --json consumers (package managers are chatty on stdout).
-        const status = args.json
-          ? (spawnSync(command, commandArgs, {
-              cwd: args.root,
-              stdio: ['ignore', 'pipe', 'pipe'],
-              encoding: 'utf8',
-            }).status ?? 1)
-          : runCommand(command, commandArgs, args.root);
-        if (status !== 0) {
-          console.error(formatStartPackageInstallFailure({ exitStatus: status, installCommand }));
-          return status;
+        const install = runStartPackageInstall(command, commandArgs, args.root);
+        if (install.status !== 0) {
+          console.error(
+            formatStartPackageInstallFailure({
+              exitStatus: install.status,
+              installCommand,
+              hostOutput: `${install.stdout}\n${install.stderr}`,
+            })
+          );
+          return install.status;
         }
       }
     }
@@ -572,7 +571,7 @@ async function start(args) {
     // 2b) Pin arkgate as a project devDependency so CI/npx do not depend on a stale global.
     // Default install=true; only --no-install skips. (installExplicit tracks user override for copy.)
     if (args.install && fs.existsSync(path.join(root, 'package.json'))) {
-      const { pinned, installStatus } = ensureProjectArkgateDependency(root, {
+      const { pinned, installStatus, hostOutput } = ensureProjectArkgateDependency(root, {
         install: true,
         runPackageManager: !args.skipPackageManager,
       });
@@ -584,6 +583,7 @@ async function start(args) {
             formatStartPackageInstallFailure({
               exitStatus: installStatus,
               installCommand: `${command} ${commandArgs.join(' ')}`,
+              hostOutput,
             })
           );
         }
