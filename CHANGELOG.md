@@ -66,7 +66,13 @@ in the immutable pre-2.0 archive linked below.
   Required CI is still the shared merge line. No new skill, schema, or host.
 
 ### Fixed
-- Stranger start path no longer leads with `npm install -D arkgate` (hard-fail
+- `start` / `--recommend` no longer labels a UI monorepo as "API server
+  without UI in this repository" when `uiHeavy` is true. The one-minute
+  label becomes "API-heavy monorepo with UI packages" (same overlay idea as
+  the workspace negative copy). Default monorepo start parks `web/**` /
+  `web/src/**` on PresentationAdapters, not ApplicationOrchestration
+  ([#288](https://github.com/pedroknigge/arkgate/issues/288)).
+- Stranger start path no longer leads with `npm install -D arkgate` (hard-fail)
   on `workspace:*`). Docs lead with `npx arkgate start`; `start --apply` already
   pins with `pnpm add -w` / `yarn add -W`. pnpm `minimumReleaseAge` recovery is
   a one-liner instead of host maturity internals. Doctor after a failed install
