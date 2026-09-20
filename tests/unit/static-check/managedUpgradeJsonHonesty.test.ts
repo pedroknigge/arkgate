@@ -29,6 +29,7 @@ type PublicAsset = {
   path: string;
   state: string;
   willApply: boolean;
+  reason?: string;
   blocked?: boolean;
   beforeHash: string | null;
   afterHash: string | null;
@@ -246,13 +247,14 @@ describe('UP-002 public content identity', () => {
     expect(preview.status, preview.stderr || preview.stdout).toBe(0);
     const report = JSON.parse(preview.stdout) as {
       assets: PublicAsset[];
-      summary: { wouldWrite: number };
+      summary: { wouldWrite: number; metadataRefresh: number };
     };
     const skill = report.assets.find((asset) => asset.path === skillPath);
     expect(skill).toBeTruthy();
     expect(skill).toMatchObject({
       state: 'current',
-      willApply: false,
+      willApply: true,
+      reason: 'stamp-refresh',
     });
     expect(skill!.beforeIdentity).toMatch(/^sha256:[a-f0-9]{64}$/);
     expect(skill!.afterIdentity).toMatch(/^sha256:[a-f0-9]{64}$/);
@@ -262,7 +264,8 @@ describe('UP-002 public content identity', () => {
     expect(skill!.beforeHash).not.toBe(skill!.afterHash);
     expect(skill!.beforeHash).not.toBe(skill!.beforeIdentity);
     expect(skill!.beforeIdentity).toBe(managedContentIdentity(stamped, 'skill'));
-    expect(report.summary.wouldWrite).toBe(0);
+    expect(report.summary.metadataRefresh).toBeGreaterThan(0);
+    expect(report.summary.wouldWrite).toBeGreaterThan(0);
   });
 
   it('managedUpgradeJson surfaces identities without changing current semantics', () => {
@@ -278,7 +281,8 @@ describe('UP-002 public content identity', () => {
     const publicJson = JSON.parse(managedUpgradeJson(plan)) as { assets: PublicAsset[] };
     const skill = publicJson.assets.find((asset) => asset.path === skillPath);
     expect(skill?.state).toBe('current');
-    expect(skill?.willApply).toBe(false);
+    expect(skill?.willApply).toBe(true);
+    expect(skill?.reason).toBe('stamp-refresh');
     expect(skill?.beforeIdentity).toMatch(/^sha256:[a-f0-9]{64}$/);
     expect(skill?.afterIdentity).toMatch(/^sha256:[a-f0-9]{64}$/);
     expect(skill?.beforeIdentity).toBe(skill?.afterIdentity);

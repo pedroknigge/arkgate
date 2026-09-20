@@ -408,8 +408,10 @@ function runHostCell(candidate, workRoot, host) {
     const metadataOnly = findAsset(initialPreview, versionedPath);
     assertCondition(metadataOnly?.state === 'current', `${host} old stamp changed content identity`);
     assertCondition(
-      metadataOnly?.action === 'none' && metadataOnly?.willApply === false,
-      `${host} old stamp scheduled a metadata-only rewrite`
+      metadataOnly?.action === 'update' &&
+        metadataOnly?.willApply === true &&
+        metadataOnly?.reason === 'stamp-refresh',
+      `${host} old stamp did not schedule a metadata-only stamp-refresh`
     );
     assertCondition(
       skillIdentity(LEGACY_UPGRADE_SKILL) === LEGACY_UPGRADE_IDENTITY,
