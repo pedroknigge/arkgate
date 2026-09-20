@@ -66,23 +66,6 @@ in the immutable pre-2.0 archive linked below.
   Required CI is still the shared merge line. No new skill, schema, or host.
 
 ### Fixed
-- `start` / `--recommend` no longer labels a UI monorepo as "API server
-  without UI in this repository" when `uiHeavy` is true. The one-minute
-  label becomes "API-heavy monorepo with UI packages" (same overlay idea as
-  the workspace negative copy). Default monorepo start parks `web/**` /
-  `web/src/**` on PresentationAdapters, not ApplicationOrchestration
-  ([#288](https://github.com/pedroknigge/arkgate/issues/288)).
-- Stranger start path no longer leads with `npm install -D arkgate` (hard-fail)
-  on `workspace:*`). Docs lead with `npx arkgate start`; `start --apply` already
-  pins with `pnpm add -w` / `yarn add -W`. pnpm `minimumReleaseAge` recovery is
-  a one-liner instead of host maturity internals. Doctor after a failed install
-  leads with resolve the package, not "make CI required"
-  ([#268](https://github.com/pedroknigge/arkgate/issues/268)).
-- Managed upgrade refreshes a skill's `arkVersion` / `arkgate@X.Y.Z` description
-  stamp when the body is unchanged (`state: current`). Frozen redirect stubs
-  no longer keep a stale picker version after a pin bump. Reuses
-  `planSkillInstall` `stamp-refresh`; `summary.metadataRefresh` counts those
-  writes. Closes [#284](https://github.com/pedroknigge/arkgate/issues/284).
 - Write hook and `ark-check` now agree on overlapping layer globs: the hook
   probes the same specifier extensions as `ark-check` and classifies with
   `layerForRelativePath` (explicit `money.ts` beats `src/lib/**`). Field
@@ -112,6 +95,58 @@ in the immutable pre-2.0 archive linked below.
   `@2` pin (issue [#211](https://github.com/pedroknigge/arkgate/issues/211)).
   Existing configs keep whatever URL they already have. Editor completion
   matches the 4.x line you just installed.
+
+## 4.8.19 — 2026-09-20
+
+**Patch** over **4.8.18**. Daily accumulate (2026-09-20 ART) of the five
+ships that landed after 4.8.18 published: pre-hook write gate first
+([#280](https://github.com/pedroknigge/arkgate/pull/280)), honest
+workspace evidence + playground exclude
+([#286](https://github.com/pedroknigge/arkgate/pull/286)), skill stamp
+refresh ([#285](https://github.com/pedroknigge/arkgate/pull/285)),
+honest start docs and install-fail next step
+([#287](https://github.com/pedroknigge/arkgate/pull/287)), and honest
+recommend label when `uiHeavy` is true
+([#289](https://github.com/pedroknigge/arkgate/pull/289)).
+**Write. Check. Ship.** **No required config migration.** No
+`schemaVersion` bump. Does not close `K01` / `Z09`. This mother
+`ark.config.json` still does **not** turn `arkOrder` on.
+
+**Status: published** (npm `latest` is **4.8.19**).
+
+### Changed
+- Write-gate order: install and trust the host pre-hook first. MCP
+  `ark_prepare_write` is fallback when that path is missing or fail-open.
+  Compact Cursor now requires the fail-closed hook (MCP alone is not
+  enough). Doctor / start / host matrix name the fallback
+  ([#280](https://github.com/pedroknigge/arkgate/pull/280)).
+
+### Fixed
+- Stranger-path `--recommend` treats `pnpm-workspace.yaml` (even without
+  `package.json#workspaces`) as workspace evidence, and no longer says
+  "not a workspace monorepo" on a workspace tree. Start / recommend skip
+  playground, fixture, and scaffold trees the same way the check walk
+  does ([#286](https://github.com/pedroknigge/arkgate/pull/286)).
+- Managed upgrade refreshes a skill's `arkVersion` / `arkgate@X.Y.Z`
+  description stamp when the body is unchanged (`state: current`).
+  Frozen redirect stubs no longer keep a stale picker version after a
+  pin bump. Reuses `planSkillInstall` `stamp-refresh`;
+  `summary.metadataRefresh` counts those writes
+  ([#285](https://github.com/pedroknigge/arkgate/pull/285) /
+  [#284](https://github.com/pedroknigge/arkgate/issues/284)).
+- Stranger start path no longer leads with `npm install -D arkgate`
+  (hard-fail on `workspace:*`). Docs lead with `npx arkgate start`;
+  `start --apply` already pins with `pnpm add -w` / `yarn add -W`.
+  pnpm `minimumReleaseAge` recovery is a one-liner. Doctor after a
+  failed install leads with resolve the package, not "make CI required"
+  ([#287](https://github.com/pedroknigge/arkgate/pull/287) /
+  [#268](https://github.com/pedroknigge/arkgate/issues/268)).
+- `start` / `--recommend` no longer labels a UI monorepo as "API server
+  without UI in this repository" when `uiHeavy` is true. The one-minute
+  label becomes "API-heavy monorepo with UI packages". Default monorepo
+  start parks `web/**` / `web/src/**` on PresentationAdapters
+  ([#289](https://github.com/pedroknigge/arkgate/pull/289) /
+  [#288](https://github.com/pedroknigge/arkgate/issues/288)).
 
 ## 4.8.18 — 2026-09-18
 
