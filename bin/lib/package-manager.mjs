@@ -94,9 +94,12 @@ export function arkCommand(root, bin, argsStr = '') {
 /**
  * Run an Ark binary from package `arkgate` when local bins may be missing.
  * Bare `npx arkgate-check` 404s — npx treats that bin name as its own package.
+ * Pass `packageSpec` (e.g. `arkgate@4.8.19`) when Age blocked a local add.
  */
-export function arkPackageRecoveryCommand(bin, argsStr = '') {
-  return `npx --package=arkgate ${bin}${argsStr ? ` ${argsStr}` : ''}`;
+export function arkPackageRecoveryCommand(bin, argsStr = '', packageSpec) {
+  const spec =
+    typeof packageSpec === 'string' && packageSpec.trim() ? packageSpec.trim() : 'arkgate';
+  return `npx --package=${spec} ${bin}${argsStr ? ` ${argsStr}` : ''}`;
 }
 
 /**

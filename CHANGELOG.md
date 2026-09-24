@@ -66,6 +66,12 @@ in the immutable pre-2.0 archive linked below.
   Required CI is still the shared merge line. No new skill, schema, or host.
 
 ### Fixed
+- Age-gated `start --apply` install failure no longer reprints the same
+  `pnpm add` as the primary next step. Recovery names pnpm Age, leads
+  with `npx --package=arkgate@<pin> arkgate-check --doctor`, and says
+  `minimumReleaseAgeExclude` must live in pnpm config or
+  `pnpm-workspace.yaml` (a CLI flag is not enough)
+  ([#292](https://github.com/pedroknigge/arkgate/issues/292)).
 - Write hook and `ark-check` now agree on overlapping layer globs: the hook
   probes the same specifier extensions as `ark-check` and classifies with
   `layerForRelativePath` (explicit `money.ts` beats `src/lib/**`). Field

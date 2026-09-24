@@ -5,7 +5,6 @@ import os from 'node:os';
 import path from 'node:path';
 import {
   arkCommand,
-  arkPackageRecoveryCommand,
   buildArchitectureRecommendation,
   START_APPLY_REFUSE_FOOTER,
 } from '../ark-shared.mjs';
@@ -216,59 +215,6 @@ function commands(root, args, helpers) {
   result.push(arkCommand(root, 'ark-check', '--plan --json'));
   result.push(arkCommand(root, 'ark-check', '--coverage --json'));
   return result;
-}
-
-/**
- * Plain one-liner for pnpm minimumReleaseAge / ERR_PNPM_NO_MATURE_MATCHING_VERSION.
- * Host dumps stay out of the recovery — stranger needs one next step.
- */
-export function explainPnpmMaturityBlock(hostOutput) {
-  const text = String(hostOutput ?? '');
-  if (!/ERR_PNPM_NO_MATURE_MATCHING_VERSION|minimumReleaseAge/i.test(text)) return null;
-  const days = text.match(/(\d+)\s*days?/i)?.[1];
-  const window = days ? `${days} days` : 'a cooling-off window';
-  return `This repo blocks packages younger than ${window} — pin an older release or exclude arkgate temporarily.`;
-}
-
-/** Pipe the package manager so recovery can hide maturity internals. */
-export function runStartPackageInstall(command, commandArgs, cwd) {
-  const result = spawnSync(command, commandArgs, {
-    cwd,
-    stdio: ['ignore', 'pipe', 'pipe'],
-    encoding: 'utf8',
-  });
-  return {
-    status: result.status ?? 1,
-    stdout: result.stdout ?? '',
-    stderr: result.stderr ?? '',
-  };
-}
-
-/**
- * Red next-step when post-apply package install fails.
- * Host files may already be written; local bins may be missing.
- */
-export function formatStartPackageInstallFailure({ exitStatus, installCommand, hostOutput }) {
-  const doctor = arkPackageRecoveryCommand('arkgate-check', '--doctor');
-  const maturity = explainPnpmMaturityBlock(hostOutput);
-  const lines = [];
-  if (maturity) {
-    lines.push(maturity);
-  } else if (hostOutput && String(hostOutput).trim()) {
-    const tail = String(hostOutput)
-      .split('\n')
-      .map((line) => line.trimEnd())
-      .filter((line) => line.trim())
-      .slice(-6);
-    if (tail.length) lines.push(...tail);
-  }
-  lines.push(
-    `Package install failed (exit ${exitStatus}). Setup files are written; the local command is not installed yet.`,
-    `  ${installCommand}`,
-    `  ${doctor}`,
-    '`arkgate-check` is a command in the arkgate package — not its own npm package.'
-  );
-  return lines.join('\n');
 }
 
 /**
