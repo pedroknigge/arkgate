@@ -10,7 +10,7 @@ import { version } from '../../../src/version.ts';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 /** Tree package identity. */
-const CURRENT = '4.8.19';
+const CURRENT = '4.8.20';
 /** Version confirmed on npm `latest`. */
 const PUBLISHED_LATEST = '4.8.11';
 
@@ -138,7 +138,7 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
 
   it('keeps 4.8.11 published on npm latest and 4.8.10 as prior', () => {
     expect(PUBLISHED_LATEST).toBe('4.8.11');
-    expect(CURRENT).toBe('4.8.19');
+    expect(CURRENT).toBe('4.8.20');
     expect(read('docs/releases/4.8.9.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.8.9.md')).toMatch(/arkgate@4\.8\.9/);
     expect(read('docs/releases/4.8.9.md')).not.toMatch(/\*\*Status:\*\*\s*prepared/i);
@@ -196,7 +196,7 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
     expect(read('CONTRIBUTING.md')).toMatch(/Optional \(not gates\)/);
     expect(read('CONTRIBUTING.md')).not.toMatch(/Current release candidate:/);
     expect(read('CONTRIBUTING.md')).not.toMatch(/Prior published:/);
-    expect(read('docs/README.md')).toMatch(/Current published:.*4\.8\.19/s);
+    expect(read('docs/README.md')).toMatch(/Current published:.*4\.8\.20/s);
     expect(read('docs/README.md')).toMatch(/Prior published:.*4\.8\.11/s);
     expect(read('docs/README.md')).toMatch(/Prior published:.*4\.8\.10/s);
     expect(read('docs/README.md')).toMatch(/Prior:.*4\.6\.2/s);
@@ -451,7 +451,51 @@ describe('CHANGELOG + release note cover 4.8.19 daily accumulate', () => {
     expect(section).not.toMatch(/Status:\s*unreleased/i);
     expect(fs.existsSync(path.join(REPO, 'docs/releases/4.8.19.md'))).toBe(false);
     expect(read('ROADMAP.md')).toMatch(/\| 292 \| `RL818` \| `done`/);
-    expect(read('ROADMAP.md')).toMatch(/\| 294 \| `RL819` \| `doing`/);
+    expect(read('ROADMAP.md')).toMatch(/\| 294 \| `RL819` \| `done`/);
+  });
+});
+
+describe('CHANGELOG + release note cover 4.8.20 daily accumulate', () => {
+  it('records the published release without a waiting-room latest pin', () => {
+    const changelog = changelogText();
+    const section = changelogSection(changelog, '4.8.20', '4.8.19');
+    expect(section).toMatch(/Status:\s*published/i);
+    expect(section).toMatch(/npm `latest` is \*\*4\.8\.20\*\*/);
+    expect(section).toMatch(/Daily accumulate \(2026-09-25 ART\)/);
+    expect(section).not.toMatch(/latest remains/);
+    expect(section).toMatch(/#301|#291/);
+    expect(section).toMatch(/behavior change/i);
+    expect(section).toMatch(/turn red/);
+    expect(section).toMatch(/symbolEvidenceFile/);
+    expect(section).toMatch(/depthLimited/);
+    expect(section).toMatch(/#300|#294/);
+    expect(section).toMatch(/src\/lib\/features/);
+    expect(section).toMatch(/regression test/);
+    expect(section).toMatch(/#299|#295/);
+    expect(section).toMatch(/layer and slice/);
+    expect(section).toMatch(/#302|#296/);
+    expect(section).toMatch(/finished or elegant/);
+    expect(section).toMatch(/#303|#297/);
+    expect(section).toMatch(/sharedImportsSlice|shared root/);
+    expect(section).toMatch(/#293|#292/);
+    expect(section).toMatch(/minimumReleaseAge|pnpm add/);
+    expect(section).toMatch(/#298/);
+    expect(section).toMatch(/GHSA-82fw-gwwq-j7x9/);
+    expect(section).toMatch(/coverage floors/);
+    expect(section).toMatch(/#304/);
+    expect(section).toMatch(/22\.12/);
+    expect(section).toMatch(/7 days/);
+    expect(section).toMatch(/#244/);
+    expect(section).toMatch(/#234/);
+    expect(section).toMatch(/No required config migration/i);
+    expect(section).toMatch(/Does not close\s*`K01`\s*\/\s*`Z09`/);
+    expect(section).toMatch(/does \*\*not\*\* turn `arkOrder` on/);
+    expect(section).not.toMatch(/Status:\s*prepared/i);
+    expect(section).not.toMatch(/No package version bump/);
+    expect(section).not.toMatch(/Status:\s*unreleased/i);
+    expect(fs.existsSync(path.join(REPO, 'docs/releases/4.8.20.md'))).toBe(false);
+    expect(read('ROADMAP.md')).toMatch(/\| 294 \| `RL819` \| `done`/);
+    expect(read('ROADMAP.md')).toMatch(/\| 295 \| `RL820` \| `doing`/);
   });
 });
 
