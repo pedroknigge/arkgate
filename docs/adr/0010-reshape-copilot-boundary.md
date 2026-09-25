@@ -72,10 +72,15 @@ preflight validates the destination against the live contract (a reshape that wo
 violations is reported as invalid, never silently emitted); T04 convergence applies to the
 resulting tree. No apply path exists anywhere in X04.
 
+The proposal itself is filtered before it is shown. The destination is the source anchor
+plus `concept/`, and the candidate is kept only when the live contract classifies `to` in
+the same layer and the same slice id as `from`. When every candidate fails, the card is
+withheld (`nextPilot` is null) instead of naming a folder no layer governs.
+
 ### D5 — One pilot at a time (Q04 discipline)
 
 The plan exposes exactly one `nextPilot` card: `pilotTarget`, `move`, `successSignal`
-(re-doctor: the cluster count drops and the verdict stays green), `killSwitch` (revert the move
+(re-doctor: the cluster count drops, layer and slice id unchanged, card still proposed — a green gate is not success), `killSwitch` (revert the move
 set; nothing else moved), `doNot[]`. Never a multi-concept batch; after each pilot, re-doctor
 before the next card exists.
 

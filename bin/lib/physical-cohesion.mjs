@@ -15,6 +15,7 @@
  * as W01 layer roles: a miss costs a warning line, never a verdict.
  */
 import path from 'node:path';
+import { layerForRelativePath, sliceIdForPath } from '../ark-layer-match.mjs';
 
 /** ADR 0010 D3 — corpus-calibrated, fixed. */
 const CLUSTER_MIN = 40;
@@ -127,15 +128,67 @@ export function computePhysicalCohesion(root, files) {
 }
 
 /**
+ * Destination for one anchor: `concept/` under that anchor. `.` (repo root)
+ * has no prefix. Never a hardcoded `src/features/` folder.
+ */
+function governedDestinationDir(anchor, concept) {
+  if (!anchor || anchor === '.') return concept;
+  return `${anchor}/${concept}`;
+}
+
+/**
+ * A previous pilot flattens files into `${anchor}/${concept}/`. That directory
+ * and anything under it is the consolidation subtree — proposing it again
+ * nests `concept/concept/` forever.
+ */
+function anchorIsConsolidationSubtree(anchor, concept) {
+  return String(anchor)
+    .split('/')
+    .filter((part) => part && part !== '.')
+    .some((part) => part === concept);
+}
+
+/** Union of explicitly declared `rules[].sliceFolders` (first-seen order). */
+function declaredSliceFolders(rules) {
+  const out = [];
+  const seen = new Set();
+  for (const rule of Array.isArray(rules) ? rules : []) {
+    const folders = Array.isArray(rule?.sliceFolders) ? rule.sliceFolders : [];
+    for (const folder of folders) {
+      if (typeof folder !== 'string' || folder.length === 0) continue;
+      const key = folder.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(folder);
+    }
+  }
+  return out;
+}
+
+/**
+ * Keep a candidate only when the live contract still classifies `to` in the
+ * same layer and the same slice id as `from`. Tooling calls the generated
+ * domain matchers; it does not import Kernel preflight.
+ */
+function destinationKeepsLayerAndSlice(fromRel, toRel, layers, sliceFolders) {
+  return (
+    layerForRelativePath(fromRel, layers) === layerForRelativePath(toRel, layers) &&
+    sliceIdForPath(fromRel, sliceFolders) === sliceIdForPath(toRel, sliceFolders)
+  );
+}
+
+/**
  * R2 — the proposed reshape pilot for the TOP finding (one at a time, Q04
  * discipline; ADR 0010 D4–D7). Proposal only: no apply path exists. Moves
- * target the smallest convention-free anchor; sampled `to` paths must fall
- * under the consolidated feature directory the agent will create via the
- * governed write path (T02 preflight validates every real move there).
+ * target the smallest convention-free anchor whose destination stays in the
+ * same layer and slice. The card is withheld when every candidate fails.
+ * @param {{ layers?: object[], rules?: object[] } | undefined} contract
  */
-export function computeReshapePilot(cohesion, files, root) {
+export function computeReshapePilot(cohesion, files, root, contract) {
   const top = cohesion?.findings?.[0];
   if (!top) return null;
+  const layers = contract?.layers;
+  const sliceFolders = declaredSliceFolders(contract?.rules);
   // Recompute the FULL anchor map for the top concept: the finding's anchors
   // are display-filtered (>= MIRROR_MIN, capped), and pilot selection over
   // that trimmed list falsely reported "nothing to move" when the only
@@ -148,16 +201,11 @@ export function computeReshapePilot(cohesion, files, root) {
     if (!r || r.concept !== top.concept) continue;
     byAnchor.set(r.anchor, (byAnchor.get(r.anchor) ?? 0) + 1);
   }
-  const targetDir = `src/features/${top.concept}`;
   const movable = [...byAnchor.entries()]
     .filter(
       ([anchor]) =>
         !CONVENTION_ANCHOR_RE.test(`${anchor}/`) &&
-        // The consolidation target subtree is DONE, not a source — without
-        // this the loop re-proposes the files it just moved, forever
-        // (end-to-end pilot-loop finding).
-        anchor !== targetDir &&
-        !anchor.startsWith(`${targetDir}/`)
+        !anchorIsConsolidationSubtree(anchor, top.concept)
     )
     .map(([anchor, count]) => ({ path: anchor, files: count }))
     .sort((a, b) => a.files - b.files || (a.path < b.path ? -1 : 1));
@@ -171,19 +219,42 @@ export function computeReshapePilot(cohesion, files, root) {
       nextPilot: null,
     };
   }
+  const fileList = Array.isArray(files) ? files : [];
+  const legalAnchors = [];
+  for (const anchor of movable) {
+    const targetDir = governedDestinationDir(anchor.path, top.concept);
+    const rels = fileList
+      .map(relOf)
+      .filter((rel) => {
+        const r = classifyPhysical(rel);
+        return r && r.concept === top.concept && r.anchor === anchor.path;
+      })
+      .sort();
+    const legal = [];
+    for (const rel of rels) {
+      const to = `${targetDir}/${rel.split('/').at(-1)}`;
+      if (!destinationKeepsLayerAndSlice(rel, to, layers, sliceFolders)) continue;
+      legal.push({ from: rel, to });
+    }
+    if (legal.length === 0) continue;
+    legalAnchors.push({ ...anchor, targetDir, legal });
+  }
+  if (legalAnchors.length === 0) {
+    return {
+      proposed: true,
+      applied: false,
+      neverMechanicalSafe: true,
+      concept: top.concept,
+      note: 'No governed destination keeps the layer and the slice.',
+      nextPilot: null,
+    };
+  }
   // Smallest movable cluster worth piloting; if none reaches the floor, take
   // the largest movable anchor so the pilot still exists and stays honest.
-  const pilotAnchor = movable.find((a) => a.files >= 10) ?? movable[movable.length - 1];
-  const rels = (Array.isArray(files) ? files : [])
-    .map(relOf)
-    .filter((rel) => {
-      const r = classifyPhysical(rel);
-      return r && r.concept === top.concept && r.anchor === pilotAnchor.path;
-    })
-    .sort();
-  const moves = rels.slice(0, MAX_MOVE_SAMPLE).map((rel) => ({
-    from: rel,
-    to: `${targetDir}/${rel.split('/').at(-1)}`,
+  const pilotAnchor = legalAnchors.find((a) => a.files >= 10) ?? legalAnchors[legalAnchors.length - 1];
+  const moves = pilotAnchor.legal.slice(0, MAX_MOVE_SAMPLE).map((move) => ({
+    from: move.from,
+    to: move.to,
   }));
   return {
     proposed: true,
@@ -191,11 +262,11 @@ export function computeReshapePilot(cohesion, files, root) {
     neverMechanicalSafe: true,
     concept: top.concept,
     nextPilot: {
-      pilotTarget: `${top.concept} @ ${pilotAnchor.path} (${pilotAnchor.files} file(s))`,
-      move: `Consolidate the ${top.concept} cluster from ${pilotAnchor.path} under ${targetDir}/ — one anchor only, moves proposed as an architecture change map and validated by the atomic preflight before any write.`,
+      pilotTarget: `${top.concept} @ ${pilotAnchor.path} (${pilotAnchor.legal.length} file(s))`,
+      move: `Consolidate the ${top.concept} cluster from ${pilotAnchor.path} under ${pilotAnchor.targetDir}/ — one anchor only, same layer and slice, moves proposed as an architecture change map and validated by the atomic preflight before any write.`,
       moveSample: moves,
-      movesTotal: rels.length,
-      successSignal: `re-run doctor: the ${top.concept} cluster count drops and the verdict stays green`,
+      movesTotal: pilotAnchor.legal.length,
+      successSignal: `re-run doctor: the ${top.concept} cluster count drops, layer and slice id unchanged, card still proposed`,
       killSwitch: 'revert this move set; nothing else was touched',
       doNot: [
         'never move files under app/ or pages/ — fixed by framework convention',

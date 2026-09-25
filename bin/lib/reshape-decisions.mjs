@@ -214,7 +214,7 @@ export function computeReshapeDecisionMemory(root, files, today = new Date().toI
 }
 
 /** Select one actionable finding while respecting explicit current verdicts. */
-export function computeDecisionAwareReshapePilot(cohesion, files, root, analysis) {
+export function computeDecisionAwareReshapePilot(cohesion, files, root, analysis, contract) {
   const findings = Array.isArray(cohesion?.findings) ? cohesion.findings : [];
   if (findings.length === 0) return null;
   const currentByTarget = new Map(
@@ -224,7 +224,7 @@ export function computeDecisionAwareReshapePilot(cohesion, files, root, analysis
     const anchors = analysis.anchorSets.get(finding.concept) ?? [];
     const decision = currentByTarget.get(targetKey(finding.concept, anchors));
     if (decision?.suppressesPilot) continue;
-    const pilot = computeReshapePilot({ ...cohesion, findings: [finding] }, files, root);
+    const pilot = computeReshapePilot({ ...cohesion, findings: [finding] }, files, root, contract);
     if (!pilot?.nextPilot) return pilot;
     return {
       ...pilot,

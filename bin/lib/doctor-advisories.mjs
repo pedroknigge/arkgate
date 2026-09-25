@@ -200,7 +200,8 @@ export function computeDoctorAdvisories(root, config, cov, rules, files, ts, par
     physicalCohesion,
     files,
     root,
-    decisionMemory
+    decisionMemory,
+    { layers: config?.layers, rules: rules ?? config?.rules }
   );
   // Prefer architecture facts paths when available; still union the doctor walk
   // so an empty-catalog residual can see Domain files the facts subset missed.

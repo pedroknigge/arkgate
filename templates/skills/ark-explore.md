@@ -350,6 +350,11 @@ targets as explicit adopter decisions, not residual to re-fight. Keep their mirr
 map. When the user accepts, defers, or rejects a live `reshapePilot.nextPilot`, record the card's
 exact `decisionTarget` with a reason (and optional `reviewBy`) in
 `.ark/reshape-decisions.json`. Never infer or suppress from free-form golden-pattern prose.
+A proposed `to` stays under the source anchor (`concept/`) and is kept only when that path
+stays in the same layer and the same slice id. If no governed destination keeps both,
+`nextPilot` is null — do not invent a folder outside the contract. Success is a smaller
+cluster with the layer and slice id unchanged and the card still proposed; a green gate is
+not success.
 
 ### C. Coupling & debt (measure, don’t guess)
 Prefer evidence over aesthetics:
