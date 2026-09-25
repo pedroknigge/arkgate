@@ -256,6 +256,15 @@ Rule fields:
   when both paths classify. Applies to **any** declared `from`→`to` pair, not only self-edges.
   Missing paths, empty slice folders, or unclassifiable slices **fail closed** (deny — cannot
   prove same-slice).
+- `sliceFolders` is a bare name or a starred prefix. A bare name (`features`) stays an
+  unanchored one-segment match: `src/lib/features/projects/rfi/x.ts` with `["features"]` is
+  `features/projects`. The next segment is never a filename, so
+  `src/components/features/projects/rfi-status-pill.tsx` with `["projects"]` is not a slice.
+  A starred prefix (`lib/features/*/*`) is anchored like `sharedRoots` — it starts the
+  repo-relative path, or sits one segment in after `src/` or `app/`. Each `*` binds one
+  directory and never the filename. The slice id is those directories
+  (`lib/features/projects/rfi`). A file directly under `lib/features/projects/` stays
+  `lib/features/projects`. A path off that prefix (`src/app/api/projects/...`) is not that slice.
 
 #### Cross-layer slice walls (already in the engine)
 

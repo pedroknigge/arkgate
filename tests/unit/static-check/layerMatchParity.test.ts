@@ -97,6 +97,15 @@ describe('layer-match parity (domain TS ↔ generated bin ESM)', async () => {
     expect(sliceTs('src/features/auth/x.ts', ['features'])).toBe(
       bin.sliceIdForPath('src/features/auth/x.ts', ['features'])
     );
+    expect(sliceTs('src/lib/features/projects/rfi/x.ts', ['lib/features/*/*'])).toBe(
+      'lib/features/projects/rfi'
+    );
+    expect(sliceTs('src/lib/features/projects/rfi/x.ts', ['lib/features/*/*'])).toBe(
+      bin.sliceIdForPath('src/lib/features/projects/rfi/x.ts', ['lib/features/*/*'])
+    );
+    expect(sliceTs('src/components/features/projects/rfi-status-pill.tsx', ['projects'])).toBe(
+      bin.sliceIdForPath('src/components/features/projects/rfi-status-pill.tsx', ['projects'])
+    );
     expect(inferTs(['src/features/**'])).toEqual(bin.inferSliceFoldersFromPatterns(['src/features/**']));
     expect(findTs(rules, 'Features', 'Features', opts)?.peerIsolation).toBe(true);
     expect(bin.findDeniedEdgeRule(rules, 'Features', 'Features', opts)?.peerIsolation).toBe(true);
