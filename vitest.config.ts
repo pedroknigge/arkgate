@@ -11,10 +11,12 @@ export default defineConfig({
     // This is a CLI test suite: most tests spawn `node bin/*.mjs` via synchronous execFileSync.
     // With many parallel worker forks all blocked in a child process at once, the reporter RPC
     // can't get an ACK in the default window on a slow CI runner → "Timeout calling
-    // onTaskUpdate" even though every test passes. Run in a single fork (one worker↔main RPC
-    // channel, no cross-fork contention) with generous timeouts. Slower, but deterministic.
+    // onTaskUpdate" even though every test passes. Vitest 4 replaced `poolOptions.forks.singleFork`
+    // with one worker and isolation off (the old single-fork behavior): one worker↔main RPC
+    // channel, no cross-fork contention, generous timeouts. Slower, but deterministic.
     pool: 'forks',
-    poolOptions: { forks: { singleFork: true } },
+    maxWorkers: 1,
+    isolate: false,
     testTimeout: 60000,
     hookTimeout: 60000,
     teardownTimeout: 60000,
