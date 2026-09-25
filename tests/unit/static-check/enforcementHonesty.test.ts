@@ -10,8 +10,10 @@ import ts from 'typescript';
 import {
   buildBaselineHonesty,
   buildCoverageHonesty,
+  buildProductHonesty,
   buildWritePathHonesty,
   computeDoctorEnforcementHonesty,
+  physicalCohesionResidualRemains,
 } from '../../../bin/lib/enforcement-honesty.mjs';
 import {
   classifyUnresolvedDependencyArg,
@@ -402,6 +404,40 @@ describe('graph-blind template-interpolation (Y09 advisory)', () => {
     const result = detectGraphBlindSpots(ts, root, [file]);
     expect(result.count).toBeGreaterThanOrEqual(1);
     expect(result.edges.some((e) => e.reason === 'non-literal' && e.kind === 'require')).toBe(true);
+  });
+
+  it('physical cohesion residual clears elegant and finished without touching design fitness (#296)', () => {
+    const designFitness = { status: 'ok', designWeak: false, smellCount: 0 };
+    const patternBets: unknown[] = [];
+    const beforeFitness = JSON.stringify(designFitness);
+    const beforeBets = JSON.stringify(patternBets);
+    const honesty = buildProductHonesty({
+      coverageHonesty: { wholeTreeGoverned: true, status: 'ok' },
+      designWeak: false,
+      activeBlockingViolations: 0,
+      physicalCohesionResidual: true,
+    });
+    expect(honesty.elegant).toBe(false);
+    expect(honesty.finished).toBe(false);
+    expect(honesty.reasonIds).toContain('physical-cohesion-residual');
+    expect(honesty.headline).toBe('Residual remaining');
+    const reason = honesty.reasons.find((row) => row.id === 'physical-cohesion-residual');
+    expect(reason.message).toMatch(/gate verdict and exit code are unchanged/i);
+    expect(reason.message).toMatch(/one judgment, not a queue to empty/i);
+    expect(JSON.stringify(designFitness)).toBe(beforeFitness);
+    expect(JSON.stringify(designFitness).toLowerCase()).not.toContain('cohesion');
+    expect(JSON.stringify(patternBets)).toBe(beforeBets);
+    expect(JSON.stringify(patternBets).toLowerCase()).not.toContain('cohesion');
+    const loop = summarizePilotLoop({ designWeak: false, patternBets, designSmells: [] });
+    expect(loop.active).toBe(false);
+    expect(loop.reason).toBe('not-design-weak');
+    expect(physicalCohesionResidualRemains({ findings: [{ concept: 'timesheet' }] })).toBe(true);
+    expect(
+      physicalCohesionResidualRemains({
+        findings: [{ concept: 'timesheet' }],
+        reshapeDecisions: { current: [{ concept: 'timesheet', suppressesPilot: true }] },
+      })
+    ).toBe(false);
   });
 
   it('unavailable when TypeScript host is missing', () => {

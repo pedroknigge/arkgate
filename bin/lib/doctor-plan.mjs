@@ -59,6 +59,7 @@ import {
 import {
   buildCoverageHonesty,
   computeDoctorEnforcementHonesty,
+  physicalCohesionResidualRemains,
 } from './enforcement-honesty.mjs';
 import {
   computePureLayerOptInNudge,
@@ -693,6 +694,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
       github: githubForBoundary,
       adoptionStance: stanceFile,
       stewardNudge: doctorAdvisories.stewardNudge,
+      physicalCohesionResidual: physicalCohesionResidualRemains(doctorAdvisories.physicalCohesion),
     });
 
   // Improvement compass: projection only — never feeds ok/valid/goal.met.

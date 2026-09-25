@@ -188,7 +188,7 @@ else is judgment/deferred and must not be auto-applied.
 **Type-edge honesty:** type-only denied edges are **placement debt** (`typeOnly` +
 `failsStrict: false`) — prefer SharedTypes / owning layer; they do not fail merge like value
 edges. Doctor `productHonesty` and `violations.typeEdgePolicy` must not be sold as “all done”
-when residual signals remain.
+when residual signals remain (`physical-cohesion-residual` included).
 
 ## Spoken / written explanation
 

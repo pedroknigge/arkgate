@@ -319,10 +319,11 @@ describe('X04 doctor surface stays advisory (pinned invariants)', () => {
     expect(pc.findingCount).toBe(1);
     expect(pc.findings[0].concept).toBe('projects');
     expect(pc.reshapePilot.nextPilot.movesTotal).toBe(22);
-    // Advisory invariants: the explosion feeds NOTHING else. (The fixture is
-    // design-weak on its own — one layer, zero rules — so the pin is that no
-    // fitness/smell surface ever mentions the cohesion sensor.)
+    // Advisory invariants: cohesion does not enter designFitness, smells, or
+    // patternBets. productHonesty may name the residual. The gate stays green.
+    // (The fixture is design-weak on its own — one layer, zero rules.)
     expect(payload.ok).toBe(true);
+    expect(payload.doctor.productHonesty.reasonIds).toContain('physical-cohesion-residual');
     expect(JSON.stringify(payload.doctor.designFitness).toLowerCase()).not.toContain('cohesion');
     expect(JSON.stringify(payload.doctor.designSmells).toLowerCase()).not.toContain('cohesion');
     expect(JSON.stringify(payload.doctor.patternBets ?? null).toLowerCase()).not.toContain(

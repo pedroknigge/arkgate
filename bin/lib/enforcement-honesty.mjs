@@ -288,14 +288,26 @@ export function buildWritePathHonesty(activeHost, hardWriteActive = false, extra
  *   primaryNextAction?: string | null,
  *   operatingMode?: string | null,
  *   activeBlockingViolations?: number | null,
+ *   physicalCohesionResidual?: boolean,
  * }} input
  */
+export function physicalCohesionResidualRemains(cohesion) {
+  const findings = Array.isArray(cohesion?.findings) ? cohesion.findings : [];
+  if (findings.length === 0) return false;
+  const covered = new Set();
+  for (const row of cohesion?.reshapeDecisions?.current ?? []) {
+    if (row?.suppressesPilot === true && typeof row.concept === 'string') covered.add(row.concept);
+  }
+  return findings.some((finding) => !covered.has(finding?.concept));
+}
+
 export function buildProductHonesty(input = {}) {
   const reasons = [];
   const cov = input.coverageHonesty;
   const base = input.baselineHonesty;
   const write = input.writePathHonesty;
   const designWeak = input.designWeak === true;
+  const cohesionResidual = input.physicalCohesionResidual === true;
   const dualTruth = input.packageVersionTruth?.dualTruth === true;
   const pinCode = input.packageVersionTruth?.code || write?.packagePinCode || null;
   const pinAbsent =
@@ -362,6 +374,14 @@ export function buildProductHonesty(input = {}) {
       id: 'design-smells-open-edges',
       message:
         'Design smells present alongside open edge debt — not elegant, not finished. Fix edges first; Shape residual after green.',
+    });
+  }
+
+  if (cohesionResidual) {
+    reasons.push({
+      id: 'physical-cohesion-residual',
+      message:
+        'Physical cohesion residual remains — the gate verdict and exit code are unchanged, and the reshape card is one judgment, not a queue to empty.',
     });
   }
 
@@ -551,6 +571,12 @@ export function buildProductHonesty(input = {}) {
     headline = 'Advisory-only adoption — merge status is not required';
   } else if (!unfinished) {
     headline = 'Honesty clear on residual signals';
+  } else if (
+    wholeTreeGoverned &&
+    architectureReasons.length === 1 &&
+    architectureReasons[0].id === 'physical-cohesion-residual'
+  ) {
+    headline = 'Residual remaining';
   } else if (coverageIncomplete) {
     headline = 'Not finished / not whole-tree guarantee';
   } else {
@@ -592,8 +618,8 @@ export function buildProductHonesty(input = {}) {
         : 'unknown';
 
   return {
-    finished: !unfinished && wholeTreeGoverned && !designWeak && activeBlocking === 0,
-    elegant: !designWeak && !base?.dirtyBaselineRisk && !designSmellsOpenEdges && activeBlocking === 0,
+    finished: !unfinished && wholeTreeGoverned && !designWeak && !cohesionResidual && activeBlocking === 0,
+    elegant: !designWeak && !cohesionResidual && !base?.dirtyBaselineRisk && !designSmellsOpenEdges && activeBlocking === 0,
     wholeTreeGuarantee:
       wholeTreeGoverned &&
       !designWeak &&
@@ -656,6 +682,7 @@ export function computeDoctorEnforcementHonesty({
   stewardNudge,
   nativeFailClosed,
   nativeFailClosedPolicy,
+  physicalCohesionResidual,
 } = {}) {
   const coverageHonesty = buildCoverageHonesty({
     percent: governedPercent,
@@ -713,6 +740,7 @@ export function computeDoctorEnforcementHonesty({
     considerMergeBoundary: true,
     emptyStewards,
     stewardNudge,
+    physicalCohesionResidual,
   });
   return {
     coverageHonesty,
