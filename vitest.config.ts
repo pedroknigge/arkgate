@@ -59,15 +59,19 @@ export default defineConfig({
         // Linux CI measures ~81.97% branches; keep modest headroom under that floor.
         // 4.6.7 CLI extracts: Linux CI measures 81.36% branches (16321). Recalibrate.
         // 4.8.10 Amarilla sensors: Linux CI measures 81.17% branches (16949/20880).
+        // Vitest 4.1 V8 remap is AST-aware (v8-to-istanbul removed). Same suite,
+        // larger branch denominator: 73.63% branches (21235/28839). Floor tracks
+        // that measurement; tests were not removed.
         statements: 79.5,
-        branches: 81.0,
+        branches: 73.2,
         // AL compact doctor + gitDirPresent: Linux CI measures 76.47% functions
         // (1775/2321) with tests green. Keep modest headroom under that floor.
         functions: 76.4,
         lines: 79.5,
         'bin/lib/write-path-detect.mjs': {
-          statements: 75,
-          lines: 75,
+          // Vitest 4 remap: 69.56% statements (32/46), 69.04% lines (29/42).
+          statements: 69,
+          lines: 68.5,
           branches: 70,
           functions: 55,
         },
@@ -91,12 +95,14 @@ export default defineConfig({
         'bin/lib/prepare-write.mjs': {
           statements: 95,
           lines: 95,
-          branches: 95,
+          // Vitest 4 remap: 94.44% branches (51/54).
+          branches: 94,
         },
         'bin/lib/safety-diagnostics.mjs': {
           statements: 95,
           lines: 95,
-          branches: 95,
+          // Vitest 4 remap: 93.65% branches (118/126).
+          branches: 93,
         },
         'bin/lib/baseline-key.mjs': {
           statements: 100,
