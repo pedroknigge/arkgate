@@ -71,10 +71,11 @@ const config = {
     // compares shifted it again. Same policyDeltaAcknowledgementMatches body.
     'src/domain/policyDelta.ts:984-1013',
     // #291 declaration witness shifted formatCoverageDiscards / budgetDetail /
-    // canPromoteInvariant. Pins stay on those decisions, not on symbolPresent.
-    'src/domain/invariantCoverage.ts:171-190',
-    'src/domain/invariantCoverage.ts:293-297',
-    'src/domain/invariantCoverage.ts:430-471',
+    // canPromoteInvariant. #307/#310 classifyCoverage shifted them again.
+    // Pins stay on those decisions, not on the classifier.
+    'src/domain/invariantCoverage.ts:225-244',
+    'src/domain/invariantCoverage.ts:679-683',
+    'src/domain/invariantCoverage.ts:812-853',
     'src/kernel/semanticAnalysis.ts:18-49',
     'src/kernel/semanticAnalysis.ts:78-258',
     'src/kernel/workflow/Saga.ts:188-238',

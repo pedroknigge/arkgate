@@ -16,8 +16,10 @@ entries are declarative; core does not evaluate arbitrary predicates.
 
 ### D2 — Coverage evidence order
 
-1. Test title contains the invariant ID (project test globs).
-2. Deterministic symbol match (`coverage.symbol`, e.g. `Order.ensureInvariants`) — a declaration of that identifier in a non-test file, witnessed by path; imports and test calls do not count.
+1. Test title contains the invariant ID (project test globs). A `describe` / `it` /
+   `test` / `context` title counts. A comment, string, test body, or import that
+   only mentions the id does not.
+2. Deterministic symbol match (`coverage.symbol`, e.g. `Order.ensureInvariants`) — a declaration of that identifier in a non-test file, witnessed by path. `function`, `class`, `const`, `method`, `type`, `interface`, and `enum` are declarations. Imports and test calls do not count.
 Missing test globs → analysis `partial`, never covered. Uncovered → `INVARIANT_UNCOVERED`
 (advisory by default; failsStrict only when mode is enforced).
 

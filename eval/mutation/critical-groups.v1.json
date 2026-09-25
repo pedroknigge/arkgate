@@ -171,28 +171,28 @@
     },
     {
       "id": "invariant-promote-honesty",
-      "note": "DF04: canPromoteInvariant refuses partial/uncovered/missing; never invents green promote.",
+      "note": "DF04: canPromoteInvariant refuses partial/uncovered/missing; never invents green promote. #307/#310 inserted classifyCoverage above it, so the pin moved with the function (812-853). Same decisions.",
       "targets": [
         {
           "file": "src/domain/invariantCoverage.ts",
-          "startLine": 430,
-          "endLine": 471
+          "startLine": 812,
+          "endLine": 853
         }
       ]
     },
     {
       "id": "invariant-coverage-message-honesty",
-      "note": "The coverage verdict is only as good as its sentence: formatCoverageDiscards and budgetDetail carry every discard reason and the knob that raises the cap. #291 inserted the declaration witness above budgetDetail, so the pins moved with formatCoverageDiscards (171-190) and budgetDetail (293-297). Same decisions.",
+      "note": "The coverage verdict is only as good as its sentence: formatCoverageDiscards and budgetDetail carry every discard reason and the knob that raises the cap. #307/#310 inserted classifyCoverage above both, so the pins moved with formatCoverageDiscards (225-244) and budgetDetail (679-683). Same decisions, not the classifier.",
       "targets": [
         {
           "file": "src/domain/invariantCoverage.ts",
-          "startLine": 171,
-          "endLine": 190
+          "startLine": 225,
+          "endLine": 244
         },
         {
           "file": "src/domain/invariantCoverage.ts",
-          "startLine": 293,
-          "endLine": 297
+          "startLine": 679,
+          "endLine": 683
         }
       ]
     },

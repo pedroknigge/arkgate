@@ -56,56 +56,387 @@ function isUnderCoverageRoot(file, roots) {
         return target === root || target.startsWith(`${root}/`);
     });
 }
-function titleMatchesInvariant(content, id) {
-    // Match describe/it/test string titles containing the invariant id.
-    const escaped = id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const re = new RegExp(`(?:describe|it|test|context)\\s*\\(\\s*['"\`][^'"\`]*${escaped}[^'"\`]*['"\`]`, 'i');
-    return re.test(content) || content.includes(id);
-}
 function escapeRegExp(value) {
     return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
-/**
- * True when `name` is declared here. Imports and calls do not count.
- * `export const name =` is the same binding shape sensors already treat as a
- * declaration (arrow or function). The last segment of `Aggregate.method` is
- * the name that must be declared.
- */
-function declaresIdentifier(content, name) {
-    const n = escapeRegExp(name);
-    const functionDecl = new RegExp(`(?:^|[\\s;{}])(?:export\\s+(?:default\\s+)?)?(?:declare\\s+)?(?:async\\s+)?function\\s*\\*?\\s*${n}\\s*[(<]`);
-    const classDecl = new RegExp(`(?:^|[\\s;{}])(?:export\\s+(?:default\\s+)?)?(?:abstract\\s+)?class\\s+${n}\\b`);
-    const constDecl = new RegExp(`(?:^|[\\s;{}])export\\s+(?:const|let|var)\\s+${n}\\s*=`);
-    const methodDecl = new RegExp(`(?:^|[\\n;{}])\\s*(?:(?:public|private|protected|static|async|readonly|override|abstract|get|set|declare)\\s+)*${n}\\s*(?:<[^>\\n]*>)?\\s*\\([^;{}]*\\)\\s*(?::\\s*[^;{]+)?\\s*\\{`);
-    return (functionDecl.test(content) ||
-        classDecl.test(content) ||
-        constDecl.test(content) ||
-        methodDecl.test(content));
+function normalizePath(file) {
+    return file.replace(/\\/g, '/').replace(/^\.\//, '');
 }
-/** Witness path, or undefined when no non-test file declares `symbol`. */
-function symbolPresent(fileContents, testFiles, symbol) {
+/**
+ * Blank comments, and optionally strings, with spaces so a regex cannot treat
+ * a comment or a quoted mention as code. Newlines stay so line structure holds.
+ * `//` and `/*` inside a string are not comments.
+ */
+function maskNonCode(content, blankStrings) {
+    const out = [];
+    let i = 0;
+    const n = content.length;
+    while (i < n) {
+        const c = content[i];
+        const next = content[i + 1];
+        if (c === '/' && next === '/') {
+            while (i < n && content[i] !== '\n') {
+                out.push(' ');
+                i += 1;
+            }
+            continue;
+        }
+        if (c === '/' && next === '*') {
+            out.push(' ', ' ');
+            i += 2;
+            while (i < n && !(content[i] === '*' && content[i + 1] === '/')) {
+                out.push(content[i] === '\n' ? '\n' : ' ');
+                i += 1;
+            }
+            if (i < n) {
+                out.push(' ', ' ');
+                i += 2;
+            }
+            continue;
+        }
+        if (c === '"' || c === "'" || c === '`') {
+            const quote = c;
+            out.push(blankStrings ? ' ' : c);
+            i += 1;
+            while (i < n) {
+                const ch = content[i];
+                if (ch === '\\') {
+                    const escaped = content[i + 1];
+                    if (blankStrings) {
+                        out.push(' ', escaped === undefined ? '' : ' ');
+                    }
+                    else {
+                        out.push('\\');
+                        if (escaped !== undefined)
+                            out.push(escaped);
+                    }
+                    i += escaped === undefined ? 1 : 2;
+                    continue;
+                }
+                if (ch === quote) {
+                    out.push(blankStrings ? ' ' : ch);
+                    i += 1;
+                    break;
+                }
+                out.push(blankStrings && ch !== '\n' ? ' ' : ch);
+                i += 1;
+            }
+            continue;
+        }
+        out.push(c);
+        i += 1;
+    }
+    return out.join('');
+}
+/** Title string when `id` sits inside a describe/it/test/context title. Comments do not count. */
+function matchTestTitle(content, id) {
+    if (!id)
+        return undefined;
+    const escaped = escapeRegExp(id);
+    const re = new RegExp(`(?:describe|it|test|context)\\s*\\(\\s*(['"\`])([^'"\`]*${escaped}[^'"\`]*)\\1`, 'i');
+    const match = re.exec(maskNonCode(content, false));
+    const title = match?.[2];
+    return title === undefined ? undefined : title;
+}
+/**
+ * Declaration shape of `name`, or undefined. Imports and calls do not count.
+ * `export const name =` is the binding shape sensors already treat as a
+ * declaration (arrow or function). Comments and strings are masked first so
+ * `// type Name` is not a declaration.
+ */
+function declarationShape(content, name) {
+    if (!name)
+        return undefined;
+    const n = escapeRegExp(name);
+    const code = maskNonCode(content, true);
+    const shapes = [
+        {
+            shape: 'function',
+            source: `(?:^|[\\s;{}])(?:export\\s+(?:default\\s+)?)?(?:declare\\s+)?(?:async\\s+)?function\\s*\\*?\\s*${n}\\s*[(<]`,
+        },
+        {
+            shape: 'class',
+            source: `(?:^|[\\s;{}])(?:export\\s+(?:default\\s+)?)?(?:abstract\\s+)?class\\s+${n}\\b`,
+        },
+        {
+            shape: 'const',
+            source: `(?:^|[\\s;{}])export\\s+(?:const|let|var)\\s+${n}\\s*=`,
+        },
+        {
+            shape: 'type',
+            source: `(?:^|[\\s;{}])(?:export\\s+)?(?:declare\\s+)?type\\s+${n}\\b`,
+        },
+        {
+            shape: 'interface',
+            source: `(?:^|[\\s;{}])(?:export\\s+)?(?:declare\\s+)?interface\\s+${n}\\b`,
+        },
+        {
+            shape: 'enum',
+            source: `(?:^|[\\s;{}])(?:export\\s+)?(?:declare\\s+)?(?:const\\s+)?enum\\s+${n}\\b`,
+        },
+        {
+            shape: 'method',
+            source: `(?:^|[\\n;{}])\\s*(?:(?:public|private|protected|static|async|readonly|override|abstract|get|set|declare)\\s+)*${n}\\s*(?:<[^>\\n]*>)?\\s*\\([^;{}]*\\)\\s*(?::\\s*[^;{]+)?\\s*\\{`,
+        },
+    ];
+    for (const entry of shapes) {
+        if (new RegExp(entry.source).test(code))
+            return entry.shape;
+    }
+    return undefined;
+}
+function lineAt(content, index) {
+    const start = content.lastIndexOf('\n', index - 1) + 1;
+    const end = content.indexOf('\n', index);
+    return content.slice(start, end === -1 ? content.length : end);
+}
+function isImportLine(line) {
+    const trimmed = line.trim();
+    if (/^import\b/.test(trimmed))
+        return true;
+    if (/^export\s+/.test(trimmed) && /\bfrom\b/.test(trimmed))
+        return true;
+    return /\brequire\s*\(/.test(trimmed);
+}
+/**
+ * Context of a bare mention. Heuristic: comment, string, import line, or
+ * other text in a test file. A call in a source file is not labeled — the
+ * verdict stays `none` ("no declared symbol") rather than a guessed context.
+ * When several contexts appear, comment wins, then string, then test body,
+ * then import.
+ */
+function mentionContext(content, needle, isTest) {
+    if (!needle || !content.includes(needle))
+        return undefined;
+    const found = new Set();
+    let i = 0;
+    const n = content.length;
+    const note = (index, zone) => {
+        if (!content.startsWith(needle, index))
+            return;
+        if (zone === 'comment') {
+            found.add('comment');
+            return;
+        }
+        if (zone === 'string') {
+            found.add('string');
+            return;
+        }
+        if (isImportLine(lineAt(content, index))) {
+            found.add('import');
+            return;
+        }
+        if (isTest)
+            found.add('test-body');
+    };
+    while (i < n) {
+        const c = content[i];
+        const next = content[i + 1];
+        if (c === '/' && next === '/') {
+            while (i < n && content[i] !== '\n') {
+                note(i, 'comment');
+                i += 1;
+            }
+            continue;
+        }
+        if (c === '/' && next === '*') {
+            note(i, 'comment');
+            note(i + 1, 'comment');
+            i += 2;
+            while (i < n && !(content[i] === '*' && content[i + 1] === '/')) {
+                note(i, 'comment');
+                i += 1;
+            }
+            if (i < n) {
+                note(i, 'comment');
+                note(i + 1, 'comment');
+                i += 2;
+            }
+            continue;
+        }
+        if (c === '"' || c === "'" || c === '`') {
+            const quote = c;
+            note(i, 'string');
+            i += 1;
+            while (i < n) {
+                const ch = content[i];
+                if (ch === '\\') {
+                    note(i, 'string');
+                    if (content[i + 1] !== undefined)
+                        note(i + 1, 'string');
+                    i += content[i + 1] === undefined ? 1 : 2;
+                    continue;
+                }
+                if (ch === quote) {
+                    note(i, 'string');
+                    i += 1;
+                    break;
+                }
+                note(i, 'string');
+                i += 1;
+            }
+            continue;
+        }
+        note(i, 'code');
+        i += 1;
+    }
+    if (found.has('comment'))
+        return 'comment';
+    if (found.has('string'))
+        return 'string';
+    if (found.has('test-body'))
+        return 'test-body';
+    if (found.has('import'))
+        return 'import';
+    return undefined;
+}
+/** Last segment of `Aggregate.method` is the name that must be declared. */
+function symbolNeedle(symbol) {
     if (!symbol)
         return undefined;
     const parts = symbol.split('.');
-    const needle = parts[parts.length - 1] ?? '';
-    if (!needle)
+    const name = parts[parts.length - 1] ?? '';
+    if (!name)
         return undefined;
-    const className = parts.length > 1 ? parts[0] : null;
-    const tests = new Set(testFiles.map((file) => file.replace(/\\/g, '/').replace(/^\.\//, '')));
-    const files = Object.keys(fileContents).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
-    for (const file of files) {
-        const normalized = file.replace(/\\/g, '/').replace(/^\.\//, '');
-        if (tests.has(normalized))
-            continue;
-        const content = fileContents[file];
-        if (!content)
-            continue;
-        if (className && !content.includes(className))
-            continue;
-        if (declaresIdentifier(content, needle))
-            return file;
+    const className = parts.length > 1 ? (parts[0] ?? null) : null;
+    return { className, name };
+}
+function declaredLabel(invariant) {
+    return symbolNeedle(invariant.coverage?.symbol)?.name ?? invariant.id;
+}
+function sortedContentFiles(fileContents) {
+    return Object.keys(fileContents).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+}
+/**
+ * One scan. `scanTests` is false when test globs are missing: a title in the
+ * loaded map must not prove a walk the scan did not claim. Test paths are
+ * still excluded from declaration search.
+ */
+function rankCoverage(invariant, files, scanTests = true) {
+    const testFiles = files.testFiles ?? [];
+    const tests = new Set(testFiles.map((file) => normalizePath(file)));
+    const roots = (files.coverageRoots ?? []).filter((root) => typeof root === 'string' && root.length > 0);
+    const wantsTest = invariant.coverage?.test !== false && scanTests;
+    const needle = symbolNeedle(invariant.coverage?.symbol ?? undefined);
+    let testTitle;
+    let outsideTitle;
+    if (wantsTest) {
+        for (const file of testFiles) {
+            const content = files.fileContents[file];
+            if (!content)
+                continue;
+            const title = matchTestTitle(content, invariant.id);
+            if (title === undefined)
+                continue;
+            if (roots.length === 0 || isUnderCoverageRoot(file, roots)) {
+                testTitle = { file, title };
+                break;
+            }
+            outsideTitle ??= { file, title };
+        }
+        testTitle ??= outsideTitle;
     }
-    return undefined;
+    let declaration;
+    if (needle) {
+        for (const file of sortedContentFiles(files.fileContents)) {
+            if (tests.has(normalizePath(file)))
+                continue;
+            const content = files.fileContents[file];
+            if (!content)
+                continue;
+            if (needle.className && !content.includes(needle.className))
+                continue;
+            const shape = declarationShape(content, needle.name);
+            if (!shape)
+                continue;
+            declaration = { file, shape };
+            break;
+        }
+    }
+    let mention;
+    if (!testTitle && !declaration) {
+        if (wantsTest) {
+            for (const file of testFiles) {
+                const content = files.fileContents[file];
+                if (!content)
+                    continue;
+                const context = mentionContext(content, invariant.id, true);
+                if (!context)
+                    continue;
+                mention = { file, context };
+                break;
+            }
+        }
+        if (!mention && needle) {
+            for (const file of sortedContentFiles(files.fileContents)) {
+                if (tests.has(normalizePath(file)))
+                    continue;
+                const content = files.fileContents[file];
+                if (!content)
+                    continue;
+                const context = mentionContext(content, needle.name, false);
+                if (!context)
+                    continue;
+                mention = { file, context };
+                break;
+            }
+        }
+    }
+    const best = testTitle
+        ? { kind: 'test-title', file: testTitle.file, title: testTitle.title }
+        : declaration
+            ? { kind: 'declaration', file: declaration.file, shape: declaration.shape }
+            : mention
+                ? { kind: 'mention-only', file: mention.file, context: mention.context }
+                : { kind: 'none' };
+    return { best, ...(testTitle ? { testTitle } : {}), ...(declaration ? { declaration } : {}) };
+}
+/**
+ * Best coverage evidence for `invariant` in `files`.
+ * test-title beats a declaration; a declaration beats a bare mention; a bare
+ * mention beats silence. Callers do not re-scan to explain the verdict.
+ */
+export function classifyCoverage(invariant, files) {
+    return rankCoverage(invariant, files).best;
+}
+/**
+ * Policy: a test title or any declaration counts, including type, interface,
+ * and enum. A mention-only verdict never counts. `none` does not count.
+ */
+export function countsAsCoverage(ev) {
+    switch (ev.kind) {
+        case 'test-title':
+        case 'declaration':
+            return true;
+        case 'mention-only':
+        case 'none':
+            return false;
+    }
+}
+function mentionWhere(context) {
+    switch (context) {
+        case 'test-body':
+            return 'a test body';
+        case 'comment':
+            return 'a comment';
+        case 'string':
+            return 'a string';
+        case 'import':
+            return 'an import';
+    }
+}
+/** Sentence for the verdict. `INVARIANT_UNCOVERED` prints this; it does not re-derive it. */
+export function describeCoverage(invariant, ev) {
+    switch (ev.kind) {
+        case 'test-title':
+            return `found \`${ev.title}\` in a describe/it title in ${ev.file}`;
+        case 'declaration':
+            return `found \`${ev.shape} ${declaredLabel(invariant)}\` in ${ev.file}`;
+        case 'mention-only':
+            return `${invariant.id} appears only in ${mentionWhere(ev.context)} in ${ev.file}; put it in a describe/it title`;
+        case 'none':
+            return 'no scanned test names it in a describe/it title and no declared symbol was found';
+    }
 }
 export function evaluateInvariantCoverage(input) {
     const invariants = input.arkRules.invariants ?? [];
@@ -131,49 +462,40 @@ export function evaluateInvariantCoverage(input) {
     const coverage = [];
     const violations = [];
     for (const inv of invariants) {
-        const evidence = [];
         const wantsTest = inv.coverage?.test !== false; // default: prefer test evidence when catalogued
         const symbol = inv.coverage?.symbol;
+        // Missing globs: do not let a loaded title prove a walk we did not claim.
+        const scanTests = !testGlobsMissing && wantsTest;
+        const ranked = rankCoverage(inv, { fileContents: input.fileContents, testFiles, coverageRoots }, scanTests);
+        const ev = ranked.best;
+        // Legacy `evidence` is derivable from the same scan: counting kinds only.
+        // A test title and a declaration can both be present; mention-only is absent.
+        const evidence = [];
+        if (scanTests && ranked.testTitle)
+            evidence.push('test-title');
+        if (ranked.declaration)
+            evidence.push('symbol');
+        const counts = countsAsCoverage(ev);
         let testEvidenceFile;
         let outsideDeclaredRoots;
-        if (!testGlobsMissing && wantsTest) {
-            // A covering test INSIDE a declared root wins over one outside it: the
-            // finding is "the only proof lives where the runner does not go", not
-            // "some proof lives there".
-            let fallbackOutside;
-            for (const file of testFiles) {
-                const content = input.fileContents[file];
-                if (!content || !titleMatchesInvariant(content, inv.id))
-                    continue;
-                if (!rootsDeclared || isUnderCoverageRoot(file, coverageRoots)) {
-                    testEvidenceFile = file;
-                    outsideDeclaredRoots = rootsDeclared ? false : undefined;
-                    break;
-                }
-                fallbackOutside ??= file;
+        if (scanTests && ranked.testTitle) {
+            testEvidenceFile = ranked.testTitle.file;
+            if (rootsDeclared) {
+                outsideDeclaredRoots = !isUnderCoverageRoot(testEvidenceFile, coverageRoots);
             }
-            if (testEvidenceFile === undefined && fallbackOutside !== undefined) {
-                testEvidenceFile = fallbackOutside;
-                outsideDeclaredRoots = true;
-            }
-            if (testEvidenceFile !== undefined)
-                evidence.push('test-title');
         }
-        const symbolEvidenceFile = symbol
-            ? symbolPresent(input.fileContents, testFiles, symbol)
-            : undefined;
-        if (symbolEvidenceFile)
-            evidence.push('symbol');
-        // Covered if any requested evidence is present.
+        const symbolEvidenceFile = ranked.declaration?.file;
+        const shape = ranked.declaration?.shape;
+        // Covered if the policy says this verdict counts.
         // When coverage declares neither test nor symbol, require at least description-only advisory presence = not covered.
         const requiresEvidence = inv.coverage?.test === true || Boolean(symbol) || inv.coverage === undefined;
-        const covered = requiresEvidence && evidence.length > 0
+        const covered = requiresEvidence && counts
             ? true
             : inv.coverage?.test === false && !symbol
                 ? true // explicitly no coverage requirements
-                : evidence.length > 0;
+                : counts;
         // Partial only when tests are missing *and* no other evidence (e.g. symbol) completed coverage.
-        const partial = testGlobsMissing && wantsTest && evidence.length === 0;
+        const partial = testGlobsMissing && wantsTest && !counts;
         coverage.push({
             invariantId: inv.id,
             layer: inv.provenance.layer,
@@ -185,6 +507,7 @@ export function evaluateInvariantCoverage(input) {
             description: inv.description,
             ...(testEvidenceFile !== undefined ? { testEvidenceFile } : {}),
             ...(symbolEvidenceFile !== undefined ? { symbolEvidenceFile } : {}),
+            ...(shape !== undefined ? { shape } : {}),
             ...(outsideDeclaredRoots !== undefined ? { outsideDeclaredRoots } : {}),
             coverageRootsDeclared: rootsDeclared,
         });
@@ -215,13 +538,11 @@ export function evaluateInvariantCoverage(input) {
                     ? coverageBudgetExhausted
                         ? `Invariant ${inv.id} coverage cannot be proven (${budgetDetail}); reporting partial, not covered.`
                         : `Invariant ${inv.id} coverage cannot be proven (test globs missing or empty); reporting partial, not covered (never-had-tests).`
-                    : // Say what was actually checked. "Not covered by a test
-                        // title" reads as "there is no test", and its inverse
-                        // reads as "there is a test and it runs" — neither is
-                        // something a text match can know.
-                        kind === 'tests-disappeared'
-                            ? `Invariant ${inv.id}: no scanned test names it in a describe/it title and no declared symbol was found (tests-disappeared — a suite exists). ArkGate matches declared text; it never executes tests.`
-                            : `Invariant ${inv.id}: no scanned test names it in a describe/it title and no declared symbol was found (never-had-tests — the scan found no tests at all). ArkGate matches declared text; it never executes tests.`) +
+                    : // The sentence is the verdict. It names a title, a declaration
+                        // shape, a bare mention, or silence — it does not re-scan.
+                        `Invariant ${inv.id}: ${describeCoverage(inv, ev)} (${kind === 'tests-disappeared'
+                            ? 'tests-disappeared — a suite exists'
+                            : 'never-had-tests — the scan found no tests at all'}). ArkGate matches declared text; it never executes tests.`) +
                     (partial && coverageBudgetExhausted ? budgetExhaustedTail : discardTail),
                 file: inv.provenance.sourceFile,
                 line: 1,

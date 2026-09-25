@@ -5,6 +5,24 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+### 4.8.21
+
+#### Changed
+- **Behavior change.** A comment, a string, a test body, or an import that merely
+  mentions an invariant id no longer counts as coverage. Only a `describe` /
+  `it` / `test` / `context` title does. Repos that were green because a comment
+  or a string contained the id will turn red. One-line fix: move the id into
+  the `it()` title.
+  ([#310](https://github.com/pedroknigge/arkgate/issues/310))
+
+#### Fixed
+- `coverage.symbol` accepts `type`, `interface`, and `enum` declarations
+  again (a `function`, `class`, `const`, or method still counts).
+  `INVARIANT_UNCOVERED` names what the scan found — for example found `type X`
+  in a file, or that the id appears only in a comment or a test body — instead
+  of saying no symbol was declared when one was.
+  ([#307](https://github.com/pedroknigge/arkgate/issues/307))
+
 ### Added
 - Optional per-rule `sliceIdentity`: `path` (default) or `stars`, for 4.8.21.
   Absent and `path` keep today's slice ids byte for byte, so baselines and
