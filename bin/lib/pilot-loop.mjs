@@ -120,35 +120,39 @@ export function extractionCardFromBet(bet, preferredFiles) {
 }
 
 /**
+ * Viable pattern bets, best pilot first (same rank as the historical selector).
+ * Mechanical-safe claims and non-production god-module paths are dropped.
+ * @param {object[] | null | undefined} patternBets
+ * @param {object[] | null | undefined} [designSmells]
+ */
+function rankedPatternBets(patternBets, designSmells) {
+  let bets = Array.isArray(patternBets) ? [...patternBets] : [];
+  if (bets.length === 0 && Array.isArray(designSmells) && designSmells.length) {
+    bets = buildPatternBetsFromSmells(designSmells);
+  }
+  const ranked = [];
+  for (let i = 0; i < bets.length; i++) {
+    const bet = bets[i];
+    if (!bet || bet.neverMechanicalSafe === false) continue;
+    if (bet.class === 'mechanical-safe') continue;
+    const files = pilotFilesForBet(bet);
+    if (files === null) continue;
+    ranked.push({ bet, files, score: scoreBet(bet, i, files) });
+  }
+  ranked.sort((a, b) => b.score - a.score);
+  return ranked;
+}
+
+/**
  * Select **one** next pilot from pattern bets (or build bets from smells).
  * @param {object[] | null | undefined} patternBets
  * @param {{ designSmells?: object[] }} [options]
  * @returns {null | ReturnType<typeof extractionCardFromBet>}
  */
 export function selectNextPilot(patternBets, options = {}) {
-  let bets = Array.isArray(patternBets) ? [...patternBets] : [];
-  if (bets.length === 0 && Array.isArray(options.designSmells) && options.designSmells.length) {
-    bets = buildPatternBetsFromSmells(options.designSmells);
-  }
-  if (bets.length === 0) return null;
-
-  let best = null;
-  let bestScore = -Infinity;
-  for (let i = 0; i < bets.length; i++) {
-    const bet = bets[i];
-    if (!bet || bet.neverMechanicalSafe === false) continue;
-    // Skip anything that claims mechanical-safe (honesty).
-    if (bet.class === 'mechanical-safe') continue;
-    const files = pilotFilesForBet(bet);
-    if (files === null) continue;
-    const sc = scoreBet(bet, i, files);
-    if (sc > bestScore) {
-      bestScore = sc;
-      best = { bet, files };
-    }
-  }
-  if (!best) return null;
-  return extractionCardFromBet(best.bet, best.files);
+  const ranked = rankedPatternBets(patternBets, options.designSmells);
+  if (ranked.length === 0) return null;
+  return extractionCardFromBet(ranked[0].bet, ranked[0].files);
 }
 
 /**
@@ -174,15 +178,159 @@ export function formatExtractionCard(card) {
 }
 
 /**
- * Doctor/plan JSON summary of the active pilot loop step.
+ * One proposed pilot. The loop does not know designWeak or which sensor
+ * produced the card — only this list.
+ *
+ * @typedef {'pattern-bet' | 'reshape'} PilotSource
+ * @typedef {{
+ *   source: PilotSource,
+ *   target: string,
+ *   move: string,
+ *   moveSample: Array<string | { from: string, to: string }>,
+ *   successSignal: string,
+ *   killSwitch: string,
+ *   bet?: object,
+ *   files?: string[],
+ *   doNot?: string[],
+ * }} PilotCandidate
+ */
+
+/**
+ * @param {object} bet
+ * @param {string[]} files
+ * @returns {PilotCandidate}
+ */
+function candidateFromBet(bet, files) {
+  const target =
+    (files && files[0]) ||
+    (typeof bet.pilot === 'string' ? bet.pilot : null) ||
+    'src/**';
+  return {
+    source: 'pattern-bet',
+    target,
+    move:
+      typeof bet.fix === 'string' && bet.fix.trim()
+        ? bet.fix.trim()
+        : 'Apply one bounded extraction for this smell on pilot paths only',
+    moveSample: files || [],
+    successSignal:
+      typeof bet.successSignal === 'string'
+        ? bet.successSignal
+        : 'Smell evidence paths cleared on pilot without weakening the contract',
+    killSwitch:
+      typeof bet.killSwitch === 'string'
+        ? bet.killSwitch
+        : 'If pilot increases edge violations without design clarity, stop and re-map with /ark-explore',
+    bet,
+    files,
+  };
+}
+
+/**
+ * @param {PilotCandidate} candidate
+ * @returns {null | ReturnType<typeof extractionCardFromBet>}
+ */
+function extractionCardFromCandidate(candidate) {
+  if (!candidate || typeof candidate.target !== 'string' || candidate.target.length === 0) {
+    return null;
+  }
+  if (candidate.source === 'pattern-bet' && candidate.bet) {
+    return extractionCardFromBet(candidate.bet, candidate.files);
+  }
+  const sample = Array.isArray(candidate.moveSample) ? candidate.moveSample : [];
+  const evidence = sample
+    .map((entry) => (typeof entry === 'string' ? entry : entry?.from))
+    .filter((entry) => typeof entry === 'string' && entry.length > 0)
+    .slice(0, 8);
+  const reshape = candidate.source === 'reshape';
+  return {
+    id: PILOT_LOOP_ID,
+    patternBetId: reshape ? `reshape:${candidate.target}` : `pattern-b:${candidate.target}`,
+    smellId: reshape ? 'physical-cohesion' : 'unknown',
+    pilot: candidate.target,
+    pilotTarget: candidate.target,
+    evidence,
+    move: candidate.move,
+    doNot:
+      Array.isArray(candidate.doNot) && candidate.doNot.length
+        ? [...candidate.doNot]
+        : [...DEFAULT_DO_NOT],
+    successSignal: candidate.successSignal,
+    killSwitch: candidate.killSwitch,
+    neverMechanicalSafe: true,
+    class: 'judgment',
+    loopStep: 'one-pilot',
+    reDoctor: 'ark-check --doctor --json',
+    rePlan: 'ark-check --plan --json',
+    next: reshape
+      ? '/ark-loop (one reshape pilot) | re-doctor after pilot'
+      : '/ark-autopilot (one cluster / one B pilot) | re-doctor after pilot',
+  };
+}
+
+/**
+ * Normalize design-weak pattern bets and a proposed reshape pilot into one list.
+ * Pattern bets stay in selector rank (best first) and are omitted unless
+ * design fitness is design-weak, so that path keeps today's card. A reshape
+ * card is appended when physical cohesion proposes one. Doctor builds this
+ * list after advisories, so the loop never depends on call order.
+ *
  * @param {{
  *   designWeak?: boolean,
  *   patternBets?: object[],
  *   designSmells?: object[],
- * }} opts
+ * }} [designFitness]
+ * @param {{
+ *   physicalCohesion?: {
+ *     reshapePilot?: { proposed?: boolean, nextPilot?: object | null },
+ *   },
+ * }} [advisories]
+ * @returns {PilotCandidate[]}
  */
-export function summarizePilotLoop(opts = {}) {
-  const designWeak = opts.designWeak === true;
+export function collectPilotCandidates(designFitness = {}, advisories = {}) {
+  /** @type {PilotCandidate[]} */
+  const candidates = [];
+  if (designFitness?.designWeak === true) {
+    for (const ranked of rankedPatternBets(designFitness.patternBets, designFitness.designSmells)) {
+      candidates.push(candidateFromBet(ranked.bet, ranked.files));
+    }
+  }
+  const reshape = advisories?.physicalCohesion?.reshapePilot;
+  const card = reshape?.proposed === true ? reshape.nextPilot : null;
+  if (card && typeof card.pilotTarget === 'string' && card.pilotTarget.length > 0) {
+    candidates.push({
+      source: 'reshape',
+      target: card.pilotTarget,
+      move:
+        typeof card.move === 'string' && card.move.trim()
+          ? card.move.trim()
+          : 'Consolidate one anchor only, then re-doctor before the next card',
+      moveSample: Array.isArray(card.moveSample) ? card.moveSample : [],
+      successSignal:
+        typeof card.successSignal === 'string'
+          ? card.successSignal
+          : 're-run doctor: the cluster count drops, layer and slice id unchanged, card still proposed',
+      killSwitch:
+        typeof card.killSwitch === 'string'
+          ? card.killSwitch
+          : 'revert this move set; nothing else was touched',
+      ...(Array.isArray(card.doNot) ? { doNot: card.doNot } : {}),
+    });
+  }
+  return candidates;
+}
+
+/**
+ * Doctor/plan JSON summary. Active iff `candidates.length > 0`.
+ * Activates exactly one candidate (ADR 0010 one-pilot rule). The rest stay
+ * queued. No designWeak parameter.
+ *
+ * @param {PilotCandidate[]} [candidates]
+ */
+export function summarizePilotLoop(candidates = []) {
+  const list = (Array.isArray(candidates) ? candidates : []).filter(
+    (candidate) => candidate && typeof candidate.target === 'string' && candidate.target.length > 0
+  );
   // Same forbid bits as DESIGN_WEAK_HONESTY_FLAGS (both auto-apply aliases).
   const forbid = {
     multiPilotBatchForbidden: true,
@@ -190,55 +338,53 @@ export function summarizePilotLoop(opts = {}) {
     autoApplyPlanBForbidden: true,
   };
 
-  if (!designWeak) {
+  if (list.length === 0) {
     return {
       active: false,
       id: PILOT_LOOP_ID,
-      reason: 'not-design-weak',
+      reason: 'no-pilot-candidates',
       oneAtATime: true,
       neverMechanicalSafe: true,
       ...forbid,
     };
   }
 
-  const nextPilot = selectNextPilot(opts.patternBets, {
-    designSmells: opts.designSmells,
-  });
-  if (!nextPilot) {
+  // One pilot, not the list. Later candidates wait for a re-doctor.
+  const extractionCard = extractionCardFromCandidate(list[0]);
+  if (!extractionCard) {
     return {
       active: false,
       id: PILOT_LOOP_ID,
-      reason: 'no-pattern-bets',
+      reason: 'no-pilot-candidates',
       oneAtATime: true,
       neverMechanicalSafe: true,
       ...forbid,
     };
   }
 
-  const remaining = Array.isArray(opts.patternBets) ? opts.patternBets.length : 0;
-  const queued = Math.max(0, remaining - 1);
-
+  const queued = list.length - 1;
   return {
     active: true,
     id: PILOT_LOOP_ID,
     oneAtATime: true,
     neverMechanicalSafe: true,
     ...forbid,
-    remainingBets: remaining,
-    // Remaining pattern bets are a queue, never concurrent pilots.
+    source: list[0].source,
+    remainingBets: list.length,
     queuedBets: queued,
     ...(queued > 0
       ? {
-          queueNote: `${queued} additional pattern bet(s) stay queued — run the single nextPilot only, then re-doctor before selecting another.`,
+          queueNote: `${queued} additional pilot candidate(s) stay queued — run the single nextPilot only, then re-doctor before selecting another.`,
         }
       : {}),
-    nextPilot,
+    nextPilot: extractionCard,
+    extractionCard,
     instruction:
       'Apply ONE pilot from nextPilot (extraction card), then re-doctor. ' +
       'Do not multi-pilot batch. patternBets never mechanical-safe. ' +
       'Never silent auto-apply of plan B. ' +
       'Success = reduced smell evidence on pilot paths; residual outside pilot may remain.',
-    cardText: formatExtractionCard(nextPilot),
+    cardText: formatExtractionCard(extractionCard),
   };
 }
 

@@ -76,6 +76,18 @@ in the immutable pre-2.0 archive linked below.
   full list. `--json` is unchanged: one warning object per edge. Doctor prints
   every edge. No engine change
   ([#313](https://github.com/pedroknigge/arkgate/issues/313)).
+- Doctor `pilotLoop` turns on when a pilot is proposed, including a
+  physical-cohesion reshape card on a tree that is not design-weak.
+  `summarizePilotLoop` takes one candidate list and is active only when
+  that list is non-empty. It still names **one** extraction card
+  (`nextPilot` / `extractionCard`, same fields). Further candidates stay
+  queued. Inactive reason is `no-pilot-candidates` (replaces
+  `not-design-weak` and `no-pattern-bets`). Skill completion contracts
+  derive **Incomplete?** from `doctor.productHonesty.finished`: when
+  `finished` is false, **Incomplete? no** is disallowed and the agent
+  writes `yes — <pilotLoop.extractionCard.move or residual>`
+  ([#309](https://github.com/pedroknigge/arkgate/issues/309)).
+  For **4.8.21**.
 - Write hook and `ark-check` now agree on overlapping layer globs: the hook
   probes the same specifier extensions as `ark-check` and classifies with
   `layerForRelativePath` (explicit `money.ts` beats `src/lib/**`). Field

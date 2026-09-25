@@ -82,3 +82,5 @@ Skill incomplete if missing any field below.
 - **Compass:** top residual lenses | `n/a`
 - **Handoff:** `/ark-autopilot` / `/ark-adopt` / `none`
 - **Incomplete?** `no` | `yes — <what is missing>`
+
+When `doctor.productHonesty.finished` is `false`, **Incomplete? no** is disallowed. Write `yes — <pilotLoop.extractionCard.move or residual>`.

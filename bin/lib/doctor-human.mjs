@@ -300,15 +300,15 @@ export function printDoctorDetailsHuman(view) {
         line(' ', color.dim(`evidence: ${smell.evidence.slice(0, 4).join(', ')}`));
       }
     }
-    if (pilotLoop?.active && pilotLoop.nextPilot) {
-      const np = pilotLoop.nextPilot;
-      line(
-        warn,
-        `Next pilot (one at a time): ${np.pilotTarget || np.pilot} [${np.smellId}] → re-doctor after change`
-      );
-      line(' ', color.dim(`success: ${np.successSignal}`));
-      line(' ', color.dim('never multi-pilot batch; pattern bets are never auto-applied'));
-    }
+  }
+  if (pilotLoop?.active && pilotLoop.nextPilot) {
+    const np = pilotLoop.nextPilot;
+    line(
+      warn,
+      `Next pilot (one at a time): ${np.pilotTarget || np.pilot} [${np.smellId}] → re-doctor after change`
+    );
+    line(' ', color.dim(`success: ${np.successSignal}`));
+    line(' ', color.dim('never multi-pilot batch; pattern bets are never auto-applied'));
   }
 
   if (options.designDelta) {

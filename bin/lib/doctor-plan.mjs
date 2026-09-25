@@ -66,7 +66,7 @@ import {
   loadGoldenPattern,
   summarizeGoldenPattern,
 } from './golden-pattern.mjs';
-import { summarizePilotLoop } from './pilot-loop.mjs';
+import { collectPilotCandidates, summarizePilotLoop } from './pilot-loop.mjs';
 import { computeDoctorAdvisories } from './doctor-advisories.mjs';
 import { ANALYSIS_COMPLETENESS, analysisIncompleteStatement, normalizeAnalysisCompleteness } from './analysis-completeness.mjs';
 import { buildDoctorImprovementCompass } from './improvement-compass-doctor.mjs';
@@ -325,12 +325,8 @@ export function buildRemediationPlan(
     governedPercent,
     totalFiles,
   });
-  // Q04 — single next pilot extraction card (one at a time → re-doctor).
-  const pilotLoop = summarizePilotLoop({
-    designWeak,
-    patternBets,
-    designSmells,
-  });
+  // Q04 — one candidate at a time. Plan has no cohesion advisory.
+  const pilotLoop = summarizePilotLoop(collectPilotCandidates({ designWeak, patternBets, designSmells }));
   const coverageHonesty = buildCoverageHonesty({
     percent: governedPercent,
     totalFiles,
@@ -604,13 +600,6 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   const goldenPattern = summarizeGoldenPattern(goldenLoad);
   // Y06 — pure-layer opt-in when golden names pure modules but no pure:true layer.
   const pureLayerOptIn = computePureLayerOptInNudge(config, goldenLoad);
-  // Q04 — one next pilot (extraction card) when design-weak.
-  const patternBetsForLoop = buildPatternBetsFromSmells(designSmells);
-  const pilotLoop = summarizePilotLoop({
-    designWeak: designFitness.designWeak,
-    patternBets: patternBetsForLoop,
-    designSmells,
-  });
   const activeViolations = baseline.exists
     ? violations.filter((_, index) => !baseline.keys.has(occurrenceKeys[index]))
     : violations;
@@ -624,6 +613,17 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     options.parseHealth,
     options.facts ?? options.architectureFacts,
     activeViolations
+  );
+  // After physical cohesion so a reshape pilot is a candidate (#309).
+  const pilotLoop = summarizePilotLoop(
+    collectPilotCandidates(
+      {
+        ...designFitness,
+        patternBets: buildPatternBetsFromSmells(designSmells),
+        designSmells,
+      },
+      doctorAdvisories
+    )
   );
   const layerOwners = collectLayerOwnerResidual(config);
   const rulesUnderContract = doctorAdvisories.rulesUnderContract;

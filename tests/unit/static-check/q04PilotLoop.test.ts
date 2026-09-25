@@ -15,6 +15,7 @@ import {
   assertNotHealthyFinishedIgnoringDesign,
 } from '../../../bin/lib/design-smells.mjs';
 import {
+  collectPilotCandidates,
   selectNextPilot,
   summarizePilotLoop,
   formatExtractionCard,
@@ -111,9 +112,12 @@ describe('pilot-loop edge branches (Q04 coverage)', () => {
 
   it('summarizePilotLoop inactive without bets; formatExtractionCard null', () => {
     expect(formatExtractionCard(null)).toBeNull();
-    const empty = summarizePilotLoop({ designWeak: true, patternBets: [] });
+    const empty = summarizePilotLoop(
+      collectPilotCandidates({ designWeak: true, patternBets: [] })
+    );
     expect(empty.active).toBe(false);
-    expect(empty.reason).toBe('no-pattern-bets');
+    expect(empty.reason).toBe('no-pilot-candidates');
+    expect(summarizePilotLoop([]).reason).toBe('no-pilot-candidates');
   });
 
   it('comparePilotResidual handles missing pilot files and target glob', () => {
@@ -210,12 +214,62 @@ describe('selectNextPilot / extraction card (Q04)', () => {
     expect(card?.move).toMatch(/never Presentation.*Domain/i);
   });
 
-  it('summarizePilotLoop inactive when not design-weak', () => {
-    const s = summarizePilotLoop({ designWeak: false, patternBets: [] });
+  it('summarizePilotLoop inactive when no candidates exist', () => {
+    const s = summarizePilotLoop(
+      collectPilotCandidates({ designWeak: false, patternBets: [] })
+    );
     expect(s.active).toBe(false);
-    expect(s.reason).toBe('not-design-weak');
+    expect(s.reason).toBe('no-pilot-candidates');
     expect(s.neverMechanicalSafe).toBe(true);
     expect(s.oneAtATime).toBe(true);
+  });
+
+  it('activates exactly one candidate when several are proposed (#309)', () => {
+    const pattern = {
+      source: 'pattern-bet' as const,
+      target: 'src/routes/orders.ts',
+      move: 'move query to adapter',
+      moveSample: ['src/routes/orders.ts'],
+      successSignal: '0 routes import ORM',
+      killSwitch: 'stop if worse',
+      files: ['src/routes/orders.ts'],
+      bet: {
+        id: 'pattern-b:facade-sql-in-routes',
+        smellId: 'facade-sql-in-routes',
+        pilot: 'src/routes/**',
+        evidence: ['src/routes/orders.ts'],
+        successSignal: '0 routes import ORM',
+        killSwitch: 'stop if worse',
+        fix: 'move query to adapter',
+        neverMechanicalSafe: true,
+        class: 'judgment',
+      },
+    };
+    const reshape = {
+      source: 'reshape' as const,
+      target: 'timesheet @ src/lib/repositories (25 file(s))',
+      move: 'Consolidate the timesheet cluster — one anchor only',
+      moveSample: [
+        {
+          from: 'src/lib/repositories/timesheet-a.ts',
+          to: 'src/lib/repositories/timesheet/timesheet-a.ts',
+        },
+      ],
+      successSignal: 'cluster count drops',
+      killSwitch: 'revert this move set',
+    };
+    const loop = summarizePilotLoop([pattern, reshape]);
+    expect(loop.active).toBe(true);
+    expect(loop.oneAtATime).toBe(true);
+    expect(loop.multiPilotBatchForbidden).toBe(true);
+    expect(loop.queuedBets).toBe(1);
+    expect(loop.queueNote).toMatch(/queued/i);
+    expect(Array.isArray(loop.nextPilot)).toBe(false);
+    expect(loop.nextPilot.pilotTarget).toBe('src/routes/orders.ts');
+    expect(loop.nextPilot.smellId).toBe('facade-sql-in-routes');
+    expect(loop.extractionCard).toEqual(loop.nextPilot);
+    expect(JSON.stringify(loop.nextPilot)).not.toContain('timesheet');
+    expect(JSON.stringify(loop.extractionCard)).not.toContain('timesheet');
   });
 
   it('extractionCardFromBet preserves neverMechanicalSafe', () => {
@@ -391,6 +445,114 @@ export async function GET() {
     if (docAfter.doctor.designFitness.designWeak) {
       expect(docAfter.doctor.postGreenPath?.id).toBe('clarify-for-ai');
       expect(docAfter.doctor.healthyFinishedForbidden).toBe(true);
+    }
+  });
+});
+
+describe('pilot candidates (#309)', () => {
+  it('keeps the pattern-bet card and queues a reshape behind that one pilot', () => {
+    const bets = [
+      {
+        id: 'pattern-b:facade-sql-in-routes',
+        smellId: 'facade-sql-in-routes',
+        pilot: 'src/routes/**',
+        evidence: ['src/routes/orders.ts'],
+        successSignal: '0 routes import ORM',
+        killSwitch: 'stop if worse',
+        fix: 'move query to adapter',
+        neverMechanicalSafe: true,
+        class: 'judgment',
+      },
+      {
+        id: 'pattern-b:soft-contract',
+        smellId: 'soft-contract',
+        pilot: 'src/**',
+        evidence: ['layer:App'],
+        successSignal: 'every layer has a rule',
+        killSwitch: 'stop',
+        fix: 'add a deny rule',
+        neverMechanicalSafe: true,
+        class: 'judgment',
+      },
+    ];
+    const advisories = {
+      physicalCohesion: {
+        reshapePilot: {
+          proposed: true,
+          nextPilot: {
+            pilotTarget: 'timesheet @ src/lib/repositories (40 file(s))',
+            move: 'Consolidate the timesheet cluster — one anchor only',
+            moveSample: [],
+            successSignal: 'cluster count drops',
+            killSwitch: 'revert this move set',
+          },
+        },
+      },
+    };
+    const historical = selectNextPilot(bets);
+    const onlyBets = collectPilotCandidates({ designWeak: true, patternBets: bets });
+    const withReshape = collectPilotCandidates({ designWeak: true, patternBets: bets }, advisories);
+    expect(withReshape[0].source).toBe('pattern-bet');
+    expect(withReshape.at(-1)?.source).toBe('reshape');
+    const loop = summarizePilotLoop(withReshape);
+    expect(loop.active).toBe(true);
+    expect(loop.source).toBe('pattern-bet');
+    expect(loop.queuedBets).toBe(withReshape.length - 1);
+    expect(loop.nextPilot.smellId).toBe(historical!.smellId);
+    expect(loop.nextPilot.pilotTarget).toBe(historical!.pilotTarget);
+    expect(loop.nextPilot.move).toBe(historical!.move);
+    expect(summarizePilotLoop(onlyBets).nextPilot).toEqual(historical);
+    expect(collectPilotCandidates({ designWeak: false, patternBets: bets })).toEqual([]);
+    expect(
+      collectPilotCandidates(
+        { designWeak: false, patternBets: bets },
+        { physicalCohesion: { reshapePilot: { proposed: true, nextPilot: null } } }
+      )
+    ).toEqual([]);
+  });
+
+  it('reshape-only repo gives an active loop with one candidate (#309)', () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-q04-reshape-'));
+    try {
+      const rels: string[] = [];
+      for (let i = 0; i < 40; i++) rels.push(`src/lib/repositories/timesheet-item-${i}.ts`);
+      for (const rel of rels) {
+        const abs = path.join(tmp, rel);
+        fs.mkdirSync(path.dirname(abs), { recursive: true });
+        fs.writeFileSync(abs, 'export const x = 1;\n');
+      }
+      const config = {
+        include: ['src'],
+        layers: [
+          { name: 'PersistenceAdapters', patterns: ['src/lib/repositories/**'] },
+          { name: 'DomainModel', patterns: ['src/domain/**'] },
+        ],
+        rules: [{ from: 'PersistenceAdapters', to: 'DomainModel', allowed: false }],
+      };
+      const payload = doctorJson(
+        tmp,
+        config,
+        rels.map((rel) => path.join(tmp, rel))
+      );
+      expect(payload.doctor.designFitness.designWeak).toBe(false);
+      expect(payload.doctor.designFitness.smellCount).toBe(0);
+      expect(payload.doctor.physicalCohesion.reshapePilot.proposed).toBe(true);
+      expect(payload.doctor.physicalCohesion.reshapePilot.nextPilot).toBeTruthy();
+      expect(payload.doctor.pilotLoop.active).toBe(true);
+      expect(payload.doctor.pilotLoop.reason).toBeUndefined();
+      expect(payload.doctor.pilotLoop.source).toBe('reshape');
+      expect(payload.doctor.pilotLoop.oneAtATime).toBe(true);
+      expect(payload.doctor.pilotLoop.queuedBets).toBe(0);
+      expect(Array.isArray(payload.doctor.pilotLoop.nextPilot)).toBe(false);
+      expect(payload.doctor.pilotLoop.nextPilot.smellId).toBe('physical-cohesion');
+      expect(payload.doctor.pilotLoop.extractionCard).toEqual(payload.doctor.pilotLoop.nextPilot);
+      expect(payload.doctor.pilotLoop.extractionCard.move).toMatch(/timesheet/);
+      expect(payload.doctor.pilotLoop.extractionCard.successSignal.length).toBeGreaterThan(10);
+      expect(payload.doctor.pilotLoop.extractionCard.killSwitch.length).toBeGreaterThan(5);
+      expect(payload.doctor.productHonesty.finished).toBe(false);
+      expect(JSON.stringify(payload.doctor.designFitness).toLowerCase()).not.toContain('cohesion');
+    } finally {
+      fs.rmSync(tmp, { recursive: true, force: true });
     }
   });
 });

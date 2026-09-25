@@ -332,5 +332,7 @@ End with exactly this structure:
 - **Handoff:** `/ark-…`, CLI action, or `none`
 - **Incomplete?** `no` or `yes — <missing work>`
 
+When `doctor.productHonesty.finished` is `false`, **Incomplete? no** is disallowed. Write `yes — <pilotLoop.extractionCard.move or residual>`.
+
 If a required verification did not run or a conflict remains blocked, report the
 task incomplete. Deferred hosts (including Codex when inactive) never make Incomplete? yes.

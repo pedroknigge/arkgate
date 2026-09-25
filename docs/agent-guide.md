@@ -361,13 +361,16 @@ npx ark-check --doctor --fail-on-new-smells --base-ref origin/main --json # opt-
 (`clarify-for-ai`) — **one** Shape door: `/ark-explore` shape-focus → dual-plan B, then
 `/ark-autopilot` applies one pilot. Do not skill-shop coverage/think for the same residual.
 
-**Pilot loop (Q04):** when design-weak, `pilotLoop.nextPilot` is **one** extraction card
-(pilot target, move, success, kill-switch). Apply **that one pilot only**, then re-doctor.
+**Pilot loop (Q04):** `pilotLoop` is active when a pilot candidate exists. Design-weak
+pattern bets are one source. A proposed physical-cohesion reshape card is the other, even
+when the tree is not design-weak. `pilotLoop.nextPilot` / `extractionCard` is **one**
+extraction card (pilot target, move, success, kill-switch). Apply **that one pilot only**,
+then re-doctor. Further candidates stay queued. Inactive reason is `no-pilot-candidates`.
 Success = reduced smell evidence on pilot paths; residual outside the pilot may remain.
 Never select seed/fixture/demo/migration/generated files as god-module pilots. A real UI business
 rule moves Domain → Application → UI; local permission/UI-state helpers are not selected by their
 `canEdit`-style name alone. Never multi-pilot batch; never mechanical-safe; never claim healthy
-finished while design-weak.
+finished while `doctor.productHonesty.finished` is false.
 
 **AI-velocity evidence (Q05):** deterministic fixture bench (no live LLM) compares the same
 feature add on design-weak vs golden-path trees. Run `npm run eval:ai-velocity`; metric is
@@ -432,9 +435,11 @@ port. Advisory only — never blocks, never feeds `designFitness`; no strict mod
 clusters per anchor directory (concentration, not volume — dispersed hooks never fire) with
 fixed corpus-calibrated thresholds; anchors under `app/`/`pages/` are `fixedByConvention` and
 never move. `reshapePilot.nextPilot` is a **proposed** one-at-a-time card (`moveSample`,
-`movesTotal`, `successSignal`, `killSwitch`, `doNot[]`): run it only via `/ark-loop` through the
-write gate + atomic preflight; merges are `/ark-adopt` / `/ark-autopilot` judgment cards. `notAScore`, never a
-verdict/`designFitness` input; there is no apply path.
+`movesTotal`, `successSignal`, `killSwitch`, `doNot[]`) and, when proposed, the single
+`pilotLoop` extraction card if no design-weak pattern bet is ahead of it. Run it only via
+`/ark-loop` through the write gate + atomic preflight; merges are `/ark-adopt` /
+`/ark-autopilot` judgment cards. `notAScore`, never a verdict/`designFitness` input; there
+is no apply path.
 
 **Reshape decision memory (Y01):** when the team accepts, defers, or rejects that target, record
 the explicit verdict in `.ark/reshape-decisions.json` using the card's exact

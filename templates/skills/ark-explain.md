@@ -244,6 +244,8 @@ End with **exactly** these headings (markdown `###`):
 - **Handoff:** `/ark-…` / CLI / `none`
 - **Incomplete?** `no` | `yes — <what is missing>`
 
+When `doctor.productHonesty.finished` is `false`, **Incomplete? no** is disallowed. Write `yes — <pilotLoop.extractionCard.move or residual>`.
+
 Prefer **Incomplete?** `yes` if the showcase report was generated but the browser-open step was
 skipped without CI/headless/user-opt-out reason.
 
