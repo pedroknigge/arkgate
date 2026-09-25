@@ -1,5 +1,7 @@
-# vitest 5 needs Node >= 22.12. engines is still >= 18, and CI runs 18 and 20.
-# Remove these ignore entries when Node 22.12+ becomes the floor.
+# vitest 5 needs Node >= 22.12. engines is still >= 18, so that bump is
+# outside the supported floor. The build job runs on Node 20; the
+# compatibility matrix covers 18, 20, 22, and 24. Remove these ignore
+# entries when Node 22.12+ becomes the floor.
 version: 2
 updates:
   - package-ecosystem: npm
@@ -9,6 +11,9 @@ updates:
     # Semgrep requires a cooldown so a just-published package is not proposed the same day.
     cooldown:
       default-days: 7
+      semver-major-days: 7
+      semver-minor-days: 7
+      semver-patch-days: 7
     # Version-update PRs stay off. Security updates still open, and they honor ignore.
     open-pull-requests-limit: 0
     ignore:
