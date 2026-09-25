@@ -10,6 +10,13 @@ import {
   formatPackageInstallDecisionHuman,
 } from '../ark-shared.mjs';
 import { describePackageVersionDualTruth } from './field-install.mjs';
+import {
+  exitCodeFor,
+  formatBlockedAssets,
+  formatPostUpgradeHuman,
+  runPostUpgradeVerification,
+  upgradeOutcome,
+} from './upgrade-outcome.mjs';
 import { __packageRoot } from './gate-files.mjs';
 import {
   applyManagedUpgrade,
@@ -316,15 +323,13 @@ export function buildUpgradeNextCommand(args, planDigest) {
   return arkCommand(args.root, 'arkgate', argsStr);
 }
 
-function verify(root, json, arkCheck, runArkCheck) {
-  const args = ['--root', root, '--config', 'ark.config.json', '--strict-merge'];
-  if (!json) return { exitCode: runArkCheck(args, { cwd: root }) };
-  const result = spawnSync(process.execPath, [arkCheck, ...args, '--json'], {
-    cwd: root,
-    stdio: ['ignore', 'pipe', 'pipe'],
-    encoding: 'utf8',
-  });
-  return { exitCode: result.status ?? 1, stderr: result.stderr?.trim() || undefined };
+function stampBlockedNextCommands(plan, args) {
+  if ((plan?.summary?.blocked ?? 0) === 0) return plan;
+  const command = buildUpgradeNextCommand({ ...args, acceptConflicts: true }, plan.planDigest);
+  for (const asset of plan.assets ?? []) {
+    if (asset.blocked) asset.nextCommand = command;
+  }
+  return plan;
 }
 
 function runProjectLocalCli({ root, script, argv }) {
@@ -544,11 +549,14 @@ export function runUpgradeCommand(args, dependencies) {
     }).status ?? 1;
   }
 
-  const plan = planManagedUpgrade(root, {
-    tools: args.tools,
-    acceptConflicts: args.acceptConflicts,
-    refreshSkills: args.refreshSkills === true,
-  });
+  const plan = stampBlockedNextCommands(
+    planManagedUpgrade(root, {
+      tools: args.tools,
+      acceptConflicts: args.acceptConflicts,
+      refreshSkills: args.refreshSkills === true,
+    }),
+    args
+  );
   if (!args.apply) {
     const wouldWrite = plan.summary?.wouldWrite ?? 0;
     const blocked = plan.summary?.blocked ?? 0;
@@ -577,11 +585,14 @@ export function runUpgradeCommand(args, dependencies) {
       );
     } else {
       renderManagedUpgrade(plan, {
-        next: needsApply
-          ? args.install
-            ? `Update the package and recompute this preview with: ${command}`
-            : `Apply the exact preview with: ${command}`
-          : undefined,
+        next:
+          blocked > 0
+            ? undefined
+            : needsApply
+              ? args.install
+                ? `Update the package and recompute this preview with: ${command}`
+                : `Apply the exact preview with: ${command}`
+              : undefined,
         skillDrift,
         hostSelection: hostHonesty,
       });
@@ -600,54 +611,80 @@ export function runUpgradeCommand(args, dependencies) {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(message);
-    return 2;
+    return exitCodeFor(upgradeOutcome({ error }));
   }
   if (applied.blocked) {
+    stampBlockedNextCommands(applied, args);
     const command = buildUpgradeNextCommand(
       { ...args, acceptConflicts: true },
       applied.planDigest
     );
+    const refusal = formatBlockedAssets(applied, { refused: true }).join('\n');
+    console.error(refusal);
     if (args.json) {
       console.log(
         managedUpgradeJson(applied, {
           blocked: true,
+          outcome: 'blocked',
           reasonCode: applied.reasonCode ?? 'managed-consent-required',
           nextCommand: command,
         })
       );
     } else {
-      renderManagedUpgrade(applied, {
-        next: 'Preview again with --accept-conflicts, then use that preview\'s exact next command.',
-      });
+      renderManagedUpgrade(applied, { refused: true });
     }
-    return 1;
+    return exitCodeFor(upgradeOutcome({ blocked: true }));
   }
   if (applied.nothingToApply && !applied.applied) {
-    if (args.json) console.log(JSON.stringify(applied, null, 2));
+    const idle = upgradeOutcome({ nothingToApply: true, applied: false });
+    if (args.json) console.log(JSON.stringify({ ...applied, outcome: idle.kind }, null, 2));
     else {
       renderManagedUpgrade(applied);
       console.log('No managed content writes pending.');
     }
-    return 0;
+    return exitCodeFor(idle);
   }
-  const verification = args.strict
-    ? { mode: 'strict-merge', ...verify(root, args.json, dependencies.arkCheck, dependencies.runArkCheck) }
-    : { mode: 'skipped', exitCode: 0 };
+  const postUpgrade = runPostUpgradeVerification(root, {
+    strict: args.strict,
+    arkCheck: dependencies.arkCheck,
+    packageVersion: dependencies.cliVersion,
+    ...(dependencies.checkResult ? { checkResult: dependencies.checkResult } : {}),
+    ...(typeof dependencies.spawnArchitectureCheck === 'function'
+      ? { checkResult: dependencies.spawnArchitectureCheck(root) }
+      : {}),
+  });
+  const outcome = upgradeOutcome({ applied: true, postUpgrade });
+  const verification = {
+    mode: postUpgrade.mode,
+    exitCode: postUpgrade.exitCode,
+    ...(postUpgrade.stderr ? { stderr: postUpgrade.stderr } : {}),
+  };
   const dualTruth = describePackageVersionDualTruth(root);
   const skillDrift = buildSkillDriftSummary(applied);
   const hostHonesty = buildHostSelectionHonesty(applied);
   // FX05: post-upgrade verification block (advisory, notAScore).
   const postUpgradeChecks = buildPostUpgradeChecks(root, {
     cliVersion: dependencies.cliVersion,
-    verification,
+    verification: {
+      ...verification,
+      verdict: postUpgrade.verdict,
+      failing: postUpgrade.failing,
+    },
     dualTruth,
   });
+  const postUpgradePayload = {
+    verdict: postUpgrade.verdict,
+    failing: postUpgrade.failing,
+    behaviorChanges: postUpgrade.behaviorChanges,
+  };
   if (args.json) {
     console.log(
       JSON.stringify(
         {
           ...applied,
+          outcome: outcome.kind,
           verification,
+          postUpgrade: postUpgradePayload,
           skillDrift,
           hostSelection: hostHonesty,
           postUpgradeChecks,
@@ -673,6 +710,7 @@ export function runUpgradeCommand(args, dependencies) {
     );
   } else {
     renderManagedUpgrade(applied, { skillDrift, hostSelection: hostHonesty });
+    for (const line of formatPostUpgradeHuman(postUpgrade)) console.log(line);
     if (!args.strict) console.log('Architecture verification skipped (--no-strict).');
     if (args.install === false || dualTruth.dualTruth) {
       console.log(
@@ -690,5 +728,5 @@ export function runUpgradeCommand(args, dependencies) {
       console.log(`  [note] mcp: ${postUpgradeChecks.mcpNote}`);
     }
   }
-  return verification.exitCode;
+  return exitCodeFor(outcome);
 }

@@ -27,6 +27,9 @@ export function upgradeUsage() {
   arkgate upgrade --apply    apply the previewed bytes (needs --plan-digest when applying managed files)
 
 Customized files stay unless you pass --accept-conflicts or --refresh-skills.
+A gitignored missing file (absent-local) is recreated without that flag.
+Exit: 0 applied and green; 3 applied but red; 2 blocked (consent); 1 error.
+Scripts comparing against 1 must switch to non-zero.
 Then: arkgate-check --doctor
 
 Every flag: arkgate --help --all
@@ -77,8 +80,11 @@ Options:
   --no-install Skip adding/installing arkgate as a project devDependency (start/upgrade).
   --apply       Apply a start plan; for upgrade, update/repreview or apply managed bytes.
   --accept-conflicts
-                Allow upgrade to recreate deleted managed assets or replace recorded conflicts.
+                Allow upgrade to recreate a deleted managed asset that is not gitignored, or replace a recorded conflict.
+                A missing gitignored file (absent-local, for example per-machine .mcp.json) is recreated without this flag.
   --plan-digest Digest emitted by an upgrade preview; required to apply managed bytes.
+                upgrade --apply exits 0 when applied and the architecture check is green, 3 when applied but red,
+                2 when blocked for consent, and 1 on error. Scripts comparing against 1 must switch to non-zero.
   --json        Emit the start/upgrade/status/agents-md preview as deterministic machine-readable JSON.
   --write       For agents-md: merge the version-matched projection into AGENTS.md.
   --check       For agents-md: exit 1 when projection stamp drifts from package version.

@@ -442,7 +442,7 @@ describe('Z06 managed-content upgrade', () => {
       '--plan-digest', planDigest, '--json',
     ]);
 
-    expect(staleApply.status).toBe(2);
+    expect(staleApply.status).toBe(1);
     expect(staleApply.stderr).toMatch(/plan digest mismatch/);
     expect(digest(settings)).toBe(before);
   });
@@ -478,7 +478,7 @@ describe('Z06 managed-content upgrade', () => {
     const result = run(ARK, [
       'upgrade', '--root', root, '--tools', 'claude', '--no-install', '--no-strict', '--apply', '--json',
     ]);
-    expect(result.status).toBe(2);
+    expect(result.status).toBe(1);
     expect(result.stderr).toMatch(/plan digest mismatch/);
   });
 
@@ -687,7 +687,7 @@ describe('Z06 managed-content upgrade', () => {
       const unrelatedBefore = digest(path.join(root, unrelated));
 
       const blocked = applyUpgrade(root, host);
-      expect(blocked.status).toBe(1);
+      expect(blocked.status).toBe(2);
       const blockedReport = JSON.parse(blocked.stdout) as {
         blocked: boolean;
         assets: Array<{ path: string; state: string; managed: boolean }>;

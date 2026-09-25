@@ -169,7 +169,7 @@ describe('UP-001 blocked apply JSON', () => {
       previewReport.planDigest,
       '--json',
     ]);
-    expect(applied.status).toBe(1);
+    expect(applied.status).toBe(2);
     const report = JSON.parse(applied.stdout) as {
       blocked: boolean;
       applied: boolean;

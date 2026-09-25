@@ -109,6 +109,16 @@ describe('skill surface inventory', () => {
     expect(body).toMatch(/Deferred hosts.*never make Incomplete/i);
   });
 
+  it('ark-upgrade stops when post-upgrade verification is red', () => {
+    const body = fs.readFileSync(path.join(SKILLS_DIR, 'ark-upgrade.md'), 'utf8');
+    expect(body).toMatch(/When \/ not when/);
+    expect(body).toMatch(/\/ark-autopilot/);
+    expect(body).toMatch(/\/ark-adopt/);
+    expect(body).toContain(
+      'If post-upgrade verification is red: **STOP**. Do not edit tests, titles, or config in the upgrade turn. Report `failing[]` and `behaviorChanges[]` and hand off. Incomplete? yes.'
+    );
+  });
+
   it('ark-upgrade resolves project-local CLI and aborts on pre-managed PATH binary', () => {
     const body = fs.readFileSync(path.join(SKILLS_DIR, 'ark-upgrade.md'), 'utf8');
     expect(body).toMatch(/Resolve the project CLI/i);

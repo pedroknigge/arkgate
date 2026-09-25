@@ -600,8 +600,8 @@ describe('runUpgradeCommand stale guard integration', () => {
         runArkCheck: () => 0,
       }
     );
-    // Digest mismatch or plan refuse → exit 2 from apply catch.
-    expect(code).toBe(2);
+    // Digest mismatch is an apply error → exit 1. Blocked consent is exit 2.
+    expect(code).toBe(1);
     expect(stderrSpy.mock.calls.map((c) => c.join(' ')).join('\n').length).toBeGreaterThan(0);
   });
 

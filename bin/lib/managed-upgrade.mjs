@@ -9,9 +9,18 @@ import {
   projectManagedUpgradeSelfServiceHonesty,
 } from './managed-upgrade-honesty.mjs';
 import {
+  ABSENT_LOCAL_REASON,
+  architectureVerificationDetail,
+  architectureVerificationOk,
+  blockedAssetReason,
+  formatBlockedAssets,
+  gitignoredPathSet,
+} from './upgrade-outcome.mjs';
+import {
   buildUpgradeWhatsNewSuggestions,
   formatUpgradeWhatsNewSuggestions,
 } from './upgrade-whats-new.mjs';
+import { arkCommand } from './package-manager.mjs';
 import {
   KNOWN_TOOLS,
   arkPackageVersion,
@@ -354,9 +363,20 @@ function afterFileContent(asset, currentFile, desiredScoped) {
   return Buffer.from(upsertCodexMcpTable(currentFile?.toString('utf8') ?? '', 'ark', desiredScoped));
 }
 
-export function classifyManagedAsset({ recorded, currentContent, targetContent: desired, kind }) {
+export function classifyManagedAsset({
+  recorded,
+  currentContent,
+  targetContent: desired,
+  kind,
+  gitignored = false,
+}) {
   const targetIdentity = managedContentIdentity(desired, kind);
   if (currentContent == null) {
+    // Fresh worktree: a recorded per-machine file (gitignored .mcp.json) is
+    // absent by nature. Recreate it. A deleted tracked file still needs consent.
+    if (recorded && gitignored === true) {
+      return { state: 'absent-local', managed: true, requiresConsent: false };
+    }
     return { state: 'missing', managed: true, requiresConsent: Boolean(recorded) };
   }
   const currentIdentity = managedContentIdentity(currentContent, kind);
@@ -456,6 +476,10 @@ export function planManagedUpgrade(root, options = {}) {
   const assets = [];
   const nextEntries = [];
   const selectedPaths = new Set();
+  const ignoredPaths = gitignoredPathSet(
+    resolvedRoot,
+    catalog.assets.map((asset) => asset.relativePath)
+  );
 
   for (const catalogAsset of catalog.assets) {
     selectedPaths.add(catalogAsset.relativePath);
@@ -472,6 +496,7 @@ export function planManagedUpgrade(root, options = {}) {
           currentContent: currentScoped,
           targetContent: desiredScoped,
           kind: catalogAsset.kind,
+          gitignored: ignoredPaths.has(catalogAsset.relativePath),
         });
     const accepted = options.acceptConflicts === true;
     // FX04: --refresh-skills opt-in rewrites customized *skill* assets to package
@@ -496,11 +521,17 @@ export function planManagedUpgrade(root, options = {}) {
       }).reason === 'stamp-refresh';
     const canApply =
       classified.state === 'stale' ||
+      classified.state === 'absent-local' ||
       skillRefresh ||
       stampRefresh ||
       (classified.state === 'missing' && (!recorded || accepted)) ||
       (classified.state === 'conflicted' && accepted);
     const blocked = classified.requiresConsent && !accepted && !skillRefresh;
+    const explanation = blocked
+      ? blockedAssetReason(classified.state)
+      : classified.state === 'absent-local'
+        ? ABSENT_LOCAL_REASON
+        : null;
     const desiredFile = afterFileContent(catalogAsset, currentFile, desiredScoped);
     const asset = {
       path: catalogAsset.relativePath,
@@ -512,7 +543,9 @@ export function planManagedUpgrade(root, options = {}) {
         ? { reason: 'unparsed managed TOML scope preserved' }
         : stampRefresh
           ? { reason: 'stamp-refresh' }
-          : {}),
+          : explanation
+            ? { reason: explanation }
+            : {}),
       action: canApply ? (currentScoped == null ? 'create' : 'update') : 'none',
       willApply: canApply,
       blocked,
@@ -591,6 +624,16 @@ export function planManagedUpgrade(root, options = {}) {
     manifestContent,
   };
   plan.planDigest = managedPlanDigest(plan);
+  if (summary.blocked > 0) {
+    const nextCommand = arkCommand(
+      resolvedRoot,
+      'arkgate',
+      ['upgrade', '--apply', '--no-install', '--accept-conflicts', '--plan-digest', plan.planDigest].join(' ')
+    );
+    for (const asset of assets) {
+      if (asset.blocked) asset.nextCommand = nextCommand;
+    }
+  }
   return plan;
 }
 
@@ -710,16 +753,8 @@ export function buildPostUpgradeChecks(root, options = {}) {
   });
   checks.push({
     id: 'architecture-verification',
-    ok:
-      options.verification?.mode === 'skipped'
-        ? null
-        : options.verification?.exitCode === 0,
-    detail:
-      options.verification?.mode === 'skipped'
-        ? 'Strict architecture verification was skipped (--no-strict).'
-        : options.verification?.exitCode === 0
-          ? 'Strict-merge architecture verification passed.'
-          : `Architecture verification exit ${options.verification?.exitCode ?? 'unknown'}.`,
+    ok: architectureVerificationOk(options.verification),
+    detail: architectureVerificationDetail(options.verification),
   });
   checks.push({
     id: 'package-version-truth',
@@ -983,8 +1018,12 @@ export function renderManagedUpgrade(plan, options = {}) {
   );
   console.log(`Profile: ${plan.profile}; hosts: ${plan.hosts.join(', ') || 'shared only'}.`);
   for (const asset of plan.assets) {
-    const consent = asset.requiresConsent ? ' (consent required)' : '';
-    console.log(`  ${asset.state.padEnd(10)} ${asset.path}${consent}`);
+    const consent = asset.requiresConsent
+      ? ' (consent required)'
+      : asset.state === 'absent-local'
+        ? ' (gitignored; recreated without consent)'
+        : '';
+    console.log(`  ${String(asset.state).padEnd(12)} ${asset.path}${consent}`);
   }
   const summary = plan.summary;
   const managedAssets = summary.managedAssets ?? summary.total ?? plan.assets.length;
@@ -998,6 +1037,11 @@ export function renderManagedUpgrade(plan, options = {}) {
         : '') +
       `; customized preserved: ${customizedPreserved}; blocked conflicts/deletions: ${blocked}.`
   );
+  for (const line of formatBlockedAssets(plan, {
+    refused: options.refused === true || plan.blocked === true,
+  })) {
+    console.log(line);
+  }
   const honesty =
     plan.selfService ??
     projectManagedUpgradeSelfServiceHonesty({
@@ -1040,6 +1084,7 @@ export function renderManagedUpgrade(plan, options = {}) {
     );
     return;
   }
+  if (blocked > 0 && !options.next) return;
   console.log(`Planned writes: ${wouldWrite}; blocked conflicts/deletions: ${blocked}.`);
   if (options.next) console.log(options.next);
   else console.log('Apply the exact preview with: npx arkgate upgrade --apply --no-install');

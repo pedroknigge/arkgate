@@ -40,6 +40,8 @@ Invoking this skill **is** the approval. Preview, then `--apply` **in this turn*
 Stopping at preview is incomplete unless the probe failed or a conflict needs
 `--accept-conflicts` / `--refresh-skills` consent.
 
+If post-upgrade verification is red: **STOP**. Do not edit tests, titles, or config in the upgrade turn. Report `failing[]` and `behaviorChanges[]` and hand off. Incomplete? yes.
+
 For session 0, start with `/ark-adopt` (or `ark-check --recommend`); brownfield
 honesty is `/ark-adopt` before this upgrade flow.
 
@@ -171,7 +173,11 @@ ArkGate has **always-on Layers** plus opt-in extras. The user chooses extras; yo
   `--plan-digest <sha256:…>` and applies only that exact candidate. A changed file
   or selection invalidates the digest instead of being overwritten.
 - Missing or conflicted assets previously recorded as managed require explicit
-  `--accept-conflicts`. Stop and obtain user consent before using it.
+  `--accept-conflicts`, unless the missing file is gitignored (`absent-local`,
+  for example a per-machine `.mcp.json` in a fresh worktree). That file is
+  recreated without consent. Stop and obtain user consent before using
+  `--accept-conflicts` on a real deletion or conflict. Every blocked asset
+  carries `reason` and `nextCommand`.
 - Customized files are preserved. Unrelated source files and similar filenames
   are never adopted. The command never writes a Codex home or another global
   directory implicitly.
@@ -184,7 +190,8 @@ ArkGate has **always-on Layers** plus opt-in extras. The user chooses extras; yo
 |---|---|---|
 | `current` | Content identity matches the candidate. | Record/adopt safely; metadata-only stamps may refresh. |
 | `stale` | Recorded managed content still matches its old identity. | Safe candidate replacement. |
-| `missing` | Candidate is absent. | Create if new; require consent if a recorded asset was deleted. |
+| `missing` | Candidate is absent and is not a gitignored local file. | Create if new; require consent if a recorded asset was deleted. Read `reason` and `nextCommand`. |
+| `absent-local` | Recorded file is missing and gitignored (per-machine file in a fresh worktree). | Recreate it. No consent. |
 | `customized` | User content diverged without a competing managed base. | Preserve it. Opt-in rewrite for **skills only**: `--refresh-skills`. |
 | `conflicted` | Both managed base and user content diverged. | Preserve and require explicit consent (`--accept-conflicts`). |
 | `retired` | A recorded asset is no longer selected by the candidate. | Preserve its file and manifest identity; take no action. |
@@ -285,16 +292,19 @@ ArkGate has **always-on Layers** plus opt-in extras. The user chooses extras; yo
    (unless more deliberate refreshes remain).
 
 5. **Verify enforcement and architecture (post-upgrade checks).** Read apply JSON
-   `postUpgradeChecks` when present. Also run:
+   `postUpgrade` (`verdict`, `failing`, `behaviorChanges`) and `postUpgradeChecks` when present.
+   Exit 3 means the files were applied and the architecture check is red. Also run:
    `npx arkgate-check --doctor --json` (or the project-local `ark-check`) and
    the same fail-closed architecture command used by managed apply (normally
    `npx arkgate-check --root . --config ark.config.json --strict-merge --json`).
-   Require `completeness: "complete"` and `ok: true`. Confirm `doctor.improvementCompass` and
+   Require `completeness: "complete"` and `ok: true` before calling the upgrade done.
+   If post-upgrade verification is red: **STOP**. Do not edit tests, titles, or config in the upgrade turn. Report `failing[]` and `behaviorChanges[]` and hand off. Incomplete? yes.
+   Handoff is `/ark-autopilot` after the report; do not regenerate a baseline without
+   explicit approval. Confirm `doctor.improvementCompass` and
    `doctor.deepModuleCoach` honesty. Run `npx arkgate agents-md --check` and
    `npx arkgate status --json`. If MCP was used, restart MCP after package bump and re-bind
    identity. Treat provider-unavailable CI required-check evidence as `unverified`, never as proof
-   that merges are blocked.    If new violations appear, hand off to `/ark-autopilot`; do not regenerate a baseline without
-   explicit approval.
+   that merges are blocked.
 
 ## Active host vs deferred hosts
 
@@ -335,4 +345,5 @@ End with exactly this structure:
 When `doctor.productHonesty.finished` is `false`, **Incomplete? no** is disallowed. Write `yes — <pilotLoop.extractionCard.move or residual>`.
 
 If a required verification did not run or a conflict remains blocked, report the
-task incomplete. Deferred hosts (including Codex when inactive) never make Incomplete? yes.
+task incomplete. If post-upgrade verification is red: **STOP**. Do not edit tests, titles, or config in the upgrade turn. Report `failing[]` and `behaviorChanges[]` and hand off. Incomplete? yes.
+Deferred hosts (including Codex when inactive) never make Incomplete? yes.

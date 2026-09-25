@@ -482,7 +482,7 @@ function runHostCell(candidate, workRoot, host) {
     );
     const before = snapshotProject(root);
     const apply = runApply(cell, host, preview.data);
-    expectStatus(apply, 1, `${host} blocked deletion apply`);
+    expectStatus(apply, 2, `${host} blocked deletion apply`);
     const data = parseJsonOutput(apply.stdout, `${host} blocked deletion apply`);
     assertCondition(data.blocked === true && data.applied === false, `${host} blocked apply was not blocked`);
     assertSnapshotEqual(before, snapshotProject(root), `${host} blocked apply`);
@@ -502,7 +502,7 @@ function runHostCell(candidate, workRoot, host) {
     writeText(root, DELETED_ASSET, concurrent);
     const before = snapshotProject(root);
     const staleApply = runApply(cell, host, acceptedPreview, { acceptConflicts: true });
-    expectStatus(staleApply, 2, `${host} stale bound apply`);
+    expectStatus(staleApply, 1, `${host} stale bound apply`);
     assertCondition(/plan digest mismatch/i.test(staleApply.stderr), `${host} stale apply omitted digest mismatch`);
     assertSnapshotEqual(before, snapshotProject(root), `${host} stale apply`);
     assertCondition(

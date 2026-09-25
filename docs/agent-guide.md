@@ -161,6 +161,8 @@ npx arkgate upgrade --apply         # registry-aware package step, then re-previ
 npx arkgate upgrade --apply --no-install --plan-digest sha256:… --refresh-skills
 ```
 
+`upgrade --apply` exits `0` when the managed files were applied and the architecture check is green, `3` when they were applied but the check is red, `2` when a recorded file still needs consent, and `1` on error (including a stale plan digest). Scripts comparing the status against `1` must switch to non-zero. JSON adds `outcome` and `postUpgrade` (`verdict`, `failing[{ruleId,count,sample}]`, `behaviorChanges`). `behaviorChanges` is the shipped per-version table, the same sentences as the changelog migration notes. A missing gitignored managed file is `absent-local` and is recreated without `--accept-conflicts`. Every blocked asset has `reason` and `nextCommand`. If `postUpgrade.verdict` is `red`, stop: report `failing` and `behaviorChanges`, and do not edit tests, titles, or config in that turn.
+
 ### Two-axis done recipe
 
 Architecture residual and feature residual are **separate axes**. Never collapse them:
