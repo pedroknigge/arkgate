@@ -47,25 +47,27 @@ const config = {
     // (type-only fields above line 40 are not executable — do not pin them).
     'src/domain/baselineKey.ts:40-120',
     // 4.0: migrateArkConfig critical slices (excludes redundant throw-only / guard noise).
-    // 546 is an equivalent mutant: forcing the typeof guard true routes a
+    // 547 is an equivalent mutant: forcing the typeof guard true routes a
     // non-string schemaVersion to the unknown-version throw, same message.
     // Retargeted after LO01 owners + trustBoundary shifted the 4.8.4 pins
     // (467-473 had landed on validateLayerOwners guards; 529 on JSDoc).
-    'src/domain/configContract.ts:542-545',
-    'src/domain/configContract.ts:547-548',
-    'src/domain/configContract.ts:568-569',
-    'src/domain/configContract.ts:574-575',
-    'src/domain/configContract.ts:584-586',
-    'src/domain/configContract.ts:597-597',
-    'src/domain/configContract.ts:604-604',
-    'src/domain/configContract.ts:613-616',
-    'src/domain/configContract.ts:627-627',
+    // #297 added sharedImportsSlice one line above these pins.
+    'src/domain/configContract.ts:543-546',
+    'src/domain/configContract.ts:548-549',
+    'src/domain/configContract.ts:569-570',
+    'src/domain/configContract.ts:575-576',
+    'src/domain/configContract.ts:585-587',
+    'src/domain/configContract.ts:598-598',
+    'src/domain/configContract.ts:605-605',
+    'src/domain/configContract.ts:614-617',
+    'src/domain/configContract.ts:628-628',
     // DF04 — selective pure truth islands (fail-closed / ack / promote honesty).
     // peerIsolationDecision is the killable fail-closed core; findDeniedEdgeDecision wires it.
-    'src/domain/layerMatch.ts:607-624',
-    // AP02 (#264) shifted the helper; 934-963 is now classifyArkPolicyDelta's
-    // compare/sort tail plus the function signature.
-    'src/domain/policyDelta.ts:956-985',
+    // #297 inserted the shared-imports-slice hop; retargeted to the same function.
+    'src/domain/layerMatch.ts:617-644',
+    // AP02 (#264) shifted the helper; a later sharedImportsSlice compare shifted it again.
+    // Retargeted to the same policyDeltaAcknowledgementMatches body.
+    'src/domain/policyDelta.ts:970-999',
     // #291 declaration witness shifted formatCoverageDiscards / budgetDetail /
     // canPromoteInvariant. Pins stay on those decisions, not on symbolPresent.
     'src/domain/invariantCoverage.ts:171-190',

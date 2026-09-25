@@ -6,6 +6,7 @@
  */
 import {
   findDeniedEdgeDecision,
+  findSharedImportsSliceBridge,
   peerIsolationDenyExplanation,
 } from '../domain/layerMatch';
 import type {
@@ -89,7 +90,28 @@ export function evaluateArchitectureGraph(
       toPath: edge.to,
       layers: input.config.layers,
     });
-    if (!decision) continue;
+    if (!decision) {
+      const bridge = findSharedImportsSliceBridge(input.rules, edge.fromLayer, edge.toLayer, {
+        fromPath: edge.from,
+        toPath: edge.to,
+        layers: input.config.layers,
+      });
+      if (bridge) {
+        warnings.push({
+          ruleId: 'SHARED_IMPORTS_SLICE',
+          file: bridge.fromPath,
+          line: edge.line,
+          fromLayer: edge.fromLayer,
+          toLayer: edge.toLayer,
+          target: bridge.toPath,
+          toSlice: bridge.toSlice,
+          failsStrict: false,
+          severity: 'warning',
+          message: `shared root ${bridge.fromPath} → slice ${bridge.toSlice} (${bridge.toPath}). The wall is direct-only.`,
+        });
+      }
+      continue;
+    }
     const rule = decision.rule;
 
     const peerIsolation = Boolean(rule.peerIsolation);

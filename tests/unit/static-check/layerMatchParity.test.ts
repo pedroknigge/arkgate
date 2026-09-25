@@ -138,6 +138,23 @@ describe('layer-match parity (domain TS ↔ generated bin ESM)', async () => {
         bin.findDeniedEdgeDecision(rules, 'Features', 'Features', opts)?.peerIsolationReason
       );
     }
+    const sink = [
+      {
+        ...rules[0],
+        sharedImportsSlice: 'deny' as const,
+      },
+    ];
+    const sinkOpts = {
+      fromPath: 'src/ui/button.tsx',
+      toPath: 'src/features/projects/rfi/x.ts',
+      layers: featLayers,
+    };
+    expect(decisionTs(sink, 'Features', 'Features', sinkOpts)?.peerIsolationReason).toBe(
+      'shared-imports-slice'
+    );
+    expect(decisionTs(sink, 'Features', 'Features', sinkOpts)?.peerIsolationReason).toBe(
+      bin.findDeniedEdgeDecision(sink, 'Features', 'Features', sinkOpts)?.peerIsolationReason
+    );
     expect(bin.pathUnderSharedRoot('src/ui/x.ts', ['ui'])).toBe(true);
     expect(bin.crossSliceEdgeAllowed([{ from: 'a', to: 'b' }], 'features/a', 'features/b')).toBe(
       true

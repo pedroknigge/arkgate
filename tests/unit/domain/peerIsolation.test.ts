@@ -755,6 +755,92 @@ describe('peerIsolation violation message names the reason that fired', () => {
   });
 });
 
+describe('shared roots are a sink (#297)', () => {
+  const sharedToSlice = {
+    fromPath: 'src/ui/button.tsx',
+    toPath: 'src/features/projects/rfi/x.ts',
+    folderCount: 1,
+    toSlice: 'features/projects',
+    fromShared: true,
+  };
+  const config = { layers: [{ name: 'Features', patterns: ['src/features/**'] }] };
+  const rules = [
+    {
+      from: 'Features',
+      to: 'Features',
+      allowed: false as const,
+      peerIsolation: true,
+      sliceFolders: ['features'],
+      sharedRoots: ['ui'],
+    },
+  ];
+
+  it('a shared root importing a slice is allowed when the flag is absent', () => {
+    expect(peerIsolationDecision(sharedToSlice)).toEqual({ denied: false });
+  });
+
+  it('sharedImportsSlice deny names the hop and allowedCrossSlice does not excuse it', () => {
+    const decision = peerIsolationDecision({
+      ...sharedToSlice,
+      sharedImportsSlice: 'deny',
+      crossSliceAllowed: true,
+    });
+    expect(decision).toEqual({ denied: true, reason: 'shared-imports-slice' });
+    expect(
+      peerIsolationDenyExplanation('shared-imports-slice', {
+        fromPath: sharedToSlice.fromPath,
+        toPath: sharedToSlice.toPath,
+        toSlice: 'features/projects',
+      })
+    ).toContain('src/ui/button.tsx → src/features/projects/rfi/x.ts');
+    const ruled = findDeniedEdgeDecision(
+      [{ ...rules[0], sharedImportsSlice: 'deny', allowedCrossSlice: [{ from: 'ui', to: 'projects' }] }],
+      'Features',
+      'Features',
+      { fromPath: 'src/ui/button.tsx', toPath: 'src/features/projects/rfi/x.ts', layers: config.layers }
+    );
+    expect(ruled?.peerIsolationReason).toBe('shared-imports-slice');
+  });
+
+  it('a slice importing a shared root stays allowed', () => {
+    expect(
+      peerIsolationDecision({
+        fromPath: 'src/features/projects/rfi/x.ts',
+        toPath: 'src/ui/button.tsx',
+        folderCount: 1,
+        fromSlice: 'features/projects',
+        toShared: true,
+        sharedImportsSlice: 'deny',
+      })
+    ).toEqual({ denied: false });
+  });
+
+  it('flag absent stays allowed and the doctor fixture still lists the bridge', () => {
+    expect(peerIsolationDecision(sharedToSlice).denied).toBe(false);
+    const result = evaluateArchitectureGraph({
+      config,
+      rules,
+      files: ['src/ui/button.tsx', 'src/features/projects/rfi/x.ts'],
+      contentViolations: [],
+      edges: [
+        {
+          from: 'src/ui/button.tsx',
+          fromLayer: 'Features',
+          to: 'src/features/projects/rfi/x.ts',
+          toLayer: 'Features',
+          line: 4,
+          kind: 'import',
+        },
+      ],
+    });
+    expect(result.violations).toHaveLength(0);
+    expect(result.warnings.map((warning) => warning.message)).toEqual([
+      'shared root src/ui/button.tsx → slice features/projects (src/features/projects/rfi/x.ts). The wall is direct-only.',
+    ]);
+    expect(result.warnings[0]?.failsStrict).toBe(false);
+  });
+});
+
 describe('peerIsolation laundering invariant (4.8.4)', () => {
   it('two real, different slices are allowed ONLY by an explicit declaration', () => {
     const bools = [true, false, undefined];

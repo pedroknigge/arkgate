@@ -408,6 +408,20 @@ function compareRules(
       'Directed cross-slice edges are now allowed by declaration.',
       'Directed cross-slice edges are no longer declared and deny again.'
     );
+
+    if ((previous.sharedImportsSlice ?? null) !== (candidate.sharedImportsSlice ?? null)) {
+      const denying = candidate.sharedImportsSlice === 'deny';
+      addFinding(findings, {
+        kind: 'shared-imports-slice',
+        path: `${path}.sharedImportsSlice`,
+        classification: denying ? 'strengthening' : 'weakening',
+        message: denying
+          ? 'A shared root may no longer import a slice.'
+          : 'A shared root may import a slice again.',
+        before: previous.sharedImportsSlice ?? null,
+        after: candidate.sharedImportsSlice ?? null,
+      });
+    }
   }
 }
 

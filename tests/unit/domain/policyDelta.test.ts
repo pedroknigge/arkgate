@@ -322,6 +322,15 @@ describe('T01 semantic policy delta', () => {
       path: '$.rules[DomainModel->DomainModel].allowedCrossSlice',
     },
     {
+      name: 'denies a shared root importing a slice',
+      candidate: {
+        ...structuredClone(BASE_CONFIG),
+        rules: [{ ...structuredClone(BASE_CONFIG.rules[0]), sharedImportsSlice: 'deny' as const }],
+      },
+      classification: 'strengthening',
+      path: '$.rules[DomainModel->DomainModel].sharedImportsSlice',
+    },
+    {
       name: 'raises the TypeScript suppression threshold',
       candidate: {
         ...structuredClone(BASE_CONFIG),
@@ -345,6 +354,21 @@ describe('T01 semantic policy delta', () => {
     expect(result.classification).toBe(classification);
     expect(result.findings).toContainEqual(expect.objectContaining({ path }));
     expect(result.valid).toBe(classification === 'strengthening');
+  });
+
+  it('removing sharedImportsSlice deny is a weakening', () => {
+    const base = {
+      ...structuredClone(BASE_CONFIG),
+      rules: [{ ...structuredClone(BASE_CONFIG.rules[0]), sharedImportsSlice: 'deny' as const }],
+    };
+    const result = analyzePolicyDelta({ baseConfig: base, candidateConfig: BASE_CONFIG });
+    expect(result.classification).toBe('weakening');
+    expect(result.findings).toContainEqual(
+      expect.objectContaining({
+        path: '$.rules[DomainModel->DomainModel].sharedImportsSlice',
+        classification: 'weakening',
+      })
+    );
   });
 
   it('preserves both directions of a replaced set and prioritizes the weakening', () => {
