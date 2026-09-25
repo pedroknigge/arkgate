@@ -2,6 +2,7 @@
  * Tooling-side ArkRules wiring: invariant coverage I/O, fileHints loader,
  * rules-under-contract (doctor) with real test fixtures.
  */
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -24,6 +25,7 @@ import {
   ARKRULES_FIRST_CONTACT_NEXT,
   ARKRULES_ONE_BREATH,
   formatArkRulesDoctorLines,
+  formatArkRulesEvidenceLines,
   formatRulesUnderContractHtml,
   summarizeRulesUnderContract,
 } from '../../../bin/lib/rules-under-contract.mjs';
@@ -508,6 +510,87 @@ export async function save(order: Order) {
       ])
     );
     expect(summary.coveredSample?.some((c: { id: string }) => c.id === 'INV-ORDER-001')).toBe(true);
+    expect(
+      summary.coveredSample?.find((c: { id: string }) => c.id === 'INV-ORDER-001')?.symbolEvidenceFile
+    ).toBe('src/domain/order.ts');
+  });
+
+  it('green doctor and rules-inventory show the symbol witness and depth discards (#291)', () => {
+    const root = makeRoot();
+    fs.mkdirSync(path.join(root, 'arkrules'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'src', 'kernel', 'app'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'src', 'app', 'api', 'health'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'tests'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'arkrules', 'DomainModel.json'),
+      JSON.stringify({
+        schemaVersion: '1.0',
+        layer: 'DomainModel',
+        structure: [],
+        invariants: [
+          {
+            id: 'api-via-define-route',
+            description: 'API routes go through defineRoute',
+            coverage: { test: true, symbol: 'defineRoute' },
+            mode: 'advisory',
+          },
+        ],
+      })
+    );
+    fs.writeFileSync(
+      path.join(root, 'src', 'kernel', 'app', 'define-route.ts'),
+      'export function defineRoute() {}\n'
+    );
+    fs.writeFileSync(
+      path.join(root, 'src', 'app', 'api', 'health', 'route.ts'),
+      "import { defineRoute } from '../../../kernel/app/define-route';\n"
+    );
+    fs.writeFileSync(
+      path.join(root, 'tests', 'health.test.ts'),
+      "it('api-via-define-route', () => { defineRoute( });\n"
+    );
+    const deep = path.join(root, 'tests', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i');
+    fs.mkdirSync(deep, { recursive: true });
+    fs.writeFileSync(path.join(deep, 'deep.test.ts'), "it('api-via-define-route deep', () => {})\n");
+    const config = {
+      schemaVersion: '1.1',
+      include: ['src'],
+      arkRules: { DomainModel: 'arkrules/DomainModel.json' },
+      layers: [{ name: 'DomainModel', patterns: ['src/**'] }],
+      rules: [],
+    };
+    fs.writeFileSync(path.join(root, 'ark.config.json'), `${JSON.stringify(config, null, 2)}\n`);
+    const summary = summarizeRulesUnderContract(root, config, {
+      files: [
+        { path: 'src/kernel/app/define-route.ts' },
+        { path: 'src/app/api/health/route.ts' },
+      ],
+    });
+    expect(summary.uncoveredInvariants).toBe(0);
+    expect(summary.coverageStats.discarded.depthLimited).toBeGreaterThan(0);
+    expect(summary.symbolEvidence).toEqual([
+      { id: 'api-via-define-route', file: 'src/kernel/app/define-route.ts' },
+    ]);
+    const lines = formatArkRulesDoctorLines(summary);
+    const text = lines.join('\n');
+    expect(text).toMatch(/uncovered=0/);
+    expect(text).toContain('ArkRules: api-via-define-route symbol src/kernel/app/define-route.ts');
+    expect(text).toContain(
+      `${summary.coverageStats.discarded.depthLimited} directories past the walk depth limit`
+    );
+    expect(formatArkRulesEvidenceLines(summary).join('\n')).toBe(
+      lines.filter((line) => line.startsWith('ArkRules: api-via') || line.includes('Scan discarded')).join('\n')
+    );
+
+    const inventory = execFileSync(
+      process.execPath,
+      [path.resolve('bin/ark-check.mjs'), '--root', root, '--config', 'ark.config.json', '--rules-inventory'],
+      { encoding: 'utf8' }
+    );
+    expect(inventory).toContain('ArkRules: api-via-define-route symbol src/kernel/app/define-route.ts');
+    expect(inventory).toContain(
+      `${summary.coverageStats.discarded.depthLimited} directories past the walk depth limit`
+    );
   });
 
   it('rules-under-contract still finds covering tests when production files exceed the budget', () => {

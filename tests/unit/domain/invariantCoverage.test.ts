@@ -21,15 +21,19 @@ import {
 } from '../../../src/domain/invariantCoverage';
 
 function catalog() {
+  return catalogForSymbol('INV-ORDER-001', 'Order total never negative', 'Order.ensureInvariants');
+}
+
+function catalogForSymbol(id: string, description: string, symbol: string) {
   const file = loadArkRulesContract({
     schemaVersion: '1.0',
     layer: 'DomainModel',
     invariants: [
       {
-        id: 'INV-ORDER-001',
-        description: 'Order total never negative',
+        id,
+        description,
         aggregate: 'Order',
-        coverage: { test: true, symbol: 'Order.ensureInvariants' },
+        coverage: { test: true, symbol },
         mode: 'enforced',
       },
     ],
@@ -64,7 +68,73 @@ describe('AR09–AR11 invariant coverage + promotion', () => {
     expect(result.coverage[0]?.evidence).toEqual(
       expect.arrayContaining(['test-title', 'symbol'])
     );
+    expect(result.coverage[0]?.symbolEvidenceFile).toBe('src/domain/order.ts');
     expect(result.violations).toHaveLength(0);
+  });
+
+  it('coverage.symbol is a non-test declaration, not an import or a test call (#291)', () => {
+    const arkRules = catalogForSymbol(
+      'api-via-define-route',
+      'API routes go through defineRoute',
+      'defineRoute'
+    );
+    const renamed = evaluateInvariantCoverage({
+      arkRules,
+      fileContents: {
+        'src/kernel/app/define-route.ts': 'export function defineRouteRENAMED() {}\n',
+        'src/app/api/health/route.ts':
+          "import { defineRoute } from '../../kernel/app/define-route';\n",
+        'src/test/health.test.ts': "it('route', () => { defineRoute( });\n",
+      },
+      testFiles: ['src/test/health.test.ts'],
+    });
+    expect(renamed.coverage[0]?.covered).toBe(false);
+    expect(renamed.coverage[0]?.symbolEvidenceFile).toBeUndefined();
+    expect(renamed.violations.some((v) => v.ruleId === 'INVARIANT_UNCOVERED')).toBe(true);
+
+    const declared = evaluateInvariantCoverage({
+      arkRules,
+      fileContents: {
+        'src/kernel/app/define-route.ts': 'export function defineRoute() {}\n',
+        'src/app/api/health/route.ts':
+          "import { defineRoute } from '../../kernel/app/define-route';\n",
+        'src/test/health.test.ts': "it('route', () => { defineRoute( });\n",
+      },
+      testFiles: ['src/test/health.test.ts'],
+    });
+    expect(declared.coverage[0]?.covered).toBe(true);
+    expect(declared.coverage[0]?.evidence).toContain('symbol');
+    expect(declared.coverage[0]?.symbolEvidenceFile).toBe('src/kernel/app/define-route.ts');
+    expect(declared.violations).toHaveLength(0);
+
+    const called = evaluateInvariantCoverage({
+      arkRules,
+      fileContents: {
+        'src/app/api/health/route.ts': 'export function GET() { return defineRoute(); }\n',
+      },
+      testFiles: ['src/test/health.test.ts'],
+    });
+    expect(called.coverage[0]?.covered).toBe(false);
+    expect(called.coverage[0]?.symbolEvidenceFile).toBeUndefined();
+
+    const onlyInTest = evaluateInvariantCoverage({
+      arkRules,
+      fileContents: {
+        'src/test/health.test.ts': 'export function defineRoute() {}\n',
+      },
+      testFiles: ['src/test/health.test.ts'],
+    });
+    expect(onlyInTest.coverage[0]?.covered).toBe(false);
+
+    const arrow = evaluateInvariantCoverage({
+      arkRules,
+      fileContents: {
+        'src/kernel/app/define-route.ts': 'export const defineRoute = () => {};\n',
+      },
+      testFiles: ['src/test/health.test.ts'],
+    });
+    expect(arrow.coverage[0]?.covered).toBe(true);
+    expect(arrow.coverage[0]?.symbolEvidenceFile).toBe('src/kernel/app/define-route.ts');
   });
 
   it('reports partial when test globs are missing (never false green)', () => {

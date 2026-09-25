@@ -19,7 +19,7 @@ export const INVARIANT_COVERAGE_ROOTS_MESSAGE = 'A domain invariant is enforced,
  * `omitBudget` drops the budget clause and the load totals for messages whose
  * own text already carries them — the same number twice reads as two facts.
  */
-function formatCoverageDiscards(stats, omitBudget = false) {
+export function formatCoverageDiscards(stats, omitBudget = false) {
     if (!stats)
         return '';
     const d = stats.discarded;
@@ -62,22 +62,50 @@ function titleMatchesInvariant(content, id) {
     const re = new RegExp(`(?:describe|it|test|context)\\s*\\(\\s*['"\`][^'"\`]*${escaped}[^'"\`]*['"\`]`, 'i');
     return re.test(content) || content.includes(id);
 }
-function symbolPresent(fileContents, symbol) {
+function escapeRegExp(value) {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+/**
+ * True when `name` is declared here. Imports and calls do not count.
+ * `export const name =` is the same binding shape sensors already treat as a
+ * declaration (arrow or function). The last segment of `Aggregate.method` is
+ * the name that must be declared.
+ */
+function declaresIdentifier(content, name) {
+    const n = escapeRegExp(name);
+    const functionDecl = new RegExp(`(?:^|[\\s;{}])(?:export\\s+(?:default\\s+)?)?(?:declare\\s+)?(?:async\\s+)?function\\s*\\*?\\s*${n}\\s*[(<]`);
+    const classDecl = new RegExp(`(?:^|[\\s;{}])(?:export\\s+(?:default\\s+)?)?(?:abstract\\s+)?class\\s+${n}\\b`);
+    const constDecl = new RegExp(`(?:^|[\\s;{}])export\\s+(?:const|let|var)\\s+${n}\\s*=`);
+    const methodDecl = new RegExp(`(?:^|[\\n;{}])\\s*(?:(?:public|private|protected|static|async|readonly|override|abstract|get|set|declare)\\s+)*${n}\\s*(?:<[^>\\n]*>)?\\s*\\([^;{}]*\\)\\s*(?::\\s*[^;{]+)?\\s*\\{`);
+    return (functionDecl.test(content) ||
+        classDecl.test(content) ||
+        constDecl.test(content) ||
+        methodDecl.test(content));
+}
+/** Witness path, or undefined when no non-test file declares `symbol`. */
+function symbolPresent(fileContents, testFiles, symbol) {
     if (!symbol)
-        return false;
-    // Support Aggregate.method or bare method name.
+        return undefined;
     const parts = symbol.split('.');
-    const needle = parts[parts.length - 1];
+    const needle = parts[parts.length - 1] ?? '';
+    if (!needle)
+        return undefined;
     const className = parts.length > 1 ? parts[0] : null;
-    for (const content of Object.values(fileContents)) {
+    const tests = new Set(testFiles.map((file) => file.replace(/\\/g, '/').replace(/^\.\//, '')));
+    const files = Object.keys(fileContents).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+    for (const file of files) {
+        const normalized = file.replace(/\\/g, '/').replace(/^\.\//, '');
+        if (tests.has(normalized))
+            continue;
+        const content = fileContents[file];
+        if (!content)
+            continue;
         if (className && !content.includes(className))
             continue;
-        if (new RegExp(`(?:function\\s+|\\b)${needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*[(<]`).test(content) ||
-            content.includes(symbol)) {
-            return true;
-        }
+        if (declaresIdentifier(content, needle))
+            return file;
     }
-    return false;
+    return undefined;
 }
 export function evaluateInvariantCoverage(input) {
     const invariants = input.arkRules.invariants ?? [];
@@ -131,9 +159,11 @@ export function evaluateInvariantCoverage(input) {
             if (testEvidenceFile !== undefined)
                 evidence.push('test-title');
         }
-        if (symbol && symbolPresent(input.fileContents, symbol)) {
+        const symbolEvidenceFile = symbol
+            ? symbolPresent(input.fileContents, testFiles, symbol)
+            : undefined;
+        if (symbolEvidenceFile)
             evidence.push('symbol');
-        }
         // Covered if any requested evidence is present.
         // When coverage declares neither test nor symbol, require at least description-only advisory presence = not covered.
         const requiresEvidence = inv.coverage?.test === true || Boolean(symbol) || inv.coverage === undefined;
@@ -154,6 +184,7 @@ export function evaluateInvariantCoverage(input) {
             partial,
             description: inv.description,
             ...(testEvidenceFile !== undefined ? { testEvidenceFile } : {}),
+            ...(symbolEvidenceFile !== undefined ? { symbolEvidenceFile } : {}),
             ...(outsideDeclaredRoots !== undefined ? { outsideDeclaredRoots } : {}),
             coverageRootsDeclared: rootsDeclared,
         });

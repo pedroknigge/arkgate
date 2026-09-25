@@ -66,11 +66,11 @@ const config = {
     // AP02 (#264) shifted the helper; 934-963 is now classifyArkPolicyDelta's
     // compare/sort tail plus the function signature.
     'src/domain/policyDelta.ts:956-985',
-    // IT01/CR01 shifted formatCoverageDiscards / budgetDetail; 127-146 is
-    // now InvariantCoverageStats JSDoc and 213-217 is symbolPresent.
-    'src/domain/invariantCoverage.ts:165-184',
-    'src/domain/invariantCoverage.ts:251-255',
-    'src/domain/invariantCoverage.ts:386-427',
+    // #291 declaration witness shifted formatCoverageDiscards / budgetDetail /
+    // canPromoteInvariant. Pins stay on those decisions, not on symbolPresent.
+    'src/domain/invariantCoverage.ts:171-190',
+    'src/domain/invariantCoverage.ts:293-297',
+    'src/domain/invariantCoverage.ts:430-471',
     'src/kernel/semanticAnalysis.ts:18-49',
     'src/kernel/semanticAnalysis.ts:78-258',
     'src/kernel/workflow/Saga.ts:188-238',

@@ -175,24 +175,24 @@
       "targets": [
         {
           "file": "src/domain/invariantCoverage.ts",
-          "startLine": 386,
-          "endLine": 427
+          "startLine": 430,
+          "endLine": 471
         }
       ]
     },
     {
       "id": "invariant-coverage-message-honesty",
-      "note": "The coverage verdict is only as good as its sentence: formatCoverageDiscards and budgetDetail carry every discard reason and the knob that raises the cap. IT01/CR01 (#255/#257) inserted tests-path and coverageRoots collectors above the helper, so 127-146 landed on InvariantCoverageStats JSDoc and 213-217 on symbolPresent. Retargeted to the same formatCoverageDiscards / budgetDetail decisions.",
+      "note": "The coverage verdict is only as good as its sentence: formatCoverageDiscards and budgetDetail carry every discard reason and the knob that raises the cap. #291 inserted the declaration witness above budgetDetail, so the pins moved with formatCoverageDiscards (171-190) and budgetDetail (293-297). Same decisions.",
       "targets": [
         {
           "file": "src/domain/invariantCoverage.ts",
-          "startLine": 165,
-          "endLine": 184
+          "startLine": 171,
+          "endLine": 190
         },
         {
           "file": "src/domain/invariantCoverage.ts",
-          "startLine": 251,
-          "endLine": 255
+          "startLine": 293,
+          "endLine": 297
         }
       ]
     },

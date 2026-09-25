@@ -53,6 +53,11 @@ one bounded decision needs 2–3 enforceable options.
   `coverage.coverageRoots` on the folder the test runner uses. Fail-closed.
   `testGlobs` alone is not enough. Silent when no invariant is enforced.
   Handoff `/ark-adopt` to write the roots. No new skill.
+- When an invariant declares `coverage.symbol`, read the witness path
+  (`symbolEvidenceFile`) and the discard line on doctor and `--rules-inventory`,
+  including when the run is green. A declaration in a non-test file is not
+  “the tests pass” — ArkGate never runs tests. Depth and byte caps stay
+  internal; the counts are what you read.
 - A doctor green / Healthy line must name a file, config key, or test.
   Uncited green is a lie — treat it as unfinished. No `/ark-cite`.
 - Distinguish **missing** skills vs **stale** catalog. Installed ≠ stale.

@@ -6,7 +6,7 @@
  */
 import path from 'node:path';
 import { loadEffectiveArkRulesFromDisk } from './effective-contract-load.mjs';
-import { evaluateInvariantCoverage } from './invariant-coverage.mjs';
+import { evaluateInvariantCoverage, formatCoverageDiscards } from './invariant-coverage.mjs';
 import {
   coverageOptionsFromConfig,
   invariantIdsFromCatalog,
@@ -138,9 +138,9 @@ export function summarizeRulesUnderContract(root, config, facts, classification)
       fileContents: coverageInputs.fileContents,
       testFiles: coverageInputs.testFiles,
       testGlobsMissing: coverageInputs.testGlobsMissing,
-      // No coverageStats / coverageRoots: this caller reads coverage ROWS and
-      // drops the violations, and both only shape violation messages. Passing
-      // them would look like wiring while changing nothing observable here.
+      // Stats shape the green doctor line (discard counts), not only a failing
+      // sentence. Roots stay out: this caller drops violations.
+      ...(coverageInputs.stats ? { coverageStats: coverageInputs.stats } : {}),
       coverageBudgetExhausted: coverageInputs.coverageBudgetExhausted === true,
     });
     const covById = new Map(
@@ -189,6 +189,9 @@ export function summarizeRulesUnderContract(root, config, facts, classification)
     const uncoveredTruncated = Math.max(0, uncoveredAll.length - UNCOVERED_CATALOG_MAX);
     const uncovered = uncoveredAll.slice(0, UNCOVERED_CATALOG_MAX);
 
+    const symbolEvidence = (coverage.coverage ?? [])
+      .filter((row) => typeof row.symbolEvidenceFile === 'string' && row.symbolEvidenceFile.length > 0)
+      .map((row) => ({ id: row.invariantId, file: row.symbolEvidenceFile }));
     const coveredAll = (coverage.coverage ?? [])
       .filter((row) => row.covered)
       .map((row) => ({
@@ -196,6 +199,9 @@ export function summarizeRulesUnderContract(root, config, facts, classification)
         layer: row.layer ?? null,
         mode: row.mode ?? null,
         description: row.description ?? null,
+        ...(typeof row.symbolEvidenceFile === 'string' && row.symbolEvidenceFile.length > 0
+          ? { symbolEvidenceFile: row.symbolEvidenceFile }
+          : {}),
       }));
     const coveredTruncated = Math.max(0, coveredAll.length - COVERED_SAMPLE_MAX);
     const coveredSample = coveredAll.slice(0, COVERED_SAMPLE_MAX);
@@ -259,6 +265,8 @@ export function summarizeRulesUnderContract(root, config, facts, classification)
       uncoveredTruncated,
       coveredSample,
       coveredTruncated,
+      symbolEvidence,
+      ...(coverageInputs.stats ? { coverageStats: coverageInputs.stats } : {}),
       mergePlanes,
       notAScore: true,
       note: 'ArkRules plane (intra-layer) — counts and catalog, never a score. Green with uncovered residual must say so. Structure sensors are heuristics; invariants are catalog+coverage evidence, not a business runtime.',
@@ -278,6 +286,27 @@ export function summarizeRulesUnderContract(root, config, facts, classification)
       note: error instanceof Error ? error.message : String(error),
     };
   }
+}
+
+/**
+ * Symbol witness paths and discard counts. Printed on green runs too —
+ * a passing check used to hide both. Depth and byte caps stay internal;
+ * only the counts already in the failure sentence are shown.
+ * @param {ReturnType<typeof summarizeRulesUnderContract>|null|undefined} section
+ * @returns {string[]}
+ */
+export function formatArkRulesEvidenceLines(section) {
+  if (!section || typeof section !== 'object') return [];
+  const lines = [];
+  const evidence = Array.isArray(section.symbolEvidence) ? section.symbolEvidence : [];
+  for (const row of evidence) {
+    if (typeof row?.file !== 'string' || row.file.length === 0) continue;
+    const id = typeof row.id === 'string' && row.id.length > 0 ? row.id : 'invariant';
+    lines.push(`ArkRules: ${id} symbol ${row.file}`);
+  }
+  const discard = formatCoverageDiscards(section.coverageStats);
+  if (discard) lines.push(`ArkRules:${discard}`);
+  return lines;
 }
 
 /**
@@ -332,6 +361,7 @@ export function formatArkRulesDoctorLines(section) {
   else if (typeof section.note === 'string' && /failed/i.test(section.note)) {
     lines.push(`ArkRules: ${section.note}`);
   }
+  lines.push(...formatArkRulesEvidenceLines(section));
   return lines;
 }
 
@@ -475,6 +505,7 @@ export function formatRulesUnderContractHtml(section, esc) {
         <code>${escape(c.id)}</code>
         <span class="tag">covered</span>
         <span class="dim">· ${escape(c.layer || '?')}</span>
+        ${c.symbolEvidenceFile ? `<span class="dim">· ${escape(c.symbolEvidenceFile)}</span>` : ''}
         ${c.description ? `<div class="msg">${escape(c.description)}</div>` : ''}
       </li>`
     )
@@ -528,6 +559,11 @@ export function formatRulesUnderContractHtml(section, esc) {
     }
     ${uncoveredBlock}
     ${coveredBlock}
+    ${
+      formatArkRulesEvidenceLines(section)
+        .map((line) => `<p class="muted" style="margin-top:.35rem;font-size:.84rem">${escape(line)}</p>`)
+        .join('')
+    }
     ${
       coveredSample.length || uncovered.length
         ? `<p class="muted" style="margin-top:.65rem;font-size:.84rem">Covered = catalog evidence found (symbol and/or test title). Not a claim that business semantics are fully proven end-to-end.</p>`

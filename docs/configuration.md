@@ -114,7 +114,10 @@ Top-level fields:
   Nothing is dropped in silence: files past the budget, files over the 256KB per-file cap,
   unreadable files or directories (permissions, broken symlinks), directories past the walk depth
   limit (8), symlinks whose target resolves outside the project root, and tests naming no
-  catalogued invariant are each counted and named in the diagnostic. A symlinked test is read only
+  catalogued invariant are each counted and named in the diagnostic. Those same counts are printed
+  on a green doctor ArkRules line and on `--rules-inventory`, not only inside a failing
+  `INVARIANT_UNCOVERED` sentence. The walk-depth and per-file byte caps stay internal — they are
+  not config keys. A symlinked test is read only
   when its target is inside the root: a file that is not in this repo never proves an invariant
   covered.
 
@@ -398,7 +401,7 @@ Each `arkrules/<Layer>.json` may declare:
 | Section | Purpose | Modes | What it really enforces |
 |---------|---------|--------|-------------------------|
 | `structure[]` | Closed sensor ids (e.g. `orchestration-only`, `thin-adapter`, `writes-via-aggregate`, `aggregate-private-state`, `always-valid-factory`, `domain-event-on-mutation`, `no-anemic-model`) | `advisory` (default) or `enforced` | **Heuristics of module shape** — not proof that logic was extracted to Domain. `writes-via-aggregate` is driver-import + write-token in the declaring layer (ADR 0032). Tier-2 sensors (`no-anemic-model`) stay advisory-only (cannot promote to enforced). |
-| `invariants[]` | Stable ids + description + `coverage` (`test` / `symbol`) + optional `appliesTo` globs | `advisory` or `enforced` | **Named policy + evidence** (symbol in source and/or test title/content). Does **not** execute business logic at check time and does **not** replace behavior/property tests. |
+| `invariants[]` | Stable ids + description + `coverage` (`test` / `symbol`) + optional `appliesTo` globs | `advisory` or `enforced` | **Named policy + evidence.** `coverage.symbol` means a declaration of that identifier in a non-test file (witness path `symbolEvidenceFile`); imports and test calls do not count. A test title may also name the invariant id. Does **not** execute tests or business logic and does **not** replace behavior/property tests. Doctor and `--rules-inventory` print the witness path and discard counts on green runs too. A declaration match is not “the tests pass.” |
 
 **Reporting:** diagnostics carry `evidence.arkruleId` + `evidence.arkruleSource`. Label residual
 **`[Layer]`** vs **`[ArkRules]`** in agent output. Doctor / HTML: `rulesUnderContract` (catalog +
