@@ -4,7 +4,12 @@
  * Reached through the src/kernel/analysis.ts facade; consumer import paths
  * never change.
  */
-import { globToRegExp, layerForRelativePath, patternSpecificity } from '../domain/layerMatch';
+import {
+  globToRegExp,
+  layerForRelativePath,
+  patternSpecificity,
+  sliceIdentityCollisions,
+} from '../domain/layerMatch';
 import {
   layersMissingRequiredOwners,
   missingLayerOwnersNextAction,
@@ -212,6 +217,17 @@ export function collectAnalysisConfigWarnings(
         `${unclassified.length} included source file(s) are not matched by any configured layer; ark-check will not enforce import rules for those source files.`,
         { count: unclassified.length, samples: unclassified.slice(0, 5) }
       )
+    );
+  }
+
+  for (const collision of sliceIdentityCollisions(rules)) {
+    warnings.push(
+      configWarning('CONFIG_SLICE_IDENTITY_COLLISION', collision.message, {
+        paths: [...collision.paths],
+        fromLayer: collision.from,
+        toLayer: collision.to,
+        failsStrict: false,
+      })
     );
   }
 

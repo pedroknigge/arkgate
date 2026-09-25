@@ -55,6 +55,9 @@ export type ArkConfigLayer = {
   allowEmpty?: boolean;
 };
 
+/** How a starred `sliceFolders` prefix is named. Absent equals `path`. */
+export type ArkConfigSliceIdentity = 'path' | 'stars';
+
 export type ArkConfigRule = {
   from: string;
   to: string;
@@ -62,6 +65,11 @@ export type ArkConfigRule = {
   message?: string;
   peerIsolation?: boolean;
   sliceFolders?: string[];
+  /**
+   * How a starred `sliceFolders` prefix is named.
+   * Absent and `path` keep today's ids. `stars` is the last literal plus the star bindings.
+   */
+  sliceIdentity?: ArkConfigSliceIdentity;
   /** Roots the repo declares shared on purpose — evidence, not unclassifiable. */
   sharedRoots?: string[];
   /** Directed slice→slice edges the repo declares on purpose. */

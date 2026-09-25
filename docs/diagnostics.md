@@ -101,6 +101,7 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 | [`CONFIG_AMBIGUOUS_LAYERS`](#CONFIG_AMBIGUOUS_LAYERS) | config | Ambiguous layer classification |
 | [`CONFIG_UNCLASSIFIED_FILES`](#CONFIG_UNCLASSIFIED_FILES) | config | Unclassified included files |
 | [`CONFIG_LAYER_MISSING_OWNER`](#CONFIG_LAYER_MISSING_OWNER) | config | Layer missing owner |
+| [`CONFIG_SLICE_IDENTITY_COLLISION`](#CONFIG_SLICE_IDENTITY_COLLISION) | config | Starred slice prefixes share one id |
 | [`ARK_UNKNOWN`](#ARK_UNKNOWN) | meta | Unknown diagnostic |
 
 ## Layer and dependency graph
@@ -893,6 +894,15 @@ never opting out of knowing.
 
 - **Why:** `requireLayerOwners` is on and this layer has no owners. Writes to that house fail closed, like a folder with no name on the door.
 - **Fix:** Add a GitHub handle or email to that layer’s owners in ark.config.json (`/ark-adopt`), then re-run. Reserved/allowEmpty houses may stay unnamed.
+
+<a id="CONFIG_SLICE_IDENTITY_COLLISION"></a>
+
+### `CONFIG_SLICE_IDENTITY_COLLISION`
+
+**Starred slice prefixes share one id**
+
+- **Why:** `sliceIdentity` is `stars` and two different `sliceFolders` prefixes bind as the same slice id. Parallel trees of one feature do that on purpose; unrelated trees that share the last folder name merge by accident. The warning names both paths.
+- **Fix:** Keep `stars` when those prefixes are one feature. Otherwise use `path`, or rename the last literal so the prefixes do not bind as the same id. Advisory — it does not fail the check.
 
 ## Meta
 

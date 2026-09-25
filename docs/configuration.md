@@ -250,8 +250,8 @@ process module-capability family must be denied.
 
 Rule fields:
 
-- `from`, `to`, `allowed`, `message`, `peerIsolation`, `sliceFolders`, `sharedRoots`,
-  `allowedCrossSlice`, `sharedImportsSlice`
+- `from`, `to`, `allowed`, `message`, `peerIsolation`, `sliceFolders`, `sliceIdentity`,
+  `sharedRoots`, `allowedCrossSlice`, `sharedImportsSlice`
 - `peerIsolation: true` + `allowed: false`: deny only when slice ids differ; same-slice allows
   when both paths classify. Applies to **any** declared `from`→`to` pair, not only self-edges.
   Missing paths, empty slice folders, or unclassifiable slices **fail closed** (deny — cannot
@@ -262,17 +262,38 @@ Rule fields:
   `src/components/features/projects/rfi-status-pill.tsx` with `["projects"]` is not a slice.
   A starred prefix (`lib/features/*/*`) is anchored like `sharedRoots` — it starts the
   repo-relative path, or sits one segment in after `src/` or `app/`. Each `*` binds one
-  directory and never the filename. The slice id includes the literal prefix plus those
-  star bindings (`lib/features/projects/rfi`), so parallel trees get different ids
-  (tracked in [#308](https://github.com/pedroknigge/arkgate/issues/308)). A file directly
-  under `lib/features/projects/` stays `lib/features/projects`. A path off that prefix
-  (`src/app/api/projects/...`) is not that slice.
+  directory and never the filename. With `sliceIdentity` `path` (the default, also
+  when the key is absent) the slice id includes the literal prefix plus those
+  star bindings (`lib/features/projects/rfi`), so parallel trees get different ids.
+  A file directly under `lib/features/projects/` stays `lib/features/projects`. A path
+  off that prefix (`src/app/api/projects/...`) is not that slice.
+- `sliceIdentity` is `path` or `stars`. Absent and `path` are the same: today's ids,
+  byte for byte, so baselines and `allowedCrossSlice` keep working with no migration.
+  `stars` names a starred prefix as the last literal plus the star bindings.
+  `lib/features/*/*` and `lib/repositories/features/*/*` both yield
+  `features/projects/rfi`, so one feature has one id across parallel trees. Bare names
+  (`features`) are unchanged. Doctor warns when two different prefixes bind as the
+  same id, and the warning names both paths (`admin/features/*` and `public/features/*`
+  both bind as `features/*`). That warning is advisory. Unrelated trees that share a
+  last folder name should stay on `path`.
+
+```jsonc
+{
+  "from": "ApplicationOrchestration",
+  "to": "PersistenceAdapters",
+  "allowed": false,
+  "peerIsolation": true,
+  "sliceFolders": ["lib/features/*/*", "lib/repositories/features/*/*"],
+  "sliceIdentity": "stars"
+}
+```
 
 #### Cross-layer slice walls (already in the engine)
 
 A slice wall on a cross-layer edge is a `peerIsolation` rule on that `from`/`to` pair
-(`allowed: false`). There is no slice-wide engine mode, no new config key, and no new skill
-name. `findDeniedEdgeDecision` already applies `peerIsolation` to any declared pair
+(`allowed: false`). There is no slice-wide engine mode and no new skill name.
+`sliceIdentity` only changes how a starred prefix is named. `findDeniedEdgeDecision`
+already applies `peerIsolation` to any declared pair
 (same-layer or cross-layer) — locked on `EdgeRule` and `findDeniedEdgeDecision` in
 [`src/domain/layerMatch.ts`](../src/domain/layerMatch.ts). There is no dedicated ADR to add.
 

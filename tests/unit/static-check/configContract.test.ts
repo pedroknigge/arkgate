@@ -212,6 +212,22 @@ const INVALID_CONTRACT_CASES = [
     message: 'must be a string',
   },
   {
+    name: 'an unknown sliceIdentity',
+    input: {
+      ...VALID_MINIMAL_CONFIG,
+      rules: [
+        {
+          from: 'DomainModel',
+          to: 'DomainModel',
+          allowed: false,
+          sliceIdentity: 'prefix',
+        },
+      ],
+    },
+    path: '$.rules[0].sliceIdentity',
+    message: 'must be one of path, stars',
+  },
+  {
     name: 'an unknown non-identifier key',
     input: { ...VALID_MINIMAL_CONFIG, 'unexpected-policy': true },
     path: '$["unexpected-policy"]',
@@ -294,6 +310,34 @@ describe('C01 config contract', () => {
   )('$surface rejects $name at $path', ({ load, input, path: issuePath, message }) => {
     expect(() => load(input)).toThrow(issuePath);
     expect(() => load(input)).toThrow(message);
+  });
+
+  it.each(CONTRACT_LOADERS)('$surface accepts sliceIdentity stars and path', ({ load }) => {
+    const stars = load({
+      ...VALID_MINIMAL_CONFIG,
+      rules: [
+        {
+          from: 'DomainModel',
+          to: 'DomainModel',
+          allowed: false,
+          sliceFolders: ['lib/features/*/*'],
+          sliceIdentity: 'stars',
+        },
+      ],
+    });
+    expect(stars.config.rules[0]?.sliceIdentity).toBe('stars');
+    const pathed = load({
+      ...VALID_MINIMAL_CONFIG,
+      rules: [
+        {
+          from: 'DomainModel',
+          to: 'DomainModel',
+          allowed: false,
+          sliceIdentity: 'path',
+        },
+      ],
+    });
+    expect(pathed.config.rules[0]?.sliceIdentity).toBe('path');
   });
 
   it('exports and publishes the schema through stable package subpaths', () => {

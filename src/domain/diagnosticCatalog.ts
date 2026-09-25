@@ -676,6 +676,14 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
     'requireLayerOwners is on and this layer has no owners. Writes to that house fail closed, like a folder with no name on the door.',
     'Add a GitHub handle or email to that layer’s owners in ark.config.json (/ark-adopt), then re-run. Reserved/allowEmpty houses may stay unnamed. Turn the flag off only if you no longer want owners required.'
   ),
+  entry(
+    'CONFIG_SLICE_IDENTITY_COLLISION',
+    'config',
+    'Starred slice prefixes share one id',
+    'sliceIdentity is stars and two different sliceFolders prefixes bind as the same slice id. Parallel trees of one feature do that on purpose; unrelated trees that share the last folder name merge by accident.',
+    'Keep stars when those prefixes are one feature. Otherwise use path, or rename the last literal so the prefixes do not bind as the same id. Doctor names both paths.',
+    { oftenAdvisory: true }
+  ),
 
   // ── literal path drift ───────────────────────────────────────────────────
   entry(

@@ -12,6 +12,7 @@ import {
   pathUnderSharedRoot,
   crossSliceEdgeAllowed,
   sliceIdForPath,
+  sliceIdentityCollisions,
   inferSliceFoldersFromPatterns,
 } from '../../../src/domain/layerMatch';
 import { evaluateArchitectureGraph } from '../../../src/kernel/graphEvaluate';
@@ -84,6 +85,147 @@ describe('sliceIdForPath / inferSliceFoldersFromPatterns', () => {
     expect(sliceIdForPath('src/lib/features/projects/rfi/deeper/x.ts', ['features', 'modules'])).toBe(
       'features/projects'
     );
+  });
+
+  it('pins today\'s path ids so baselines and allowedCrossSlice stay byte-identical', () => {
+    const pinned: Array<[string, string[], string | undefined]> = [
+      ['src/features/auth/api.ts', ['features'], 'features/auth'],
+      ['src/features/payments/hooks/usePay.ts', ['features'], 'features/payments'],
+      ['src/modules/auth/x.ts', ['features', 'modules'], 'modules/auth'],
+      ['src/Features/Auth/api.ts', ['features'], 'features/auth'],
+      ['src/lib/features/projects/rfi/x.ts', ['lib/features/*/*'], 'lib/features/projects/rfi'],
+      ['src/lib/features/projects/rfi/x.ts', ['features'], 'features/projects'],
+      ['src/lib/features/projects/file.ts', ['lib/features/*/*'], 'lib/features/projects'],
+      ['lib/features/projects/rfi/x.ts', ['lib/features/*/*'], 'lib/features/projects/rfi'],
+      [
+        'src/components/features/projects/rfi/view.tsx',
+        ['components/features/*/*'],
+        'components/features/projects/rfi',
+      ],
+      [
+        'src/lib/repositories/features/projects/rfi/repo.ts',
+        ['lib/repositories/features/*/*'],
+        'lib/repositories/features/projects/rfi',
+      ],
+      ['src/app/api/projects/[projectCode]/rfis/route.ts', ['lib/features/*/*'], undefined],
+    ];
+    for (const [rel, folders, id] of pinned) {
+      expect(sliceIdForPath(rel, folders), rel).toBe(id);
+      expect(sliceIdForPath(rel, folders, 'path'), `${rel} path`).toBe(id);
+    }
+  });
+
+  it('stars gives one id across parallel trees', () => {
+    const folders = [
+      'lib/features/*/*',
+      'components/features/*/*',
+      'lib/repositories/features/*/*',
+    ];
+    expect(sliceIdForPath('src/lib/features/projects/rfi/x.ts', folders, 'stars')).toBe(
+      'features/projects/rfi'
+    );
+    expect(
+      sliceIdForPath('src/components/features/projects/rfi/view.tsx', folders, 'stars')
+    ).toBe('features/projects/rfi');
+    expect(
+      sliceIdForPath('src/lib/repositories/features/projects/rfi/repo.ts', folders, 'stars')
+    ).toBe('features/projects/rfi');
+    expect(sliceIdForPath('src/lib/features/projects/rfi/x.ts', ['features'], 'stars')).toBe(
+      'features/projects'
+    );
+  });
+
+  it('collision warning names both paths when stars prefixes share a stem', () => {
+    const hits = sliceIdentityCollisions([
+      {
+        from: 'Application',
+        to: 'Persistence',
+        sliceFolders: ['admin/features/*', 'public/features/*'],
+        sliceIdentity: 'stars',
+      },
+    ]);
+    expect(hits).toHaveLength(1);
+    expect(hits[0]?.paths).toEqual(['admin/features/*', 'public/features/*']);
+    expect(hits[0]?.message).toContain('admin/features/*');
+    expect(hits[0]?.message).toContain('public/features/*');
+    expect(hits[0]?.stem).toBe('features/*');
+
+    const parallel = sliceIdentityCollisions([
+      {
+        from: 'Application',
+        to: 'Persistence',
+        sliceFolders: ['lib/features/*/*', 'lib/repositories/features/*/*'],
+        sliceIdentity: 'stars',
+      },
+    ]);
+    expect(parallel[0]?.message).toContain('lib/features/*/*');
+    expect(parallel[0]?.message).toContain('lib/repositories/features/*/*');
+
+    expect(
+      sliceIdentityCollisions([
+        {
+          from: 'Application',
+          to: 'Persistence',
+          sliceFolders: ['admin/features/*', 'public/features/*'],
+        },
+      ])
+    ).toEqual([]);
+    expect(
+      sliceIdentityCollisions([
+        {
+          from: 'Application',
+          to: 'Persistence',
+          sliceFolders: ['lib/features/*/*'],
+          sliceIdentity: 'stars',
+        },
+      ])
+    ).toEqual([]);
+  });
+
+  it('stars lets one feature cross layers without a cross-slice denial', () => {
+    const layers = [
+      { name: 'Application', patterns: ['src/lib/features/**'] },
+      { name: 'Persistence', patterns: ['src/lib/repositories/**'] },
+    ];
+    const folders = ['lib/features/*/*', 'lib/repositories/features/*/*'];
+    const paths = {
+      fromPath: 'src/lib/features/projects/rfi/x.ts',
+      toPath: 'src/lib/repositories/features/projects/rfi/repo.ts',
+      layers,
+    };
+    const starred = findDeniedEdgeDecision(
+      [
+        {
+          from: 'Application',
+          to: 'Persistence',
+          allowed: false,
+          peerIsolation: true,
+          sliceFolders: folders,
+          sliceIdentity: 'stars',
+        },
+      ],
+      'Application',
+      'Persistence',
+      paths
+    );
+    expect(starred).toBeUndefined();
+    const pathed = findDeniedEdgeDecision(
+      [
+        {
+          from: 'Application',
+          to: 'Persistence',
+          allowed: false,
+          peerIsolation: true,
+          sliceFolders: folders,
+        },
+      ],
+      'Application',
+      'Persistence',
+      paths
+    );
+    expect(pathed?.peerIsolationReason).toBe('cross-slice');
+    expect(pathed?.fromSlice).toBe('lib/features/projects/rfi');
+    expect(pathed?.toSlice).toBe('lib/repositories/features/projects/rfi');
   });
 
   it('a star never binds the filename, so a flat file stays in the last directory', () => {

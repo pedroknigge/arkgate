@@ -88,6 +88,20 @@ function ackLifecycleHtml(lc) {
   return rows.join('\n');
 }
 
+function sliceIdentityHtml(section) {
+  const collisions = Array.isArray(section?.collisions) ? section.collisions : [];
+  if (collisions.length === 0) return '';
+  const items = collisions.map((collision) => `<li>${esc(collision.message ?? '')}</li>`).join('\n');
+  return `
+  <section class="section card" data-advisory="sliceIdentity">
+    <h2>Slice identity <span class="muted">(advisory — not a verdict, not a score)</span></h2>
+    <ul>
+      ${items}
+    </ul>
+    <p class="muted">Two prefixes bind as one slice id under <code>sliceIdentity: "stars"</code>. That is the point when the trees are one feature, and a mistake when they are not.</p>
+  </section>`;
+}
+
 function contractHealthHtml(health) {
   if (!health) return '';
   const smells = Array.isArray(health.smells) ? health.smells : [];
@@ -347,6 +361,7 @@ export function renderAdvisorySections(advisories, escape) {
     improvementCompassHtml(advisories.improvementCompass),
     deepModuleCoachHtml(advisories.deepModuleCoach),
     stewardNudgeHtml(advisories.stewardNudge),
+    sliceIdentityHtml(advisories.sliceIdentity),
     contractHealthHtml(advisories.contractHealth),
     ambientStateHtml(advisories.ambientState),
     physicalCohesionHtml(advisories.physicalCohesion),

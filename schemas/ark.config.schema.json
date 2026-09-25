@@ -798,6 +798,14 @@
           "uniqueItems": true,
           "minItems": 1
         },
+        "sliceIdentity": {
+          "type": "string",
+          "enum": [
+            "path",
+            "stars"
+          ],
+          "description": "How a starred sliceFolders prefix is named. Absent and path keep today's ids (every literal and star binding). stars keeps the last literal plus the star bindings, so parallel trees share one feature id. Bare names are unchanged."
+        },
         "sharedRoots": {
           "type": "array",
           "items": {

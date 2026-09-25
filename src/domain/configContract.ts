@@ -45,6 +45,7 @@ export type {
   ArkConfigMigrationResult,
   ArkConfigRule,
   ArkConfigSafety,
+  ArkConfigSliceIdentity,
   ArkConfigSchemaVersion,
 } from './configTypes';
 
@@ -267,6 +268,12 @@ export const ARK_CONFIG_SCHEMA = {
         message: { type: 'string', minLength: 1 },
         peerIsolation: { type: 'boolean' },
         sliceFolders: { ...stringArraySchema, minItems: 1 },
+        sliceIdentity: {
+          type: 'string',
+          enum: ['path', 'stars'],
+          description:
+            'How a starred sliceFolders prefix is named. Absent and path keep today\'s ids (every literal and star binding). stars keeps the last literal plus the star bindings, so parallel trees share one feature id. Bare names are unchanged.',
+        },
         sharedRoots: { ...stringArraySchema, minItems: 1 },
         allowedCrossSlice: {
           type: 'array',
