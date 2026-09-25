@@ -362,7 +362,7 @@ while design-weak is false.
 Prefer evidence over aesthetics:
 - **Fan-in / importers** of hot modules (who imports the suspect file?).
 - **Export surface** (how many public symbols does the orchestration module re-export?).
-- Import cycles, cross-feature leaks (`peerIsolation` candidates).
+- Import cycles, cross-feature leaks (`peerIsolation` candidates). A shared root that imports a slice is a direct-only bridge; doctor lists it. `sharedImportsSlice: "deny"` closes that one hop. It does not finish the wall.
 - Business rules in UI/hooks (`can*`, `calculate*`, policy constants) → Domain / intents.
 - Dead or aspirational globs; layers with files but no rules; **starter/preset rules weaker than sibling archetypes** (soft green).
 - LOC is a **hint** only — pair it with fan-in or export count before calling something a god module.

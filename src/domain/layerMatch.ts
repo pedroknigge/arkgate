@@ -69,6 +69,12 @@ export type EdgeRule = {
    * with several slice parents. Everything not declared still denies.
    */
   allowedCrossSlice?: CrossSliceEdge[];
+  /**
+   * When `"deny"`, a declared shared root may not import a slice. Default
+   * (absent) keeps that hop allowed. Slice → shared stays allowed either way.
+   * `allowedCrossSlice` does not excuse this hop.
+   */
+  sharedImportsSlice?: 'deny';
   /** Optional override message for scanners / write-gate. */
   message?: string;
 };
@@ -568,7 +574,8 @@ export type PeerIsolationDenyReason =
   | 'missing-path'
   | 'no-slice-folders'
   | 'unclassifiable-path'
-  | 'cross-slice';
+  | 'cross-slice'
+  | 'shared-imports-slice';
 
 export type PeerIsolationDecision = {
   denied: boolean;
@@ -588,6 +595,8 @@ export type PeerIsolationInput = {
   toShared?: boolean;
   /** The rule declares this directed slice→slice edge. */
   crossSliceAllowed?: boolean;
+  /** Rule opted in: a shared root may not import a slice. */
+  sharedImportsSlice?: 'deny';
 };
 
 /**
@@ -598,7 +607,8 @@ export type PeerIsolationInput = {
  * cross-slice edge, is the repo telling us its design, so it is no longer
  * "unclassifiable". Order: no fromPath → no slice folders → intent (no toPath):
  * shared-root allow / slice fail-closed → a side that is neither in a slice nor
- * declared shared → same slice → declared cross edge → deny.
+ * declared shared → shared root importing a slice (only when the rule denies
+ * that hop) → same slice → declared cross edge → deny.
  *
  * Intent/event names are not files. Callers pass fromPath only and must not
  * invent a toPath (that would mis-slice). A declared shared root is classified
@@ -615,6 +625,16 @@ export function peerIsolationDecision(input: PeerIsolationInput): PeerIsolationD
   }
   const toClassified = Boolean(input.toSlice) || input.toShared === true;
   if (!fromClassified || !toClassified) return { denied: true, reason: 'unclassifiable-path' };
+  // Shared roots are a sink. The hop is allowed unless the rule opts in.
+  // allowedCrossSlice does not excuse it: this is not a slice-to-slice edge.
+  if (
+    input.sharedImportsSlice === 'deny' &&
+    input.fromShared === true &&
+    Boolean(input.toSlice) &&
+    !input.fromSlice
+  ) {
+    return { denied: true, reason: 'shared-imports-slice' };
+  }
   // At least one side is declared shared (and carries no slice id): the repo
   // said this code belongs to no slice, so there is no cross-slice edge here.
   if (!input.fromSlice || !input.toSlice) return { denied: false };
@@ -652,6 +672,8 @@ export function peerIsolationDenyExplanation(
   switch (reason) {
     case 'cross-slice':
       return `cross-slice edge ${context.fromSlice ?? '?'} → ${context.toSlice ?? '?'}. Extract the shared code, use events/ports across slices, or declare the edge in the rule's allowedCrossSlice.`;
+    case 'shared-imports-slice':
+      return `shared root imports slice ${context.toSlice ?? '?'} (${context.fromPath ?? '?'} → ${context.toPath ?? '?'}). The wall is direct-only.`;
     case 'unclassifiable-path': {
       const unplaced = [
         context.fromSlice ? undefined : context.fromPath,
@@ -732,6 +754,7 @@ export function findDeniedEdgeDecision(
         fromShared: !fromSlice && pathUnderSharedRoot(fromPath, rule.sharedRoots),
         toShared: !toSlice && pathUnderSharedRoot(toPath, rule.sharedRoots),
         crossSliceAllowed: crossSliceEdgeAllowed(rule.allowedCrossSlice, fromSlice, toSlice),
+        sharedImportsSlice: rule.sharedImportsSlice,
       });
       if (decision.denied) {
         return { rule, peerIsolationReason: decision.reason, fromSlice, toSlice };
@@ -742,6 +765,41 @@ export function findDeniedEdgeDecision(
     // Classic deny — same-layer always allowed without peerIsolation
     if (from === to) continue;
     return { rule };
+  }
+  return undefined;
+}
+
+/** A shared root importing a slice while the deny flag is off. Doctor lists these. */
+export type SharedImportsSliceBridge = {
+  fromPath: string;
+  toPath: string;
+  toSlice: string;
+};
+
+/**
+ * Shared-root → slice edges the check still allows. Listed so a green run
+ * says the wall is direct-only. When the rule sets `sharedImportsSlice: "deny"`
+ * the same hop is a violation instead, so it is not listed twice.
+ */
+export function findSharedImportsSliceBridge(
+  rules: EdgeRule[] | undefined,
+  from: string,
+  to: string,
+  options?: EdgeCheckOptions
+): SharedImportsSliceBridge | undefined {
+  const fromPath = options?.fromPath;
+  const toPath = options?.toPath;
+  if (!fromPath || !toPath) return undefined;
+  for (const rule of rules ?? []) {
+    if (rule.from !== from || rule.to !== to) continue;
+    if (rule.allowed !== false || !rule.peerIsolation) continue;
+    if (rule.sharedImportsSlice === 'deny') continue;
+    const folders = resolveSliceFolders(rule, from, options?.layers);
+    const fromSlice = sliceIdForPath(fromPath, folders);
+    const toSlice = sliceIdForPath(toPath, folders);
+    if (fromSlice || !toSlice) continue;
+    if (!pathUnderSharedRoot(fromPath, rule.sharedRoots)) continue;
+    return { fromPath, toPath, toSlice };
   }
   return undefined;
 }

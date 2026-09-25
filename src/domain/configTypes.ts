@@ -66,6 +66,8 @@ export type ArkConfigRule = {
   sharedRoots?: string[];
   /** Directed slice→slice edges the repo declares on purpose. */
   allowedCrossSlice?: ArkConfigCrossSliceEdge[];
+  /** When `"deny"`, a declared shared root may not import a slice. */
+  sharedImportsSlice?: 'deny';
 };
 
 export type ArkConfigCrossSliceEdge = {

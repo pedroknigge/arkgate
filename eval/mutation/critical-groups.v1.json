@@ -4,52 +4,52 @@
   "groups": [
     {
       "id": "config-loading",
-      "note": "4.8.4 pins (467–473 version parse, 493–551 walk/load/parse) drifted onto validateLayerOwners and JSDoc after LO01 owners + trustBoundary. Retargeted to the same migrateArkConfig / load / JSON.parse decisions. Skip 546 (equivalent typeof guard).",
+      "note": "4.8.4 pins (467–473 version parse, 493–551 walk/load/parse) drifted onto validateLayerOwners and JSDoc after LO01 owners + trustBoundary. Retargeted to the same migrateArkConfig / load / JSON.parse decisions. #297 added sharedImportsSlice and shifted these pins by one. Skip 547 (equivalent typeof guard).",
       "targets": [
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 542,
-          "endLine": 545
+          "startLine": 543,
+          "endLine": 546
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 547,
-          "endLine": 548
+          "startLine": 548,
+          "endLine": 549
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 568,
-          "endLine": 569
+          "startLine": 569,
+          "endLine": 570
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 574,
-          "endLine": 575
+          "startLine": 575,
+          "endLine": 576
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 584,
-          "endLine": 586
+          "startLine": 585,
+          "endLine": 587
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 597,
-          "endLine": 597
+          "startLine": 598,
+          "endLine": 598
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 604,
-          "endLine": 604
+          "startLine": 605,
+          "endLine": 605
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 613,
-          "endLine": 616
+          "startLine": 614,
+          "endLine": 617
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 627,
-          "endLine": 627
+          "startLine": 628,
+          "endLine": 628
         }
       ]
     },
@@ -149,23 +149,23 @@
     },
     {
       "id": "peer-isolation-fail-closed",
-      "note": "DF04: peerIsolationDecision pure fail-closed core (missing paths/slices/folders, declared shared roots, declared cross-slice edges). peerIsolationMustDeny is its boolean face.",
+      "note": "DF04: peerIsolationDecision pure fail-closed core (missing paths/slices/folders, declared shared roots, declared cross-slice edges, shared-imports-slice). peerIsolationMustDeny is its boolean face. #297 shifted the function; retargeted to the same body.",
       "targets": [
         {
           "file": "src/domain/layerMatch.ts",
-          "startLine": 607,
-          "endLine": 624
+          "startLine": 617,
+          "endLine": 644
         }
       ]
     },
     {
       "id": "policy-delta-ack-match",
-      "note": "DF04: policyDeltaAcknowledgementMatches hash + finding-id set equality. AP02 (#264) inserted adrPath JSDoc, ADR_PATH_NEXT_ACTION, and allow-added above the helper, so 934-963 landed on classifyArkPolicyDelta's compare/sort tail plus the function signature. Retargeted to the same helper body.",
+      "note": "DF04: policyDeltaAcknowledgementMatches hash + finding-id set equality. AP02 (#264) inserted adrPath JSDoc above the helper. #297 inserted the sharedImportsSlice compare, so 956-985 moved. Retargeted to the same helper body.",
       "targets": [
         {
           "file": "src/domain/policyDelta.ts",
-          "startLine": 956,
-          "endLine": 985
+          "startLine": 970,
+          "endLine": 999
         }
       ]
     },

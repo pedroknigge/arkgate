@@ -228,6 +228,7 @@ export const ARK_CONFIG_SCHEMA = {
                         },
                     },
                 },
+                sharedImportsSlice: { type: 'string', enum: ['deny'] },
             },
         },
         safety: {

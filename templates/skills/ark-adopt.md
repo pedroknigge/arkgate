@@ -358,7 +358,10 @@ Ark protects the **boundary around** a framework, not its internals. Nest/DI pub
    The denial names its reason. `unclassifiable path` in bulk means shared code lives outside
    the slice folders — declare those roots (`sharedRoots`) on the rule instead of treating
    thousands of shared files as violations; `cross-slice edge a → b` is the real one, and a
-   deliberate directed edge goes in `allowedCrossSlice`. Promoting the shared slice to its own
+   deliberate directed edge goes in `allowedCrossSlice`. Shared roots are a sink: a slice may
+   import them, and they may import a slice. Doctor lists that shared-root → slice hop even
+   when the check stays green, so the wall is direct-only. `sharedImportsSlice: "deny"` closes
+   that one hop; it does not finish the wall. Promoting the shared slice to its own
    layer is still the preferred fix.
    `sliceFolders`: a bare name stays an unanchored one-segment match (`features` on
    `src/lib/features/projects/rfi/x.ts` is `features/projects`); a filename is never the
