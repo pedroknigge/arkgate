@@ -110,6 +110,8 @@ decision-grade explore pass **and** without opening violating files.
    layout — no pilot”; never reconstruct that dead card from `findings`. When the user accepts,
    defers, or rejects a live card, persist its exact `decisionTarget` with a non-empty reason and
    optional `reviewBy` in `.ark/reshape-decisions.json`; never infer a verdict from golden prose.
+   A cohesion residual starts one reshape judgment card, not the pattern-bet apply loop.
+   `pilotLoop` stays inactive (`not-design-weak`) unless the tree is design-weak.
 
 
 

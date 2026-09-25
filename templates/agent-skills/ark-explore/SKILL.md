@@ -354,7 +354,9 @@ A proposed `to` stays under the source anchor (`concept/`) and is kept only when
 stays in the same layer and the same slice id. If no governed destination keeps both,
 `nextPilot` is null — do not invent a folder outside the contract. Success is a smaller
 cluster with the layer and slice id unchanged and the card still proposed; a green gate is
-not success.
+not success. A cohesion residual (`physical-cohesion-residual`) starts that one reshape
+judgment card. It does not start the pattern-bet apply loop — `pilotLoop` stays inactive
+while design-weak is false.
 
 ### C. Coupling & debt (measure, don’t guess)
 Prefer evidence over aesthetics:

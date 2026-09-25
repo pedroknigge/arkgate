@@ -17,6 +17,7 @@ import {
   buildBaselineHonesty,
   buildWritePathHonesty,
   buildProductHonesty,
+  physicalCohesionResidualRemains,
 } from './enforcement-honesty.mjs';
 import { summarizeRulesUnderContract } from './rules-under-contract.mjs';
 import { attachExtraDoctorSections } from './doctor-advisories.mjs';
@@ -25,6 +26,7 @@ import { describePackageVersionDualTruth } from './field-install.mjs';
 import { buildDoctorImprovementCompass } from './improvement-compass-doctor.mjs';
 import { buildDeepModuleCoachAdvisory } from './deep-module-coach.mjs';
 import { computePhysicalCohesion } from './physical-cohesion.mjs';
+import { computeReshapeDecisionMemory } from './reshape-decisions.mjs';
 import { POST_GREEN_LEDE, operatingModeTitle } from './product-copy.mjs';
 
 function esc(value) {
@@ -153,6 +155,8 @@ export function buildReportDepthPayload(
       : packageVersionTruth?.code === 'PACKAGE_PIN_ABSENT'
         ? 'Add arkgate to package.json and install so CI/npx resolve this CLI (PACKAGE_PIN_ABSENT)'
         : null;
+  const physicalCohesion = computePhysicalCohesion(root, files);
+  physicalCohesion.reshapeDecisions = computeReshapeDecisionMemory(root, files).summary;
   const productHonesty = buildProductHonesty({
     coverageHonesty,
     baselineHonesty,
@@ -169,9 +173,9 @@ export function buildReportDepthPayload(
       : null,
     primaryNextAction: postGreenPath?.action ?? dualTruthNext,
     activeBlockingViolations: activeBlockingCount,
+    physicalCohesionResidual: physicalCohesionResidualRemains(physicalCohesion),
   });
   // Doctor parity: same physical-cohesion + baseline stale facts as runDoctor.
-  const physicalCohesion = computePhysicalCohesion(root, files);
   const baselineStale =
     typeof baselineSplit.baselineStale === 'number' ? baselineSplit.baselineStale : null;
   // Improvement compass — same projection as doctor; notAScore; never a gate input.
