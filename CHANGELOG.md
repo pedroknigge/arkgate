@@ -127,15 +127,20 @@ vitest 5 ignore
 ([#304](https://github.com/pedroknigge/arkgate/pull/304)), and docs
 ([#244](https://github.com/pedroknigge/arkgate/pull/244),
 [#234](https://github.com/pedroknigge/arkgate/pull/234)).
-**Write. Check. Ship.** **No required config migration.** No
+**Write. Check. Ship.** **Behavior change:** some repos that are green
+today can turn red. See the migration note under Changed. No
 `schemaVersion` bump. Does not close `K01` / `Z09`. This mother
 `ark.config.json` still does **not** turn `arkOrder` on.
 
 **Status: published** (npm `latest` is **4.8.20**).
 
 ### Changed
-- This is a behavior change. Some repos that are green today will turn red
-  when `coverage.symbol` only appeared in tests or imports.
+- **Migration.** This is a behavior change. Some repos that are green today
+  will turn red when `coverage.symbol` only appeared in tests or imports.
+  Move the invariant id into a `describe`/`it` title, or point
+  `coverage.symbol` at a function, class, or const declaration; `type` and
+  `interface` symbols are currently rejected
+  ([#307](https://github.com/pedroknigge/arkgate/issues/307)).
   `symbolEvidenceFile` is the non-test file that declares the symbol.
   Discard counters (`depthLimited`, the per-file byte cap, and the other
   existing reasons) are printed on green doctor and `--rules-inventory`
@@ -143,8 +148,11 @@ vitest 5 ignore
   ([#301](https://github.com/pedroknigge/arkgate/pull/301) /
   [#291](https://github.com/pedroknigge/arkgate/issues/291)).
 - `sliceFolders` accepts a starred prefix (`lib/features/*/*`), anchored
-  like `sharedRoots`. The slice id is the directories the stars bind
-  (`lib/features/projects/rfi`). A star never binds a filename; a file
+  like `sharedRoots`. For a starred anchored pattern the slice id includes
+  the literal prefix plus the directories the stars bind
+  (`lib/features/projects/rfi`), so parallel trees get different ids
+  (tracked in [#308](https://github.com/pedroknigge/arkgate/issues/308)).
+  A star never binds a filename; a file
   directly under that prefix stays in the last directory
   (`lib/features/projects`). Bare `sliceFolders` names no longer treat a
   filename as the slice child segment.

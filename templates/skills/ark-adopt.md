@@ -366,8 +366,9 @@ Ark protects the **boundary around** a framework, not its internals. Nest/DI pub
    `sliceFolders`: a bare name stays an unanchored one-segment match (`features` on
    `src/lib/features/projects/rfi/x.ts` is `features/projects`); a filename is never the
    child segment. A starred prefix (`lib/features/*/*`) is anchored like `sharedRoots`
-   (offset 0 or 1) and the slice id is the directories the stars bind
-   (`lib/features/projects/rfi`). Before trusting green, add one deliberate
+   (offset 0 or 1). The slice id includes the literal prefix plus the directories
+   the stars bind (`lib/features/projects/rfi`), so parallel trees get different ids
+   (tracked in #308). Before trusting green, add one deliberate
    feature-to-feature import and expect `cross-slice`.
    If one edge dominates residual debt: **STOP — do not continue this skill as complete.** **STOP — concentrated edge:** rewrite `ark.config.json` **in this turn** with source evidence (do not freeze a wrong config or grind N freezes).
    Empty Domain/Persistence + I/O under Application → false-green.

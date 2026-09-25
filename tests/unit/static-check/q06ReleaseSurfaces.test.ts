@@ -487,7 +487,15 @@ describe('CHANGELOG + release note cover 4.8.20 daily accumulate', () => {
     expect(section).toMatch(/7 days/);
     expect(section).toMatch(/#244/);
     expect(section).toMatch(/#234/);
-    expect(section).toMatch(/No required config migration/i);
+    expect(section).toMatch(/Behavior change/i);
+    expect(section).toMatch(/migration note under Changed/i);
+    expect(section).toMatch(/#307/);
+    expect(section).toMatch(/function, class, or const declaration/);
+    expect(section).toMatch(/symbols are currently rejected/);
+    expect(section).toMatch(/literal prefix plus the directories the stars bind/);
+    expect(section).toMatch(/parallel trees get different ids/);
+    expect(section).toMatch(/#308/);
+    expect(section).not.toMatch(/No required config migration/i);
     expect(section).toMatch(/Does not close\s*`K01`\s*\/\s*`Z09`/);
     expect(section).toMatch(/does \*\*not\*\* turn `arkOrder` on/);
     expect(section).not.toMatch(/Status:\s*prepared/i);
