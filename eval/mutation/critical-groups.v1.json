@@ -4,37 +4,32 @@
   "groups": [
     {
       "id": "config-loading",
-      "note": "4.8.4 pins (467–473 version parse, 493–551 walk/load/parse) drifted onto validateLayerOwners and JSDoc after LO01 owners + trustBoundary. Retargeted to the same migrateArkConfig / load / JSON.parse decisions. #297 added sharedImportsSlice and shifted these pins by one. Skip 547 (equivalent typeof guard).",
+      "note": "4.8.4 pins (467–473 version parse, 493–551 walk/load/parse) drifted onto validateLayerOwners and JSDoc after LO01 owners + trustBoundary. Retargeted to the same migrateArkConfig / load / JSON.parse decisions. #297 added sharedImportsSlice and shifted these pins by one. #308 sliceIdentity schema shifted them by seven. Skip the equivalent typeof guard (one line after the unversioned branch).",
       "targets": [
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 543,
-          "endLine": 546
+          "startLine": 550,
+          "endLine": 553
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 548,
-          "endLine": 549
+          "startLine": 555,
+          "endLine": 556
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 569,
-          "endLine": 570
+          "startLine": 576,
+          "endLine": 577
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 575,
-          "endLine": 576
+          "startLine": 582,
+          "endLine": 583
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 585,
-          "endLine": 587
-        },
-        {
-          "file": "src/domain/configContract.ts",
-          "startLine": 598,
-          "endLine": 598
+          "startLine": 592,
+          "endLine": 594
         },
         {
           "file": "src/domain/configContract.ts",
@@ -43,13 +38,18 @@
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 614,
-          "endLine": 617
+          "startLine": 612,
+          "endLine": 612
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 628,
-          "endLine": 628
+          "startLine": 621,
+          "endLine": 624
+        },
+        {
+          "file": "src/domain/configContract.ts",
+          "startLine": 635,
+          "endLine": 635
         }
       ]
     },
@@ -149,23 +149,23 @@
     },
     {
       "id": "peer-isolation-fail-closed",
-      "note": "DF04: peerIsolationDecision pure fail-closed core (missing paths/slices/folders, declared shared roots, declared cross-slice edges, shared-imports-slice). peerIsolationMustDeny is its boolean face. #297 shifted the function; retargeted to the same body. Slice-id JSDoc (#308) added eight lines above it; retargeted again to the same body.",
+      "note": "DF04: peerIsolationDecision pure fail-closed core (missing paths/slices/folders, declared shared roots, declared cross-slice edges, shared-imports-slice). peerIsolationMustDeny is its boolean face. #297 shifted the function. Slice-id JSDoc and #308 sliceIdentity helpers shifted it again; retargeted to the same body.",
       "targets": [
         {
           "file": "src/domain/layerMatch.ts",
-          "startLine": 625,
-          "endLine": 652
+          "startLine": 747,
+          "endLine": 774
         }
       ]
     },
     {
       "id": "policy-delta-ack-match",
-      "note": "DF04: policyDeltaAcknowledgementMatches hash + finding-id set equality. AP02 (#264) inserted adrPath JSDoc above the helper. #297 inserted the sharedImportsSlice compare, so 956-985 moved. Retargeted to the same helper body.",
+      "note": "DF04: policyDeltaAcknowledgementMatches hash + finding-id set equality. AP02 (#264) inserted adrPath JSDoc above the helper. #297 inserted the sharedImportsSlice compare. #308 inserted the sliceIdentity compare, so the helper moved again. Retargeted to the same body.",
       "targets": [
         {
           "file": "src/domain/policyDelta.ts",
-          "startLine": 970,
-          "endLine": 999
+          "startLine": 984,
+          "endLine": 1013
         }
       ]
     },
