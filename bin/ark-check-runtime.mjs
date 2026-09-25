@@ -1673,6 +1673,27 @@ async function main() {
       inventory.candidates[0] != null
         ? inventoryToExtractionCard(inventory.candidates[0])
         : null;
+    let evidenceLines = [];
+    let coverageEvidence = null;
+    if (config.arkRules && Object.keys(config.arkRules).length > 0) {
+      try {
+        const { summarizeRulesUnderContract, formatArkRulesEvidenceLines } = await import(
+          './lib/rules-under-contract.mjs'
+        );
+        const section = summarizeRulesUnderContract(root, config, {
+          files: files.map((file) => ({ path: normalize(path.relative(root, file)) })),
+        });
+        evidenceLines = formatArkRulesEvidenceLines(section);
+        if (section.active === true) {
+          coverageEvidence = {
+            symbolEvidence: section.symbolEvidence ?? [],
+            discarded: section.coverageStats?.discarded ?? null,
+          };
+        }
+      } catch {
+        /* inventory still useful when coverage cannot be read */
+      }
+    }
     const payload = {
       rulesInventory: inventory,
       rulesMigration: {
@@ -1682,6 +1703,7 @@ async function main() {
         notAScore: true,
       },
       nextPilot: nextPilot,
+      ...(coverageEvidence ? { coverageEvidence } : {}),
     };
     if (args.json) {
       console.log(JSON.stringify(payload, null, 2));
@@ -1695,6 +1717,7 @@ async function main() {
       if (nextPilot) {
         console.log(`Next extraction pilot: ${nextPilot.pilot} → ${nextPilot.pilotTarget}`);
       }
+      for (const line of evidenceLines) console.log(line);
     }
     process.exitCode = 0;
     return;

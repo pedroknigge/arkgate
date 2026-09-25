@@ -17,7 +17,7 @@ entries are declarative; core does not evaluate arbitrary predicates.
 ### D2 — Coverage evidence order
 
 1. Test title contains the invariant ID (project test globs).
-2. Deterministic symbol match (`coverage.symbol`, e.g. `Order.ensureInvariants`).
+2. Deterministic symbol match (`coverage.symbol`, e.g. `Order.ensureInvariants`) — a declaration of that identifier in a non-test file, witnessed by path; imports and test calls do not count.
 Missing test globs → analysis `partial`, never covered. Uncovered → `INVARIANT_UNCOVERED`
 (advisory by default; failsStrict only when mode is enforced).
 

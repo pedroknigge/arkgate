@@ -63,6 +63,11 @@ has honest houses. Skills never enforce — CLI / hooks / CI do.
   `coverage.coverageRoots` to the folder the test runner uses. Fail-closed
   until that path exists. `coverage.testGlobs` alone is not enough. Silent
   when no invariant is enforced. No new skill.
+- `coverage.symbol` means a declaration of that identifier in a non-test file.
+  Doctor and `--rules-inventory` print `symbolEvidenceFile` and the discard
+  counts even when uncovered is 0. Read that path. Imports and calls in tests
+  do not count. That declaration text is not “the tests pass” — ArkGate never
+  runs tests. No new config key.
 - CLI-first: if `arkgate-check` already resolved the root, do not wait on MCP.
 - Do not add `arkRun` or `arkOrder` unless the user wants that extra. When they do, write
   **advisory** extra in this turn (`arkRun` schema `1.2+`; `arkOrder` schema `1.3+`).
