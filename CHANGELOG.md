@@ -66,12 +66,6 @@ in the immutable pre-2.0 archive linked below.
   Required CI is still the shared merge line. No new skill, schema, or host.
 
 ### Fixed
-- Age-gated `start --apply` install failure no longer reprints the same
-  `pnpm add` as the primary next step. Recovery names pnpm Age, leads
-  with `npx --package=arkgate@<pin> arkgate-check --doctor`, and says
-  `minimumReleaseAgeExclude` must live in pnpm config or
-  `pnpm-workspace.yaml` (a CLI flag is not enough)
-  ([#292](https://github.com/pedroknigge/arkgate/issues/292)).
 - Write hook and `ark-check` now agree on overlapping layer globs: the hook
   probes the same specifier extensions as `ark-check` and classifies with
   `layerForRelativePath` (explicit `money.ts` beats `src/lib/**`). Field
@@ -101,6 +95,107 @@ in the immutable pre-2.0 archive linked below.
   `@2` pin (issue [#211](https://github.com/pedroknigge/arkgate/issues/211)).
   Existing configs keep whatever URL they already have. Editor completion
   matches the 4.x line you just installed.
+
+## 4.8.20 — 2026-09-25
+
+**Patch** over **4.8.19**. Daily accumulate (2026-09-25 ART) of the ships
+that landed after 4.8.19 published: `coverage.symbol` is a non-test
+declaration
+([#301](https://github.com/pedroknigge/arkgate/pull/301) /
+[#291](https://github.com/pedroknigge/arkgate/issues/291)), reshape pilot
+stays in the source layer and slice
+([#299](https://github.com/pedroknigge/arkgate/pull/299) /
+[#295](https://github.com/pedroknigge/arkgate/issues/295)),
+physical-cohesion residual clears finished and elegant
+([#302](https://github.com/pedroknigge/arkgate/pull/302) /
+[#296](https://github.com/pedroknigge/arkgate/issues/296)), anchored
+starred `sliceFolders`
+([#300](https://github.com/pedroknigge/arkgate/pull/300) /
+[#294](https://github.com/pedroknigge/arkgate/issues/294)), shared roots
+cannot import a slice when opted in
+([#303](https://github.com/pedroknigge/arkgate/pull/303) /
+[#297](https://github.com/pedroknigge/arkgate/issues/297)), pnpm Age
+install-fail recovery
+([#293](https://github.com/pedroknigge/arkgate/pull/293) /
+[#292](https://github.com/pedroknigge/arkgate/issues/292)), vitest 4.1.11
+([#298](https://github.com/pedroknigge/arkgate/pull/298)), Dependabot
+vitest 5 ignore
+([#304](https://github.com/pedroknigge/arkgate/pull/304)), and docs
+([#244](https://github.com/pedroknigge/arkgate/pull/244),
+[#234](https://github.com/pedroknigge/arkgate/pull/234)).
+**Write. Check. Ship.** **No required config migration.** No
+`schemaVersion` bump. Does not close `K01` / `Z09`. This mother
+`ark.config.json` still does **not** turn `arkOrder` on.
+
+**Status: published** (npm `latest` is **4.8.20**).
+
+### Changed
+- This is a behavior change. Some repos that are green today will turn red
+  when `coverage.symbol` only appeared in tests or imports.
+  `symbolEvidenceFile` is the non-test file that declares the symbol.
+  Discard counters (`depthLimited`, the per-file byte cap, and the other
+  existing reasons) are printed on green doctor and `--rules-inventory`
+  output too; the depth and byte caps themselves stay internal
+  ([#301](https://github.com/pedroknigge/arkgate/pull/301) /
+  [#291](https://github.com/pedroknigge/arkgate/issues/291)).
+- `sliceFolders` accepts a starred prefix (`lib/features/*/*`), anchored
+  like `sharedRoots`. The slice id is the directories the stars bind
+  (`lib/features/projects/rfi`). A star never binds a filename; a file
+  directly under that prefix stays in the last directory
+  (`lib/features/projects`). Bare `sliceFolders` names no longer treat a
+  filename as the slice child segment.
+  `src/components/features/projects/rfi-status-pill.tsx` with `["projects"]`
+  is not a slice. Bare names under `src/lib/features` behave exactly as
+  before: `src/lib/features/projects/rfi/x.ts` with `["features"]` stays
+  `features/projects` (a regression test covers it)
+  ([#300](https://github.com/pedroknigge/arkgate/pull/300) /
+  [#294](https://github.com/pedroknigge/arkgate/issues/294)).
+
+### Fixed
+- Reshape pilot destinations stay in the source file's layer and slice. A
+  proposal that would leave both is withheld instead of pointing at
+  `src/features/`
+  ([#299](https://github.com/pedroknigge/arkgate/pull/299) /
+  [#295](https://github.com/pedroknigge/arkgate/issues/295)).
+- Doctor no longer calls the tree finished or elegant while a
+  physical-cohesion finding is still unsuppressed. The gate verdict is
+  unchanged, and the reshape card stays one judgment
+  ([#302](https://github.com/pedroknigge/arkgate/pull/302) /
+  [#296](https://github.com/pedroknigge/arkgate/issues/296)).
+- A `peerIsolation` rule may set `sharedImportsSlice` to `"deny"`. A
+  declared shared root then may not import a slice
+  (`shared root … → slice …`). The default stays off, so current walls
+  stay green. A slice importing a shared root stays allowed.
+  `allowedCrossSlice` does not excuse this hop. Doctor lists shared-root
+  → slice bridges even when the flag is off. A green run still says the
+  wall is direct-only
+  ([#303](https://github.com/pedroknigge/arkgate/pull/303) /
+  [#297](https://github.com/pedroknigge/arkgate/issues/297)).
+- Age-gated `start --apply` install failure no longer reprints the same
+  `pnpm add` as the primary next step. Recovery names pnpm Age, leads
+  with `npx --package=arkgate@<pin> arkgate-check --doctor`, and says
+  `minimumReleaseAgeExclude` must live in pnpm config or
+  `pnpm-workspace.yaml` (a CLI flag is not enough)
+  ([#293](https://github.com/pedroknigge/arkgate/pull/293) /
+  [#292](https://github.com/pedroknigge/arkgate/issues/292)).
+
+### Dependencies
+- Dev dependency `vitest` and `@vitest/coverage-v8` are on 4.1.11, which
+  pulls `@vitest/mocker@4.1.11` and closes
+  [GHSA-82fw-gwwq-j7x9](https://github.com/vitest-dev/vitest/security/advisories/GHSA-82fw-gwwq-j7x9)
+  (moderate path traversal via redirect mocks). Vitest 4's V8 coverage
+  provider remaps with AST analysis, so the same suite reports a larger
+  branch denominator; coverage floors moved to just under those measured
+  numbers. No tests were removed
+  ([#298](https://github.com/pedroknigge/arkgate/pull/298)).
+- Dependabot ignores vitest 5 (`vitest`, `@vitest/coverage-v8`, and
+  `@vitest/mocker` at `>= 5.0.0`) until Node 22.12+ is the floor.
+  Version-update pull requests stay off; the cooldown is 7 days
+  ([#304](https://github.com/pedroknigge/arkgate/pull/304)).
+- Docs: anonymized live dogfood sales stats
+  ([#244](https://github.com/pedroknigge/arkgate/pull/244)); `UC01` marked
+  done after [#233](https://github.com/pedroknigge/arkgate/pull/233)
+  ([#234](https://github.com/pedroknigge/arkgate/pull/234)).
 
 ## 4.8.19 — 2026-09-20
 
