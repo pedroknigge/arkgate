@@ -14,6 +14,10 @@ import {
   formatWarningAttribution,
   formatWarningLine,
   printWarning,
+  humanWarningLines,
+  formatSharedImportsSliceSummary,
+  printSharedImportsSliceBridgeList,
+  SHARED_IMPORTS_SLICE_FULL_LIST,
   WARNING_UNATTRIBUTED,
 } from '../../../bin/lib/violations.mjs';
 import { computeCoverage } from '../../../bin/lib/doctor-plan.mjs';
@@ -92,6 +96,98 @@ describe('violations.mjs (shipped)', () => {
     expect(formatWarningLine(warning)).toContain(WARNING_UNATTRIBUTED);
     expect(formatWarningLine(warning)).toContain('CONFIG_NO_LAYERS');
     printWarning(warning);
+  });
+
+  it('groups SHARED_IMPORTS_SLICE by rule and layer edge with count and top 3', () => {
+    const features = Array.from({ length: 5 }, (_, index) => ({
+      ruleId: 'SHARED_IMPORTS_SLICE',
+      file: 'src/ui/hub.ts',
+      line: index + 1,
+      fromLayer: 'Features',
+      toLayer: 'Features',
+      target: `src/features/item-${index}/x.ts`,
+      toSlice: `features/item-${index}`,
+      failsStrict: false,
+      message: `shared root src/ui/hub.ts → slice features/item-${index} (src/features/item-${index}/x.ts). The wall is direct-only.`,
+    }));
+    const screens = Array.from({ length: 4 }, (_, index) => ({
+      ruleId: 'SHARED_IMPORTS_SLICE',
+      file: 'src/app/hub.ts',
+      line: index + 1,
+      fromLayer: 'Screens',
+      toLayer: 'Screens',
+      target: `src/screens/item-${index}/x.ts`,
+      toSlice: `screens/item-${index}`,
+      failsStrict: false,
+      message: `shared root src/app/hub.ts → slice screens/item-${index} (src/screens/item-${index}/x.ts). The wall is direct-only.`,
+    }));
+    const other = {
+      ruleId: 'CONFIG_NO_LAYERS',
+      message: 'No file layers are configured.',
+    };
+    const warnings = [other, ...features, ...screens];
+    const before = JSON.stringify(warnings);
+    const lines = humanWarningLines(warnings);
+    expect(JSON.stringify(warnings)).toBe(before);
+    expect(lines).toHaveLength(3);
+    expect(lines[0]).toBe(formatWarningLine(other));
+    expect(lines[1]).toContain('SHARED_IMPORTS_SLICE Features → Features: 5 shared-root → slice bridges');
+    expect(lines[1]).toContain('src/ui/hub.ts:1 → features/item-0 (src/features/item-0/x.ts)');
+    expect(lines[1]).toContain('src/ui/hub.ts:2 → features/item-1 (src/features/item-1/x.ts)');
+    expect(lines[1]).toContain('src/ui/hub.ts:3 → features/item-2 (src/features/item-2/x.ts)');
+    expect(lines[1]).not.toContain('features/item-3');
+    expect(lines[1]).not.toContain('features/item-4');
+    expect(lines[1]).toContain('The wall is direct-only.');
+    expect(lines[1]).toContain(SHARED_IMPORTS_SLICE_FULL_LIST);
+    expect(lines[1]).toContain('ark-check --json');
+    expect(lines[1]).toContain('ark-check --doctor');
+    expect(lines[2]).toContain('Screens → Screens: 4 shared-root → slice bridges');
+    expect(lines[2]).not.toContain('screens/item-3');
+    expect(formatSharedImportsSliceSummary(features.slice(0, 1))).toContain('1 shared-root → slice bridge');
+    const flood = Array.from({ length: 1671 }, (_, index) => ({
+      ruleId: 'SHARED_IMPORTS_SLICE',
+      file: `src/ui/f${index}.ts`,
+      line: 1,
+      fromLayer: 'Features',
+      toLayer: 'Features',
+      toSlice: 'features/management',
+      target: `src/features/management/f${index}.ts`,
+      message: 'shared root. The wall is direct-only.',
+    }));
+    const [floodLine] = humanWarningLines(flood);
+    expect(humanWarningLines(flood)).toHaveLength(1);
+    expect(floodLine).toContain('1,671 shared-root → slice bridges');
+    expect(floodLine).toContain('src/ui/f0.ts:1');
+    expect(floodLine).toContain('src/ui/f2.ts:1');
+    expect(floodLine).not.toContain('src/ui/f3.ts');
+    expect(floodLine).toContain('ark-check --json');
+    expect(floodLine).toContain('ark-check --doctor');
+  });
+
+  it('doctor lists every SHARED_IMPORTS_SLICE edge instead of the summary', () => {
+    const warnings = Array.from({ length: 4 }, (_, index) => ({
+      ruleId: 'SHARED_IMPORTS_SLICE',
+      file: `src/ui/f${index}.ts`,
+      line: 2,
+      fromLayer: 'Features',
+      toLayer: 'Features',
+      target: `src/features/s${index}/x.ts`,
+      toSlice: `features/s${index}`,
+      message: `shared root src/ui/f${index}.ts → slice features/s${index} (src/features/s${index}/x.ts). The wall is direct-only.`,
+    }));
+    const logged = [];
+    const original = console.log;
+    console.log = (line) => logged.push(String(line));
+    try {
+      printSharedImportsSliceBridgeList(warnings);
+    } finally {
+      console.log = original;
+    }
+    const edgeLines = logged.filter((line) => line.includes('shared root '));
+    expect(edgeLines).toHaveLength(4);
+    expect(edgeLines.join('\n')).toContain('src/ui/f3.ts');
+    expect(logged.join('\n')).not.toContain('ark-check --json');
+    expect(logged.join('\n')).toContain('Shared-root → slice bridges (4):');
   });
 
   it('baselineOccurrenceKeys ratchets duplicates', () => {

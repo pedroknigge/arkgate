@@ -322,9 +322,9 @@ is evidence:
   character must not disable fail-closed. A path that still resolves to a slice keeps its slice —
   `features/auth/ui/form.tsx` stays `features/auth`. Shared roots are a sink: a slice may import
   a shared root, and a shared root may import a slice unless the rule sets `sharedImportsSlice`
-  to `"deny"`. That hop is direct only — `allowedCrossSlice` does not excuse it. Doctor lists
-  shared-root → slice edges even when the flag is off, so a green run still says the wall is
-  direct-only.
+  to `"deny"`. That hop is direct only — `allowedCrossSlice` does not excuse it. A green
+  `ark-check` prints one line per layer edge (the count and three examples) and says the
+  wall is direct-only. Every edge stays in `ark-check --json` and `ark-check --doctor`.
 - `allowedCrossSlice` entries match a full slice id (`features/catalog`) or a bare slice name
   (`catalog`), and only in the direction written. The reverse edge still denies. A bare name
   matches that name under **any** slice folder, so in a repo with several slice parents
