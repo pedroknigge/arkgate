@@ -1,0 +1,17 @@
+# vitest 5 needs Node >= 22.12. engines is still >= 18, and CI runs 18 and 20.
+# Remove these ignore entries when Node 22.12+ becomes the floor.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+    # Version-update PRs stay off. Security updates still open, and they honor ignore.
+    open-pull-requests-limit: 0
+    ignore:
+      - dependency-name: vitest
+        versions: [">=5.0.0"]
+      - dependency-name: "@vitest/coverage-v8"
+        versions: [">=5.0.0"]
+      - dependency-name: "@vitest/mocker"
+        versions: [">=5.0.0"]
