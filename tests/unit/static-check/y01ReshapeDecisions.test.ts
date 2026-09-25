@@ -327,9 +327,11 @@ describe('Y01 verdict semantics — facts stay, pressure changes', () => {
   it('a rejected top finding advances to the next finding, still one pilot at a time', () => {
     const root = mk();
     const projectFiles = projects(root);
+    // Anchor must not already be a `billing/` directory: that path is the
+    // consolidation subtree (`concept/` under the source anchor).
     const billingFiles = seed(
       root,
-      Array.from({ length: 42 }, (_, index) => `src/lib/billing/billing-${index}.ts`)
+      Array.from({ length: 42 }, (_, index) => `src/lib/pay-handlers/billing-${index}.ts`)
     );
     const files = [...projectFiles, ...billingFiles];
     writeDecisions(root, [decision('rejected')]);

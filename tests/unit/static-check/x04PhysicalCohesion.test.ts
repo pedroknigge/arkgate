@@ -17,6 +17,7 @@ import {
   computePhysicalCohesion,
   computeReshapePilot,
 } from '../../../bin/lib/physical-cohesion.mjs';
+import { layerForRelativePath, sliceIdForPath } from '../../../bin/ark-layer-match.mjs';
 import { runDoctor } from '../../../bin/lib/doctor-plan.mjs';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
@@ -185,12 +186,15 @@ describe('X04 reshape pilot — proposed, never applied (ADR 0010 D4–D7)', () 
     expect(card.moveSample.length).toBe(5);
     for (const m of card.moveSample) {
       expect(m.from).toMatch(/^src\/lib\/repositories\//);
-      expect(m.to).toMatch(/^src\/features\/projects\//);
+      expect(m.to).toMatch(/^src\/lib\/repositories\/projects\//);
+      expect(m.to.startsWith('src/features/')).toBe(false);
     }
     expect(card.doNot.join(' ')).toMatch(/never move files under app\//);
     expect(card.doNot.join(' ')).toMatch(/one pilot at a time/);
     expect(card.killSwitch).toBeTruthy();
     expect(card.successSignal).toContain('re-run doctor');
+    expect(card.successSignal).toContain('layer and slice id unchanged, card still proposed');
+    expect(card.successSignal).not.toContain('verdict stays green');
   });
 
   it('when every anchor is framework-owned, no move is proposed', () => {
@@ -202,6 +206,7 @@ describe('X04 reshape pilot — proposed, never applied (ADR 0010 D4–D7)', () 
     const pilot = computeReshapePilot(pc, files, root);
     expect(pilot.nextPilot).toBeNull();
     expect(pilot.note).toMatch(/fixed by framework convention/);
+    expect(JSON.stringify(pilot)).not.toContain('src/features');
   });
 
   it('a movable anchor below the display floor still gets the pilot (cross-model finding)', () => {
@@ -224,9 +229,51 @@ describe('X04 reshape pilot — proposed, never applied (ADR 0010 D4–D7)', () 
     expect(computeReshapePilot(null, [], '/tmp')).toBeNull();
   });
 
+  it('keeps the destination in the source layer and slice (issue 295)', () => {
+    const root = mk();
+    const rels: string[] = [];
+    for (let i = 0; i < 40; i++) {
+      rels.push(`src/lib/repositories/features/management/timesheet-activity-${i}.ts`);
+    }
+    const files = seed(root, rels);
+    const pc = computePhysicalCohesion(root, files);
+    const contract = {
+      layers: [{ name: 'PersistenceAdapters', patterns: ['src/lib/repositories/**'] }],
+      rules: [{ sliceFolders: ['features'] }],
+    };
+    const pilot = computeReshapePilot(pc, files, root, contract);
+    const move = pilot.nextPilot.moveSample[0];
+    expect(move.from.startsWith('src/lib/repositories/features/management/')).toBe(true);
+    expect(move.to.startsWith('src/lib/repositories/features/management/timesheet/')).toBe(true);
+    expect(move.to.startsWith('src/features/timesheet/')).toBe(false);
+    expect(layerForRelativePath(move.to, contract.layers)).toBe(
+      layerForRelativePath(move.from, contract.layers)
+    );
+    expect(sliceIdForPath(move.to, ['features'])).toBe('features/management');
+    expect(sliceIdForPath(move.from, ['features'])).toBe('features/management');
+    expect(JSON.stringify(pilot)).not.toContain('src/features/');
+  });
+
+  it('withholds the card when no destination keeps the layer and the slice', () => {
+    const root = mk();
+    const rels: string[] = [];
+    for (let i = 0; i < 40; i++) rels.push(`src/lib/repositories/timesheet-item-${i}.ts`);
+    const files = seed(root, rels);
+    const pc = computePhysicalCohesion(root, files);
+    // `*` matches one segment: the file is governed, `timesheet/` under it is not.
+    const contract = {
+      layers: [{ name: 'PersistenceAdapters', patterns: ['src/lib/repositories/*'] }],
+      rules: [{ sliceFolders: ['repositories'] }],
+    };
+    const pilot = computeReshapePilot(pc, files, root, contract);
+    expect(pilot.nextPilot).toBeNull();
+    expect(pilot.note).toMatch(/no governed destination keeps the layer and the slice/i);
+    expect(JSON.stringify(pilot)).not.toContain('src/features');
+  });
+
   it('the consolidation target subtree is never re-proposed as a source (loop converges)', () => {
-    // End-to-end pilot-loop finding: after executing a pilot, the moved files
-    // live under src/features/<concept>/ — proposing them again loops forever.
+    // After a pilot, moved files live under <anchor>/<concept>/ (here the
+    // concept directory itself). Proposing that subtree again nests forever.
     const root = mk();
     const rels: string[] = [];
     for (let i = 0; i < 45; i++) rels.push(`src/app/api/projects/p${i}/route.ts`);

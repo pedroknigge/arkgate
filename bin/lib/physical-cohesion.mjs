@@ -15,6 +15,7 @@
  * as W01 layer roles: a miss costs a warning line, never a verdict.
  */
 import path from 'node:path';
+import { layerForRelativePath, sliceIdForPath } from '../ark-layer-match.mjs';
 
 /** ADR 0010 D3 — corpus-calibrated, fixed. */
 const CLUSTER_MIN = 40;
@@ -126,76 +127,92 @@ export function computePhysicalCohesion(root, files) {
   };
 }
 
+function governedDestinationDir(anchor, concept) {
+  return !anchor || anchor === '.' ? concept : `${anchor}/${concept}`;
+}
+
+function anchorIsConsolidationSubtree(anchor, concept) {
+  return String(anchor).split('/').some((part) => part === concept);
+}
+
+function declaredSliceFolders(rules) {
+  const out = [];
+  const seen = new Set();
+  for (const rule of Array.isArray(rules) ? rules : []) {
+    const folders = Array.isArray(rule?.sliceFolders) ? rule.sliceFolders : [];
+    for (const folder of folders) {
+      if (typeof folder !== 'string' || folder.length === 0 || seen.has(folder.toLowerCase())) continue;
+      seen.add(folder.toLowerCase());
+      out.push(folder);
+    }
+  }
+  return out;
+}
+
+function destinationKeepsLayerAndSlice(fromRel, toRel, layers, sliceFolders) {
+  return layerForRelativePath(fromRel, layers) === layerForRelativePath(toRel, layers)
+    && sliceIdForPath(fromRel, sliceFolders) === sliceIdForPath(toRel, sliceFolders);
+}
+
+function withheldPilot(concept, note) {
+  return { proposed: true, applied: false, neverMechanicalSafe: true, concept, note, nextPilot: null };
+}
+
 /**
- * R2 — the proposed reshape pilot for the TOP finding (one at a time, Q04
- * discipline; ADR 0010 D4–D7). Proposal only: no apply path exists. Moves
- * target the smallest convention-free anchor; sampled `to` paths must fall
- * under the consolidated feature directory the agent will create via the
- * governed write path (T02 preflight validates every real move there).
+ * R2 — proposed reshape pilot (ADR 0010 D4–D7). `to` is `concept/` under the
+ * source anchor and is kept only when the generated layer and slice matchers
+ * agree. Tooling does not import Kernel preflight. Withheld when every
+ * candidate fails.
  */
-export function computeReshapePilot(cohesion, files, root) {
+export function computeReshapePilot(cohesion, files, root, contract) {
   const top = cohesion?.findings?.[0];
   if (!top) return null;
-  // Recompute the FULL anchor map for the top concept: the finding's anchors
-  // are display-filtered (>= MIRROR_MIN, capped), and pilot selection over
-  // that trimmed list falsely reported "nothing to move" when the only
-  // movable anchor sat below the display floor (cross-model review finding).
+  const layers = contract?.layers;
+  const sliceFolders = declaredSliceFolders(contract?.rules);
+  // Full anchor map: the finding's anchors are display-filtered (>= MIRROR_MIN).
   const byAnchor = new Map();
   const relOf = (abs) => path.relative(root, abs).split(path.sep).join('/');
-  for (const abs of Array.isArray(files) ? files : []) {
+  const fileList = Array.isArray(files) ? files : [];
+  for (const abs of fileList) {
     const rel = relOf(abs);
-    const r = classifyPhysical(rel);
-    if (!r || r.concept !== top.concept) continue;
-    byAnchor.set(r.anchor, (byAnchor.get(r.anchor) ?? 0) + 1);
+    const ranked = classifyPhysical(rel);
+    if (!ranked || ranked.concept !== top.concept) continue;
+    byAnchor.set(ranked.anchor, (byAnchor.get(ranked.anchor) ?? 0) + 1);
   }
-  const targetDir = `src/features/${top.concept}`;
   const movable = [...byAnchor.entries()]
-    .filter(
-      ([anchor]) =>
-        !CONVENTION_ANCHOR_RE.test(`${anchor}/`) &&
-        // The consolidation target subtree is DONE, not a source — without
-        // this the loop re-proposes the files it just moved, forever
-        // (end-to-end pilot-loop finding).
-        anchor !== targetDir &&
-        !anchor.startsWith(`${targetDir}/`)
-    )
+    .filter(([anchor]) => !CONVENTION_ANCHOR_RE.test(`${anchor}/`) && !anchorIsConsolidationSubtree(anchor, top.concept))
     .map(([anchor, count]) => ({ path: anchor, files: count }))
     .sort((a, b) => a.files - b.files || (a.path < b.path ? -1 : 1));
   if (movable.length === 0) {
-    return {
-      proposed: true,
-      applied: false,
-      neverMechanicalSafe: true,
-      concept: top.concept,
-      note: 'Every remaining anchor for this concept is fixed by framework convention or already consolidated — nothing to move; consider the merge-card review instead.',
-      nextPilot: null,
-    };
+    return withheldPilot(top.concept, 'Every remaining anchor for this concept is fixed by framework convention or already consolidated — nothing to move; consider the merge-card review instead.');
   }
-  // Smallest movable cluster worth piloting; if none reaches the floor, take
-  // the largest movable anchor so the pilot still exists and stays honest.
-  const pilotAnchor = movable.find((a) => a.files >= 10) ?? movable[movable.length - 1];
-  const rels = (Array.isArray(files) ? files : [])
-    .map(relOf)
-    .filter((rel) => {
-      const r = classifyPhysical(rel);
-      return r && r.concept === top.concept && r.anchor === pilotAnchor.path;
-    })
-    .sort();
-  const moves = rels.slice(0, MAX_MOVE_SAMPLE).map((rel) => ({
-    from: rel,
-    to: `${targetDir}/${rel.split('/').at(-1)}`,
-  }));
+  const legalAnchors = [];
+  for (const anchor of movable) {
+    const targetDir = governedDestinationDir(anchor.path, top.concept);
+    const legal = fileList.map(relOf).filter((rel) => {
+      const ranked = classifyPhysical(rel);
+      if (!ranked || ranked.concept !== top.concept || ranked.anchor !== anchor.path) return false;
+      const to = `${targetDir}/${rel.split('/').at(-1)}`;
+      return destinationKeepsLayerAndSlice(rel, to, layers, sliceFolders);
+    }).sort().map((rel) => ({ from: rel, to: `${targetDir}/${rel.split('/').at(-1)}` }));
+    if (legal.length > 0) legalAnchors.push({ ...anchor, targetDir, legal });
+  }
+  if (legalAnchors.length === 0) {
+    return withheldPilot(top.concept, 'No governed destination keeps the layer and the slice.');
+  }
+  // Smallest cluster of at least 10 files; otherwise the largest movable anchor.
+  const pilotAnchor = legalAnchors.find((a) => a.files >= 10) ?? legalAnchors.at(-1);
   return {
     proposed: true,
     applied: false,
     neverMechanicalSafe: true,
     concept: top.concept,
     nextPilot: {
-      pilotTarget: `${top.concept} @ ${pilotAnchor.path} (${pilotAnchor.files} file(s))`,
-      move: `Consolidate the ${top.concept} cluster from ${pilotAnchor.path} under ${targetDir}/ — one anchor only, moves proposed as an architecture change map and validated by the atomic preflight before any write.`,
-      moveSample: moves,
-      movesTotal: rels.length,
-      successSignal: `re-run doctor: the ${top.concept} cluster count drops and the verdict stays green`,
+      pilotTarget: `${top.concept} @ ${pilotAnchor.path} (${pilotAnchor.legal.length} file(s))`,
+      move: `Consolidate the ${top.concept} cluster from ${pilotAnchor.path} under ${pilotAnchor.targetDir}/ — one anchor only, same layer and slice, moves proposed as an architecture change map and validated by the atomic preflight before any write.`,
+      moveSample: pilotAnchor.legal.slice(0, MAX_MOVE_SAMPLE),
+      movesTotal: pilotAnchor.legal.length,
+      successSignal: `re-run doctor: the ${top.concept} cluster count drops, layer and slice id unchanged, card still proposed`,
       killSwitch: 'revert this move set; nothing else was touched',
       doNot: [
         'never move files under app/ or pages/ — fixed by framework convention',
