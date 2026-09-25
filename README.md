@@ -4,21 +4,6 @@
 
 **When the agent writes a bad import, the write doesn’t land. The same check fails the pull request.**
 
-Not an API Gateway. Not a folder linter. If the check is not required on the PR, the config
-is just documentation.
-
-AI can build fast—and make a mess just as fast.
-
-Keep the product easy to understand, change, and trust.
-
-Contain what the AI may write, and in what shape. Guide you with proven patterns and one next step. Order leftover mess toward a clean tree, a little at a time.
-
-Safer changes, fewer surprises, and extra protection only when you choose it.
-
-That is **Contener · Guiar · Ordenar**.
-
-Works with Cursor, Claude, Codex, and Grok.
-
 [![Website](https://img.shields.io/badge/website-arkgate.online-0a0a0a)](https://www.arkgate.online/)
 [![CI](https://github.com/pedroknigge/arkgate/actions/workflows/ci.yml/badge.svg)](https://github.com/pedroknigge/arkgate/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/arkgate?color=cb3837&label=npm)](https://www.npmjs.com/package/arkgate)
@@ -26,30 +11,50 @@ Works with Cursor, Claude, Codex, and Grok.
 ![Node](https://img.shields.io/badge/node-%3E%3D18-339933?logo=node.js)
 ![TS 5–7](https://img.shields.io/badge/TypeScript-5%20%7C%206%20%7C%207-3178c6?logo=typescript)
 
-```text
-  ┌─────────┐     ┌─────────┐     ┌─────────┐
-  │  WRITE  │────▶│  CHECK  │────▶│  SHIP   │
-  │  agent  │     │  block  │     │  merge  │
-  └─────────┘     └────┬────┘     └─────────┘
-                       │
-                       ▼
-                 bad import
-                 doesn't land
-```
-
 </div>
 
-> **ArkGate 4.8.20** is on npm `latest`.
-> Write. Check. Ship. Adopted = required GitHub
-> status running `arkgate-check --strict-merge`, or an explicit `advisory-only` stance.
-> Status is compact (`arkgate-check --doctor`; `--all` for Details). Optional **ArkRun**
-> (`arkgate/runtime`) is an in-memory runtime — not Postgres. Optional **ArkOrder**
-> (`arkgate/order`) stops rewriting a big product choice — like the billing plan —
-> as if it were a seat count. Change those choices through a valve, not a generic update.
-> `@arkgate/runtime` is deprecated.
-> [4.8.20](CHANGELOG.md) · [4.8.11](docs/releases/4.8.11.md) · [4.8.10](docs/releases/4.8.10.md) · [4.8.9](docs/releases/4.8.9.md) · [4.8.8](docs/releases/4.8.8.md) · [4.8.7](docs/releases/4.8.7.md) · [4.8.6](docs/releases/4.8.6.md) · [4.8.5](docs/releases/4.8.5.md) · [4.8.4](docs/releases/4.8.4.md) · [4.8.3](docs/releases/4.8.3.md) · [4.8.2](docs/releases/4.8.2.md) · [4.8.1](docs/releases/4.8.1.md) · [4.8.0](docs/releases/4.8.0.md) · [Docs hub](docs/README.md) · [Voice](docs/product-voice.md)
+ArkGate is import rules for AI-written TypeScript. **Contener · Guiar · Ordenar**: contain what the AI may write, and in what shape. Guide the next step. Order leftover mess toward a clean tree, a little at a time.
+
+<a id="less-spaghetti-after-the-gate-is-green"></a>
+
+## Why
+
+AI takes the shortest path. One bad import lands, then another, and the product gets harder to change. A linter that runs only after the agent finishes sees the mess too late.
+
+Design the boundary before you implement. Put a small interface in front of the work and keep the detail behind it. When leftover mess remains, the honest light is **needs a refactor**. Weakening the rules to paint the check green leaves that design unfinished.
+
+## Try it
+
+One command. Preview only — no files change. npm `latest` is **4.8.20**:
+
+```bash
+npx arkgate@4.8.20 start
+```
+
+## What a red result looks like
+
+After a rules file exists, a domain file that imports infrastructure fails the check (exit 1). This is real output from `arkgate-check` on arkgate@4.8.20:
+
+```text
+✖ LAYER_IMPORT_VIOLATION  src/domain/order.ts:1
+  DomainModel → Infrastructure  (src/infra/db.ts)
+  DomainModel must not import Infrastructure.
+  Next action: Classify the import: if it is constants/types/pure, adopt into DomainModel or SharedKernel; define a port only if the target is a real use-case. Then preflight again.
+
+✖ 1 violation(s).
+```
+
+Do that next action. Classify the import, or introduce a port when the dependency is a real use case. Then run the check again.
+
+That red line is the check. It does not stop every write. On Cursor, a hook without `failClosed: true` is fail-open: if the checker cannot run, the write still lands. Shell writes, hosted tools, and human edits are outside the local hook. The hard line for every path is a **required** GitHub status running `arkgate-check --strict-merge`. Until that status is required, the rules file is just documentation.
+
+Anyone: [Use ArkGate](docs/use.md) · Developers: [Develop](docs/develop.md) · This library: [CONTRIBUTING](CONTRIBUTING.md)
 
 ---
+
+## Appendix
+
+The minute above is the product. Below is reference: the longer introduction, what this is not, hosts, commands, extras, and where release history lives.
 
 ## Choose your path
 
@@ -61,47 +66,26 @@ Works with Cursor, Claude, Codex, and Grok.
 
 Full map: **[docs/README.md](docs/README.md)**
 
----
+## The longer introduction
 
-## Start in one minute
+AI can build fast—and make a mess just as fast.
 
-```bash
-npx arkgate start                 # preview files + commands
-npx arkgate start --apply         # compact config + host router + CI plan
-npx --package=arkgate arkgate-check --doctor        # status — one next step
-npx --package=arkgate arkgate-check --doctor --all  # full details
-```
+Keep the product easy to understand, change, and trust.
 
-`start --apply` pins arkgate with this repo's package manager (`pnpm add -w` / `yarn add -W` at a workspace root). Do not run `npm install -D arkgate` at a `workspace:*` root — npm rejects that protocol. After a local install, `npx arkgate-check --doctor` also works. `arkgate-check` is a command in the `arkgate` package, not its own npm package. If pnpm Age (`minimumReleaseAge`) blocks a brand-new release, keep using `npx --package=arkgate@<version>` — do not re-run the same add. Put arkgate on `minimumReleaseAgeExclude` in pnpm config or `pnpm-workspace.yaml` (a CLI flag is not enough), or wait until the package is mature.
+Contain what the AI may write, and in what shape. Guide you with proven patterns and one next step. Order leftover mess toward a clean tree, a little at a time.
 
-`start --apply` refuses when projected governed coverage is below 50% or
-shape confidence is weak (below 0.6 with coverage under 80%), or when the
-planned write is too big for compact start (more than 8 gate files or 32 KB).
-That lock is deliberate. Coverage/shape: lock with `--archetype <id>`,
-`--preset <name>`, or `--force`. Size: `--force` does not unlock. Next:
-`npx arkgate-check --init`. Or inspect ranked shapes with
-`npx arkgate-check --recommend`.
+Safer changes, fewer surprises, and extra protection only when you choose it.
 
-That is the product. Stuck? Run status (`--doctor`) and do action **#1**.
+That is **Contener · Guiar · Ordenar**.
 
-```text
-start → doctor → new files in the right folder
-              ↘ leftover mess: map, then one small refactor
-```
+## What this is not
 
-Keep the rules file out of product PRs. Local check:
-`ark-check --local --base origin/dev` (same as `--changed`; refused with
-`--strict-merge`). Changing the rules themselves uses `--contract-session`.
+Not an API Gateway. Not a folder linter. If the check is not required on the PR, the config
+is just documentation.
 
-Aliases `ark` / `ark-check` / `ark-mcp` still work. npm / pnpm / yarn. No install lifecycle scripts
-— and none on pack or prepare either, so `pnpm add git+https://github.com/pedroknigge/arkgate`
-installs at a pinned commit with no `allowBuilds` entry. A git install gives you the CLIs and the
-schemas; the library, MCP and ESLint entry points live in the built `dist/` and come from npm.
-See [docs/package-surface.md](docs/package-surface.md#installing-from-git).
+ArkGate is not a web framework, ORM, or job runner. The npm package is `arkgate` — not affiliated with the separate Archgate CLI project.
 
-![Write gate: agent blocked, then self-corrects](docs/assets/ark-write-gate.svg)
-
----
+ArkRun is an optional experimental runtime. In-memory. Not Postgres. `@arkgate/runtime` is deprecated. ArkOrder does not replace import rules: layers can be green while the agent still rewrites the billing plan like a seat count.
 
 ## What it is
 
@@ -133,12 +117,20 @@ inter-layer verdict when absent. Label leftovers **`[Layer]`** vs **`[ArkRules]`
 **`[ArkRun]`** vs **`[ArkOrder]`**.
 Details: [configuration](docs/configuration.md) · [use](docs/use.md).
 
-**Not** an API Gateway, a folder linter, a web framework, ORM, or job runner.
-ArkRun is in-memory — local and tests, not Postgres. ArkOrder does not replace
-import rules: layers can be green while the agent still PATCHes the billing plan
-like a seat count.
+```text
+  ┌─────────┐     ┌─────────┐     ┌─────────┐
+  │  WRITE  │────▶│  CHECK  │────▶│  SHIP   │
+  │  agent  │     │  block  │     │  merge  │
+  └─────────┘     └────┬────┘     └─────────┘
+                       │
+                       ▼
+                 bad import
+                 doesn't land
+```
 
-**Name note:** npm package `arkgate` — not affiliated with the separate Archgate CLI project.
+![Write gate: agent blocked, then self-corrects](docs/assets/ark-write-gate.svg)
+
+Adopted means a required GitHub status running `arkgate-check --strict-merge`, or an explicit `advisory-only` stance. Status is compact (`arkgate-check --doctor`; `--all` for details).
 
 ### When not to adopt
 
@@ -149,18 +141,6 @@ status the rules file is just documentation — stay with a boundary linter alon
 [Why not only ESLint / Nx / cruiser?](#why-not-only-eslint--nx--cruiser)).
 Anyone path: [docs/use.md — When not to adopt](docs/use.md#when-not-to-adopt). Limits of a green
 check: [4.3.0 — What ArkGate is / isn't](docs/releases/4.3.0.md#what-arkgate-is--isnt).
-
----
-
-## Why it exists
-
-AI takes the shortest path. Contain the write so a bad import never lands. Guide
-the next step so a non-expert is not stuck. Order leftover mess toward a clean
-tree, one small refactor at a time.
-
-Traditional linters catch this only in CI after the agent finished. ArkGate
-checks at write time and again on the PR. Green imports are not elegant design —
-leftover mess is **needs a refactor**, not “done”.
 
 ---
 
@@ -180,6 +160,44 @@ leftover mess is **needs a refactor**, not “done”.
 | **Ready · needs a refactor** | Edges clean; leftover design work remains | One small change — not “done” |
 
 Details: [docs/use.md](docs/use.md).
+
+---
+
+## Start in one minute
+
+```bash
+npx arkgate start                 # preview files + commands
+npx arkgate start --apply         # compact config + host router + CI plan
+npx --package=arkgate arkgate-check --doctor        # status — one next step
+npx --package=arkgate arkgate-check --doctor --all  # full details
+```
+
+`start --apply` pins arkgate with this repo's package manager (`pnpm add -w` / `yarn add -W` at a workspace root). Do not run `npm install -D arkgate` at a `workspace:*` root — npm rejects that protocol. After a local install, `npx arkgate-check --doctor` also works. `arkgate-check` is a command in the `arkgate` package, not its own npm package. If pnpm Age (`minimumReleaseAge`) blocks a brand-new release, keep using `npx --package=arkgate@<version>` — do not re-run the same add. Put arkgate on `minimumReleaseAgeExclude` in pnpm config or `pnpm-workspace.yaml` (a CLI flag is not enough), or wait until the package is mature.
+
+`start --apply` refuses when projected governed coverage is below 50% or
+shape confidence is weak (below 0.6 with coverage under 80%), or when the
+planned write is too big for compact start (more than 8 gate files or 32 KB).
+That lock is deliberate. Coverage/shape: lock with `--archetype <id>`,
+`--preset <name>`, or `--force`. Size: `--force` does not unlock. Next:
+`npx arkgate-check --init`. Or inspect ranked shapes with
+`npx arkgate-check --recommend`.
+
+That is the fuller path. Stuck? Run status (`--doctor`) and do action **#1**.
+
+```text
+start → doctor → new files in the right folder
+              ↘ leftover mess: map, then one small refactor
+```
+
+Keep the rules file out of product PRs. Local check:
+`ark-check --local --base origin/dev` (same as `--changed`; refused with
+`--strict-merge`). Changing the rules themselves uses `--contract-session`.
+
+Aliases `ark` / `ark-check` / `ark-mcp` still work. npm / pnpm / yarn. No install lifecycle scripts
+— and none on pack or prepare either, so `pnpm add git+https://github.com/pedroknigge/arkgate`
+installs at a pinned commit with no `allowBuilds` entry. A git install gives you the CLIs and the
+schemas; the library, MCP and ESLint entry points live in the built `dist/` and come from npm.
+See [docs/package-surface.md](docs/package-surface.md#installing-from-git).
 
 ---
 
@@ -271,6 +289,10 @@ npx arkgate-check --install-agent-gates --tools claude,cursor,codex,grok,antigra
 
 More: [docs/develop.md](docs/develop.md) · skills install: [docs/agent-guide.md](docs/agent-guide.md#install-skills-ark-and-ecosystem) · enthusiast track: [docs/enthusiast/](docs/enthusiast/README.md)
 
+## Other skills, only when you need them
+
+Day-to-day work uses the compact router and status. The full `/ark-*` pack is expert depth: install it when you want a guided next step, not as the first action. Catalog and install paths: [Install skills — Ark and ecosystem](docs/agent-guide.md#install-skills-ark-and-ecosystem).
+
 ---
 
 ## Optional ArkRun
@@ -346,43 +368,10 @@ Compact starters leave the extra off. Details: [ArkOrder](docs/arkorder.md).
 | Config · package surface · TS | [configuration](docs/configuration.md) · [package-surface](docs/package-surface.md) · [typescript-support](docs/typescript-support.md) |
 | Brownfield | [docs/brownfield-adoption.md](docs/brownfield-adoption.md) |
 | Security | [SECURITY.md](SECURITY.md) |
-| Current published (4.8.20 on npm `latest`) | [CHANGELOG](CHANGELOG.md) |
-| Prior published (4.8.11) | [docs/releases/4.8.11.md](docs/releases/4.8.11.md) · [CHANGELOG](CHANGELOG.md) |
-| Prior published (4.8.10) | [docs/releases/4.8.10.md](docs/releases/4.8.10.md) · [CHANGELOG](CHANGELOG.md) |
-| Prior published (4.8.9) | [docs/releases/4.8.9.md](docs/releases/4.8.9.md) · [CHANGELOG](CHANGELOG.md) |
-| Prior published (4.8.7) | [docs/releases/4.8.7.md](docs/releases/4.8.7.md) · [CHANGELOG](CHANGELOG.md) |
-| Prior published (4.8.6) | [docs/releases/4.8.6.md](docs/releases/4.8.6.md) |
-| Prior published (4.8.5) | [docs/releases/4.8.5.md](docs/releases/4.8.5.md) |
-| Prior published (4.8.4) | [docs/releases/4.8.4.md](docs/releases/4.8.4.md) |
-| Prior published (4.8.3) | [docs/releases/4.8.3.md](docs/releases/4.8.3.md) |
-| Prior published (4.8.2) | [docs/releases/4.8.2.md](docs/releases/4.8.2.md) |
-| Prior published (4.8.1) | [docs/releases/4.8.1.md](docs/releases/4.8.1.md) |
-| Prior published (4.8.0) | [docs/releases/4.8.0.md](docs/releases/4.8.0.md) |
-| Prior published (4.7.6) | [docs/releases/4.7.6.md](docs/releases/4.7.6.md) |
-| Prior published (4.7.5) | [docs/releases/4.7.5.md](docs/releases/4.7.5.md) |
-| Prior published (4.7.3) | [docs/releases/4.7.3.md](docs/releases/4.7.3.md) |
-| Prior published (4.7.2) | [docs/releases/4.7.2.md](docs/releases/4.7.2.md) |
-| Prior published (4.7.1) | [docs/releases/4.7.1.md](docs/releases/4.7.1.md) |
-| Prior published (4.7.0) | [docs/releases/4.7.0.md](docs/releases/4.7.0.md) |
-| Prior published (4.6.7) | [docs/releases/4.6.7.md](docs/releases/4.6.7.md) |
-| Prior published (4.6.6) | [docs/releases/4.6.6.md](docs/releases/4.6.6.md) |
-| Prior published (4.6.5) | [docs/releases/4.6.5.md](docs/releases/4.6.5.md) |
-| Prior published (4.6.3) | [docs/releases/4.6.3.md](docs/releases/4.6.3.md) |
-| Prior (4.6.2) | [docs/releases/4.6.2.md](docs/releases/4.6.2.md) |
-| Prior (4.6.1) | [docs/releases/4.6.1.md](docs/releases/4.6.1.md) |
-| Prior (4.6.0) | [docs/releases/4.6.0.md](docs/releases/4.6.0.md) |
-| Prior (4.5.7) | [docs/releases/4.5.7.md](docs/releases/4.5.7.md) |
-| Prior (4.5.0) | [docs/releases/4.5.0.md](docs/releases/4.5.0.md) |
-| Prior (4.4.0) | [docs/releases/4.4.0.md](docs/releases/4.4.0.md) |
-| Prior (4.3.0) | [docs/releases/4.3.0.md](docs/releases/4.3.0.md) |
-| Prior (4.2.1) | [docs/releases/4.2.1.md](docs/releases/4.2.1.md) |
-| Previous (4.2.0) | [docs/releases/4.2.0.md](docs/releases/4.2.0.md) |
-| Previous (4.1.1) | [docs/releases/4.1.1.md](docs/releases/4.1.1.md) |
-| Previous (4.1.0) | [docs/releases/4.1.0.md](docs/releases/4.1.0.md) |
-| Previous patch (4.0.1) | [docs/releases/4.0.1.md](docs/releases/4.0.1.md) |
-| Previous (4.0.0) | [docs/releases/4.0.0.md](docs/releases/4.0.0.md) |
-| Previous (3.9.2) | [docs/releases/3.9.2.md](docs/releases/3.9.2.md) |
+| Release history | [CHANGELOG.md](CHANGELOG.md) · [site changelog](https://www.arkgate.online/changelog/) · [docs hub index](docs/README.md#history-and-maintainer-material) |
 | History / maintainer evidence | [docs/archive/](docs/archive/README.md) |
+
+Version notes live in [CHANGELOG.md](CHANGELOG.md) and on the [site changelog](https://www.arkgate.online/changelog/). The docs hub keeps the per-version index: [History and maintainer material](docs/README.md#history-and-maintainer-material).
 
 ---
 

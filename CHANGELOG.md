@@ -48,6 +48,10 @@ in the immutable pre-2.0 archive linked below.
   short phrase templates so the shape is visible. No new skill, schema, or flag.
 
 ### Changed
+- README first screen is the one-minute story: what (**Contener · Guiar · Ordenar**),
+  why, `npx arkgate@4.8.20 start`, and one honest red check (fail-open named).
+  Host matrix, not-that line, and release index sit below `## Appendix`.
+  Release history points at CHANGELOG.md, the site changelog, and the docs hub.
 - Compact `--doctor` names ArkRules only when the `arkRules` map is on
   (one breath + counts, not a score). Absence stays silent. Reuses
   `rulesUnderContract` — no new schema, flag, or skill. `--doctor --all`
