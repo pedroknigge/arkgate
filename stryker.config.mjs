@@ -62,7 +62,7 @@ const config = {
     'src/domain/configContract.ts:627-627',
     // DF04 — selective pure truth islands (fail-closed / ack / promote honesty).
     // peerIsolationDecision is the killable fail-closed core; findDeniedEdgeDecision wires it.
-    'src/domain/layerMatch.ts:517-534',
+    'src/domain/layerMatch.ts:607-624',
     // AP02 (#264) shifted the helper; 934-963 is now classifyArkPolicyDelta's
     // compare/sort tail plus the function signature.
     'src/domain/policyDelta.ts:956-985',

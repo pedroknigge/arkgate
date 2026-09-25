@@ -58,6 +58,64 @@ describe('sliceIdForPath / inferSliceFoldersFromPatterns', () => {
     expect(sliceIdForPath('src/Features/Auth/api.ts', ['features'])).toBe('features/auth');
   });
 
+  it('keeps a bare name unanchored and binds a starred prefix at the shared-root offset', () => {
+    expect(sliceIdForPath('src/lib/features/projects/rfi/x.ts', ['lib/features/*/*'])).toBe(
+      'lib/features/projects/rfi'
+    );
+    expect(sliceIdForPath('src/lib/features/projects/rfi/x.ts', ['features'])).toBe(
+      'features/projects'
+    );
+    expect(
+      sliceIdForPath('src/app/api/projects/[projectCode]/rfis/route.ts', ['lib/features/*/*'])
+    ).toBeUndefined();
+    expect(
+      sliceIdForPath('src/components/features/projects/rfi-status-pill.tsx', ['projects'])
+    ).toBeUndefined();
+    expect(sliceIdForPath('src/features/auth/api.ts', ['features'])).toBe('features/auth');
+  });
+
+  it('bare names under src/lib/features keep resolving exactly as before', () => {
+    expect(sliceIdForPath('src/lib/features/projects/rfi/x.ts', ['features'])).toBe(
+      'features/projects'
+    );
+    expect(sliceIdForPath('src/lib/features/management/opportunity/y.ts', ['features'])).toBe(
+      'features/management'
+    );
+    expect(sliceIdForPath('src/lib/features/projects/rfi/deeper/x.ts', ['features', 'modules'])).toBe(
+      'features/projects'
+    );
+  });
+
+  it('a star never binds the filename, so a flat file stays in the last directory', () => {
+    expect(sliceIdForPath('src/lib/features/projects/file.ts', ['lib/features/*/*'])).toBe(
+      'lib/features/projects'
+    );
+    expect(sliceIdForPath('lib/features/projects/rfi/x.ts', ['lib/features/*/*'])).toBe(
+      'lib/features/projects/rfi'
+    );
+  });
+
+  it('a deliberate feature-to-feature import is cross-slice', () => {
+    const layers = [{ name: 'Features', patterns: ['src/lib/features/**'] }];
+    const rules = [
+      {
+        from: 'Features',
+        to: 'Features',
+        allowed: false as const,
+        peerIsolation: true,
+        sliceFolders: ['lib/features/*/*'],
+      },
+    ];
+    const decision = findDeniedEdgeDecision(rules, 'Features', 'Features', {
+      fromPath: 'src/lib/features/projects/rfi/x.ts',
+      toPath: 'src/lib/features/projects/other/y.ts',
+      layers,
+    });
+    expect(decision?.peerIsolationReason).toBe('cross-slice');
+    expect(decision?.fromSlice).toBe('lib/features/projects/rfi');
+    expect(decision?.toSlice).toBe('lib/features/projects/other');
+  });
+
   it('infers features from src/features/**', () => {
     expect(inferSliceFoldersFromPatterns(['src/features/**'])).toEqual(['features']);
     expect(inferSliceFoldersFromPatterns(['src/contexts/**', 'src/bounded-contexts/**'])).toEqual(

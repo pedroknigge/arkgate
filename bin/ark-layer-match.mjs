@@ -215,6 +215,14 @@ export function layerForRelativePath(relPath, layers) {
  * Includes the parent folder so `features/auth` ≠ `modules/auth`.
  * Identity is case-normalized for portable results across filesystems.
  * `src/features/auth/api.ts` + folders `["features"]` → `"features/auth"`.
+ *
+ * A bare name stays that unanchored one-segment match. The child segment is
+ * never the filename, so a flat file under the parent is not its own slice.
+ * A starred prefix (`lib/features` plus one star per extra directory) reuses
+ * the shared-root anchor: it must sit at offset 0, or at offset 1 after `src/`
+ * or `app/`. The slice id is the concrete directories the stars bind. A star
+ * never binds the filename; a file directly under the last bound directory
+ * keeps that directory as its slice.
  */
 export function sliceIdForPath(relPath, sliceFolders) {
     if (!sliceFolders?.length)
@@ -222,11 +230,87 @@ export function sliceIdForPath(relPath, sliceFolders) {
     const parts = String(relPath)
         .split(/[/\\]/)
         .filter(Boolean);
-    const folders = new Set(sliceFolders.map((s) => String(s).toLowerCase()));
-    for (let i = 0; i < parts.length - 1; i += 1) {
-        if (folders.has(parts[i].toLowerCase())) {
-            return `${parts[i].toLowerCase()}/${parts[i + 1].toLowerCase()}`;
+    if (parts.length === 0)
+        return undefined;
+    const bare = new Set();
+    for (const raw of sliceFolders) {
+        if (typeof raw !== 'string' || raw.length === 0)
+            continue;
+        if (isAnchoredSliceEntry(raw)) {
+            const anchored = anchoredSliceId(parts, raw);
+            if (anchored)
+                return anchored;
+            continue;
         }
+        if (!raw.includes('/') && !raw.includes('\\') && !raw.includes('*')) {
+            bare.add(raw.toLowerCase());
+        }
+    }
+    return bareSliceId(parts, bare);
+}
+/** A starred prefix with a real leading directory, not a bare name and not `*`. */
+function isAnchoredSliceEntry(entry) {
+    const segments = entry.split(/[/\\]/).filter((part) => part.length > 0);
+    if (segments.length < 2)
+        return false;
+    if (segments[0] === '*' || segments[0] === '**')
+        return false;
+    return segments.some((part) => part === '*');
+}
+function anchoredSliceId(parts, raw) {
+    const pattern = raw
+        .split(/[/\\]/)
+        .filter((part) => part.length > 0)
+        .map((part) => part.toLowerCase());
+    const offsets = anchorOffsets(parts, pattern[0] ?? '');
+    for (const offset of offsets) {
+        const id = bindAnchoredSlice(parts, pattern, offset);
+        if (id)
+            return id;
+    }
+    return undefined;
+}
+/**
+ * Walk the prefix. Literals must match. Each star binds one directory and
+ * stops before the filename; leftover stars then end the id at the last
+ * directory that did bind.
+ */
+function bindAnchoredSlice(parts, pattern, offset) {
+    const bound = [];
+    let index = offset;
+    for (let pi = 0; pi < pattern.length; pi += 1) {
+        const segment = pattern[pi];
+        if (segment === '*') {
+            if (index >= parts.length - 1) {
+                for (let rest = pi; rest < pattern.length; rest += 1) {
+                    if (pattern[rest] !== '*')
+                        return undefined;
+                }
+                break;
+            }
+            bound.push(parts[index].toLowerCase());
+            index += 1;
+            continue;
+        }
+        if (segment === '**' || index >= parts.length)
+            return undefined;
+        if (parts[index].toLowerCase() !== segment)
+            return undefined;
+        bound.push(parts[index].toLowerCase());
+        index += 1;
+    }
+    return bound.length > 0 ? bound.join('/') : undefined;
+}
+/** Bare names: leftmost folder, plus the next directory. Never the filename. */
+function bareSliceId(parts, names) {
+    if (names.size === 0)
+        return undefined;
+    for (let i = 0; i < parts.length - 1; i += 1) {
+        if (!names.has(parts[i].toLowerCase()))
+            continue;
+        if (i + 1 >= parts.length - 1)
+            continue;
+        return `${parts[i].toLowerCase()}/${parts[i + 1].toLowerCase()}`;
     }
     return undefined;
 }
@@ -279,6 +363,16 @@ function trimTrailingSlashes(value) {
 }
 /** Source folders a declared shared root may sit under without being named. */
 const SHARED_ROOT_SOURCE_PREFIXES = ['src', 'app'];
+/**
+ * Anchor at segment 0, or also at segment 1 when the path opens with `src/` or
+ * `app/` and the declaration does not itself start with that folder.
+ * Shared roots and starred slice prefixes share this offset.
+ */
+function anchorOffsets(parts, rootHead) {
+    const head = (parts[0] ?? '').toLowerCase();
+    const root = rootHead.toLowerCase();
+    return SHARED_ROOT_SOURCE_PREFIXES.includes(head) && root !== head ? [0, 1] : [0];
+}
 /** A root that would disable the wall wholesale is not a root. */
 function isBlanketRoot(raw) {
     const trimmed = trimTrailingSlashes(raw.replace(/^[./]+/, ''));
@@ -287,7 +381,7 @@ function isBlanketRoot(raw) {
 /**
  * Is `relPath` under one of the roots the rule declares shared on purpose?
  *
- * **Anchored**, unlike `sliceIdForPath`: the root must start the repo-relative
+ * **Anchored**: the root must start the repo-relative
  * path, optionally after a single conventional source folder, so `ui` covers
  * `ui/button.tsx` and `src/ui/button.tsx` but NOT `modules/a/ui/x.tsx` — an
  * unanchored root would exempt a whole tree the author never declared. Deeper
@@ -317,9 +411,7 @@ export function pathUnderSharedRoot(relPath, sharedRoots) {
         const root = normalizeSegments(raw);
         if (root.length === 0)
             continue;
-        // Anchor at segment 0, or at segment 1 when the path opens with a source
-        // folder the root does not itself name.
-        const offsets = SHARED_ROOT_SOURCE_PREFIXES.includes(parts[0]) && root[0] !== parts[0] ? [0, 1] : [0];
+        const offsets = anchorOffsets(parts, root[0] ?? '');
         for (const offset of offsets) {
             if (offset + root.length > parts.length)
                 continue;

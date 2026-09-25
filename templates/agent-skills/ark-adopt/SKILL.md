@@ -360,6 +360,12 @@ Ark protects the **boundary around** a framework, not its internals. Nest/DI pub
    thousands of shared files as violations; `cross-slice edge a → b` is the real one, and a
    deliberate directed edge goes in `allowedCrossSlice`. Promoting the shared slice to its own
    layer is still the preferred fix.
+   `sliceFolders`: a bare name stays an unanchored one-segment match (`features` on
+   `src/lib/features/projects/rfi/x.ts` is `features/projects`); a filename is never the
+   child segment. A starred prefix (`lib/features/*/*`) is anchored like `sharedRoots`
+   (offset 0 or 1) and the slice id is the directories the stars bind
+   (`lib/features/projects/rfi`). Before trusting green, add one deliberate
+   feature-to-feature import and expect `cross-slice`.
    If one edge dominates residual debt: **STOP — do not continue this skill as complete.** **STOP — concentrated edge:** rewrite `ark.config.json` **in this turn** with source evidence (do not freeze a wrong config or grind N freezes).
    Empty Domain/Persistence + I/O under Application → false-green.
    **STOP — do not continue this skill as complete.** **STOP — false-green:** fix the config **in this turn** before claiming ENFORCE. Do not claim goal.met / ENFORCE from type-only cleanup while doctor reports `contract-false-green-io-under-application`.
