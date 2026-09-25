@@ -6,6 +6,9 @@ updates:
     directory: "/"
     schedule:
       interval: weekly
+    # Semgrep requires a cooldown so a just-published package is not proposed the same day.
+    cooldown:
+      default-days: 7
     # Version-update PRs stay off. Security updates still open, and they honor ignore.
     open-pull-requests-limit: 0
     ignore:
