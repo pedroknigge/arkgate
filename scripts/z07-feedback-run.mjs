@@ -47,7 +47,7 @@ function parseArgs(argv) {
 function runVitest(files, kind, timeoutMs) {
   const pool = kind === 'pure'
     ? ['--pool', 'threads', '--maxWorkers', '4']
-    : ['--pool', 'forks', '--poolOptions.forks.singleFork=true'];
+    : ['--pool', 'forks', '--maxWorkers', '1', '--no-isolate'];
   const args = [VITEST, 'run', ...files, ...pool];
   const started = process.hrtime.bigint();
   const child = spawn(process.execPath, args, { cwd: REPO, env: process.env, stdio: 'inherit' });
