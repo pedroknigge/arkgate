@@ -5,32 +5,7 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
-### 4.8.21
-
-#### Changed
-- **Behavior change.** A comment, a string, a test body, or an import that merely
-  mentions an invariant id no longer counts as coverage. Only a `describe` /
-  `it` / `test` / `context` title does. Repos that were green because a comment
-  or a string contained the id will turn red. One-line fix: move the id into
-  the `it()` title.
-  ([#310](https://github.com/pedroknigge/arkgate/issues/310))
-
-#### Fixed
-- `coverage.symbol` accepts `type`, `interface`, and `enum` declarations
-  again (a `function`, `class`, `const`, or method still counts).
-  `INVARIANT_UNCOVERED` names what the scan found — for example found `type X`
-  in a file, or that the id appears only in a comment or a test body — instead
-  of saying no symbol was declared when one was.
-  ([#307](https://github.com/pedroknigge/arkgate/issues/307))
-
 ### Added
-- Optional per-rule `sliceIdentity`: `path` (default) or `stars`, for 4.8.21.
-  Absent and `path` keep today's slice ids byte for byte, so baselines and
-  `allowedCrossSlice` need no migration. `stars` names a starred
-  `sliceFolders` prefix as the last literal plus the star bindings
-  (`lib/features/*/*` and `lib/repositories/features/*/*` both yield
-  `features/projects/rfi`). Doctor warns when two prefixes collapse onto one
-  id and names both paths. Additive. No `schemaVersion` bump.
 - Soft doctor residual when Domain is declared but empty and the UI holds the
   rules (`noDomainFrontend`). Projects empty Domain + presentation share, or
   the existing `domain-logic-in-ui` smell. Friendly next step: one Domain file
@@ -73,27 +48,6 @@ in the immutable pre-2.0 archive linked below.
   short phrase templates so the shape is visible. No new skill, schema, or flag.
 
 ### Changed
-- README first screen is the one-minute story: what (**Contener · Guiar · Ordenar**),
-  why, `npx arkgate@4.8.20 start`, and one honest red check (fail-open named).
-  Host matrix, not-that line, and release index sit below `## Appendix`.
-  Release history points at CHANGELOG.md, the site changelog, and the docs hub.
-- `arkgate upgrade --apply` reports one outcome. Exit `0` means applied and the
-  architecture check is green (or there was nothing to apply). Exit `3` means
-  applied but red. Exit `2` means blocked until you consent. Exit `1` means
-  error, including a stale `--plan-digest` (that path was exit `2`). A stale CLI
-  outside the project still refuses with exit `2` before any plan. JSON stays
-  additive: `outcome`, `postUpgrade.verdict`, `postUpgrade.failing`
-  (`ruleId`, `count`, `sample`), `postUpgrade.behaviorChanges`, and on each
-  blocked asset `reason` plus `nextCommand`. A recorded file that is missing
-  and gitignored is `absent-local` and is recreated without consent (a
-  per-machine `.mcp.json` in a fresh worktree). A deleted file that is not
-  gitignored still needs `--accept-conflicts`. Behavior-change lines come from
-  the shipped per-version table (same sentences as these notes):
-  - 4.8.20: coverage.symbol now requires a real declaration (some green repos turn red)
-  - 4.8.21: a bare mention of an invariant id no longer counts as coverage (only describe/it titles or declarations, incl. type/interface/enum)
-  - 4.8.21: upgrade exit code 3 = applied but red. Scripts comparing against 1 must switch to 'non-zero'
-  ([#311](https://github.com/pedroknigge/arkgate/issues/311),
-  [#312](https://github.com/pedroknigge/arkgate/issues/312)).
 - Compact `--doctor` names ArkRules only when the `arkRules` map is on
   (one breath + counts, not a score). Absence stays silent. Reuses
   `rulesUnderContract` — no new schema, flag, or skill. `--doctor --all`
@@ -112,24 +66,6 @@ in the immutable pre-2.0 archive linked below.
   Required CI is still the shared merge line. No new skill, schema, or host.
 
 ### Fixed
-- Human `ark-check` groups `SHARED_IMPORTS_SLICE` advisories into one line per
-  rule and layer edge (the count and three examples) instead of one line per
-  import. The line names `ark-check --json` and `ark-check --doctor` for the
-  full list. `--json` is unchanged: one warning object per edge. Doctor prints
-  every edge. No engine change
-  ([#313](https://github.com/pedroknigge/arkgate/issues/313)).
-- Doctor `pilotLoop` turns on when a pilot is proposed, including a
-  physical-cohesion reshape card on a tree that is not design-weak.
-  `summarizePilotLoop` takes one candidate list and is active only when
-  that list is non-empty. It still names **one** extraction card
-  (`nextPilot` / `extractionCard`, same fields). Further candidates stay
-  queued. Inactive reason is `no-pilot-candidates` (replaces
-  `not-design-weak` and `no-pattern-bets`). Skill completion contracts
-  derive **Incomplete?** from `doctor.productHonesty.finished`: when
-  `finished` is false, **Incomplete? no** is disallowed and the agent
-  writes `yes — <pilotLoop.extractionCard.move or residual>`
-  ([#309](https://github.com/pedroknigge/arkgate/issues/309)).
-  For **4.8.21**.
 - Write hook and `ark-check` now agree on overlapping layer globs: the hook
   probes the same specifier extensions as `ark-check` and classifies with
   `layerForRelativePath` (explicit `money.ts` beats `src/lib/**`). Field
@@ -159,6 +95,117 @@ in the immutable pre-2.0 archive linked below.
   `@2` pin (issue [#211](https://github.com/pedroknigge/arkgate/issues/211)).
   Existing configs keep whatever URL they already have. Editor completion
   matches the 4.x line you just installed.
+
+## 4.8.21 — 2026-09-26
+
+**Patch** over **4.8.20**. Daily accumulate (2026-09-26 ART) of the ships
+that landed after 4.8.20 published: a bare invariant-id mention is not
+coverage and `coverage.symbol` accepts `type` / `interface` / `enum` again
+([#319](https://github.com/pedroknigge/arkgate/pull/319) /
+[#310](https://github.com/pedroknigge/arkgate/issues/310),
+[#307](https://github.com/pedroknigge/arkgate/issues/307)), one explained
+`arkgate upgrade --apply` outcome with exit `3` for applied but red
+([#320](https://github.com/pedroknigge/arkgate/pull/320) /
+[#311](https://github.com/pedroknigge/arkgate/issues/311),
+[#312](https://github.com/pedroknigge/arkgate/issues/312)), optional
+`sliceIdentity: "stars"`
+([#318](https://github.com/pedroknigge/arkgate/pull/318) /
+[#308](https://github.com/pedroknigge/arkgate/issues/308)), grouped
+`SHARED_IMPORTS_SLICE` human output
+([#316](https://github.com/pedroknigge/arkgate/pull/316) /
+[#313](https://github.com/pedroknigge/arkgate/issues/313)), pilot loop sees
+reshape pilots
+([#317](https://github.com/pedroknigge/arkgate/pull/317) /
+[#309](https://github.com/pedroknigge/arkgate/issues/309)), README
+first-contact rewrite
+([#306](https://github.com/pedroknigge/arkgate/pull/306)), and docs fixes
+([#315](https://github.com/pedroknigge/arkgate/pull/315)).
+**Write. Check. Ship.** **Behavior change:** some repos that are green
+today can turn red, and scripts that compare `arkgate upgrade --apply`
+against exit `1` must compare non-zero. See the two notes under Changed.
+No `schemaVersion` bump. Does not close `K01` / `Z09`. This mother
+`ark.config.json` still does **not** turn `arkOrder` on.
+
+**Status: released** (tag `v4.8.21`). This file does not assert registry
+state; run `npm view arkgate@4.8.21 version` to confirm the package is
+available (#314).
+
+### Changed
+- **Behavior change.** A comment, a string, a test body, or an import that merely
+  mentions an invariant id no longer counts as coverage. Only a `describe` /
+  `it` / `test` / `context` title does. Repos that were green because a comment
+  or a string contained the id will turn red. One-line fix: move the id into
+  the `it()` title.
+  ([#319](https://github.com/pedroknigge/arkgate/pull/319) /
+  [#310](https://github.com/pedroknigge/arkgate/issues/310))
+- **Behavior change for scripts.** `arkgate upgrade --apply` reports one
+  outcome. Exit `0` means applied and the architecture check is green (or
+  there was nothing to apply). Exit `3` means applied but red, so scripts
+  that compare against exit `1` must compare non-zero. Exit `2` means
+  blocked until you consent. Exit `1` means error, including a stale `--plan-digest` (that path was exit `2`). A stale CLI
+  outside the project still refuses with exit `2` before any plan. JSON stays
+  additive: `outcome`, `postUpgrade.verdict`, `postUpgrade.failing`
+  (`ruleId`, `count`, `sample`), `postUpgrade.behaviorChanges`, and on each
+  blocked asset `reason` plus `nextCommand`. A recorded file that is missing
+  and gitignored is `absent-local` and is recreated without consent (a
+  per-machine `.mcp.json` in a fresh worktree). A deleted file that is not
+  gitignored still needs `--accept-conflicts`. Behavior-change lines come from
+  the shipped per-version table (same sentences as these notes):
+  - 4.8.20: coverage.symbol now requires a real declaration (some green repos turn red)
+  - 4.8.21: a bare mention of an invariant id no longer counts as coverage (only describe/it titles or declarations, incl. type/interface/enum)
+  - 4.8.21: upgrade exit code 3 = applied but red. Scripts comparing against 1 must switch to 'non-zero'
+  ([#320](https://github.com/pedroknigge/arkgate/pull/320) /
+  [#311](https://github.com/pedroknigge/arkgate/issues/311),
+  [#312](https://github.com/pedroknigge/arkgate/issues/312)).
+- README first screen is the one-minute story: what (**Contener · Guiar · Ordenar**),
+  why, `npx arkgate@<version> start`, and one honest red check (fail-open named).
+  Host matrix, not-that line, and release index sit below `## Appendix`.
+  Release history points at CHANGELOG.md, the site changelog, and the docs hub.
+  ([#306](https://github.com/pedroknigge/arkgate/pull/306))
+
+### Added
+- Optional per-rule `sliceIdentity`: `path` (default) or `stars`.
+  Absent and `path` keep today's slice ids byte for byte, so baselines and
+  `allowedCrossSlice` need no migration. `stars` names a starred
+  `sliceFolders` prefix as the last literal plus the star bindings
+  (`lib/features/*/*` and `lib/repositories/features/*/*` both yield
+  `features/projects/rfi`). Doctor warns when two prefixes collapse onto one
+  id and names both paths. Additive. No `schemaVersion` bump.
+  ([#318](https://github.com/pedroknigge/arkgate/pull/318) /
+  [#308](https://github.com/pedroknigge/arkgate/issues/308)).
+
+### Fixed
+- `coverage.symbol` accepts `type`, `interface`, and `enum` declarations
+  again (a `function`, `class`, `const`, or method still counts).
+  `INVARIANT_UNCOVERED` names what the scan found — for example found `type X`
+  in a file, or that the id appears only in a comment or a test body — instead
+  of saying no symbol was declared when one was.
+  ([#319](https://github.com/pedroknigge/arkgate/pull/319) /
+  [#307](https://github.com/pedroknigge/arkgate/issues/307)).
+- Human `ark-check` groups `SHARED_IMPORTS_SLICE` advisories into one line per
+  rule and layer edge (the count and three examples) instead of one line per
+  import. The line names `ark-check --json` and `ark-check --doctor` for the
+  full list. `--json` is unchanged: one warning object per edge. Doctor prints
+  every edge. No engine change
+  ([#316](https://github.com/pedroknigge/arkgate/pull/316) /
+  [#313](https://github.com/pedroknigge/arkgate/issues/313)).
+- Doctor `pilotLoop` turns on when a pilot is proposed, including a
+  physical-cohesion reshape card on a tree that is not design-weak.
+  `summarizePilotLoop` takes one candidate list and is active only when
+  that list is non-empty. It still names **one** extraction card
+  (`nextPilot` / `extractionCard`, same fields). Further candidates stay
+  queued. Inactive reason is `no-pilot-candidates` (replaces
+  `not-design-weak` and `no-pattern-bets`). Skill completion contracts
+  derive **Incomplete?** from `doctor.productHonesty.finished`: when
+  `finished` is false, **Incomplete? no** is disallowed and the agent
+  writes `yes — <pilotLoop.extractionCard.move or residual>`
+  ([#317](https://github.com/pedroknigge/arkgate/pull/317) /
+  [#309](https://github.com/pedroknigge/arkgate/issues/309)).
+- Docs: the 4.8.20 header states its behavior change instead of "no
+  required config migration", and starred anchored `sliceFolders` wording
+  matches the code (the slice id includes the literal prefix plus the star
+  bindings) in configuration, the agent guide, and the adopt skill
+  ([#315](https://github.com/pedroknigge/arkgate/pull/315)).
 
 ## 4.8.20 — 2026-09-25
 
