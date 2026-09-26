@@ -154,42 +154,42 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
     expect(read('docs/releases/4.8.5.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.8.5.md')).toMatch(/arkgate@4\.8\.5/);
     expect(read('docs/releases/4.8.5.md')).not.toMatch(/\*\*Status:\*\*\s*prepared/i);
-    expect(read('README.md')).toMatch(/4\.8\.4/);
-    expect(read('README.md')).toMatch(/docs\/releases\/4\.8\.4\.md/);
+    expect(read('docs/README.md')).toMatch(/4\.8\.4/);
+    expect(read('docs/README.md')).toMatch(/releases\/4\.8\.4\.md/);
     expect(read('docs/releases/4.8.4.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.8.4.md')).toMatch(/arkgate@4\.8\.4/);
-    expect(read('README.md')).toMatch(/4\.8\.3/);
-    expect(read('README.md')).toMatch(/docs\/releases\/4\.8\.3\.md/);
+    expect(read('docs/README.md')).toMatch(/4\.8\.3/);
+    expect(read('docs/README.md')).toMatch(/releases\/4\.8\.3\.md/);
     expect(read('docs/releases/4.8.3.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.8.3.md')).toMatch(/arkgate@4\.8\.3/);
-    expect(read('README.md')).toMatch(/4\.8\.2/);
-    expect(read('README.md')).toMatch(/docs\/releases\/4\.8\.2\.md/);
+    expect(read('docs/README.md')).toMatch(/4\.8\.2/);
+    expect(read('docs/README.md')).toMatch(/releases\/4\.8\.2\.md/);
     expect(read('docs/releases/4.8.2.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.8.2.md')).toMatch(/arkgate@4\.8\.2/);
-    expect(read('README.md')).toMatch(/4\.8\.1/);
-    expect(read('README.md')).toMatch(/docs\/releases\/4\.8\.1\.md/);
+    expect(read('docs/README.md')).toMatch(/4\.8\.1/);
+    expect(read('docs/README.md')).toMatch(/releases\/4\.8\.1\.md/);
     expect(read('docs/releases/4.8.1.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.8.1.md')).toMatch(/arkgate@4\.8\.1/);
-    expect(read('README.md')).toMatch(/4\.8\.0/);
-    expect(read('README.md')).toMatch(/docs\/releases\/4\.8\.0\.md/);
+    expect(read('docs/README.md')).toMatch(/4\.8\.0/);
+    expect(read('docs/README.md')).toMatch(/releases\/4\.8\.0\.md/);
     expect(read('docs/releases/4.8.0.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.8.0.md')).toMatch(/arkgate@4\.8\.0/);
-    expect(read('README.md')).toMatch(/4\.7\.6/);
-    expect(read('README.md')).toMatch(/docs\/releases\/4\.7\.6\.md/);
-    expect(read('README.md')).toMatch(/4\.7\.5/);
-    expect(read('README.md')).toMatch(/docs\/releases\/4\.7\.5\.md/);
-    expect(read('README.md')).toMatch(/4\.7\.3/);
-    expect(read('README.md')).toMatch(/docs\/releases\/4\.7\.3\.md/);
-    expect(read('README.md')).toMatch(/4\.7\.2/);
-    expect(read('README.md')).toMatch(/docs\/releases\/4\.7\.2\.md/);
-    expect(read('README.md')).toMatch(/4\.7\.1/);
-    expect(read('README.md')).toMatch(/docs\/releases\/4\.7\.1\.md/);
-    expect(read('README.md')).toMatch(/4\.7\.0/);
-    expect(read('README.md')).toMatch(/docs\/releases\/4\.7\.0\.md/);
-    expect(read('README.md')).toMatch(/4\.6\.7/);
-    expect(read('README.md')).toMatch(/docs\/releases\/4\.6\.7\.md/);
-    expect(read('README.md')).toMatch(/4\.6\.6/);
-    expect(read('README.md')).toMatch(/docs\/releases\/4\.6\.6\.md/);
+    expect(read('docs/README.md')).toMatch(/4\.7\.6/);
+    expect(read('docs/README.md')).toMatch(/releases\/4\.7\.6\.md/);
+    expect(read('docs/README.md')).toMatch(/4\.7\.5/);
+    expect(read('docs/README.md')).toMatch(/releases\/4\.7\.5\.md/);
+    expect(read('docs/README.md')).toMatch(/4\.7\.3/);
+    expect(read('docs/README.md')).toMatch(/releases\/4\.7\.3\.md/);
+    expect(read('docs/README.md')).toMatch(/4\.7\.2/);
+    expect(read('docs/README.md')).toMatch(/releases\/4\.7\.2\.md/);
+    expect(read('docs/README.md')).toMatch(/4\.7\.1/);
+    expect(read('docs/README.md')).toMatch(/releases\/4\.7\.1\.md/);
+    expect(read('docs/README.md')).toMatch(/4\.7\.0/);
+    expect(read('docs/README.md')).toMatch(/releases\/4\.7\.0\.md/);
+    expect(read('docs/README.md')).toMatch(/4\.6\.7/);
+    expect(read('docs/README.md')).toMatch(/releases\/4\.6\.7\.md/);
+    expect(read('docs/README.md')).toMatch(/4\.6\.6/);
+    expect(read('docs/README.md')).toMatch(/releases\/4\.6\.6\.md/);
     expect(read('CONTRIBUTING.md')).toMatch(/slim CI/i);
     expect(read('CONTRIBUTING.md')).toMatch(/annotated/i);
     expect(read('CONTRIBUTING.md')).toMatch(/already exist, do not retag/i);
@@ -1288,13 +1288,13 @@ describe('CHANGELOG + release note cover 3.7.0 Phase Y', () => {
   });
 
   it('public release pointers cover published 4.6.2 and retain prior notes', () => {
-    expect(read('README.md')).toMatch(/4\.6\.2/);
-    expect(read('README.md')).toMatch(/docs\/releases\/4\.6\.2\.md/);
-    expect(read('README.md')).toMatch(/4\.6\.1/);
-    expect(read('README.md')).toMatch(/docs\/releases\/4\.6\.1\.md/);
-    expect(read('README.md')).toMatch(/4\.6\.0/);
-    expect(read('README.md')).toMatch(/docs\/releases\/4\.6\.0\.md/);
-    expect(read('README.md')).toMatch(/4\.5\.7|4\.5\.6|4\.5\.5/);
+    expect(read('docs/README.md')).toMatch(/4\.6\.2/);
+    expect(read('docs/README.md')).toMatch(/releases\/4\.6\.2\.md/);
+    expect(read('docs/README.md')).toMatch(/4\.6\.1/);
+    expect(read('docs/README.md')).toMatch(/releases\/4\.6\.1\.md/);
+    expect(read('docs/README.md')).toMatch(/4\.6\.0/);
+    expect(read('docs/README.md')).toMatch(/releases\/4\.6\.0\.md/);
+    expect(read('docs/README.md')).toMatch(/4\.5\.7|4\.5\.6|4\.5\.5/);
     expect(read('README.md')).toMatch(/npm `latest`|on npm/);
     expect(read('CONTRIBUTING.md')).toMatch(/docs\/releases\//);
     expect(read('CONTRIBUTING.md')).toMatch(/Optional \(not gates\)/);
@@ -1467,6 +1467,33 @@ describe('CHANGELOG + release note cover 3.9.1 patch hygiene', () => {
     expect(readme).toMatch(/just documentation/);
   });
 
+  it('README first screen is the one-minute story; reference sits below the appendix', () => {
+    const readme = read('README.md');
+    const boundary = readme.indexOf('\n## Appendix\n');
+    expect(boundary).toBeGreaterThan(0);
+    const screen = readme.slice(0, boundary);
+    const appendix = readme.slice(boundary);
+    expect(screen).toMatch(/Write\. Check\. Ship\./);
+    expect(screen.indexOf('When the agent writes a bad import')).toBeGreaterThan(
+      screen.indexOf('Write. Check. Ship.')
+    );
+    expect(screen).toMatch(/\*\*Contener · Guiar · Ordenar\*\*/);
+    expect(screen).toMatch(/npx arkgate@4\.8\.20 start/);
+    expect(screen).toMatch(/✖ LAYER_IMPORT_VIOLATION  src\/domain\/order\.ts:1/);
+    expect(screen).toMatch(/fail-open/);
+    expect(screen).toMatch(/needs a refactor/);
+    expect(screen).toMatch(/just documentation/);
+    expect(screen).not.toMatch(/Not an API Gateway/);
+    expect(screen).not.toMatch(/## Host enforcement support/);
+    expect(screen).not.toMatch(/docs\/releases\/4\./);
+    expect(appendix).toMatch(/Not an API Gateway\. Not a folder linter\./);
+    expect(appendix).toContain('AI can build fast—and make a mess just as fast.');
+    expect(appendix).toContain('That is **Contener · Guiar · Ordenar**.');
+    expect(appendix).toMatch(/## Host enforcement support/);
+    expect(appendix).toMatch(/\[CHANGELOG\.md\]\(CHANGELOG\.md\)/);
+    expect(appendix).toMatch(/https:\/\/www\.arkgate\.online\/changelog\//);
+  });
+
   it('current public openings use the locked deny and the same unlabeled four-paragraph story', () => {
     const deny = /When the agent writes a bad import/;
     const verbs = /Write\. Check\. Ship\./;
@@ -1482,7 +1509,6 @@ describe('CHANGELOG + release note cover 3.9.1 patch hygiene', () => {
     const forbiddenStoryJargon = /\blayers?\b|within-layer|\bruntime\b|in-memory|CI status|slow parameters|\bxi\b|\bvalve\b|architecture boundaries/i;
     const visibleStarScaffolding = /^#{1,6}.*(?:\bSTAR\b|situation.*task.*action.*result)|\*\*(?:Situation|Task|Action|Result):\*\*/im;
     const openings = [
-      'README.md',
       'docs/use.md',
       'docs/develop.md',
       'docs/README.md',

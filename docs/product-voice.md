@@ -66,9 +66,9 @@ Skills never enforce. ξ / Haken stay below the fold.
 
 ## Locked first-contact
 
-On the eight canonical public openings — `README.md`, `docs/use.md`,
-`docs/develop.md`, `docs/README.md`, `docs/enthusiast/README.md`,
-`docs/agent-guide.md`, `docs/ai-gates.md`, and `docs/package-surface.md` — use:
+On the seven lane openings — `docs/use.md`, `docs/develop.md`, `docs/README.md`,
+`docs/enthusiast/README.md`, `docs/agent-guide.md`, `docs/ai-gates.md`, and
+`docs/package-surface.md` — use:
 
 1. **Verbs:** `Write. Check. Ship.`
 2. **Deny:** `When the agent writes a bad import, the write doesn’t land. The same check fails the pull request.`
@@ -76,6 +76,14 @@ On the eight canonical public openings — `README.md`, `docs/use.md`,
 4. **Story:** the exact four-paragraph introduction below, with no visible heading or labels. Paragraph 3 is the north star in ordinary English.
 5. **Caption (immediately after the four paragraphs):** `That is **Contener · Guiar · Ordenar**.`
 6. **Technical nouns (below the introduction):** ArkGate is import rules. ArkRules is optional policies. ArkRun is an optional experimental runtime. ArkOrder is the extra for the few big product choices (billing plan, not seat counts) — named when the consumer opts in, never as the first noun. No ξ / Haken / slaving on the first screen.
+
+`README.md` is the first-contact module. Its first screen is four beats: what
+(**Contener · Guiar · Ordenar**), why (design the boundary before you implement;
+a green check is **needs a refactor** when leftover mess remains), one command
+(`npx arkgate@4.8.20 start`), and one honest red result (fail-open named; required
+CI is the hard line). The four paragraphs, the not-that line, the host matrix,
+and the release index sit below `## Appendix`. The not-that line does not lead
+the README.
 
 Do not lead with folders, `ark.config.json`, “contract”, “gate”, “house”, or “doctor”
 as the first noun. Historical: `If the AI writes an illegal import, the write is rejected`
