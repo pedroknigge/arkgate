@@ -8,7 +8,7 @@ import {
   summarizeDesignFitness,
   buildPatternBetsFromSmells,
 } from './design-smells.mjs';
-import { summarizePilotLoop } from './pilot-loop.mjs';
+import { collectPilotCandidates, summarizePilotLoop } from './pilot-loop.mjs';
 import { buildPostGreenNextAction } from './post-green-path.mjs';
 import { loadGoldenPattern, summarizeGoldenPattern } from './golden-pattern.mjs';
 import { collectAdoptionGaps } from './mcp-adoption.mjs';
@@ -76,11 +76,14 @@ export function buildReportDepthPayload(
   });
   const postGreenPath = buildPostGreenNextAction(designFitness);
   const patternBets = buildPatternBetsFromSmells(designSmells);
-  const pilotLoop = summarizePilotLoop({
-    designWeak: designFitness.designWeak,
-    patternBets,
-    designSmells,
-  });
+  const physicalCohesion = computePhysicalCohesion(root, files);
+  physicalCohesion.reshapeDecisions = computeReshapeDecisionMemory(root, files).summary;
+  const pilotLoop = summarizePilotLoop(
+    collectPilotCandidates(
+      { ...designFitness, patternBets, designSmells },
+      { physicalCohesion }
+    )
+  );
   const goldenPattern = summarizeGoldenPattern(loadGoldenPattern(root));
   const adoption = collectAdoptionGaps(root, config, coverage);
   const baseline = readBaseline(root, '.ark-baseline.json');
@@ -155,8 +158,6 @@ export function buildReportDepthPayload(
       : packageVersionTruth?.code === 'PACKAGE_PIN_ABSENT'
         ? 'Add arkgate to package.json and install so CI/npx resolve this CLI (PACKAGE_PIN_ABSENT)'
         : null;
-  const physicalCohesion = computePhysicalCohesion(root, files);
-  physicalCohesion.reshapeDecisions = computeReshapeDecisionMemory(root, files).summary;
   const productHonesty = buildProductHonesty({
     coverageHonesty,
     baselineHonesty,

@@ -196,5 +196,7 @@ End with **exactly** these headings (markdown `###`):
 - **Handoff:** `/ark-…` / CLI / `none`
 - **Incomplete?** `no` | `yes — <what is missing>`
 
+When `doctor.productHonesty.finished` is `false`, **Incomplete? no** is disallowed. Write `yes — <pilotLoop.extractionCard.move or residual>`.
+
 If a **STOP** handoff applies and you continued as if done, set **Incomplete?** to `yes`.
 **Skill incomplete if missing** any of the bullets above.

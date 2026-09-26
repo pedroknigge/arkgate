@@ -110,10 +110,10 @@ decision-grade explore pass **and** without opening violating files.
    layout — no pilot”; never reconstruct that dead card from `findings`. When the user accepts,
    defers, or rejects a live card, persist its exact `decisionTarget` with a non-empty reason and
    optional `reviewBy` in `.ark/reshape-decisions.json`; never infer a verdict from golden prose.
-   A cohesion residual starts one reshape judgment card, not the pattern-bet apply loop.
-   `pilotLoop` stays inactive (`not-design-weak`) unless the tree is design-weak.
-
-
+   A cohesion residual starts **one** reshape judgment card on `pilotLoop.nextPilot`
+   (one pilot, then re-doctor). The loop is active when a pilot candidate exists,
+   including that reshape card when the tree is not design-weak. It does not start
+   a pattern-bet batch.
 
 ## MCP workspace binding (mandatory)
 
@@ -307,6 +307,8 @@ End with **exactly** these headings (markdown `###`):
 - **Compass:** top residual lenses | `n/a`
 - **Handoff:** `/ark-…` / CLI / `none`
 - **Incomplete?** `no` | `yes — <what is missing>`
+
+When `doctor.productHonesty.finished` is `false`, **Incomplete? no** is disallowed. Write `yes — <pilotLoop.extractionCard.move or residual>`.
 
 If a **STOP** handoff applies and you continued as if done, set **Incomplete?** to `yes`.
 **Skill incomplete if missing** any of the bullets above.

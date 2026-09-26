@@ -355,8 +355,8 @@ stays in the same layer and the same slice id. If no governed destination keeps 
 `nextPilot` is null — do not invent a folder outside the contract. Success is a smaller
 cluster with the layer and slice id unchanged and the card still proposed; a green gate is
 not success. A cohesion residual (`physical-cohesion-residual`) starts that one reshape
-judgment card. It does not start the pattern-bet apply loop — `pilotLoop` stays inactive
-while design-weak is false.
+judgment card as `pilotLoop.nextPilot`. It does not start the pattern-bet apply
+loop. Apply that one card, then re-doctor.
 
 ### C. Coupling & debt (measure, don’t guess)
 Prefer evidence over aesthetics:
@@ -533,6 +533,8 @@ End with **exactly** these headings (markdown `###`):
 - **Done axes:** architecture residual (status/doctor/compass) | feature/ticket residual (outside package). Enforce green ≠ feature done
 - **Handoff:** `/ark-…` / CLI / `none`
 - **Incomplete?** `no` | `yes — <what is missing>`
+
+When `doctor.productHonesty.finished` is `false`, **Incomplete? no** is disallowed. Write `yes — <pilotLoop.extractionCard.move or residual>`.
 
 If a **STOP** handoff applies and you continued as if done, set **Incomplete?** to `yes`.
 **Skill incomplete if missing** any of the bullets above.

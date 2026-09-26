@@ -228,12 +228,13 @@ ark-check --plan --json     # patternBets[] with neverMechanicalSafe: true
 
 ### Pilot loop (Q04) — one pilot at a time → re-doctor
 
-When doctor/plan report **ENFORCE · design-weak**, JSON also includes **`pilotLoop`**:
+When a pilot candidate exists, doctor/plan JSON includes **`pilotLoop`**:
 
 | Field | Meaning |
 |-------|---------|
-| `pilotLoop.active` | `true` when design-weak and at least one pattern bet exists |
-| `pilotLoop.nextPilot` | **One** extraction card (same fields as §6) ranked from `patternBets` |
+| `pilotLoop.active` | `true` when a candidate exists: a design-weak pattern bet, or a proposed reshape card |
+| `pilotLoop.nextPilot` / `extractionCard` | **One** extraction card (same fields as §6). Further candidates stay queued |
+| `pilotLoop.reason` | `no-pilot-candidates` when the list is empty |
 | `pilotLoop.oneAtATime` | Always true — do not multi-pilot batch |
 | `pilotLoop.neverMechanicalSafe` | Always true — judgment only; re-doctor is the success sensor |
 

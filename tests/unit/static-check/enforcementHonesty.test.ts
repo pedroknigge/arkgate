@@ -29,7 +29,7 @@ import {
   DESIGN_WEAK_HONESTY_FLAGS,
   POST_GREEN_PLACEMENT_COACHING,
 } from '../../../bin/lib/post-green-path.mjs';
-import { summarizePilotLoop } from '../../../bin/lib/pilot-loop.mjs';
+import { collectPilotCandidates, summarizePilotLoop } from '../../../bin/lib/pilot-loop.mjs';
 import { buildRemediationPlan } from '../../../bin/lib/doctor-plan.mjs';
 import { HOST_SUPPORT_HOSTS, HOST_SUPPORT_MATRIX } from '../../../bin/lib/host-support-matrix.mjs';
 
@@ -242,25 +242,27 @@ describe('post-validity coaching flags', () => {
   });
 
   it('pilot loop queues remaining bets and emits both auto-apply aliases', () => {
-    const loop = summarizePilotLoop({
-      designWeak: true,
-      patternBets: [
-        {
-          id: 'b1',
-          smellId: 'god-module',
-          neverMechanicalSafe: true,
-          evidence: ['src/a.ts'],
-          move: 'extract',
-        },
-        {
-          id: 'b2',
-          smellId: 'soft-contract',
-          neverMechanicalSafe: true,
-          evidence: ['src/b.ts'],
-          move: 'tighten',
-        },
-      ],
-    });
+    const loop = summarizePilotLoop(
+      collectPilotCandidates({
+        designWeak: true,
+        patternBets: [
+          {
+            id: 'b1',
+            smellId: 'god-module',
+            neverMechanicalSafe: true,
+            evidence: ['src/a.ts'],
+            fix: 'extract',
+          },
+          {
+            id: 'b2',
+            smellId: 'soft-contract',
+            neverMechanicalSafe: true,
+            evidence: ['src/b.ts'],
+            fix: 'tighten',
+          },
+        ],
+      })
+    );
     expect(loop.active).toBe(true);
     expect(loop.oneAtATime).toBe(true);
     expect(loop.multiPilotBatchForbidden).toBe(true);
@@ -428,9 +430,37 @@ describe('graph-blind template-interpolation (Y09 advisory)', () => {
     expect(JSON.stringify(designFitness).toLowerCase()).not.toContain('cohesion');
     expect(JSON.stringify(patternBets)).toBe(beforeBets);
     expect(JSON.stringify(patternBets).toLowerCase()).not.toContain('cohesion');
-    const loop = summarizePilotLoop({ designWeak: false, patternBets, designSmells: [] });
-    expect(loop.active).toBe(false);
-    expect(loop.reason).toBe('not-design-weak');
+    const idle = summarizePilotLoop(
+      collectPilotCandidates({ ...designFitness, patternBets, designSmells: [] }, {})
+    );
+    expect(idle.active).toBe(false);
+    expect(idle.reason).toBe('no-pilot-candidates');
+    const reshapeOnly = collectPilotCandidates(
+      { ...designFitness, patternBets, designSmells: [] },
+      {
+        physicalCohesion: {
+          reshapePilot: {
+            proposed: true,
+            nextPilot: {
+              pilotTarget: 'timesheet @ src/lib/repositories (25 file(s))',
+              move: 'Consolidate the timesheet cluster — one anchor only',
+              moveSample: [{ from: 'src/lib/repositories/timesheet-a.ts', to: 'src/lib/repositories/timesheet/timesheet-a.ts' }],
+              successSignal: 'cluster count drops',
+              killSwitch: 'revert this move set',
+            },
+          },
+        },
+      }
+    );
+    expect(reshapeOnly).toHaveLength(1);
+    expect(reshapeOnly[0].source).toBe('reshape');
+    const loop = summarizePilotLoop(reshapeOnly);
+    expect(loop.active).toBe(true);
+    expect(loop.oneAtATime).toBe(true);
+    expect(loop.queuedBets).toBe(0);
+    expect(Array.isArray(loop.nextPilot)).toBe(false);
+    expect(loop.extractionCard.move).toMatch(/one anchor only/);
+    expect(loop.nextPilot).toBe(loop.extractionCard);
     expect(physicalCohesionResidualRemains({ findings: [{ concept: 'timesheet' }] })).toBe(true);
     expect(
       physicalCohesionResidualRemains({

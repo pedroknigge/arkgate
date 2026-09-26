@@ -83,6 +83,24 @@ describe('skill surface inventory', () => {
     expect(names).toEqual([...EXPECTED_SKILLS].sort());
   });
 
+  it('rendered skills derive Incomplete? from productHonesty.finished (#309)', () => {
+    const renderedRoot = path.join(REPO, 'templates/agent-skills');
+    for (const name of EXPECTED_SKILLS) {
+      const rendered = fs.readFileSync(path.join(renderedRoot, name, 'SKILL.md'), 'utf8');
+      expect(rendered, name).toContain('doctor.productHonesty.finished');
+      expect(rendered, name).toContain('**Incomplete? no** is disallowed');
+      expect(rendered, name).toContain('yes — <pilotLoop.extractionCard.move or residual>');
+    }
+    const upgrade = fs.readFileSync(path.join(renderedRoot, 'ark-upgrade', 'SKILL.md'), 'utf8');
+    const autopilot = fs.readFileSync(path.join(renderedRoot, 'ark-autopilot', 'SKILL.md'), 'utf8');
+    const explore = fs.readFileSync(path.join(renderedRoot, 'ark-explore', 'SKILL.md'), 'utf8');
+    expect(upgrade).toContain('/ark-autopilot');
+    expect(autopilot).toContain('/ark-explore');
+    expect(explore).toContain('/ark-autopilot');
+    expect(autopilot).not.toContain('not-design-weak');
+    expect(explore).not.toContain('pilotLoop` stays inactive');
+  });
+
   it('ark-upgrade documents active vs deferred hosts (Codex not Incomplete)', () => {
     const body = fs.readFileSync(path.join(SKILLS_DIR, 'ark-upgrade.md'), 'utf8');
     expect(body).toMatch(/Active host vs deferred/i);
