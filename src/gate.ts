@@ -260,8 +260,16 @@ export {
 
 export {
   canPromoteInvariant,
+  classifyCoverage,
+  countsAsCoverage,
+  describeCoverage,
   evaluateInvariantCoverage,
+  type CoverageEvidence,
+  type CoverageFiles,
+  type CoverageInvariant,
+  type DeclarationShape,
   type InvariantCoverageEvidence,
+  type MentionContext,
 } from './domain/invariantCoverage';
 
 export {

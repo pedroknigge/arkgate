@@ -7,10 +7,13 @@ import { ARK_CONFIG_SCHEMA } from '../../../src/domain/configContract';
 import {
   canPromoteInvariant,
   catalogHasEnforcedInvariant,
+  classifyCoverage,
   collectMissingCoverageRootsFindings,
   collectMissingInvariantTestsPathFindings,
   configuredCoverageRoots,
   configuredInvariantTestsPaths,
+  countsAsCoverage,
+  describeCoverage,
   evaluateInvariantCoverage,
   hasConfiguredCoverageRoots,
   hasConfiguredInvariantTestsPath,
@@ -18,6 +21,10 @@ import {
   INVARIANT_COVERAGE_ROOTS_RULE_ID,
   INVARIANT_TESTS_PATH_MESSAGE,
   INVARIANT_TESTS_PATH_RULE_ID,
+  type CoverageEvidence,
+  type CoverageInvariant,
+  type DeclarationShape,
+  type MentionContext,
 } from '../../../src/domain/invariantCoverage';
 
 function catalog() {
@@ -694,6 +701,304 @@ describe('AR09–AR11 invariant coverage + promotion', () => {
     expect(
       (ARK_CONFIG_SCHEMA.properties as { arkRules?: unknown }).arkRules
     ).not.toHaveProperty('hintBudget');
+  });
+});
+
+describe('classifyCoverage evidence (#307, #310)', () => {
+  const id = 'INV-ORDER-001';
+  const invariant: CoverageInvariant = {
+    id,
+    coverage: { test: true, symbol: 'Order.ensureInvariants' },
+  };
+
+  function files(content: string, path = 'tests/order.test.ts') {
+    return { fileContents: { [path]: content }, testFiles: [path] };
+  }
+
+  it('names a describe/it title and counts it', () => {
+    const ev = classifyCoverage(invariant, files("it('INV-ORDER-001 keeps total non-negative', () => {})"));
+    expect(ev).toEqual({
+      kind: 'test-title',
+      file: 'tests/order.test.ts',
+      title: 'INV-ORDER-001 keeps total non-negative',
+    });
+    expect(countsAsCoverage(ev)).toBe(true);
+    expect(describeCoverage(invariant, ev)).toBe(
+      'found `INV-ORDER-001 keeps total non-negative` in a describe/it title in tests/order.test.ts'
+    );
+  });
+
+  it('accepts each declaration shape, including type, interface, and enum', () => {
+    const rows: Array<{ shape: DeclarationShape; symbol: string; source: string; label: string }> = [
+      {
+        shape: 'function',
+        symbol: 'defineRoute',
+        label: 'defineRoute',
+        source: 'export function defineRoute() {}\n',
+      },
+      {
+        shape: 'class',
+        symbol: 'Order',
+        label: 'Order',
+        source: 'export class Order {}\n',
+      },
+      {
+        shape: 'const',
+        symbol: 'defineRoute',
+        label: 'defineRoute',
+        source: 'export const defineRoute = () => {};\n',
+      },
+      {
+        shape: 'method',
+        symbol: 'Order.ensureInvariants',
+        label: 'ensureInvariants',
+        source: 'export class Order { ensureInvariants() { if (this.total < 0) throw new Error(); } }\n',
+      },
+      {
+        shape: 'type',
+        symbol: 'DomainEventPayload',
+        label: 'DomainEventPayload',
+        source: 'export type DomainEventPayload = Record<string, unknown>\n',
+      },
+      {
+        shape: 'interface',
+        symbol: 'ProjectStatus',
+        label: 'ProjectStatus',
+        source: 'export interface ProjectStatus { id: string }\n',
+      },
+      {
+        shape: 'enum',
+        symbol: 'ProjectStatus',
+        label: 'ProjectStatus',
+        source: 'export enum ProjectStatus { Open, Closed }\n',
+      },
+    ];
+    for (const row of rows) {
+      const inv: CoverageInvariant = { id, coverage: { test: true, symbol: row.symbol } };
+      const source = 'src/domain/project.ts';
+      const ev = classifyCoverage(inv, {
+        fileContents: { [source]: row.source },
+        testFiles: ['tests/order.test.ts'],
+      });
+      expect(ev, row.shape).toEqual({ kind: 'declaration', file: source, shape: row.shape });
+      expect(countsAsCoverage(ev), row.shape).toBe(true);
+      expect(describeCoverage(inv, ev)).toBe(`found \`${row.shape} ${row.label}\` in ${source}`);
+
+      const result = evaluateInvariantCoverage({
+        arkRules: catalogForSymbol(id, 'declared symbol', row.symbol),
+        fileContents: { [source]: row.source },
+        testFiles: ['tests/order.test.ts'],
+      });
+      expect(result.coverage[0]?.covered, row.shape).toBe(true);
+      expect(result.coverage[0]?.evidence, row.shape).toContain('symbol');
+      expect(result.coverage[0]?.shape, row.shape).toBe(row.shape);
+      expect(result.coverage[0]?.symbolEvidenceFile, row.shape).toBe(source);
+      expect(result.violations, row.shape).toHaveLength(0);
+    }
+  });
+
+  it('accepts a non-exported type, interface, and enum', () => {
+    const rows: Array<{ shape: DeclarationShape; source: string }> = [
+      { shape: 'type', source: 'type DomainEventPayload = { id: string }\n' },
+      { shape: 'interface', source: 'interface ProjectStatus { id: string }\n' },
+      { shape: 'enum', source: 'enum ProjectStatus { Open }\n' },
+    ];
+    for (const row of rows) {
+      const symbol = row.shape === 'type' ? 'DomainEventPayload' : 'ProjectStatus';
+      const ev = classifyCoverage(
+        { id, coverage: { symbol } },
+        {
+          fileContents: { 'src/domain/project.ts': row.source },
+          testFiles: [],
+        }
+      );
+      expect(ev, row.shape).toEqual({
+        kind: 'declaration',
+        file: 'src/domain/project.ts',
+        shape: row.shape,
+      });
+    }
+  });
+
+  it('does not treat a commented-out type as a declaration', () => {
+    const ev = classifyCoverage(
+      { id, coverage: { symbol: 'DomainEventPayload' } },
+      {
+        fileContents: {
+          'src/domain/project.ts': '// export type DomainEventPayload = { id: string }\n',
+        },
+        testFiles: [],
+      }
+    );
+    expect(ev.kind).toBe('mention-only');
+    if (ev.kind === 'mention-only') expect(ev.context).toBe('comment');
+    expect(countsAsCoverage(ev)).toBe(false);
+  });
+
+  it('keeps test-title and symbol together, and records shape, when both count', () => {
+    const result = evaluateInvariantCoverage({
+      arkRules: catalog(),
+      fileContents: {
+        'src/domain/order.ts':
+          'export class Order { ensureInvariants() { if (this.total < 0) throw new Error(); } }',
+        'tests/order.test.ts': "it('INV-ORDER-001 keeps total non-negative', () => {})",
+      },
+      testFiles: ['tests/order.test.ts'],
+    });
+    expect(result.coverage[0]?.evidence).toEqual(['test-title', 'symbol']);
+    expect(result.coverage[0]?.shape).toBe('method');
+    const ev = classifyCoverage(invariant, {
+      fileContents: {
+        'src/domain/order.ts':
+          'export class Order { ensureInvariants() { if (this.total < 0) throw new Error(); } }',
+        'tests/order.test.ts': "it('INV-ORDER-001 keeps total non-negative', () => {})",
+      },
+      testFiles: ['tests/order.test.ts'],
+    });
+    expect(ev.kind).toBe('test-title');
+  });
+
+  it('reports each mention context and never counts it', () => {
+    const rows: Array<{ context: MentionContext; content: string; message: string }> = [
+      {
+        context: 'comment',
+        content: "// INV-ORDER-001\nit('unrelated', () => expect(1).toBe(1))\n",
+        message:
+          'INV-ORDER-001 appears only in a comment in tests/order.test.ts; put it in a describe/it title',
+      },
+      {
+        context: 'string',
+        content: "it('unrelated', () => { const name = 'INV-ORDER-001'; })\n",
+        message:
+          'INV-ORDER-001 appears only in a string in tests/order.test.ts; put it in a describe/it title',
+      },
+      {
+        context: 'test-body',
+        content: "it('unrelated', () => { lock(INV-ORDER-001); })\n",
+        message:
+          'INV-ORDER-001 appears only in a test body in tests/order.test.ts; put it in a describe/it title',
+      },
+    ];
+    for (const row of rows) {
+      const ev = classifyCoverage({ id, coverage: { test: true } }, files(row.content));
+      expect(ev, row.context).toEqual({
+        kind: 'mention-only',
+        file: 'tests/order.test.ts',
+        context: row.context,
+      });
+      expect(countsAsCoverage(ev), row.context).toBe(false);
+      expect(describeCoverage({ id }, ev)).toBe(row.message);
+      const result = evaluateInvariantCoverage({
+        arkRules: catalogForSymbol(id, 'phrase', 'Missing.symbol'),
+        fileContents: { 'tests/order.test.ts': row.content },
+        testFiles: ['tests/order.test.ts'],
+      });
+      expect(result.coverage[0]?.covered, row.context).toBe(false);
+      expect(result.coverage[0]?.evidence, row.context).toEqual([]);
+      expect(result.violations[0]?.message, row.context).toContain(row.message);
+    }
+  });
+
+  it('leaves a comment-only mention uncovered and says where the id sat', () => {
+    const result = evaluateInvariantCoverage({
+      arkRules: catalog(),
+      fileContents: {
+        'tests/order.test.ts': "// INV-ORDER-001\nit('does something unrelated', () => {})\n",
+      },
+      testFiles: ['tests/order.test.ts'],
+    });
+    expect(result.coverage[0]?.covered).toBe(false);
+    expect(result.coverage[0]?.evidence).toEqual([]);
+    expect(result.coverage[0]?.shape).toBeUndefined();
+    expect(result.violations[0]?.ruleId).toBe('INVARIANT_UNCOVERED');
+    expect(result.violations[0]?.message).toBe(
+      'Invariant INV-ORDER-001: INV-ORDER-001 appears only in a comment in tests/order.test.ts; ' +
+        'put it in a describe/it title (tests-disappeared — a suite exists). ' +
+        'ArkGate matches declared text; it never executes tests.'
+    );
+  });
+
+  it('does not count a commented-out it() title', () => {
+    const ev = classifyCoverage(
+      { id, coverage: { test: true } },
+      files("// it('INV-ORDER-001', () => {})\nit('unrelated', () => {})\n")
+    );
+    expect(ev).toEqual({
+      kind: 'mention-only',
+      file: 'tests/order.test.ts',
+      context: 'comment',
+    });
+    expect(countsAsCoverage(ev)).toBe(false);
+  });
+
+  it('prefers a real title over a comment in the same file', () => {
+    const ev = classifyCoverage(
+      { id, coverage: { test: true } },
+      files("// INV-ORDER-001\nit('INV-ORDER-001 holds', () => {})\n")
+    );
+    expect(ev.kind).toBe('test-title');
+    expect(countsAsCoverage(ev)).toBe(true);
+  });
+
+  it('prefers a declaration over a test-file comment', () => {
+    const ev = classifyCoverage(invariant, {
+      fileContents: {
+        'src/domain/order.ts': 'export class Order { ensureInvariants() {} }\n',
+        'tests/order.test.ts': '// INV-ORDER-001\n',
+      },
+      testFiles: ['tests/order.test.ts'],
+    });
+    expect(ev).toEqual({
+      kind: 'declaration',
+      file: 'src/domain/order.ts',
+      shape: 'method',
+    });
+    expect(countsAsCoverage(ev)).toBe(true);
+  });
+
+  it('says an imported symbol is only an import', () => {
+    const inv: CoverageInvariant = { id: 'api-via-define-route', coverage: { symbol: 'defineRoute' } };
+    const ev = classifyCoverage(inv, {
+      fileContents: {
+        'src/app/api/health/route.ts': "import { defineRoute } from '../../kernel/app/define-route';\n",
+      },
+      testFiles: ['src/test/health.test.ts'],
+    });
+    expect(ev).toEqual({
+      kind: 'mention-only',
+      file: 'src/app/api/health/route.ts',
+      context: 'import',
+    });
+    expect(countsAsCoverage(ev)).toBe(false);
+    expect(describeCoverage(inv, ev)).toBe(
+      'api-via-define-route appears only in an import in src/app/api/health/route.ts; put it in a describe/it title'
+    );
+  });
+
+  it('describes silence without claiming a mention', () => {
+    const ev: CoverageEvidence = classifyCoverage(
+      { id, coverage: { test: true, symbol: 'Missing.symbol' } },
+      files("it('unrelated', () => {})\n")
+    );
+    expect(ev).toEqual({ kind: 'none' });
+    expect(countsAsCoverage(ev)).toBe(false);
+    expect(describeCoverage({ id }, ev)).toBe(
+      'no scanned test names it in a describe/it title and no declared symbol was found'
+    );
+  });
+
+  it('countsAsCoverage is false for every mention context and for none', () => {
+    const mentions: MentionContext[] = ['test-body', 'comment', 'string', 'import'];
+    for (const context of mentions) {
+      expect(countsAsCoverage({ kind: 'mention-only', file: 'x.test.ts', context })).toBe(false);
+    }
+    expect(countsAsCoverage({ kind: 'none' })).toBe(false);
+    expect(
+      countsAsCoverage({ kind: 'test-title', file: 'x.test.ts', title: id })
+    ).toBe(true);
+    expect(
+      countsAsCoverage({ kind: 'declaration', file: 'src/a.ts', shape: 'type' })
+    ).toBe(true);
   });
 });
 
