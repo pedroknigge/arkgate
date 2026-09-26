@@ -37,6 +37,7 @@ import {
 } from './ark-order-doctor.mjs';
 import { composeMergePlanesHonesty } from './extra-merge-teeth.mjs';
 import { collectPrototypeShortcutsResidual } from './prototype-shortcuts.mjs';
+import { sliceIdentityCollisions } from '../ark-layer-match.mjs';
 
 export function attachExtraDoctorSections(rulesUnderContract, config, classification, findings) {
   const arkRulesMerge = {
@@ -120,6 +121,13 @@ export function printCompactExtraDoctorLines(advisories, io) {
       console.log('');
       io.line(io.warn, states.ask);
       if (states.nextAction) io.line(' ', `Next: ${states.nextAction}`);
+    }
+  }
+  const sliceIdentity = advisories?.sliceIdentity;
+  if (Array.isArray(sliceIdentity?.collisions) && sliceIdentity.collisions.length > 0) {
+    console.log('');
+    for (const collision of sliceIdentity.collisions) {
+      io.line(io.warn, collision.message);
     }
   }
   const noDomain = advisories?.noDomainFrontend;
@@ -247,8 +255,12 @@ export function computeDoctorAdvisories(root, config, cov, rules, files, ts, par
     coverage: cov,
     files,
   });
+  const sliceIdentityHits = sliceIdentityCollisions(rules ?? config?.rules);
   return {
     ...(prototypeShortcuts ? { prototypeShortcuts } : {}),
+    ...(sliceIdentityHits.length > 0
+      ? { sliceIdentity: { notAScore: true, collisions: sliceIdentityHits } }
+      : {}),
     contractHealth: computeContractHealth(root, config, cov, rules),
     ambientState: computeAmbientState(ts, root, config, files),
     physicalCohesion,
@@ -265,6 +277,14 @@ export function computeDoctorAdvisories(root, config, cov, rules, files, ts, par
 }
 
 export function printDoctorAdvisories(advisories, io) {
+  const sliceIdentity = advisories?.sliceIdentity;
+  if (Array.isArray(sliceIdentity?.collisions) && sliceIdentity.collisions.length > 0) {
+    console.log('');
+    console.log(io.color.bold('Slice identity'));
+    for (const collision of sliceIdentity.collisions) {
+      io.line(io.warn, collision.message);
+    }
+  }
   printContractHealthSection(advisories.contractHealth, io);
   printAmbientStateSection(advisories.ambientState, io);
   printPhysicalCohesionSection(

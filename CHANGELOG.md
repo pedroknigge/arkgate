@@ -6,6 +6,13 @@ in the immutable pre-2.0 archive linked below.
 ## Unreleased
 
 ### Added
+- Optional per-rule `sliceIdentity`: `path` (default) or `stars`, for 4.8.21.
+  Absent and `path` keep today's slice ids byte for byte, so baselines and
+  `allowedCrossSlice` need no migration. `stars` names a starred
+  `sliceFolders` prefix as the last literal plus the star bindings
+  (`lib/features/*/*` and `lib/repositories/features/*/*` both yield
+  `features/projects/rfi`). Doctor warns when two prefixes collapse onto one
+  id and names both paths. Additive. No `schemaVersion` bump.
 - Soft doctor residual when Domain is declared but empty and the UI holds the
   rules (`noDomainFrontend`). Projects empty Domain + presentation share, or
   the existing `domain-logic-in-ui` smell. Friendly next step: one Domain file

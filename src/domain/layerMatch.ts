@@ -15,6 +15,19 @@ export type LayerConfig = {
 };
 
 /**
+ * How a starred `sliceFolders` prefix becomes a slice id.
+ *
+ * - `path` (default, also the absent value): every literal and every star
+ *   binding. `lib/features` plus two stars → `lib/features/projects/rfi`.
+ *   Byte-identical to the ids baselines and `allowedCrossSlice` already use.
+ * - `stars`: last literal segment plus the star bindings.
+ *   `lib/features` plus two stars, and `lib/repositories/features` plus two
+ *   stars, both → `features/projects/rfi`.
+ *   Prefix stripping stays inside `bindAnchoredSlice`. Bare names are unchanged.
+ */
+export type SliceIdentity = 'path' | 'stars';
+
+/**
  * Layer-to-layer dependency rule from ark.config.json.
  *
  * - Classic: `{ from, to, allowed: false }` denies **cross-layer** edges only.
@@ -39,12 +52,21 @@ export type EdgeRule = {
    * Slice parents. A bare name (`["features"]`) is an unanchored one-segment
    * match: `src/features/auth/api.ts` → `features/auth`. The next segment is
    * never a filename. A starred prefix (`lib` / `features` / `*` / `*`) is
-   * anchored like `sharedRoots`. The slice id includes the literal prefix
+   * anchored like `sharedRoots`. With `sliceIdentity` `"path"` (the default,
+   * also when the key is absent) the slice id includes the literal prefix
    * plus the directories the stars bind (`lib/features/projects/rfi`), so
-   * parallel trees get different ids (tracked in #308).
+   * parallel trees get different ids. With `"stars"` it is the last literal
+   * plus the star bindings, so the same feature has one id across parallel
+   * trees.
    * When omitted, inferred from the layer's glob patterns (segment before a wildcard).
    */
   sliceFolders?: string[];
+  /**
+   * How a starred `sliceFolders` prefix is named. Absent and `"path"` keep
+   * today's ids. `"stars"` is the last literal plus the star bindings, so the
+   * same feature has one id across parallel trees.
+   */
+  sliceIdentity?: SliceIdentity;
   /**
    * Roots the repo declares **shared on purpose** (`["ui", "hooks", "lib/permissions"]`).
    *
@@ -325,16 +347,19 @@ export function layerForRelativePath(
  * never the filename, so a flat file under the parent is not its own slice.
  * A starred prefix (`lib` / `features` / `*` / `*`) reuses the shared-root
  * anchor: it must sit at offset 0, or at offset 1 after `src/` or `app/`.
- * The slice id includes the literal prefix plus the star bindings
- * (`lib/features/projects/rfi`), so parallel trees get different ids
- * (tracked in #308). A star never binds the filename; a file directly under
- * the last bound directory keeps that directory as its slice.
+ * With `sliceIdentity` `"path"` (the default) the slice id includes the
+ * literal prefix plus the star bindings (`lib/features/projects/rfi`), so
+ * parallel trees get different ids. With `"stars"` it is the last literal
+ * plus those star bindings. A star never binds the filename; a file directly
+ * under the last bound directory keeps that directory as its slice.
  */
 export function sliceIdForPath(
   relPath: string,
-  sliceFolders: string[] | undefined
+  sliceFolders: string[] | undefined,
+  sliceIdentity?: SliceIdentity
 ): string | undefined {
   if (!sliceFolders?.length) return undefined;
+  const identity: SliceIdentity = sliceIdentity === 'stars' ? 'stars' : 'path';
   const parts = String(relPath)
     .split(/[/\\]/)
     .filter(Boolean);
@@ -343,7 +368,7 @@ export function sliceIdForPath(
   for (const raw of sliceFolders) {
     if (typeof raw !== 'string' || raw.length === 0) continue;
     if (isAnchoredSliceEntry(raw)) {
-      const anchored = anchoredSliceId(parts, raw);
+      const anchored = anchoredSliceId(parts, raw, identity);
       if (anchored) return anchored;
       continue;
     }
@@ -362,35 +387,44 @@ function isAnchoredSliceEntry(entry: string): boolean {
   return segments.some((part) => part === '*');
 }
 
-function anchoredSliceId(parts: string[], raw: string): string | undefined {
+function anchoredSliceId(
+  parts: string[],
+  raw: string,
+  identity: SliceIdentity
+): string | undefined {
   const pattern = raw
     .split(/[/\\]/)
     .filter((part) => part.length > 0)
     .map((part) => part.toLowerCase());
   const offsets = anchorOffsets(parts, pattern[0] ?? '');
   for (const offset of offsets) {
-    const id = bindAnchoredSlice(parts, pattern, offset);
+    const id = bindAnchoredSlice(parts, pattern, offset, identity);
     if (id) return id;
   }
   return undefined;
 }
 
 /**
- * Walk an anchored pattern from `offset`. Each matching literal is part of
- * the slice id, and each `*` binds one directory that is also part of the
- * id. A star stops before the filename; leftover stars then end the id at
- * the last directory that did bind. Segments `lib` / `features` / `*` / `*`
+ * Walk an anchored pattern from `offset`. Literals must match. Each matching
+ * literal is part of the bound segments, and each `*` binds one directory.
+ * A star stops before the filename; leftover stars then end the id at the
+ * last directory that did bind. Segments `lib` / `features` / `*` / `*`
  * (the pattern `lib/features` plus two stars) therefore yield
- * `lib/features/projects/rfi` (literal prefix plus star bindings), so a
- * parallel tree (`components` / `features` / `*` / `*`) gets a different id
- * (tracked in #308).
+ * `lib/features/projects/rfi` under `path`.
+ *
+ * `path` returns every bound segment (literal prefix plus star bindings), so
+ * a parallel tree (`components` / `features` / `*` / `*`) gets a different
+ * id. `stars` drops the literal prefix before the last literal and keeps
+ * that literal plus the star bindings.
  */
 function bindAnchoredSlice(
   parts: string[],
   pattern: string[],
-  offset: number
+  offset: number,
+  identity: SliceIdentity = 'path'
 ): string | undefined {
   const bound: string[] = [];
+  let lastLiteralAt = -1;
   let index = offset;
   for (let pi = 0; pi < pattern.length; pi += 1) {
     const segment = pattern[pi];
@@ -408,9 +442,97 @@ function bindAnchoredSlice(
     if (segment === '**' || index >= parts.length) return undefined;
     if (parts[index].toLowerCase() !== segment) return undefined;
     bound.push(parts[index].toLowerCase());
+    lastLiteralAt = bound.length - 1;
     index += 1;
   }
-  return bound.length > 0 ? bound.join('/') : undefined;
+  if (bound.length === 0) return undefined;
+  if (identity === 'stars') {
+    if (lastLiteralAt < 0) return undefined;
+    return bound.slice(lastLiteralAt).join('/');
+  }
+  return bound.join('/');
+}
+
+/** Two starred prefixes that bind as the same id under `sliceIdentity: "stars"`. */
+export type SliceIdentityCollision = {
+  from: string;
+  to: string;
+  /** Shared stars stem, e.g. `features` plus two stars. */
+  stem: string;
+  /** The sliceFolders patterns that collapse. The warning names every one. */
+  paths: readonly string[];
+  message: string;
+};
+
+/**
+ * Doctor warning input. Silent unless `sliceIdentity` is `"stars"` and two
+ * different anchored prefixes share a stem (last literal plus the stars after it).
+ */
+export function sliceIdentityCollisions(
+  rules: readonly Pick<EdgeRule, 'from' | 'to' | 'sliceFolders' | 'sliceIdentity'>[] | undefined
+): SliceIdentityCollision[] {
+  const out: SliceIdentityCollision[] = [];
+  for (const rule of rules ?? []) {
+    if (!rule || rule.sliceIdentity !== 'stars') continue;
+    const groups = new Map<string, string[]>();
+    const seen = new Map<string, Set<string>>();
+    for (const raw of rule.sliceFolders ?? []) {
+      if (typeof raw !== 'string' || raw.length === 0) continue;
+      const stem = starsIdentityStem(raw);
+      if (!stem) continue;
+      const key = raw.split(/[/\\]/).filter((part) => part.length > 0).join('/').toLowerCase();
+      const groupSeen = seen.get(stem) ?? new Set<string>();
+      if (groupSeen.has(key)) continue;
+      groupSeen.add(key);
+      seen.set(stem, groupSeen);
+      const paths = groups.get(stem) ?? [];
+      paths.push(raw);
+      groups.set(stem, paths);
+    }
+    for (const [stem, paths] of groups) {
+      if (paths.length < 2) continue;
+      out.push({
+        from: rule.from,
+        to: rule.to,
+        stem,
+        paths,
+        message: formatSliceIdentityCollision(rule.from, rule.to, paths, stem),
+      });
+    }
+  }
+  return out;
+}
+
+/** Last literal plus the stars that follow it. `**` never forms a stem. */
+function starsIdentityStem(raw: string): string | undefined {
+  if (!isAnchoredSliceEntry(raw)) return undefined;
+  const segments = raw
+    .split(/[/\\]/)
+    .filter((part) => part.length > 0)
+    .map((part) => part.toLowerCase());
+  let lastLiteral = -1;
+  for (let i = 0; i < segments.length; i += 1) {
+    const part = segments[i] ?? '';
+    if (part === '**') return undefined;
+    if (part !== '*') lastLiteral = i;
+  }
+  if (lastLiteral < 0) return undefined;
+  const tail = segments.slice(lastLiteral);
+  if (tail.some((part, index) => index > 0 && part !== '*')) return undefined;
+  return tail.join('/');
+}
+
+function formatSliceIdentityCollision(
+  from: string,
+  to: string,
+  paths: readonly string[],
+  stem: string
+): string {
+  const named =
+    paths.length === 2
+      ? `${paths[0]} and ${paths[1]}`
+      : `${paths.slice(0, -1).join(', ')}, and ${paths[paths.length - 1]}`;
+  return `${from} → ${to}: sliceIdentity "stars" gives one slice id to ${named}. They bind as ${stem}.`;
 }
 
 /** Bare names: leftmost folder, plus the next directory. Never the filename. */
@@ -751,8 +873,10 @@ export function findDeniedEdgeDecision(
       const fromPath = options?.fromPath;
       const toPath = options?.toPath;
       const folders = resolveSliceFolders(rule, from, options?.layers);
-      const fromSlice = fromPath ? sliceIdForPath(fromPath, folders) : undefined;
-      const toSlice = toPath ? sliceIdForPath(toPath, folders) : undefined;
+      const fromSlice = fromPath
+        ? sliceIdForPath(fromPath, folders, rule.sliceIdentity)
+        : undefined;
+      const toSlice = toPath ? sliceIdForPath(toPath, folders, rule.sliceIdentity) : undefined;
       const decision = peerIsolationDecision({
         fromPath,
         toPath,
@@ -803,8 +927,8 @@ export function findSharedImportsSliceBridge(
     if (rule.allowed !== false || !rule.peerIsolation) continue;
     if (rule.sharedImportsSlice === 'deny') continue;
     const folders = resolveSliceFolders(rule, from, options?.layers);
-    const fromSlice = sliceIdForPath(fromPath, folders);
-    const toSlice = sliceIdForPath(toPath, folders);
+    const fromSlice = sliceIdForPath(fromPath, folders, rule.sliceIdentity);
+    const toSlice = sliceIdForPath(toPath, folders, rule.sliceIdentity);
     if (fromSlice || !toSlice) continue;
     if (!pathUnderSharedRoot(fromPath, rule.sharedRoots)) continue;
     return { fromPath, toPath, toSlice };

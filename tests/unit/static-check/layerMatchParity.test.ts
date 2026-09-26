@@ -103,6 +103,18 @@ describe('layer-match parity (domain TS ↔ generated bin ESM)', async () => {
     expect(sliceTs('src/lib/features/projects/rfi/x.ts', ['lib/features/*/*'])).toBe(
       bin.sliceIdForPath('src/lib/features/projects/rfi/x.ts', ['lib/features/*/*'])
     );
+    expect(
+      sliceTs('src/lib/repositories/features/projects/rfi/repo.ts', ['lib/repositories/features/*/*'], 'stars')
+    ).toBe('features/projects/rfi');
+    expect(
+      sliceTs('src/lib/repositories/features/projects/rfi/repo.ts', ['lib/repositories/features/*/*'], 'stars')
+    ).toBe(
+      bin.sliceIdForPath(
+        'src/lib/repositories/features/projects/rfi/repo.ts',
+        ['lib/repositories/features/*/*'],
+        'stars'
+      )
+    );
     expect(sliceTs('src/components/features/projects/rfi-status-pill.tsx', ['projects'])).toBe(
       bin.sliceIdForPath('src/components/features/projects/rfi-status-pill.tsx', ['projects'])
     );

@@ -290,6 +290,15 @@ describe('T01 semantic policy delta', () => {
       path: '$.layers[DomainModel].optional',
     },
     {
+      name: 'changes slice identity to stars',
+      candidate: {
+        ...structuredClone(BASE_CONFIG),
+        rules: [{ ...structuredClone(BASE_CONFIG.rules[0]), sliceIdentity: 'stars' as const }],
+      },
+      classification: 'judgment-required',
+      path: '$.rules[DomainModel->DomainModel].sliceIdentity',
+    },
+    {
       name: 'changes slice ownership folders',
       candidate: {
         ...structuredClone(BASE_CONFIG),
@@ -354,6 +363,16 @@ describe('T01 semantic policy delta', () => {
     expect(result.classification).toBe(classification);
     expect(result.findings).toContainEqual(expect.objectContaining({ path }));
     expect(result.valid).toBe(classification === 'strengthening');
+  });
+
+  it('treats omitted sliceIdentity and path as the same ids', () => {
+    const candidate = {
+      ...structuredClone(BASE_CONFIG),
+      rules: [{ ...structuredClone(BASE_CONFIG.rules[0]), sliceIdentity: 'path' as const }],
+    };
+    const result = analyzePolicyDelta({ baseConfig: BASE_CONFIG, candidateConfig: candidate });
+    expect(result.classification).toBe('neutral');
+    expect(result.findings).toEqual([]);
   });
 
   it('removing sharedImportsSlice deny is a weakening', () => {

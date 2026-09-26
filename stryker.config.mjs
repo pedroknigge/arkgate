@@ -52,23 +52,24 @@ const config = {
     // Retargeted after LO01 owners + trustBoundary shifted the 4.8.4 pins
     // (467-473 had landed on validateLayerOwners guards; 529 on JSDoc).
     // #297 added sharedImportsSlice one line above these pins.
-    'src/domain/configContract.ts:543-546',
-    'src/domain/configContract.ts:548-549',
-    'src/domain/configContract.ts:569-570',
-    'src/domain/configContract.ts:575-576',
-    'src/domain/configContract.ts:585-587',
-    'src/domain/configContract.ts:598-598',
+    // #308 sliceIdentity schema shifted the same decisions by seven lines.
+    'src/domain/configContract.ts:550-553',
+    'src/domain/configContract.ts:555-556',
+    'src/domain/configContract.ts:576-577',
+    'src/domain/configContract.ts:582-583',
+    'src/domain/configContract.ts:592-594',
     'src/domain/configContract.ts:605-605',
-    'src/domain/configContract.ts:614-617',
-    'src/domain/configContract.ts:628-628',
+    'src/domain/configContract.ts:612-612',
+    'src/domain/configContract.ts:621-624',
+    'src/domain/configContract.ts:635-635',
     // DF04 — selective pure truth islands (fail-closed / ack / promote honesty).
     // peerIsolationDecision is the killable fail-closed core; findDeniedEdgeDecision wires it.
-    // #297 inserted the shared-imports-slice hop; retargeted to the same function.
-    // Slice-id JSDoc (#308) added eight lines above the function; same body.
-    'src/domain/layerMatch.ts:625-652',
-    // AP02 (#264) shifted the helper; a later sharedImportsSlice compare shifted it again.
-    // Retargeted to the same policyDeltaAcknowledgementMatches body.
-    'src/domain/policyDelta.ts:970-999',
+    // #297 inserted the shared-imports-slice hop. Slice-id JSDoc and #308
+    // sliceIdentity helpers shifted peerIsolationDecision again; retargeted to the same function.
+    'src/domain/layerMatch.ts:747-774',
+    // AP02 (#264) shifted the helper; sharedImportsSlice and #308 sliceIdentity
+    // compares shifted it again. Same policyDeltaAcknowledgementMatches body.
+    'src/domain/policyDelta.ts:984-1013',
     // #291 declaration witness shifted formatCoverageDiscards / budgetDetail /
     // canPromoteInvariant. Pins stay on those decisions, not on symbolPresent.
     'src/domain/invariantCoverage.ts:171-190',

@@ -385,6 +385,20 @@ function compareRules(
       });
     }
 
+    const previousIdentity = previous.sliceIdentity ?? 'path';
+    const candidateIdentity = candidate.sliceIdentity ?? 'path';
+    if (previousIdentity !== candidateIdentity) {
+      addFinding(findings, {
+        kind: 'slice-identity-changed',
+        path: `${path}.sliceIdentity`,
+        classification: 'judgment-required',
+        message:
+          'Slice identity changed and can reclassify existing slice ids. Baselines and allowedCrossSlice use those ids.',
+        before: previousIdentity,
+        after: candidateIdentity,
+      });
+    }
+
     // sharedRoots / allowedCrossSlice are inert on a rule without peerIsolation;
     // a change there is not a policy change until the wall exists.
     if (!previousPeer && !candidatePeer) continue;
