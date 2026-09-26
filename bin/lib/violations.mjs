@@ -97,6 +97,115 @@ export function printWarning(warning) {
   );
 }
 
+/** Advisory the engine emits once per shared-root → slice edge. Humans see a group. */
+export const SHARED_IMPORTS_SLICE_RULE_ID = 'SHARED_IMPORTS_SLICE';
+
+/**
+ * Where the full per-edge list lives. Human check output names this on every
+ * grouped line. `--json` is the machine list; `--doctor` prints every edge.
+ */
+export const SHARED_IMPORTS_SLICE_FULL_LIST =
+  'Full list: ark-check --json or ark-check --doctor';
+
+const SHARED_IMPORTS_SLICE_EXAMPLE_LIMIT = 3;
+
+function formatAdvisoryCount(count) {
+  return String(count).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+function layerLabel(value) {
+  return typeof value === 'string' && value.trim() ? value.trim() : '?';
+}
+
+/** Group key: one fact per rule and layer edge. */
+export function sharedImportsSliceGroupKey(warning) {
+  return [
+    typeof warning?.ruleId === 'string' ? warning.ruleId : SHARED_IMPORTS_SLICE_RULE_ID,
+    layerLabel(warning?.fromLayer),
+    layerLabel(warning?.toLayer),
+  ].join('\0');
+}
+
+function formatSharedImportsSliceExample(warning) {
+  const file = typeof warning?.file === 'string' && warning.file.trim() ? warning.file.trim() : 'unknown';
+  const line = Number.isInteger(warning?.line) && warning.line > 0 ? warning.line : 1;
+  const slice =
+    typeof warning?.toSlice === 'string' && warning.toSlice.trim() ? warning.toSlice.trim() : 'slice';
+  const target =
+    typeof warning?.target === 'string' && warning.target.trim() ? ` (${warning.target.trim()})` : '';
+  return `${file}:${line} → ${slice}${target}`;
+}
+
+/** One human line for a (ruleId, fromLayer → toLayer) group. Count plus top 3 edges. */
+export function formatSharedImportsSliceSummary(group) {
+  const sample = group[0] ?? {};
+  const ruleId =
+    typeof sample.ruleId === 'string' ? sample.ruleId : SHARED_IMPORTS_SLICE_RULE_ID;
+  const count = group.length;
+  const noun = count === 1 ? 'bridge' : 'bridges';
+  const examples = group
+    .slice(0, SHARED_IMPORTS_SLICE_EXAMPLE_LIMIT)
+    .map(formatSharedImportsSliceExample)
+    .join('; ');
+  return (
+    `warning ${ruleId} ${layerLabel(sample.fromLayer)} → ${layerLabel(sample.toLayer)}: ` +
+    `${formatAdvisoryCount(count)} shared-root → slice ${noun} (e.g. ${examples}). ` +
+    `The wall is direct-only. ${SHARED_IMPORTS_SLICE_FULL_LIST}`
+  );
+}
+
+/**
+ * Human check lines. SHARED_IMPORTS_SLICE collapses to one line per group.
+ * Every other warning stays one line. Does not mutate `warnings` — `--json`
+ * and doctor still walk the per-edge array.
+ */
+export function humanWarningLines(warnings) {
+  const groups = new Map();
+  const slots = [];
+  for (const warning of warnings ?? []) {
+    if (warning?.ruleId !== SHARED_IMPORTS_SLICE_RULE_ID) {
+      slots.push({ kind: 'line', line: formatWarningLine(warning) });
+      continue;
+    }
+    const key = sharedImportsSliceGroupKey(warning);
+    let group = groups.get(key);
+    if (!group) {
+      group = [];
+      groups.set(key, group);
+      slots.push({ kind: 'group', key });
+    }
+    group.push(warning);
+  }
+  return slots.map((slot) =>
+    slot.kind === 'line' ? slot.line : formatSharedImportsSliceSummary(groups.get(slot.key))
+  );
+}
+
+function printColoredWarningLine(line) {
+  const painted = line.startsWith('warning ')
+    ? `${color.yellow('warning')}${line.slice('warning'.length)}`
+    : line;
+  console.error(painted);
+}
+
+/** ark-check human renderer. Grouping stops here; the warnings array is unchanged. */
+export function printHumanWarnings(warnings) {
+  for (const line of humanWarningLines(warnings)) {
+    printColoredWarningLine(line);
+  }
+}
+
+/** Doctor human list: every shared-root → slice edge, not the grouped summary. */
+export function printSharedImportsSliceBridgeList(warnings) {
+  const lines = (warnings ?? [])
+    .filter((warning) => warning?.ruleId === SHARED_IMPORTS_SLICE_RULE_ID)
+    .map((warning) => formatWarningLine(warning));
+  if (lines.length === 0) return;
+  console.log('');
+  console.log(`Shared-root → slice bridges (${formatAdvisoryCount(lines.length)}):`);
+  for (const line of lines) console.log(line);
+}
+
 /** Non-blocking type-only placement debt: exit stays 0; do not paint ✖. */
 export function isNonBlockingPlacementDebt(violation) {
   return violation?.failsStrict === false;

@@ -70,6 +70,12 @@ in the immutable pre-2.0 archive linked below.
   Required CI is still the shared merge line. No new skill, schema, or host.
 
 ### Fixed
+- Human `ark-check` groups `SHARED_IMPORTS_SLICE` advisories into one line per
+  rule and layer edge (the count and three examples) instead of one line per
+  import. The line names `ark-check --json` and `ark-check --doctor` for the
+  full list. `--json` is unchanged: one warning object per edge. Doctor prints
+  every edge. No engine change
+  ([#313](https://github.com/pedroknigge/arkgate/issues/313)).
 - Write hook and `ark-check` now agree on overlapping layer globs: the hook
   probes the same specifier extensions as `ark-check` and classifies with
   `layerForRelativePath` (explicit `money.ts` beats `src/lib/**`). Field

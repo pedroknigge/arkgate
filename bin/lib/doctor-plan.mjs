@@ -965,6 +965,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     activeCount,
     skillGaps,
     agentHomeGaps,
+    warnings: options.warnings,
     baseline,
     baselineHonesty,
     staleBaseline,

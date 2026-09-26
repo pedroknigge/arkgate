@@ -14,6 +14,7 @@ import { analysisIncompleteStatement } from './analysis-completeness.mjs';
 import { skillGapsForActiveHost, detectCodexHomeGap, codexConcernIsActive, skillGapToolLabel } from './agent-gates.mjs';
 import { agentHomeConcernIsActive } from './agent-homes.mjs';
 import { layerGuidanceLine } from './layer-description.mjs';
+import { printSharedImportsSliceBridgeList } from './violations.mjs';
 import {
   citedGreen,
   ciMergeGreenCites,
@@ -187,6 +188,7 @@ export function printDoctorCompactHuman(view) {
     }
   }
 
+  printSharedImportsSliceBridgeList(view.warnings);
   console.log('');
   console.log(color.dim('More: --doctor --all'));
 }

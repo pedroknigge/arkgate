@@ -74,7 +74,7 @@ import {
   writeBaseline,
   printViolation,
   printViolationBreakdown,
-  printWarning,
+  printHumanWarnings,
   CONCENTRATION_MIN_VIOLATIONS,
 } from './lib/violations.mjs';
 import {
@@ -1503,6 +1503,7 @@ async function main() {
       safety, designDelta,
       ts, parseHealth, completeness,
       all: args.all === true, requireGates: args.requireGates === true,
+      warnings,
     });
     if (designDelta) process.exitCode = !designDelta.complete ? 2 : designDelta.valid ? 0 : 1; return;
   }
@@ -1956,9 +1957,7 @@ async function main() {
       ...(teamParliament ? { teamParliament } : {}),
     }, null, 2));
   } else {
-    for (const warning of warnings) {
-      printWarning(warning);
-    }
+    printHumanWarnings(warnings);
     for (const violation of activeViolations) {
       printViolation(violation);
     }
