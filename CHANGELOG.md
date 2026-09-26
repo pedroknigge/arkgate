@@ -77,6 +77,23 @@ in the immutable pre-2.0 archive linked below.
   why, `npx arkgate@4.8.20 start`, and one honest red check (fail-open named).
   Host matrix, not-that line, and release index sit below `## Appendix`.
   Release history points at CHANGELOG.md, the site changelog, and the docs hub.
+- `arkgate upgrade --apply` reports one outcome. Exit `0` means applied and the
+  architecture check is green (or there was nothing to apply). Exit `3` means
+  applied but red. Exit `2` means blocked until you consent. Exit `1` means
+  error, including a stale `--plan-digest` (that path was exit `2`). A stale CLI
+  outside the project still refuses with exit `2` before any plan. JSON stays
+  additive: `outcome`, `postUpgrade.verdict`, `postUpgrade.failing`
+  (`ruleId`, `count`, `sample`), `postUpgrade.behaviorChanges`, and on each
+  blocked asset `reason` plus `nextCommand`. A recorded file that is missing
+  and gitignored is `absent-local` and is recreated without consent (a
+  per-machine `.mcp.json` in a fresh worktree). A deleted file that is not
+  gitignored still needs `--accept-conflicts`. Behavior-change lines come from
+  the shipped per-version table (same sentences as these notes):
+  - 4.8.20: coverage.symbol now requires a real declaration (some green repos turn red)
+  - 4.8.21: a bare mention of an invariant id no longer counts as coverage (only describe/it titles or declarations, incl. type/interface/enum)
+  - 4.8.21: upgrade exit code 3 = applied but red. Scripts comparing against 1 must switch to 'non-zero'
+  ([#311](https://github.com/pedroknigge/arkgate/issues/311),
+  [#312](https://github.com/pedroknigge/arkgate/issues/312)).
 - Compact `--doctor` names ArkRules only when the `arkRules` map is on
   (one breath + counts, not a score). Absence stays silent. Reuses
   `rulesUnderContract` — no new schema, flag, or skill. `--doctor --all`
