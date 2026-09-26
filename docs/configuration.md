@@ -262,9 +262,11 @@ Rule fields:
   `src/components/features/projects/rfi-status-pill.tsx` with `["projects"]` is not a slice.
   A starred prefix (`lib/features/*/*`) is anchored like `sharedRoots` — it starts the
   repo-relative path, or sits one segment in after `src/` or `app/`. Each `*` binds one
-  directory and never the filename. The slice id is those directories
-  (`lib/features/projects/rfi`). A file directly under `lib/features/projects/` stays
-  `lib/features/projects`. A path off that prefix (`src/app/api/projects/...`) is not that slice.
+  directory and never the filename. The slice id includes the literal prefix plus those
+  star bindings (`lib/features/projects/rfi`), so parallel trees get different ids
+  (tracked in [#308](https://github.com/pedroknigge/arkgate/issues/308)). A file directly
+  under `lib/features/projects/` stays `lib/features/projects`. A path off that prefix
+  (`src/app/api/projects/...`) is not that slice.
 
 #### Cross-layer slice walls (already in the engine)
 

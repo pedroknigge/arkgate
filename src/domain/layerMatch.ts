@@ -38,8 +38,10 @@ export type EdgeRule = {
   /**
    * Slice parents. A bare name (`["features"]`) is an unanchored one-segment
    * match: `src/features/auth/api.ts` → `features/auth`. The next segment is
-   * never a filename. A starred prefix (`lib/features` plus stars) is anchored
-   * like `sharedRoots`; the slice id is the directories those stars bind.
+   * never a filename. A starred prefix (`lib` / `features` / `*` / `*`) is
+   * anchored like `sharedRoots`. The slice id includes the literal prefix
+   * plus the directories the stars bind (`lib/features/projects/rfi`), so
+   * parallel trees get different ids (tracked in #308).
    * When omitted, inferred from the layer's glob patterns (segment before a wildcard).
    */
   sliceFolders?: string[];
@@ -321,11 +323,12 @@ export function layerForRelativePath(
  *
  * A bare name stays that unanchored one-segment match. The child segment is
  * never the filename, so a flat file under the parent is not its own slice.
- * A starred prefix (`lib/features` plus one star per extra directory) reuses
- * the shared-root anchor: it must sit at offset 0, or at offset 1 after `src/`
- * or `app/`. The slice id is the concrete directories the stars bind. A star
- * never binds the filename; a file directly under the last bound directory
- * keeps that directory as its slice.
+ * A starred prefix (`lib` / `features` / `*` / `*`) reuses the shared-root
+ * anchor: it must sit at offset 0, or at offset 1 after `src/` or `app/`.
+ * The slice id includes the literal prefix plus the star bindings
+ * (`lib/features/projects/rfi`), so parallel trees get different ids
+ * (tracked in #308). A star never binds the filename; a file directly under
+ * the last bound directory keeps that directory as its slice.
  */
 export function sliceIdForPath(
   relPath: string,
@@ -373,9 +376,14 @@ function anchoredSliceId(parts: string[], raw: string): string | undefined {
 }
 
 /**
- * Walk the prefix. Literals must match. Each star binds one directory and
- * stops before the filename; leftover stars then end the id at the last
- * directory that did bind.
+ * Walk an anchored pattern from `offset`. Each matching literal is part of
+ * the slice id, and each `*` binds one directory that is also part of the
+ * id. A star stops before the filename; leftover stars then end the id at
+ * the last directory that did bind. Segments `lib` / `features` / `*` / `*`
+ * (the pattern `lib/features` plus two stars) therefore yield
+ * `lib/features/projects/rfi` (literal prefix plus star bindings), so a
+ * parallel tree (`components` / `features` / `*` / `*`) gets a different id
+ * (tracked in #308).
  */
 function bindAnchoredSlice(
   parts: string[],

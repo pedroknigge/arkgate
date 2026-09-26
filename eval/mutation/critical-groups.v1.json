@@ -149,12 +149,12 @@
     },
     {
       "id": "peer-isolation-fail-closed",
-      "note": "DF04: peerIsolationDecision pure fail-closed core (missing paths/slices/folders, declared shared roots, declared cross-slice edges, shared-imports-slice). peerIsolationMustDeny is its boolean face. #297 shifted the function; retargeted to the same body.",
+      "note": "DF04: peerIsolationDecision pure fail-closed core (missing paths/slices/folders, declared shared roots, declared cross-slice edges, shared-imports-slice). peerIsolationMustDeny is its boolean face. #297 shifted the function; retargeted to the same body. Slice-id JSDoc (#308) added eight lines above it; retargeted again to the same body.",
       "targets": [
         {
           "file": "src/domain/layerMatch.ts",
-          "startLine": 617,
-          "endLine": 644
+          "startLine": 625,
+          "endLine": 652
         }
       ]
     },

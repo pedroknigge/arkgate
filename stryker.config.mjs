@@ -64,7 +64,8 @@ const config = {
     // DF04 — selective pure truth islands (fail-closed / ack / promote honesty).
     // peerIsolationDecision is the killable fail-closed core; findDeniedEdgeDecision wires it.
     // #297 inserted the shared-imports-slice hop; retargeted to the same function.
-    'src/domain/layerMatch.ts:617-644',
+    // Slice-id JSDoc (#308) added eight lines above the function; same body.
+    'src/domain/layerMatch.ts:625-652',
     // AP02 (#264) shifted the helper; a later sharedImportsSlice compare shifted it again.
     // Retargeted to the same policyDeltaAcknowledgementMatches body.
     'src/domain/policyDelta.ts:970-999',

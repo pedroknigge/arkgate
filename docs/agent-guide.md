@@ -1135,7 +1135,7 @@ edges are not denied by that rule.
 
 - **Denied:** `src/features/auth/**` → `src/features/payments/**` (different slice id).
 - **Allowed:** same-slice imports when both paths classify; classic non-peerIsolation denies still apply across layers.
-- **`sliceFolders`:** optional parent segments (default: inferred from layer globs).
+- **`sliceFolders`:** optional parent segments (default: inferred from layer globs). A bare name stays an unanchored one-segment match (`features` on `src/features/auth` is `features/auth`). A starred anchored pattern includes the literal prefix plus the star bindings (`lib/features/*/*` → `lib/features/projects/rfi`), so parallel trees get different ids (tracked in [#308](https://github.com/pedroknigge/arkgate/issues/308)).
 - **Fail-closed:** missing paths, empty/unresolvable slice folders, or unclassifiable either side → **deny** via peerIsolation (cannot prove same-slice).
 - **`sharedRoots`** (4.8.4): roots the repo declares shared on purpose (`["ui", "hooks", "lib/permissions"]`). A file under a declared shared root is evidence, not an unclassifiable path, so fail-closed stops firing on every shared file. **Anchored** — the root starts the path, optionally after one `src/` or `app/`; write deeper or monorepo roots out (`packages/web/src/ui`) or glob them, and a bare `*` / `**` is refused. A path that still resolves to a slice keeps its slice.
 - **`allowedCrossSlice`** (4.8.4): `[{ "from": "features/checkout", "to": "features/catalog" }]` — one directed slice→slice edge the repo declares on purpose. The reverse still denies.
