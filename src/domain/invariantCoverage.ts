@@ -334,7 +334,7 @@ function matchTestTitle(content: string, id: string): string | undefined {
   if (!id) return undefined;
   const escaped = escapeRegExp(id);
   const re = new RegExp(
-    `(?:describe|it|test|context)\\s*\\(\\s*(['"\`])([^'"\`]*${escaped}[^'"\`]*)\\1`,
+    `(?:describe|it|test|context)\\s*\\(\\s*(['"\`])((?:(?!\\1)[^\\\\]|\\\\.)*?${escaped}(?:(?!\\1)[^\\\\]|\\\\.)*?)\\1`,
     'i'
   );
   const match = re.exec(maskNonCode(content, false));

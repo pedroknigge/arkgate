@@ -975,6 +975,15 @@ describe('classifyCoverage evidence (#307, #310)', () => {
     );
   });
 
+  it('accepts a title that contains the other quote character', () => {
+    const title = "INV-ORDER-001 — no agrega un <input type='file'> crudo";
+    const ev = classifyCoverage(
+      { id, coverage: { test: true } },
+      files(`it("${title}", () => {})\n`)
+    );
+    expect(ev).toEqual({ kind: 'test-title', file: 'tests/order.test.ts', title });
+  });
+
   it('describes silence without claiming a mention', () => {
     const ev: CoverageEvidence = classifyCoverage(
       { id, coverage: { test: true, symbol: 'Missing.symbol' } },

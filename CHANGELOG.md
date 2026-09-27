@@ -70,6 +70,9 @@ in the immutable pre-2.0 archive linked below.
   Required CI is still the shared merge line. No new skill, schema, or host.
 
 ### Fixed
+- Test-title coverage accepts a `describe`/`it` title that contains the other
+  quote character, such as `it("… <input type='file'> …")`
+  (issue [#323](https://github.com/pedroknigge/arkgate/issues/323)).
 - Write hook and `ark-check` now agree on overlapping layer globs: the hook
   probes the same specifier extensions as `ark-check` and classifies with
   `layerForRelativePath` (explicit `money.ts` beats `src/lib/**`). Field
