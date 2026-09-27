@@ -118,6 +118,7 @@
     "test:adapter-parity": "vitest run tests/unit/adapters/adapterParity.test.ts tests/unit/adapters/z04ResolvedAdapterParity.test.ts tests/unit/eslint/parity.test.ts",
     "test:onboarding-matrix": "for shard in library/small library/medium library/large api/small api/medium api/large frontend/small frontend/medium frontend/large monorepo/small monorepo/medium monorepo/large; do O04_SHARD=$shard npm run test:onboarding-matrix:shard; done",
     "test:onboarding-matrix:shard": "vitest run tests/unit/static-check/o04OnboardingMatrix.test.ts",
+    "test:journey": "node tests/journey/journey.mjs",
     "test:gate-only": "vitest run tests/unit/static-check/arkCheck.test.ts tests/unit/mcp/arkMcp.test.ts tests/unit/eslint",
     "test:package-isolation": "node scripts/smoke-package-isolation.mjs",
     "typecheck": "tsc --noEmit",
