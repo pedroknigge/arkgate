@@ -289,6 +289,7 @@ export function buildWritePathHonesty(activeHost, hardWriteActive = false, extra
  *   operatingMode?: string | null,
  *   activeBlockingViolations?: number | null,
  *   physicalCohesionResidual?: boolean,
+ *   childWallAdvisory?: boolean,
  * }} input
  */
 export function physicalCohesionResidualRemains(cohesion) {
@@ -489,6 +490,14 @@ export function buildProductHonesty(input = {}) {
     // Informational only when no enforced arkrule plane — does not alone make unfinished.
   }
 
+  if (input.childWallAdvisory === true) {
+    reasons.push({
+      id: 'child-wall-advisory',
+      message:
+        'A child wall lists siblings as advisory. Recorded crossings stay non-blocking, and a new sibling crossing past that baseline still fails. This house stays unfinished until siblings is deny.',
+    });
+  }
+
   // EH05: environment residual deny-list (future reason ids stay architecture debt by default).
   const ENVIRONMENT_REASON_IDS = new Set(['soft-write-host', 'native-fail-open']);
 
@@ -683,6 +692,7 @@ export function computeDoctorEnforcementHonesty({
   nativeFailClosed,
   nativeFailClosedPolicy,
   physicalCohesionResidual,
+  childWallAdvisory,
 } = {}) {
   const coverageHonesty = buildCoverageHonesty({
     percent: governedPercent,
@@ -741,6 +751,7 @@ export function computeDoctorEnforcementHonesty({
     emptyStewards,
     stewardNudge,
     physicalCohesionResidual,
+    childWallAdvisory,
   });
   return {
     coverageHonesty,

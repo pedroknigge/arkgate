@@ -14,8 +14,9 @@ import {
   patternSpecificity,
   layerForRelativePath,
   isEdgeDenied,
+  composeSliceDenialMessage,
   findDeniedEdgeDecision,
-  peerIsolationDenyExplanation,
+  sliceFindingExtras,
   isScanExcludedRelative,
 } from '../domain/layerMatch';
 import {
@@ -493,24 +494,19 @@ export const noDomainInfraImports: ArkRule = {
           // pure type-only (non-peer) is placement debt (warning + SharedTypes hint).
           // sourcePureTypeModule alone never softens a value import.
           const typePlacementDebt = typeOnlyEdge && !peerIsolation;
-          // Same shape as graphEvaluate: a rule-level `message` override gets the
-          // reason appended, never replaced by it.
-          const peerReason =
-            peerIsolation && decision
-              ? peerIsolationDenyExplanation(decision.peerIsolationReason ?? 'cross-slice', {
-                  fromPath: relFile,
-                  toPath: relTarget,
-                  fromSlice: decision.fromSlice,
-                  toSlice: decision.toSlice,
-                })
-              : undefined;
-          const baseMsg = deniedRule?.message
-            ? peerReason
-              ? `${deniedRule.message} (${peerReason})`
-              : deniedRule.message
-            : peerReason
-              ? `${fromLayer} must not ${edgeKind} another slice of ${toLayer} (${relFile} → ${relTarget}): ${peerReason}`
-              : `${fromLayer} must not ${edgeKind} ${toLayer}.`;
+          const verdict = decision?.sliceVerdict;
+          const baseMsg = verdict
+            ? composeSliceDenialMessage({
+                surface: 'import',
+                verdict,
+                fromLayer,
+                toLayer,
+                kind: edgeKind,
+                fromPath: relFile,
+                toPath: relTarget,
+                ruleMessage: deniedRule?.message,
+              })
+            : deniedRule?.message ?? `${fromLayer} must not ${edgeKind} ${toLayer}.`;
           reportAdapterDiagnostic(
             context,
             node,
@@ -524,7 +520,8 @@ export const noDomainInfraImports: ArkRule = {
               edgeKind,
               ...(peerIsolation ? { peerIsolation: true } : {}),
               ...(typeOnlyEdge ? { typeOnly: true } : {}),
-              ...(typePlacementDebt ? { severity: 'warning' as const } : {}),
+              ...sliceFindingExtras(verdict),
+              ...(typePlacementDebt ? { failsStrict: false, severity: 'warning' as const } : {}),
               ...(sourceProgramExportsOnlyTypes(node)
                 ? { sourcePureTypeModule: true }
                 : {}),

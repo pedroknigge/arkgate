@@ -40,6 +40,12 @@ export type AdapterViolationInput = {
   severity?: unknown;
   /** When false, finding is non-blocking (e.g. type-only placement debt). */
   failsStrict?: unknown;
+  /** Nested-wall reason. The ruleId stays LAYER_IMPORT_VIOLATION. Not part of the baseline key. */
+  reasonId?: unknown;
+  /** Last segment of the importer universe id, when the finding has a reasonId. */
+  universeFrom?: unknown;
+  /** Last segment of the importee universe id, when the finding has a reasonId. */
+  universeTo?: unknown;
   nextAction?: unknown;
   /** U04: the denied capability id on CAPABILITY_VIOLATION. */
   capability?: unknown;

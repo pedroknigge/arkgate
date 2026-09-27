@@ -6,6 +6,7 @@ in the immutable pre-2.0 archive linked below.
 ## Unreleased
 
 ### Added
+- Optional `childSlices` on a `peerIsolation` rule: an inner wall under today's universe wall. Absent, behavior and output stay the same. Present, a cross-universe deny is `reasonId` `CROSS_PARENT_SLICE` (never advisory) and a sibling crossing is `CROSS_SIBLING_SLICE` (`siblings`: `deny` or `advisory`). `commonFolders` and flat files are universe common. `parentMayImportChild` defaults to false. The baseline key does not include `reasonId`. Advisory siblings still fail when they grow past the recorded baseline, and `productHonesty.finished` stays false while any child wall is advisory. Doctor reports `{ crossParent, crossSibling, pairs }`. arkgate 4.8.22 and older reject the key. No wildcards, aliases, or per-subtree enforcement in this change.
 - Soft doctor residual when Domain is declared but empty and the UI holds the
   rules (`noDomainFrontend`). Projects empty Domain + presentation share, or
   the existing `domain-logic-in-ui` smell. Friendly next step: one Domain file

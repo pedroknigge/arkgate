@@ -684,6 +684,22 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
     'Keep stars when those prefixes are one feature. Otherwise use path, or rename the last literal so the prefixes do not bind as the same id. Doctor names both paths.',
     { oftenAdvisory: true }
   ),
+  entry(
+    'CONFIG_CHILD_SLICES_VERSION',
+    'config',
+    'childSlices needs a newer arkgate',
+    'The rule schema sets additionalProperties to false. arkgate 4.8.22 and older reject a config that contains childSlices instead of ignoring the key.',
+    'Pin arkgate newer than 4.8.22 before shipping a config that sets childSlices. This warning does not fail the check.',
+    { oftenAdvisory: true }
+  ),
+  entry(
+    'CONFIG_CHILD_SLICE_EXTENDS',
+    'config',
+    'Child slice id does not extend its universe',
+    'A path resolved a child id that is not the universe id plus a further segment. The child wall does not treat that id as a child, so the edge is universe common until the folders line up.',
+    'Point childSlices.sliceFolders at children under the same universe id the outer sliceFolders already names. Doctor names the path.',
+    { oftenAdvisory: true }
+  ),
 
   // ── literal path drift ───────────────────────────────────────────────────
   entry(
@@ -783,4 +799,44 @@ export function catalogFixForRuleId(ruleId: string | null | undefined): string |
  */
 export function catalogWhyForRuleId(ruleId: string | null | undefined): string | undefined {
   return getDiagnosticCatalogEntry(ruleId)?.why;
+}
+
+/**
+ * Hints for slice reasonIds. The finding ruleId stays LAYER_IMPORT_VIOLATION.
+ * reasonId is not a second catalog code and is not part of the baseline key.
+ */
+export type SliceReasonHint = {
+  reasonId: 'CROSS_PARENT_SLICE' | 'CROSS_SIBLING_SLICE';
+  ruleId: 'LAYER_IMPORT_VIOLATION';
+  title: string;
+  why: string;
+  fix: string;
+};
+
+export const SLICE_REASON_HINTS: readonly SliceReasonHint[] = Object.freeze([
+  Object.freeze({
+    reasonId: 'CROSS_PARENT_SLICE',
+    ruleId: 'LAYER_IMPORT_VIOLATION',
+    title: 'Cross-universe slice',
+    why: 'This import crosses two universe slices. The child wall cannot allow another universe.',
+    fix: 'Keep the import inside one universe, or move the shared code into a folder both universes may use.',
+  }),
+  Object.freeze({
+    reasonId: 'CROSS_SIBLING_SLICE',
+    ruleId: 'LAYER_IMPORT_VIOLATION',
+    title: 'Cross-sibling slice',
+    why: 'This import crosses two feature slices inside one universe.',
+    fix: 'Import universe-common code, or move the shared piece into the feature that owns it. Advisory siblings still fail when the count grows past the baseline.',
+  }),
+]);
+
+const SLICE_REASON_BY_ID: ReadonlyMap<string, SliceReasonHint> = new Map(
+  SLICE_REASON_HINTS.map((hint) => [hint.reasonId, hint])
+);
+
+export function sliceReasonHint(
+  reasonId: string | null | undefined
+): SliceReasonHint | undefined {
+  if (typeof reasonId !== 'string' || reasonId.length === 0) return undefined;
+  return SLICE_REASON_BY_ID.get(reasonId);
 }

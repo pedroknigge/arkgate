@@ -121,6 +121,8 @@ export const DIAGNOSTIC_CATALOG = Object.freeze([
     entry('CONFIG_UNCLASSIFIED_FILES', 'config', 'Unclassified included files', 'Included source files match no layer pattern; import rules will not enforce on them.', 'Extend layer patterns or narrow include so every governed file is classified.', { oftenAdvisory: true }),
     entry('CONFIG_LAYER_MISSING_OWNER', 'config', 'Layer missing owner', 'requireLayerOwners is on and this layer has no owners. Writes to that house fail closed, like a folder with no name on the door.', 'Add a GitHub handle or email to that layer’s owners in ark.config.json (/ark-adopt), then re-run. Reserved/allowEmpty houses may stay unnamed. Turn the flag off only if you no longer want owners required.'),
     entry('CONFIG_SLICE_IDENTITY_COLLISION', 'config', 'Starred slice prefixes share one id', 'sliceIdentity is stars and two different sliceFolders prefixes bind as the same slice id. Parallel trees of one feature do that on purpose; unrelated trees that share the last folder name merge by accident.', 'Keep stars when those prefixes are one feature. Otherwise use path, or rename the last literal so the prefixes do not bind as the same id. Doctor names both paths.', { oftenAdvisory: true }),
+    entry('CONFIG_CHILD_SLICES_VERSION', 'config', 'childSlices needs a newer arkgate', 'The rule schema sets additionalProperties to false. arkgate 4.8.22 and older reject a config that contains childSlices instead of ignoring the key.', 'Pin arkgate newer than 4.8.22 before shipping a config that sets childSlices. This warning does not fail the check.', { oftenAdvisory: true }),
+    entry('CONFIG_CHILD_SLICE_EXTENDS', 'config', 'Child slice id does not extend its universe', 'A path resolved a child id that is not the universe id plus a further segment. The child wall does not treat that id as a child, so the edge is universe common until the folders line up.', 'Point childSlices.sliceFolders at children under the same universe id the outer sliceFolders already names. Doctor names the path.', { oftenAdvisory: true }),
     // ── literal path drift ───────────────────────────────────────────────────
     entry('LITERAL_PATH_DRIFT', 'drift', 'Literal path moved by a rename', 'A repo path written inside a string, a comment or a docstring no longer resolves, and the rename set says where it went. Nothing in the gate sees this class: `tsc` resolves imports, not strings, and ESLint does not either, so the rename compiles green and the reference lies afterwards. It appears in four forms — the tsconfig alias, a relative literal, a path written without the include-root prefix, and prose — and a hand sweep reliably covers one of them.', 'Apply the suggested replacement, or re-run `npx arkgate-check --path-drift --base-ref <ref> --write` to apply every writable anchored replacement at once. The rewrite is mechanical and one-directional: the destination comes from the rename, it must itself resolve and be path-shaped, and the token is rewritten in the form the author wrote it in. A destination that leaves the alias root of the literal is reported with the target only and must be rewritten by hand.'),
     entry('LITERAL_PATH_UNRESOLVED', 'drift', 'Literal path does not resolve', 'A literal that looks like a repo path does not resolve under this root, and no rename explains where it went. Unlike LITERAL_PATH_DRIFT this is a candidate, not a verdict: with nothing to anchor it, ArkGate cannot tell a dead reference from an illustrative path in a comment, an example in documentation, or a path belonging to another tree.', 'Read the candidate and decide: fix the path, or leave it. Advisory only — it never fails a run and is never rewritten by --write, because there is no destination to propose. Run `--path-drift --all` to list the sweep.', { oftenAdvisory: true }),
@@ -182,4 +184,26 @@ export function catalogFixForRuleId(ruleId) {
  */
 export function catalogWhyForRuleId(ruleId) {
     return getDiagnosticCatalogEntry(ruleId)?.why;
+}
+export const SLICE_REASON_HINTS = Object.freeze([
+    Object.freeze({
+        reasonId: 'CROSS_PARENT_SLICE',
+        ruleId: 'LAYER_IMPORT_VIOLATION',
+        title: 'Cross-universe slice',
+        why: 'This import crosses two universe slices. The child wall cannot allow another universe.',
+        fix: 'Keep the import inside one universe, or move the shared code into a folder both universes may use.',
+    }),
+    Object.freeze({
+        reasonId: 'CROSS_SIBLING_SLICE',
+        ruleId: 'LAYER_IMPORT_VIOLATION',
+        title: 'Cross-sibling slice',
+        why: 'This import crosses two feature slices inside one universe.',
+        fix: 'Import universe-common code, or move the shared piece into the feature that owns it. Advisory siblings still fail when the count grows past the baseline.',
+    }),
+]);
+const SLICE_REASON_BY_ID = new Map(SLICE_REASON_HINTS.map((hint) => [hint.reasonId, hint]));
+export function sliceReasonHint(reasonId) {
+    if (typeof reasonId !== 'string' || reasonId.length === 0)
+        return undefined;
+    return SLICE_REASON_BY_ID.get(reasonId);
 }

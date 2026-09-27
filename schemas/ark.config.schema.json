@@ -842,6 +842,51 @@
           "enum": [
             "deny"
           ]
+        },
+        "childSlices": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "sliceFolders"
+          ],
+          "description": "Optional inner wall under this rule. Absent keeps today's universe wall. sliceFolders names children. commonFolders and flat files are universe common. siblings is deny (default) or advisory. parentMayImportChild defaults to false. Cross-parent has no advisory knob. arkgate 4.8.22 and older reject this key.",
+          "properties": {
+            "sliceFolders": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "uniqueItems": true,
+              "minItems": 1
+            },
+            "sliceIdentity": {
+              "type": "string",
+              "enum": [
+                "path",
+                "stars"
+              ]
+            },
+            "commonFolders": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "uniqueItems": true,
+              "minItems": 1
+            },
+            "siblings": {
+              "type": "string",
+              "enum": [
+                "deny",
+                "advisory"
+              ]
+            },
+            "parentMayImportChild": {
+              "type": "boolean"
+            }
+          }
         }
       }
     },

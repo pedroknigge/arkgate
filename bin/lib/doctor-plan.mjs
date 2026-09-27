@@ -694,7 +694,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
       github: githubForBoundary,
       adoptionStance: stanceFile,
       stewardNudge: doctorAdvisories.stewardNudge,
-      physicalCohesionResidual: physicalCohesionResidualRemains(doctorAdvisories.physicalCohesion),
+      physicalCohesionResidual: physicalCohesionResidualRemains(doctorAdvisories.physicalCohesion), childWallAdvisory: (config?.rules ?? []).some((rule) => rule?.childSlices != null && rule.childSlices.siblings === 'advisory'),
     });
 
   // Improvement compass: projection only — never feeds ok/valid/goal.met.

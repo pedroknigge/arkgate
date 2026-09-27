@@ -174,7 +174,7 @@ export function buildReportDepthPayload(
       : null,
     primaryNextAction: postGreenPath?.action ?? dualTruthNext,
     activeBlockingViolations: activeBlockingCount,
-    physicalCohesionResidual: physicalCohesionResidualRemains(physicalCohesion),
+    physicalCohesionResidual: physicalCohesionResidualRemains(physicalCohesion), childWallAdvisory: (config?.rules ?? []).some((rule) => rule?.childSlices != null && rule.childSlices.siblings === 'advisory'),
   });
   // Doctor parity: same physical-cohesion + baseline stale facts as runDoctor.
   const baselineStale =

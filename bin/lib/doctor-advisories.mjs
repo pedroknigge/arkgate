@@ -37,7 +37,7 @@ import {
 } from './ark-order-doctor.mjs';
 import { composeMergePlanesHonesty } from './extra-merge-teeth.mjs';
 import { collectPrototypeShortcutsResidual } from './prototype-shortcuts.mjs';
-import { sliceIdentityCollisions } from '../ark-layer-match.mjs';
+import { sliceCountReport, sliceIdentityCollisions } from '../ark-layer-match.mjs';
 
 export function attachExtraDoctorSections(rulesUnderContract, config, classification, findings) {
   const arkRulesMerge = {
@@ -256,7 +256,9 @@ export function computeDoctorAdvisories(root, config, cov, rules, files, ts, par
     files,
   });
   const sliceIdentityHits = sliceIdentityCollisions(rules ?? config?.rules);
+  const slices = sliceCountReport(activeViolations);
   return {
+    ...(slices ? { slices } : {}),
     ...(prototypeShortcuts ? { prototypeShortcuts } : {}),
     ...(sliceIdentityHits.length > 0
       ? { sliceIdentity: { notAScore: true, collisions: sliceIdentityHits } }

@@ -5,9 +5,10 @@
  * facade; consumer import paths never change.
  */
 import {
+  composeSliceDenialMessage,
   findDeniedEdgeDecision,
   findSharedImportsSliceBridge,
-  peerIsolationDenyExplanation,
+  sliceFindingExtras,
 } from '../domain/layerMatch';
 import type {
   ArchitectureEngineResult,
@@ -124,24 +125,19 @@ export function evaluateArchitectureGraph(
     // (convert value → import type) from relocate (already import type).
     const typePlacementDebt =
       !peerIsolation && Boolean(edge.typeOnly || edge.namedBindingsTypeOnly);
-    // The reason is appended to a rule-level `message` override rather than
-    // replaced by it: an override must not make an unclassifiable-path denial
-    // and a real cross-slice denial read identically again.
-    const peerReason = peerIsolation
-      ? peerIsolationDenyExplanation(decision.peerIsolationReason ?? 'cross-slice', {
+    const verdict = decision.sliceVerdict;
+    const baseMessage = verdict
+      ? composeSliceDenialMessage({
+          surface: 'import',
+          verdict,
+          fromLayer: edge.fromLayer,
+          toLayer: edge.toLayer,
+          kind: edge.kind,
           fromPath: edge.from,
           toPath: edge.to,
-          fromSlice: decision.fromSlice,
-          toSlice: decision.toSlice,
+          ruleMessage: rule.message,
         })
-      : undefined;
-    const baseMessage = rule.message
-      ? peerReason
-        ? `${rule.message} (${peerReason})`
-        : rule.message
-      : peerReason
-        ? `${edge.fromLayer} must not ${edge.kind} another slice of ${edge.toLayer} (${edge.from} → ${edge.to}): ${peerReason}`
-        : `${edge.fromLayer} must not ${edge.kind} ${edge.toLayer}.`;
+      : rule.message ?? `${edge.fromLayer} must not ${edge.kind} ${edge.toLayer}.`;
     violations.push({
       ruleId: 'LAYER_IMPORT_VIOLATION',
       file: edge.from,
@@ -156,6 +152,7 @@ export function evaluateArchitectureGraph(
       ...(!peerIsolation && edge.portProofEligible ? { portProofEligible: true } : {}),
       ...(edge.kind ? { edgeKind: edge.kind } : {}),
       ...(peerIsolation ? { peerIsolation: true } : {}),
+      ...sliceFindingExtras(verdict),
       message: typePlacementDebt
         ? `${baseMessage} (type-only — type placement debt; prefer SharedTypes / owning layer; not runtime coupling)`
         : baseMessage,

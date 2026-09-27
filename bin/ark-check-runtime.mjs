@@ -66,6 +66,7 @@ import {
   printAdrPresenceHint,
 } from './lib/doctor-plan.mjs';
 import { runRatchetCores } from './lib/core-ratchet.mjs';
+import { applyAdvisorySiblingRatchet } from './ark-layer-match.mjs';
 import {
   baselineKey,
   baselineOccurrenceKeys,
@@ -1593,8 +1594,9 @@ async function main() {
     const baseline = readBaseline(root, args.baseline);
     if (baseline.exists) {
       const occurrenceKeys = baselineOccurrenceKeys(violations);
-      suppressed = violations.filter((_, index) => baseline.keys.has(occurrenceKeys[index]));
-      activeViolations = violations.filter((_, index) => !baseline.keys.has(occurrenceKeys[index]));
+      const judged = applyAdvisorySiblingRatchet(violations, occurrenceKeys, baseline.keys);
+      suppressed = judged.filter((_, index) => baseline.keys.has(occurrenceKeys[index]));
+      activeViolations = judged.filter((_, index) => !baseline.keys.has(occurrenceKeys[index]));
       const currentKeys = new Set(occurrenceKeys);
       staleBaselineKeys = [...baseline.keys].filter((key) => !currentKeys.has(key)).length;
     } else {

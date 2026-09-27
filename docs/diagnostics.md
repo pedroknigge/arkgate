@@ -102,6 +102,8 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 | [`CONFIG_UNCLASSIFIED_FILES`](#CONFIG_UNCLASSIFIED_FILES) | config | Unclassified included files |
 | [`CONFIG_LAYER_MISSING_OWNER`](#CONFIG_LAYER_MISSING_OWNER) | config | Layer missing owner |
 | [`CONFIG_SLICE_IDENTITY_COLLISION`](#CONFIG_SLICE_IDENTITY_COLLISION) | config | Starred slice prefixes share one id |
+| [`CONFIG_CHILD_SLICES_VERSION`](#CONFIG_CHILD_SLICES_VERSION) | config | childSlices needs a newer arkgate |
+| [`CONFIG_CHILD_SLICE_EXTENDS`](#CONFIG_CHILD_SLICE_EXTENDS) | config | Child slice id does not extend its universe |
 | [`ARK_UNKNOWN`](#ARK_UNKNOWN) | meta | Unknown diagnostic |
 
 ## Layer and dependency graph
@@ -114,6 +116,7 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 
 - **Why:** This file imported a folder it may not reach. The write doesn’t land. The same check fails the pull request.
 - **Fix:** Branch by import kind: constants/types/pure → adopt into DomainModel or SharedKernel (do not invent a port); kernel/events/bootstrap from Persistence → inject a port or move the map to SharedTypes (Persistence must not emit); define a port only when the target is a real use-case. Type-only edges use `import type`. Then preflight again. Do not weaken the layer rule without a hash-bound policy acknowledgement.
+- **Slice reasons:** the ruleId stays `LAYER_IMPORT_VIOLATION`. When a rule sets `childSlices`, the finding may also carry `reasonId` `CROSS_PARENT_SLICE` (this import crosses two universe slices; the child wall cannot allow another universe) or `CROSS_SIBLING_SLICE` (this import crosses two feature slices inside one universe). The baseline key does not include `reasonId`. Without `childSlices`, `reasonId` is absent.
 
 <a id="LAYER_INTENT_REFERENCE_VIOLATION"></a>
 
@@ -903,6 +906,24 @@ never opting out of knowing.
 
 - **Why:** `sliceIdentity` is `stars` and two different `sliceFolders` prefixes bind as the same slice id. Parallel trees of one feature do that on purpose; unrelated trees that share the last folder name merge by accident. The warning names both paths.
 - **Fix:** Keep `stars` when those prefixes are one feature. Otherwise use `path`, or rename the last literal so the prefixes do not bind as the same id. Advisory — it does not fail the check.
+
+<a id="CONFIG_CHILD_SLICES_VERSION"></a>
+
+### `CONFIG_CHILD_SLICES_VERSION`
+
+**childSlices needs a newer arkgate**
+
+- **Why:** The rule schema sets additionalProperties to false. arkgate 4.8.22 and older reject a config that contains childSlices instead of ignoring the key.
+- **Fix:** Pin arkgate newer than 4.8.22 before shipping a config that sets childSlices. This warning does not fail the check.
+
+<a id="CONFIG_CHILD_SLICE_EXTENDS"></a>
+
+### `CONFIG_CHILD_SLICE_EXTENDS`
+
+**Child slice id does not extend its universe**
+
+- **Why:** A path resolved a child id that is not the universe id plus a further segment. The child wall does not treat that id as a child, so the edge is universe common until the folders line up.
+- **Fix:** Point childSlices.sliceFolders at children under the same universe id the outer sliceFolders already names. Doctor names the path. Advisory — it does not fail the check.
 
 ## Meta
 

@@ -251,7 +251,7 @@ process module-capability family must be denied.
 Rule fields:
 
 - `from`, `to`, `allowed`, `message`, `peerIsolation`, `sliceFolders`, `sliceIdentity`,
-  `sharedRoots`, `allowedCrossSlice`, `sharedImportsSlice`
+  `sharedRoots`, `allowedCrossSlice`, `sharedImportsSlice`, `childSlices`
 - `peerIsolation: true` + `allowed: false`: deny only when slice ids differ; same-slice allows
   when both paths classify. Applies to **any** declared `from`→`to` pair, not only self-edges.
   Missing paths, empty slice folders, or unclassifiable slices **fail closed** (deny — cannot
@@ -276,6 +276,23 @@ Rule fields:
   same id, and the warning names both paths (`admin/features/*` and `public/features/*`
   both bind as `features/*`). That warning is advisory. Unrelated trees that share a
   last folder name should stay on `path`.
+- `childSlices` is an optional inner wall on a `peerIsolation` rule. Absent means today's
+  universe wall, byte for byte: no `reasonId`, same messages, same doctor output.
+  `sliceFolders` names the children (`lib/features/*/*` under a universe id `features/projects`).
+  `sliceIdentity` is the same `path` | `stars` choice. `commonFolders` (directory names such as
+  `domain`) and a flat file whose child id does not grow past the universe id are universe
+  common. A child may import that common code. Common code may import a child only when
+  `parentMayImportChild` is true (default false). `siblings` is `deny` (default, also when the
+  key is omitted) or `advisory`. The universe wall runs first. A denied cross-universe edge is
+  `reasonId` `CROSS_PARENT_SLICE` and is never advisory. A denied sibling edge is
+  `CROSS_SIBLING_SLICE`: an error when `siblings` is `deny`, a warning (`failsStrict: false`)
+  when `advisory`. A new sibling crossing past the recorded baseline still fails in advisory
+  mode. The baseline key stays `ruleId|file|fromLayer|toLayer|target` and does not include
+  `reasonId`. `productHonesty.finished` stays false while any child wall is advisory.
+  Doctor `slices` is `{ crossParent, crossSibling, pairs }` for the directed universe pairs
+  that occur. A child id that does not extend its universe id warns
+  `CONFIG_CHILD_SLICE_EXTENDS` and is treated as universe common. arkgate 4.8.22 and older
+  reject the key (`CONFIG_CHILD_SLICES_VERSION`); ship it only on a newer release.
 
 ```jsonc
 {

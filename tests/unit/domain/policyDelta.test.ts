@@ -565,4 +565,50 @@ describe('policyDeltaAcknowledgementMatches (DF04 pure helper)', () => {
       )
     ).toBe(false);
   });
+
+  it('classifies a child wall as strengthening, advisory as judgment, and removal as weakening', () => {
+    const child = {
+      sliceFolders: ['lib/features/*/*'],
+      sliceIdentity: 'stars' as const,
+      commonFolders: ['domain'],
+      siblings: 'deny' as const,
+      parentMayImportChild: false,
+    };
+    const withChild = {
+      ...structuredClone(BASE_CONFIG),
+      rules: [{ ...structuredClone(BASE_CONFIG.rules[0]), childSlices: child }],
+    };
+    const added = analyzePolicyDelta({ baseConfig: BASE_CONFIG, candidateConfig: withChild });
+    expect(added.findings).toContainEqual(
+      expect.objectContaining({
+        path: '$.rules[DomainModel->DomainModel].childSlices',
+        classification: 'strengthening',
+      })
+    );
+    const advisory = analyzePolicyDelta({
+      baseConfig: BASE_CONFIG,
+      candidateConfig: {
+        ...structuredClone(BASE_CONFIG),
+        rules: [
+          {
+            ...structuredClone(BASE_CONFIG.rules[0]),
+            childSlices: { ...child, siblings: 'advisory' as const },
+          },
+        ],
+      },
+    });
+    expect(advisory.findings).toContainEqual(
+      expect.objectContaining({
+        path: '$.rules[DomainModel->DomainModel].childSlices',
+        classification: 'judgment-required',
+      })
+    );
+    const removed = analyzePolicyDelta({ baseConfig: withChild, candidateConfig: BASE_CONFIG });
+    expect(removed.findings).toContainEqual(
+      expect.objectContaining({
+        path: '$.rules[DomainModel->DomainModel].childSlices',
+        classification: 'weakening',
+      })
+    );
+  });
 });
