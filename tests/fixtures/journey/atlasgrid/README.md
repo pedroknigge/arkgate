@@ -14,3 +14,4 @@ Pinned edges for later slices work:
 - `load-rfi.ts` imports `rfi-repository.ts` (one importer) and `projects/domain`. `project-codes.ts` imports `rfi-intake.ts`.
 - `catalog-repository.ts` is imported by rfi and scm.
 - Shared roots reach into slices six times. Two of those continue a cross-universe path (management to operations through `format.ts`, projects to management through `dialog.tsx`). One stays inside projects (`labels.ts` to scm). `lib/compliance` sits outside features and imports nothing.
+- `ark.config.deny-cross-parent.json` is the universe wall plus `sharedImportsSlice: "deny-cross-parent"`.

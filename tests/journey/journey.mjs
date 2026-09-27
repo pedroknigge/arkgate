@@ -583,8 +583,10 @@ function evaluateJourneyCases(fixture, steps) {
 }
 
 function evaluateJourneyCase(spec, steps) {
-  const check = selectStep(steps, { doctor: false, hierarchy: spec.kind !== 'compat-universe-wall' });
-  const doctor = selectStep(steps, { doctor: true, hierarchy: spec.kind !== 'compat-universe-wall' });
+  const config = spec.kind === 'pr2-laundering' ? 'deny-cross-parent' : null;
+  const hierarchy = spec.kind !== 'compat-universe-wall' && spec.kind !== 'pr2-laundering';
+  const check = selectStep(steps, { doctor: false, hierarchy, config });
+  const doctor = selectStep(steps, { doctor: true, hierarchy, config });
   const judged = judgeJourneyCase(spec, check?.output ?? null, doctor?.output ?? null);
   const status = caseStatus(spec.expect, judged.met);
   return {
@@ -606,8 +608,9 @@ function caseStatus(expect, met) {
   throw new JourneyError('case', `case expect must be pass or fail, got ${expect}`);
 }
 
-function selectStep(steps, { doctor, hierarchy }) {
+function selectStep(steps, { doctor, hierarchy, config = null }) {
   const matches = steps.filter((step) => step.command.includes('--doctor') === doctor);
+  if (config) return matches.find((step) => step.command.includes(config)) ?? null;
   if (hierarchy) {
     const tagged = matches.find((step) => /child-slices|childSlices|hierarchy/.test(step.command));
     if (tagged) return tagged;
@@ -632,6 +635,8 @@ function judgeJourneyCase(spec, check, doctor) {
       return judgeCommonImportsChild(spec, check);
     case 'pr1-doctor-slice-counts':
       return judgeDoctorSliceCounts(spec, doctor);
+    case 'pr2-laundering':
+      return judgeLaundering(spec, check);
     default:
       throw new JourneyError('case', `unknown journey case kind ${spec.kind}`);
   }
@@ -741,6 +746,32 @@ function judgeCommonImportsChild(spec, check) {
   const met =
     hits.length === spec.want.findings &&
     hits.every((row) => row.ruleId === spec.want.ruleId && row.severity === spec.want.severity);
+  return { met, want: spec.want, got };
+}
+
+function judgeLaundering(spec, check) {
+  const violations = check?.violations ?? [];
+  const hits = violations.filter((row) => row.reasonId === spec.want.reasonId);
+  const cross = spec.edges.map((edge) =>
+    hits.find((row) => row.file === edge.file && row.target === edge.target)
+  );
+  const sameUniverse = hits.filter(
+    (row) => row.file === spec.sameUniverse.file && row.target === spec.sameUniverse.target
+  ).length;
+  const got = {
+    count: hits.length,
+    ruleIds: uniqueSorted(hits.map((row) => row.ruleId)),
+    reasonIds: uniqueSorted(hits.map((row) => row.reasonId)),
+    severities: uniqueSorted(hits.map((row) => row.severity)),
+    sameUniverse,
+  };
+  const met =
+    hits.length === spec.want.count &&
+    sameUniverse === spec.want.sameUniverse &&
+    cross.length === spec.want.count &&
+    cross.every(
+      (row) => row && row.ruleId === spec.want.ruleId && row.severity === spec.want.severity
+    );
   return { met, want: spec.want, got };
 }
 

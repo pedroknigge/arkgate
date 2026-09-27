@@ -94,11 +94,12 @@ export type EdgeRule = {
    */
   allowedCrossSlice?: CrossSliceEdge[];
   /**
-   * When `"deny"`, a declared shared root may not import a slice. Default
-   * (absent) keeps that hop allowed. Slice → shared stays allowed either way.
-   * `allowedCrossSlice` does not excuse this hop.
+   * `"deny"`: a shared root may not import a slice. `"deny-cross-parent"` leaves
+   * that hop allowed; a whole-graph pass then reports a slice that reaches
+   * another universe only through shared. Absent keeps the hop allowed.
+   * `allowedCrossSlice` does not excuse `"deny"`.
    */
-  sharedImportsSlice?: 'deny';
+  sharedImportsSlice?: 'deny' | 'deny-cross-parent';
   /**
    * Optional inner wall under this rule's universe wall. Absent: the universe
    * wall is the whole decision and check output stays byte-identical.
@@ -792,8 +793,8 @@ export type PeerIsolationInput = {
   toShared?: boolean;
   /** The rule declares this directed slice→slice edge. */
   crossSliceAllowed?: boolean;
-  /** Rule opted in: a shared root may not import a slice. */
-  sharedImportsSlice?: 'deny';
+  /** `"deny"` blocks a shared root importing a slice. `"deny-cross-parent"` does not. */
+  sharedImportsSlice?: 'deny' | 'deny-cross-parent';
 };
 
 /**
