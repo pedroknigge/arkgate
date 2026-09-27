@@ -48,10 +48,6 @@ in the immutable pre-2.0 archive linked below.
   short phrase templates so the shape is visible. No new skill, schema, or flag.
 
 ### Changed
-- Internal: packed journey matrix (`journey(fixture, steps)`) installs the
-  npm tarball into a vendored fixture and compares a JSON subset to a
-  committed golden. CI runs one job per fixture. Unit tests and coverage
-  floors are unchanged.
 - Compact `--doctor` names ArkRules only when the `arkRules` map is on
   (one breath + counts, not a score). Absence stays silent. Reuses
   `rulesUnderContract` — no new schema, flag, or skill. `--doctor --all`
@@ -70,15 +66,6 @@ in the immutable pre-2.0 archive linked below.
   Required CI is still the shared merge line. No new skill, schema, or host.
 
 ### Fixed
-- Const-declaration coverage accepts a type annotation between the name and
-  `=`, including `=>` inside a function type (`export const X: ReadonlyArray<…> =`,
-  `export const f: (a: A) => B =`). When that declaration does not match and the
-  only comment is in a different file, the message is `no declaration matched`,
-  not "appears only in a comment"
-  (issue [#322](https://github.com/pedroknigge/arkgate/issues/322)).
-- Test-title coverage accepts a `describe`/`it` title that contains the other
-  quote character, such as `it("… <input type='file'> …")`
-  (issue [#323](https://github.com/pedroknigge/arkgate/issues/323)).
 - Write hook and `ark-check` now agree on overlapping layer globs: the hook
   probes the same specifier extensions as `ark-check` and classifies with
   `layerForRelativePath` (explicit `money.ts` beats `src/lib/**`). Field
@@ -108,6 +95,54 @@ in the immutable pre-2.0 archive linked below.
   `@2` pin (issue [#211](https://github.com/pedroknigge/arkgate/issues/211)).
   Existing configs keep whatever URL they already have. Editor completion
   matches the 4.x line you just installed.
+
+## 4.8.22 — 2026-09-27
+
+**Patch** over **4.8.21**. Daily accumulate (2026-09-27 ART) of the ships
+that landed after 4.8.21 published: `coverage.symbol` recognizes
+`export const X: Type =` (including `=>` inside a function type) and a
+cross-file comment is reported as `no declaration matched`
+([#324](https://github.com/pedroknigge/arkgate/pull/324) /
+[#322](https://github.com/pedroknigge/arkgate/issues/322)), test titles that
+contain the other quote character count as coverage
+([#324](https://github.com/pedroknigge/arkgate/pull/324) /
+[#323](https://github.com/pedroknigge/arkgate/issues/323)), and a packed
+journey matrix in CI
+([#324](https://github.com/pedroknigge/arkgate/pull/324)).
+**Write. Check. Ship.** **No required config migration.** No
+`schemaVersion` bump. No new behavior change: both fixes only accept
+coverage that 4.8.21 wrongly rejected. Does not close `K01` / `Z09`. This
+mother `ark.config.json` still does **not** turn `arkOrder` on.
+
+**Status: released** (tag `v4.8.22`). This file does not assert registry
+state; run `npm view arkgate@4.8.22 version` to confirm the package is
+available (#314).
+
+### Fixed
+- Test-title coverage accepts a `describe`/`it` title that contains the other
+  quote character, such as `it("… <input type='file'> …")`
+  ([#324](https://github.com/pedroknigge/arkgate/pull/324) /
+  [#323](https://github.com/pedroknigge/arkgate/issues/323)).
+- Const-declaration coverage accepts a type annotation between the name and
+  `=`, including `=>` inside a function type (`export const X: ReadonlyArray<…> =`,
+  `export const f: (a: A) => B =`). When that declaration does not match and the
+  only comment is in a different file, the message is `no declaration matched`,
+  not "appears only in a comment"
+  ([#324](https://github.com/pedroknigge/arkgate/pull/324) /
+  [#322](https://github.com/pedroknigge/arkgate/issues/322)).
+
+### Known limitation
+- `coverage.symbol` still does not recognize a declaration exported through
+  an export list (`const X = …` plus `export { X }`). Declare it with
+  `export const X` (or point `coverage.symbol` at a function, class, type,
+  interface, or enum declaration) until that form is supported.
+
+### Changed
+- Internal: packed journey matrix (`journey(fixture, steps)`) installs the
+  npm tarball into a vendored realistic fixture (`ledgerline`) and compares
+  a JSON subset to a committed golden. CI runs one job per fixture. Unit tests and coverage
+  floors are unchanged. No product behavior change
+  ([#324](https://github.com/pedroknigge/arkgate/pull/324)).
 
 ## 4.8.21 — 2026-09-26
 
