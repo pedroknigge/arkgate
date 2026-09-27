@@ -10,7 +10,7 @@ import { version } from '../../../src/version.ts';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 /** Tree package identity. */
-const CURRENT = '4.8.21';
+const CURRENT = '4.8.22';
 /** Version confirmed on npm `latest`. */
 const PUBLISHED_LATEST = '4.8.11';
 
@@ -138,7 +138,7 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
 
   it('keeps 4.8.11 published on npm latest and 4.8.10 as prior', () => {
     expect(PUBLISHED_LATEST).toBe('4.8.11');
-    expect(CURRENT).toBe('4.8.21');
+    expect(CURRENT).toBe('4.8.22');
     expect(read('docs/releases/4.8.9.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.8.9.md')).toMatch(/arkgate@4\.8\.9/);
     expect(read('docs/releases/4.8.9.md')).not.toMatch(/\*\*Status:\*\*\s*prepared/i);
@@ -196,7 +196,8 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
     expect(read('CONTRIBUTING.md')).toMatch(/Optional \(not gates\)/);
     expect(read('CONTRIBUTING.md')).not.toMatch(/Current release candidate:/);
     expect(read('CONTRIBUTING.md')).not.toMatch(/Prior published:/);
-    expect(read('docs/README.md')).toMatch(/Current release:.*4\.8\.21/s);
+    expect(read('docs/README.md')).toMatch(/Current release:.*4\.8\.22/s);
+    expect(read('docs/README.md')).toMatch(/Prior published:.*4\.8\.21/s);
     expect(read('docs/README.md')).toMatch(/Prior published:.*4\.8\.20/s);
     expect(read('docs/README.md')).toMatch(/Prior published:.*4\.8\.11/s);
     expect(read('docs/README.md')).toMatch(/Prior published:.*4\.8\.10/s);
@@ -542,7 +543,37 @@ describe('CHANGELOG + release note cover 4.8.21 daily accumulate', () => {
     expect(section).not.toMatch(/Status:\s*unreleased/i);
     expect(fs.existsSync(path.join(REPO, 'docs/releases/4.8.21.md'))).toBe(false);
     expect(read('ROADMAP.md')).toMatch(/\| 295 \| `RL820` \| `done`/);
-    expect(read('ROADMAP.md')).toMatch(/\| 296 \| `RL821` \| `doing`/);
+    expect(read('ROADMAP.md')).toMatch(/\| 296 \| `RL821` \| `done`/);
+  });
+});
+
+describe('CHANGELOG + release note cover 4.8.22 daily accumulate', () => {
+  it('records the release without asserting registry state (#314)', () => {
+    const changelog = changelogText();
+    const section = changelogSection(changelog, '4.8.22', '4.8.21');
+    expect(section).toMatch(/Status:\s*released/i);
+    expect(section).toMatch(/npm view arkgate@4\.8\.22 version/);
+    expect(section).not.toMatch(/npm `latest` is/);
+    expect(section).toMatch(/Daily accumulate \(2026-09-27 ART\)/);
+    expect(section).not.toMatch(/latest remains/);
+    expect(section).toMatch(/#323/);
+    expect(section).toMatch(/other\s+quote character/);
+    expect(section).toMatch(/#322/);
+    expect(section).toMatch(/export const X: Type =/);
+    expect(section).toMatch(/=>/);
+    expect(section).toMatch(/no declaration matched/);
+    expect(section).toMatch(/Known limitation/);
+    expect(section).toMatch(/export \{ X \}/);
+    expect(section).toMatch(/journey matrix/);
+    expect(section).toMatch(/#324/);
+    expect(section).toMatch(/No required config migration/i);
+    expect(section).toMatch(/Does not close\s*`K01`\s*\/\s*`Z09`/);
+    expect(section).toMatch(/does \*\*not\*\* turn `arkOrder` on/);
+    expect(section).not.toMatch(/Status:\s*prepared/i);
+    expect(section).not.toMatch(/Status:\s*unreleased/i);
+    expect(fs.existsSync(path.join(REPO, 'docs/releases/4.8.22.md'))).toBe(false);
+    expect(read('ROADMAP.md')).toMatch(/\| 296 \| `RL821` \| `done`/);
+    expect(read('ROADMAP.md')).toMatch(/\| 297 \| `RL822` \| `doing`/);
   });
 });
 
@@ -1525,7 +1556,7 @@ describe('CHANGELOG + release note cover 3.9.1 patch hygiene', () => {
       screen.indexOf('Write. Check. Ship.')
     );
     expect(screen).toMatch(/\*\*Contener · Guiar · Ordenar\*\*/);
-    expect(screen).toMatch(/npx arkgate@4\.8\.21 start/);
+    expect(screen).toMatch(/npx arkgate@4\.8\.22 start/);
     expect(screen).toMatch(/✖ LAYER_IMPORT_VIOLATION  src\/domain\/order\.ts:1/);
     expect(screen).toMatch(/fail-open/);
     expect(screen).toMatch(/needs a refactor/);
