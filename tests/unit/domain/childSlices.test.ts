@@ -371,6 +371,7 @@ describe('nested slice wall', () => {
     const child = 'features/projects/rfi';
     expect(importerInEnforcedSubtree(file, child, ['features/projects/rfi'])).toBe(true);
     expect(importerInEnforcedSubtree(file, child, ['SRC/lib/features/projects/rfi'])).toBe(true);
+    expect(importerInEnforcedSubtree(file, child, ['lib/features/projects/rfi///'])).toBe(true);
     expect(importerInEnforcedSubtree(file, child, ['rfi'])).toBe(false);
     expect(importerInEnforcedSubtree(file, child, ['features/projects/*'])).toBe(false);
     expect(importerInEnforcedSubtree(file, child, ['features/projects/scm'])).toBe(false);

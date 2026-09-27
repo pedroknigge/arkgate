@@ -657,6 +657,22 @@ describe('policyDeltaAcknowledgementMatches (DF04 pure helper)', () => {
         path: '$.rules[DomainModel->DomainModel].childSlices.siblings.enforce',
       })
     );
+    const slashOnly = analyzePolicyDelta({
+      baseConfig: enforced,
+      candidateConfig: {
+        ...structuredClone(BASE_CONFIG),
+        rules: [
+          {
+            ...structuredClone(BASE_CONFIG.rules[0]),
+            childSlices: {
+              ...child,
+              siblings: { default: 'advisory' as const, enforce: ['features/projects/rfi/'] },
+            },
+          },
+        ],
+      },
+    });
+    expect(slashOnly.findings.filter((finding) => finding.path.includes('siblings'))).toEqual([]);
     const removed = analyzePolicyDelta({ baseConfig: enforced, candidateConfig: base });
     expect(removed.findings).toContainEqual(
       expect.objectContaining({

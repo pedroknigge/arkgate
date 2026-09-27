@@ -683,7 +683,7 @@ export function resolveChildSliceId(relPath, universeId, child) {
     return { mismatched: { childId: raw, universeId } };
 }
 function siblingEntryKey(entry) {
-    return entry.trim().replace(/\\/g, '/').replace(/\/+$/g, '').toLowerCase();
+    return trimTrailingSlashes(entry.trim().replace(/\\/g, '/')).toLowerCase();
 }
 function stripSrcOrApp(value) {
     return value.replace(/^(?:src|app)\//, '');

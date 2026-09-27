@@ -564,7 +564,7 @@ function validateChildSliceSiblings(candidate: Record<string, unknown>, issues: 
         issues.push({ path: entryPath, message: 'must be a non-empty child slice id or subtree path' });
         return;
       }
-      const normalized = entry.trim().replace(/\\/g, '/').replace(/\/+$/g, '');
+      const normalized = trimTrailingSlashes(entry.trim().replace(/\\/g, '/'));
       if (normalized.split('/').some((part) => part.length === 0 || part === '.' || part === '..')) {
         issues.push({ path: entryPath, message: 'must be a child slice id or subtree path without . or ..' });
         return;
@@ -770,4 +770,16 @@ export function withArkConfigMetadata<T extends Record<string, unknown>>(
     if (key !== '$schema' && key !== 'schemaVersion') result[key] = value;
   }
   return result as T & Pick<ArkConfig, '$schema' | 'schemaVersion'>;
+}
+
+/**
+ * Trim trailing slashes without a regex.
+ *
+ * `/\/+$/` is a polynomial ReDoS on a value that comes from the repo's own
+ * contract but is still library input. A scan is linear and says the same thing.
+ */
+function trimTrailingSlashes(value: string): string {
+  let end = value.length;
+  while (end > 0 && value[end - 1] === '/') end -= 1;
+  return value.slice(0, end);
 }

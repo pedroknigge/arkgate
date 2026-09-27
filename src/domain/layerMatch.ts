@@ -958,7 +958,7 @@ export function resolveChildSliceId(
 }
 
 function siblingEntryKey(entry: string): string {
-  return entry.trim().replace(/\\/g, '/').replace(/\/+$/g, '').toLowerCase();
+  return trimTrailingSlashes(entry.trim().replace(/\\/g, '/')).toLowerCase();
 }
 
 function stripSrcOrApp(value: string): string {

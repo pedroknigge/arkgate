@@ -475,6 +475,18 @@ describe('C01 config contract', () => {
       path: '$.rules[0].childSlices.siblings.enforce[1]',
       message: 'duplicate enforce entry',
     },
+    {
+      name: 'a duplicate enforce entry that differs only by a trailing slash',
+      siblings: { default: 'advisory', enforce: ['features/projects/rfi', 'features/projects/rfi/'] },
+      path: '$.rules[0].childSlices.siblings.enforce[1]',
+      message: 'duplicate enforce entry',
+    },
+    {
+      name: 'an enforce entry of only slashes',
+      siblings: { default: 'advisory', enforce: ['///'] },
+      path: '$.rules[0].childSlices.siblings.enforce[0]',
+      message: 'without . or ..',
+    },
   ])('rejects $name', ({ siblings, path: issuePath, message }) => {
     const input = {
       ...VALID_MINIMAL_CONFIG,

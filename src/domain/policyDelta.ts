@@ -456,7 +456,7 @@ type SiblingPolicy = { mode: 'deny' | 'advisory'; enforce: string[] };
 function enforceKeys(entries: readonly string[] | undefined): string[] {
   return sortedUnique(
     (entries ?? []).map((entry) =>
-      entry.trim().replace(/\\/g, '/').replace(/\/+$/g, '').toLowerCase()
+      trimTrailingSlashes(entry.trim().replace(/\\/g, '/')).toLowerCase()
     )
   );
 }
@@ -1155,6 +1155,18 @@ export function policyDeltaAcknowledgementMatches(
   const actualIds = sortedUnique(acknowledgement.findingIds);
   const expectedIds = sortedUnique(expected.findingIds);
   return actualIds.length === expectedIds.length && actualIds.every((id, index) => id === expectedIds[index]);
+}
+
+/**
+ * Trim trailing slashes without a regex.
+ *
+ * `/\/+$/` is a polynomial ReDoS on a value that comes from the repo's own
+ * contract but is still library input. A scan is linear and says the same thing.
+ */
+function trimTrailingSlashes(value: string): string {
+  let end = value.length;
+  while (end > 0 && value[end - 1] === '/') end -= 1;
+  return value.slice(0, end);
 }
 
 /** Absent < deny-cross-parent < deny. Up the rank strengthens. Down weakens. */
