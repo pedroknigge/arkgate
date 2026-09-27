@@ -436,6 +436,99 @@ function compareRules(
         after: candidate.sharedImportsSlice ?? null,
       });
     }
+
+    compareChildSlices(findings, path, previous, candidate);
+  }
+}
+
+function childSliceFoldersKey(rule: ArkConfigRule): string {
+  const child = rule.childSlices;
+  if (!child) return '';
+  return JSON.stringify([
+    sortedUnique(child.sliceFolders ?? []),
+    child.sliceIdentity ?? 'path',
+    sortedUnique(child.commonFolders ?? []),
+  ]);
+}
+
+function childSliceSiblings(rule: ArkConfigRule): 'deny' | 'advisory' | null {
+  if (!rule.childSlices) return null;
+  return rule.childSlices.siblings === 'advisory' ? 'advisory' : 'deny';
+}
+
+/**
+ * Adding a denying child wall strengthens. Advisory siblings and
+ * parentMayImportChild weaken. Folder edits need a human.
+ */
+function compareChildSlices(
+  findings: PolicyDeltaFinding[],
+  path: string,
+  previous: ArkConfigRule,
+  candidate: ArkConfigRule
+): void {
+  const before = childSliceSiblings(previous);
+  const after = childSliceSiblings(candidate);
+  if (before === null && after === null) return;
+  if (before === null && after !== null) {
+    addFinding(findings, {
+      kind: 'child-slices-added',
+      path: `${path}.childSlices`,
+      classification: after === 'advisory' ? 'judgment-required' : 'strengthening',
+      message:
+        after === 'advisory'
+          ? 'A child slice wall was added with advisory sibling crossings.'
+          : 'A child slice wall was added. Sibling crossings inside a universe are now denied.',
+      after: candidate.childSlices,
+    });
+    return;
+  }
+  if (before !== null && after === null) {
+    addFinding(findings, {
+      kind: 'child-slices-removed',
+      path: `${path}.childSlices`,
+      classification: 'weakening',
+      message: 'The child slice wall was removed. Sibling crossings inside a universe are allowed again.',
+      before: previous.childSlices,
+    });
+    return;
+  }
+  if (childSliceFoldersKey(previous) !== childSliceFoldersKey(candidate)) {
+    addFinding(findings, {
+      kind: 'child-slices-changed',
+      path: `${path}.childSlices`,
+      classification: 'judgment-required',
+      message: 'Child slice folders changed and can reclassify edges inside a universe.',
+      before: previous.childSlices,
+      after: candidate.childSlices,
+    });
+    return;
+  }
+  if (before !== after) {
+    const weakening = after === 'advisory';
+    addFinding(findings, {
+      kind: 'child-slices-siblings',
+      path: `${path}.childSlices.siblings`,
+      classification: weakening ? 'weakening' : 'strengthening',
+      message: weakening
+        ? 'Sibling crossings inside a universe are now advisory.'
+        : 'Sibling crossings inside a universe are now denied.',
+      before,
+      after,
+    });
+  }
+  const previousParent = previous.childSlices?.parentMayImportChild === true;
+  const candidateParent = candidate.childSlices?.parentMayImportChild === true;
+  if (previousParent !== candidateParent) {
+    addFinding(findings, {
+      kind: 'child-slices-parent-import',
+      path: `${path}.childSlices.parentMayImportChild`,
+      classification: candidateParent ? 'weakening' : 'strengthening',
+      message: candidateParent
+        ? 'Universe common may now import a child slice.'
+        : 'Universe common may no longer import a child slice.',
+      before: previousParent,
+      after: candidateParent,
+    });
   }
 }
 

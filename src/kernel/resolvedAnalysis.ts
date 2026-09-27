@@ -16,10 +16,11 @@ import {
   forbiddenGlobalForModuleSpecifier,
 } from '../domain/capabilities';
 import {
+  composeSliceDenialMessage,
   findDeniedEdgeDecision,
   globToRegExp,
   layerForRelativePath,
-  peerIsolationDenyExplanation,
+  sliceFindingExtras,
 } from '../domain/layerMatch';
 import {
   DEFAULT_INTENT_PREFIXES,
@@ -384,22 +385,19 @@ function contentViolations(
       }
     );
     if (!decision) continue;
-    const peerReason = decision.rule.peerIsolation
-      ? peerIsolationDenyExplanation(decision.peerIsolationReason ?? 'cross-slice', {
-          fromPath: reference.file,
-          fromSlice: decision.fromSlice,
-          toSlice: decision.toSlice,
-        })
-      : undefined;
+    const verdict = decision.sliceVerdict;
     const defaultMessage = `${fromLayer} must not reference ${toLayer} intent ${reference.intent}.`;
-    const message =
-      peerReason && decision.peerIsolationReason !== 'cross-slice'
-        ? `${defaultMessage} ${peerReason}`
-        : decision.rule.message
-          ? peerReason
-            ? `${decision.rule.message} (${peerReason})`
-            : decision.rule.message
-          : defaultMessage;
+    const message = verdict
+      ? composeSliceDenialMessage({
+          surface: 'intent',
+          verdict,
+          fromLayer,
+          toLayer,
+          fromPath: reference.file,
+          ruleMessage: decision.rule.message,
+          defaultMessage,
+        })
+      : (decision.rule.message ?? defaultMessage);
     violations.push({
       ruleId: 'LAYER_INTENT_REFERENCE_VIOLATION',
       file: reference.file,
@@ -408,6 +406,7 @@ function contentViolations(
       toLayer,
       target: reference.intent,
       ...(decision.rule.peerIsolation ? { peerIsolation: true } : {}),
+      ...sliceFindingExtras(verdict),
       message,
     });
   }

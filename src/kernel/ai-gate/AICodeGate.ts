@@ -22,9 +22,9 @@ import {
   forbiddenGlobalForModuleSpecifier,
 } from '../../domain/capabilities';
 import {
+  composeSliceDenialMessage,
   findDeniedEdgeDecision,
-  findDeniedEdgeRule,
-  peerIsolationDenyExplanation,
+  sliceFindingExtras,
 } from '../../domain/layerMatch';
 import { collectCapabilityUses } from '../capabilityAnalysis';
 import { classifyPublishFacts, looksLikeArkIntent } from '../../domain/sourcePolicy';
@@ -632,7 +632,7 @@ export function createAICodeGate<Context = AICodeGateContext>(
             : undefined;
         const targetLayer = targetHit?.layer;
         if (targetLayer && contextLayer) {
-          const blocked = findDeniedEdgeRule(
+          const decision = findDeniedEdgeDecision(
             options.architectureProfile?.rules,
             contextLayer,
             targetLayer,
@@ -642,7 +642,8 @@ export function createAICodeGate<Context = AICodeGateContext>(
               layers: options.architectureLayers,
             }
           );
-          if (blocked) {
+          if (decision) {
+            const blocked = decision.rule;
             // W1: type-only static edges (`import type` / `export type`) are erased at
             // runtime — do not hard-block the write path. ark-check --plan still surfaces
             // them for type placement (mechanical-safe relocate). Value imports stay hard-block.
@@ -650,31 +651,39 @@ export function createAICodeGate<Context = AICodeGateContext>(
               continue;
             }
             const peer = Boolean(blocked.peerIsolation);
+            const extras = sliceFindingExtras(decision.sliceVerdict);
+            const base =
+              blocked.message ??
+              (peer
+                ? `Layer "${contextLayer}" must not import across slices into "${targetLayer}".`
+                : `Layer "${contextLayer}" must not import "${targetLayer}".`);
+            // Keep today's sentence when there is no reasonId. A child-only deny
+            // (universe common importing a child) still names that fact.
+            const explanation =
+              extras.reasonId || (peer && !decision.peerIsolationReason)
+                ? decision.sliceVerdict?.explanation
+                : undefined;
             violations.push(
-              violation(
-                'LAYER_IMPORT_VIOLATION',
-                blocked.message ??
-                  (peer
-                    ? `Layer "${contextLayer}" must not import across slices into "${targetLayer}".`
-                    : `Layer "${contextLayer}" must not import "${targetLayer}".`),
-                {
-                  line: lineOf(source, specifier.index),
-                  source: specifier.value,
-                  target: specifier.value,
-                  filePath,
-                  fromLayer: contextLayer,
-                  toLayer: targetLayer,
-                  suggestion: peer
-                    ? 'Extract shared code to a shared layer, or coordinate slices via events/ports — do not import across feature/context slices.'
-                    : 'Depend on a port/interface owned by an inner layer instead, or move this ' +
-                      'code to a layer allowed to make this import.',
-                  details: {
-                    importKind: specifier.kind,
-                    peerIsolation: peer,
-                    ...(specifier.typeOnly ? { typeOnly: true } : {}),
-                  },
-                }
-              )
+              violation('LAYER_IMPORT_VIOLATION', explanation ? `${base} ${explanation}` : base, {
+                line: lineOf(source, specifier.index),
+                source: specifier.value,
+                target: specifier.value,
+                filePath,
+                fromLayer: contextLayer,
+                toLayer: targetLayer,
+                ...(extras.reasonId ? { reasonId: extras.reasonId } : {}),
+                ...(extras.failsStrict === false ? { failsStrict: false } : {}),
+                suggestion: peer
+                  ? 'Extract shared code to a shared layer, or coordinate slices via events/ports — do not import across feature/context slices.'
+                  : 'Depend on a port/interface owned by an inner layer instead, or move this ' +
+                    'code to a layer allowed to make this import.',
+                details: {
+                  importKind: specifier.kind,
+                  peerIsolation: peer,
+                  ...(specifier.typeOnly ? { typeOnly: true } : {}),
+                  ...(extras.reasonId ? { reasonId: extras.reasonId } : {}),
+                },
+              })
             );
             continue;
           }
@@ -774,22 +783,20 @@ export function createAICodeGate<Context = AICodeGateContext>(
           );
 
           if (blocked) {
-            const peerReason = blocked.rule.peerIsolation
-              ? peerIsolationDenyExplanation(blocked.peerIsolationReason ?? 'cross-slice', {
-                  fromPath: typeof filePath === 'string' ? filePath : undefined,
-                  fromSlice: blocked.fromSlice,
-                  toSlice: blocked.toSlice,
-                })
-              : undefined;
+            const verdict = blocked.sliceVerdict;
             const defaultMessage = `Layer "${contextLayer}" must not reference "${targetLayer}" through "${literal.value}".`;
-            const message =
-              peerReason && blocked.peerIsolationReason !== 'cross-slice'
-                ? `${defaultMessage} ${peerReason}`
-                : blocked.rule.message
-                  ? peerReason
-                    ? `${blocked.rule.message} (${peerReason})`
-                    : blocked.rule.message
-                  : defaultMessage;
+            const message = verdict
+              ? composeSliceDenialMessage({
+                  surface: 'intent',
+                  verdict,
+                  fromLayer: contextLayer,
+                  toLayer: targetLayer,
+                  fromPath: typeof filePath === 'string' ? filePath : undefined,
+                  ruleMessage: blocked.rule.message,
+                  defaultMessage,
+                })
+              : (blocked.rule.message ?? defaultMessage);
+            const extras = sliceFindingExtras(verdict);
             violations.push(
               violation('LAYER_REFERENCE_VIOLATION', message, {
                 line: lineOf(source, literal.index),
@@ -797,8 +804,14 @@ export function createAICodeGate<Context = AICodeGateContext>(
                 target: literal.value,
                 fromLayer: contextLayer,
                 toLayer: targetLayer,
+                ...(extras.reasonId ? { reasonId: extras.reasonId } : {}),
+                ...(extras.failsStrict === false ? { failsStrict: false } : {}),
                 suggestion: 'Route the dependency through an allowed intent, port, or event.',
-                details: { rule: blocked.rule, peerIsolationReason: blocked.peerIsolationReason },
+                details: {
+                  rule: blocked.rule,
+                  peerIsolationReason: blocked.peerIsolationReason,
+                  ...(extras.reasonId ? { reasonId: extras.reasonId } : {}),
+                },
               })
             );
           }
@@ -958,7 +971,7 @@ export function createAICodeGate<Context = AICodeGateContext>(
         completeness: 'partial',
         completenessReasons: ['LEXICAL_EVIDENCE_INCOMPLETE'],
         valid: false,
-        lexicalValid: violations.length === 0,
+        lexicalValid: !violations.some((item) => item.failsStrict !== false),
         violations,
       };
     },

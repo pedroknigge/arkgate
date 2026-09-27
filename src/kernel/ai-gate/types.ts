@@ -17,6 +17,10 @@ export interface AICodeGateViolation {
   target?: string;
   fromLayer?: string;
   toLayer?: string;
+  /** Nested-wall reason. Absent on a classic layer deny and on a child-only parent import. */
+  reasonId?: string;
+  /** False for an advisory sibling crossing. Omitted findings still block the snippet. */
+  failsStrict?: boolean;
   details?: unknown;
 }
 

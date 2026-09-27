@@ -228,6 +228,23 @@ const INVALID_CONTRACT_CASES = [
     message: 'must be one of path, stars',
   },
   {
+    name: 'an unknown childSlices siblings value',
+    input: {
+      ...VALID_MINIMAL_CONFIG,
+      rules: [
+        {
+          from: 'DomainModel',
+          to: 'DomainModel',
+          allowed: false,
+          peerIsolation: true,
+          childSlices: { sliceFolders: ['lib/features/*/*'], siblings: 'warn' },
+        },
+      ],
+    },
+    path: '$.rules[0].childSlices.siblings',
+    message: 'must be one of deny, advisory',
+  },
+  {
     name: 'an unknown non-identifier key',
     input: { ...VALID_MINIMAL_CONFIG, 'unexpected-policy': true },
     path: '$["unexpected-policy"]',
@@ -338,6 +355,35 @@ describe('C01 config contract', () => {
       ],
     });
     expect(pathed.config.rules[0]?.sliceIdentity).toBe('path');
+  });
+
+  it.each(CONTRACT_LOADERS)('$surface accepts an optional childSlices block', ({ load }) => {
+    const loaded = load({
+      ...VALID_MINIMAL_CONFIG,
+      rules: [
+        {
+          from: 'DomainModel',
+          to: 'DomainModel',
+          allowed: false,
+          peerIsolation: true,
+          sliceFolders: ['features'],
+          childSlices: {
+            sliceFolders: ['lib/features/*/*'],
+            sliceIdentity: 'stars',
+            commonFolders: ['domain'],
+            siblings: 'advisory',
+            parentMayImportChild: false,
+          },
+        },
+      ],
+    });
+    expect(loaded.config.rules[0]?.childSlices).toEqual({
+      sliceFolders: ['lib/features/*/*'],
+      sliceIdentity: 'stars',
+      commonFolders: ['domain'],
+      siblings: 'advisory',
+      parentMayImportChild: false,
+    });
   });
 
   it('exports and publishes the schema through stable package subpaths', () => {

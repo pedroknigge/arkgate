@@ -6,6 +6,7 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
+import { applyAdvisorySiblingRatchet } from '../ark-layer-match.mjs';
 import {
   baselineKeysFromDocument,
   classifyBaselineKeyDelta,
@@ -321,7 +322,8 @@ export function applyAgainstRatchet({
 }) {
   const baseRaw = readJsonMaybe(gitShowText(root, againstRef, '.ark-baseline.json'));
   const baseKeys = new Set(baselineKeysFromDocument(baseRaw));
-  const vsBaseActive = violations.filter((_, index) => !baseKeys.has(occurrenceKeys[index]));
+  const judged = baseRaw ? applyAdvisorySiblingRatchet(violations, occurrenceKeys, baseKeys) : violations;
+  const vsBaseActive = judged.filter((_, index) => !baseKeys.has(occurrenceKeys[index]));
   const changedSet = new Set(changedPaths ?? []);
   const activeViolations = changed
     ? vsBaseActive.filter((violation) =>
@@ -330,7 +332,7 @@ export function applyAgainstRatchet({
     : vsBaseActive;
   return {
     activeViolations,
-    suppressed: violations.filter((violation) => !activeViolations.includes(violation)),
+    suppressed: judged.filter((violation) => !activeViolations.includes(violation)),
   };
 }
 

@@ -76,6 +76,19 @@ export type ArkConfigRule = {
   allowedCrossSlice?: ArkConfigCrossSliceEdge[];
   /** When `"deny"`, a declared shared root may not import a slice. */
   sharedImportsSlice?: 'deny';
+  /**
+   * Optional inner wall. Absent keeps today's universe-wall output.
+   * `siblings` defaults to deny. `parentMayImportChild` defaults to false.
+   */
+  childSlices?: ArkConfigChildSlices;
+};
+
+export type ArkConfigChildSlices = {
+  sliceFolders: string[];
+  sliceIdentity?: ArkConfigSliceIdentity;
+  commonFolders?: string[];
+  siblings?: 'deny' | 'advisory';
+  parentMayImportChild?: boolean;
 };
 
 export type ArkConfigCrossSliceEdge = {

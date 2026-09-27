@@ -229,6 +229,28 @@ describe('buildWritePathHonesty', () => {
   });
 });
 
+describe('child wall advisory honesty', () => {
+  it('keeps finished false while any child wall is advisory', () => {
+    const honest = buildProductHonesty({
+      coverageHonesty: { status: 'ok', wholeTreeGoverned: true, message: 'covered' },
+      baselineHonesty: { status: 'ok', message: 'clean' },
+      writePathHonesty: { activeHost: 'cursor', hardWriteActive: true, message: 'hard' },
+      activeBlockingViolations: 0,
+      childWallAdvisory: true,
+    });
+    expect(honest.finished).toBe(false);
+    expect(honest.reasonIds).toContain('child-wall-advisory');
+    const denied = buildProductHonesty({
+      coverageHonesty: { status: 'ok', wholeTreeGoverned: true, message: 'covered' },
+      baselineHonesty: { status: 'ok', message: 'clean' },
+      writePathHonesty: { activeHost: 'cursor', hardWriteActive: true, message: 'hard' },
+      activeBlockingViolations: 0,
+      childWallAdvisory: false,
+    });
+    expect(denied.reasonIds ?? []).not.toContain('child-wall-advisory');
+  });
+});
+
 describe('post-validity coaching flags', () => {
   it('design-weak post-green path forbids multi-pilot auto-apply and coaches placement', () => {
     const action = buildPostGreenNextAction({ designWeak: true })!;

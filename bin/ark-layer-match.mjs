@@ -9,6 +9,11 @@
  * CLI-only layerForFile (Node path resolution) is appended below the pure core.
  */
 
+/**
+ * Last published arkgate that rejects `childSlices`. The rule schema sets
+ * `additionalProperties: false`, so 4.8.22 and older refuse the whole config.
+ */
+export const CHILD_SLICES_REJECTED_THROUGH = '4.8.22';
 const regexpCache = new Map();
 function escapeLiteral(ch) {
     return /[.*+?^${}()|[\]\\]/.test(ch) ? `\\${ch}` : ch;
@@ -624,6 +629,280 @@ export function peerIsolationDenyExplanation(reason, context) {
             return 'no path evidence for this edge — peerIsolation needs the importer and importee paths.';
     }
 }
+function crossParentExplanation(fromSlice, toSlice) {
+    return `cross-parent slice ${fromSlice ?? '?'} → ${toSlice ?? '?'}. The child wall cannot allow another universe.`;
+}
+function crossSiblingExplanation(fromChild, toChild, universe) {
+    return `cross-sibling slice ${fromChild} → ${toChild} inside ${universe}.`;
+}
+function parentImportsChildExplanation(toChild) {
+    return `universe common imports child ${toChild}. parentMayImportChild is off.`;
+}
+/** Last path segment of a universe slice id (`features/projects` → `projects`). */
+export function universePairLabel(sliceId) {
+    if (!sliceId)
+        return undefined;
+    const parts = sliceId.split('/').filter(Boolean);
+    return parts.length > 0 ? parts[parts.length - 1] : undefined;
+}
+function directorySegments(relPath) {
+    const parts = String(relPath).split(/[/\\]/).filter(Boolean);
+    return parts.slice(0, -1);
+}
+function pathHasCommonFolder(relPath, commonFolders) {
+    if (!commonFolders?.length)
+        return false;
+    const names = new Set();
+    for (const raw of commonFolders) {
+        if (typeof raw === 'string' && raw.length > 0)
+            names.add(raw.toLowerCase());
+    }
+    if (names.size === 0)
+        return false;
+    return directorySegments(relPath).some((part) => names.has(part.toLowerCase()));
+}
+/**
+ * Child id for one path. A common folder and a flat file (the starred id does
+ * not grow past the universe id) are universe common. A child id that does not
+ * extend the universe id is not used; the caller warns.
+ */
+export function resolveChildSliceId(relPath, universeId, child) {
+    if (!relPath || !child?.sliceFolders?.length)
+        return {};
+    if (pathHasCommonFolder(relPath, child.commonFolders))
+        return {};
+    const raw = sliceIdForPath(relPath, child.sliceFolders, child.sliceIdentity);
+    if (!raw || !universeId)
+        return {};
+    const childKey = raw.toLowerCase();
+    const universeKey = universeId.toLowerCase();
+    if (childKey === universeKey)
+        return {};
+    if (childKey.startsWith(`${universeKey}/`))
+        return { childId: raw };
+    return { mismatched: { childId: raw, universeId } };
+}
+/**
+ * Universe wall, then the child wall. An allow from the child wall never
+ * overturns a universe deny: that deny returns before the child wall runs.
+ */
+export function evaluateNestedSliceWall(input) {
+    const universe = peerIsolationDecision({
+        fromPath: input.fromPath,
+        toPath: input.toPath,
+        folderCount: input.folderCount,
+        fromSlice: input.fromSlice,
+        toSlice: input.toSlice,
+        fromShared: input.fromShared,
+        toShared: input.toShared,
+        crossSliceAllowed: input.crossSliceAllowed,
+        sharedImportsSlice: input.rule.sharedImportsSlice,
+    });
+    if (universe.denied) {
+        const crossParent = Boolean(input.rule.childSlices) && universe.reason === 'cross-slice';
+        return {
+            crossing: universe.reason === 'cross-slice' ? 'cross-parent' : 'fail-closed',
+            decision: 'deny',
+            ...(crossParent ? { reasonId: 'CROSS_PARENT_SLICE' } : {}),
+            explanation: crossParent
+                ? crossParentExplanation(input.fromSlice, input.toSlice)
+                : peerIsolationDenyExplanation(universe.reason ?? 'missing-path', {
+                    fromPath: input.fromPath,
+                    toPath: input.toPath,
+                    fromSlice: input.fromSlice,
+                    toSlice: input.toSlice,
+                }),
+            peerIsolationReason: universe.reason,
+            fromUniverse: input.fromSlice,
+            toUniverse: input.toSlice,
+        };
+    }
+    const child = input.rule.childSlices;
+    if (!child || !input.fromSlice || !input.toSlice || input.fromSlice !== input.toSlice || !input.toPath) {
+        return {
+            crossing: 'none',
+            decision: 'allow',
+            fromUniverse: input.fromSlice,
+            toUniverse: input.toSlice,
+        };
+    }
+    const fromChild = resolveChildSliceId(input.fromPath, input.fromSlice, child).childId;
+    const toChild = resolveChildSliceId(input.toPath, input.toSlice, child).childId;
+    const allowSameUniverse = {
+        crossing: 'none',
+        decision: 'allow',
+        fromUniverse: input.fromSlice,
+        toUniverse: input.toSlice,
+    };
+    if (fromChild && toChild && fromChild !== toChild) {
+        const advisory = child.siblings === 'advisory';
+        return {
+            crossing: 'cross-sibling',
+            decision: advisory ? 'advisory' : 'deny',
+            reasonId: 'CROSS_SIBLING_SLICE',
+            explanation: crossSiblingExplanation(fromChild, toChild, input.fromSlice),
+            fromUniverse: input.fromSlice,
+            toUniverse: input.toSlice,
+        };
+    }
+    if (!fromChild && toChild && child.parentMayImportChild !== true) {
+        return {
+            crossing: 'parent-imports-child',
+            decision: 'deny',
+            explanation: parentImportsChildExplanation(toChild),
+            fromUniverse: input.fromSlice,
+            toUniverse: input.toSlice,
+        };
+    }
+    return allowSameUniverse;
+}
+/**
+ * Finding message. Import sites always append the explanation. Intent sites
+ * keep today's wording when there is no reasonId: a plain cross-slice deny
+ * does not gain a clause, and any other universe-wall reason does.
+ */
+export function composeSliceDenialMessage(input) {
+    const explanation = input.verdict.explanation;
+    if (input.surface === 'intent') {
+        const defaultMessage = input.defaultMessage ?? `${input.fromLayer} must not reference ${input.toLayer} intent.`;
+        if (input.verdict.reasonId && explanation)
+            return `${defaultMessage} ${explanation}`;
+        if (explanation && input.verdict.peerIsolationReason !== 'cross-slice') {
+            return `${defaultMessage} ${explanation}`;
+        }
+        if (input.ruleMessage) {
+            return explanation ? `${input.ruleMessage} (${explanation})` : input.ruleMessage;
+        }
+        return defaultMessage;
+    }
+    if (input.ruleMessage) {
+        return explanation ? `${input.ruleMessage} (${explanation})` : input.ruleMessage;
+    }
+    if (explanation) {
+        const kind = input.kind ?? 'import';
+        return `${input.fromLayer} must not ${kind} another slice of ${input.toLayer} (${input.fromPath} → ${input.toPath}): ${explanation}`;
+    }
+    return `${input.fromLayer} must not ${input.kind ?? 'import'} ${input.toLayer}.`;
+}
+/** Fields a reporting site copies onto a finding. Absent when the verdict allows. */
+export function sliceFindingExtras(verdict) {
+    if (!verdict || verdict.decision === 'allow')
+        return {};
+    const from = universePairLabel(verdict.fromUniverse);
+    const to = universePairLabel(verdict.toUniverse);
+    return {
+        ...(verdict.reasonId ? { reasonId: verdict.reasonId } : {}),
+        ...(verdict.reasonId && from && to ? { universeFrom: from, universeTo: to } : {}),
+        ...(verdict.decision === 'advisory'
+            ? { failsStrict: false, severity: 'warning' }
+            : {}),
+    };
+}
+export function anyChildWallAdvisory(rules) {
+    return (rules ?? []).some((rule) => rule?.childSlices != null && rule.childSlices.siblings === 'advisory');
+}
+/** Doctor counts. Null when this scan has no nested-wall reason, so the key stays absent. */
+export function sliceCountReport(violations) {
+    let crossParent = 0;
+    let crossSibling = 0;
+    const pairs = new Map();
+    for (const row of violations ?? []) {
+        if (row.reasonId === 'CROSS_PARENT_SLICE') {
+            crossParent += 1;
+            if (typeof row.universeFrom === 'string' && typeof row.universeTo === 'string') {
+                const key = `${row.universeFrom}\0${row.universeTo}`;
+                const prev = pairs.get(key);
+                if (prev)
+                    prev.count += 1;
+                else
+                    pairs.set(key, { from: row.universeFrom, to: row.universeTo, count: 1 });
+            }
+        }
+        else if (row.reasonId === 'CROSS_SIBLING_SLICE') {
+            crossSibling += 1;
+        }
+    }
+    if (crossParent === 0 && crossSibling === 0)
+        return null;
+    return {
+        crossParent,
+        crossSibling,
+        pairs: [...pairs.values()].sort((left, right) => left.from.localeCompare(right.from) || left.to.localeCompare(right.to)),
+    };
+}
+/**
+ * One version warning when any rule sets childSlices, plus one warning per
+ * directed rule when a path's child id does not extend its universe id.
+ */
+export function childSliceConfigFindings(rules, files) {
+    const out = [];
+    let versionWarned = false;
+    const seenMismatch = new Set();
+    for (const rule of rules ?? []) {
+        if (!rule?.childSlices)
+            continue;
+        if (!versionWarned) {
+            versionWarned = true;
+            out.push({
+                ruleId: 'CONFIG_CHILD_SLICES_VERSION',
+                failsStrict: false,
+                message: `childSlices needs an arkgate newer than ${CHILD_SLICES_REJECTED_THROUGH}. Version ${CHILD_SLICES_REJECTED_THROUGH} and older reject the key because the rule schema sets additionalProperties: false.`,
+            });
+        }
+        if (!rule.peerIsolation)
+            continue;
+        for (const file of files) {
+            const universeId = sliceIdForPath(file, rule.sliceFolders, rule.sliceIdentity);
+            const resolved = resolveChildSliceId(file, universeId, rule.childSlices);
+            if (!resolved.mismatched)
+                continue;
+            const key = `${rule.from}\0${rule.to}\0${resolved.mismatched.universeId}\0${resolved.mismatched.childId}`;
+            if (seenMismatch.has(key))
+                continue;
+            seenMismatch.add(key);
+            out.push({
+                ruleId: 'CONFIG_CHILD_SLICE_EXTENDS',
+                failsStrict: false,
+                fromLayer: rule.from,
+                toLayer: rule.to,
+                path: file,
+                message: `${rule.from} → ${rule.to}: child id ${resolved.mismatched.childId} does not extend universe id ${resolved.mismatched.universeId} (${file}).`,
+            });
+        }
+    }
+    return out;
+}
+/**
+ * Advisory sibling crossings above the recorded baseline count become blocking.
+ * The key is the existing baseline identity (ruleId, file, layers, target) —
+ * reasonId is not part of it. No baseline means there is no recorded count,
+ * so advisory stays non-blocking. Recorded crossings stay advisory.
+ */
+export function applyAdvisorySiblingRatchet(violations, occurrenceKeys, recordedKeys) {
+    const indexes = [];
+    for (let index = 0; index < violations.length; index += 1) {
+        if (violations[index]?.reasonId === 'CROSS_SIBLING_SLICE')
+            indexes.push(index);
+    }
+    if (indexes.length === 0)
+        return [...violations];
+    let recorded = 0;
+    for (const index of indexes) {
+        if (recordedKeys.has(occurrenceKeys[index] ?? ''))
+            recorded += 1;
+    }
+    if (indexes.length <= recorded)
+        return [...violations];
+    return violations.map((violation, index) => {
+        if (violation.reasonId !== 'CROSS_SIBLING_SLICE')
+            return violation;
+        if (recordedKeys.has(occurrenceKeys[index] ?? ''))
+            return violation;
+        if (violation.failsStrict !== false)
+            return violation;
+        return { ...violation, failsStrict: true, severity: 'error' };
+    });
+}
 /**
  * Find the first denying rule for a layer edge.
  *
@@ -660,7 +939,8 @@ export function findDeniedEdgeDecision(rules, from, to, options) {
                 ? sliceIdForPath(fromPath, folders, rule.sliceIdentity)
                 : undefined;
             const toSlice = toPath ? sliceIdForPath(toPath, folders, rule.sliceIdentity) : undefined;
-            const decision = peerIsolationDecision({
+            const verdict = evaluateNestedSliceWall({
+                rule,
                 fromPath,
                 toPath,
                 folderCount: folders.length,
@@ -669,12 +949,17 @@ export function findDeniedEdgeDecision(rules, from, to, options) {
                 fromShared: !fromSlice && pathUnderSharedRoot(fromPath, rule.sharedRoots),
                 toShared: !toSlice && pathUnderSharedRoot(toPath, rule.sharedRoots),
                 crossSliceAllowed: crossSliceEdgeAllowed(rule.allowedCrossSlice, fromSlice, toSlice),
-                sharedImportsSlice: rule.sharedImportsSlice,
             });
-            if (decision.denied) {
-                return { rule, peerIsolationReason: decision.reason, fromSlice, toSlice };
+            if (verdict.decision !== 'allow') {
+                return {
+                    rule,
+                    peerIsolationReason: verdict.peerIsolationReason,
+                    fromSlice,
+                    toSlice,
+                    sliceVerdict: verdict,
+                };
             }
-            continue; // same slice, declared shared, or declared cross edge: no denial
+            continue; // same slice, declared shared, declared cross edge, or child wall allow
         }
         // Classic deny — same-layer always allowed without peerIsolation
         if (from === to)

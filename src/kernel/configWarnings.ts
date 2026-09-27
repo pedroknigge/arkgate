@@ -5,6 +5,7 @@
  * never change.
  */
 import {
+  childSliceConfigFindings,
   globToRegExp,
   layerForRelativePath,
   patternSpecificity,
@@ -227,6 +228,17 @@ export function collectAnalysisConfigWarnings(
         fromLayer: collision.from,
         toLayer: collision.to,
         failsStrict: false,
+      })
+    );
+  }
+
+  for (const finding of childSliceConfigFindings(rules, files)) {
+    warnings.push(
+      configWarning(finding.ruleId, finding.message, {
+        failsStrict: false,
+        ...(finding.path ? { file: finding.path } : {}),
+        ...(finding.fromLayer ? { fromLayer: finding.fromLayer } : {}),
+        ...(finding.toLayer ? { toLayer: finding.toLayer } : {}),
       })
     );
   }

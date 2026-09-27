@@ -136,6 +136,8 @@ export const JOURNEYS = Object.freeze({
   atlasgrid: Object.freeze([
     Object.freeze(['ark-check', '--json', '--no-cache']),
     Object.freeze(['ark-check', '--doctor', '--json', '--no-cache']),
+    Object.freeze(['ark-check', '--json', '--no-cache', '--config', 'ark.config.child-slices.json']),
+    Object.freeze(['ark-check', '--doctor', '--json', '--no-cache', '--config', 'ark.config.child-slices.json']),
   ]),
 });
 
@@ -153,9 +155,9 @@ export const JOURNEY_CASES = Object.freeze({
     Object.freeze({
       id: 'pr1-cross-parent-slice',
       owner: '#326 PR1',
-      expect: 'fail',
+      expect: 'pass',
       kind: 'pr1-cross-parent-slice',
-      note: 'Owned by #326 PR1. Recorded red until childSlices reports CROSS_PARENT_SLICE on these five directed pairs.',
+      note: 'Owned by #326 PR1. childSlices reports CROSS_PARENT_SLICE on these five directed pairs.',
       edges: crossParentEdges,
       want: Object.freeze({
         ruleId: 'LAYER_IMPORT_VIOLATION',
@@ -167,9 +169,9 @@ export const JOURNEY_CASES = Object.freeze({
     Object.freeze({
       id: 'pr1-cross-sibling-slice',
       owner: '#326 PR1',
-      expect: 'fail',
+      expect: 'pass',
       kind: 'pr1-cross-sibling-slice',
-      note: 'Owned by #326 PR1. Recorded red until the child wall denies these three sibling crossings (error when siblings is deny).',
+      note: 'Owned by #326 PR1. The child wall denies these three sibling crossings (error when siblings is deny).',
       edges: crossSiblingEdges,
       want: Object.freeze({
         ruleId: 'LAYER_IMPORT_VIOLATION',
@@ -181,9 +183,9 @@ export const JOURNEY_CASES = Object.freeze({
     Object.freeze({
       id: 'pr1-child-imports-own-common',
       owner: '#326 PR1',
-      expect: 'fail',
+      expect: 'pass',
       kind: 'pr1-child-imports-own-common',
-      note: 'Owned by #326 PR1. A feature may import its own flat repository and its universe domain/. Recorded red until the child wall is on and those edges stay clean.',
+      note: 'Owned by #326 PR1. A feature may import its own flat repository and its universe domain/. The child wall leaves those edges clean.',
       flatRepo: Object.freeze({
         file: 'src/lib/features/projects/rfi/load-rfi.ts',
         target: 'src/lib/repositories/features/projects/rfi-repository.ts',
@@ -201,9 +203,9 @@ export const JOURNEY_CASES = Object.freeze({
     Object.freeze({
       id: 'pr1-common-imports-child',
       owner: '#326 PR1',
-      expect: 'fail',
+      expect: 'pass',
       kind: 'pr1-common-imports-child',
-      note: 'Owned by #326 PR1. Universe common must not import a child feature. Recorded red until that edge is denied.',
+      note: 'Owned by #326 PR1. Universe common must not import a child feature. That edge is denied.',
       edge: Object.freeze({
         file: 'src/lib/features/projects/domain/project-codes.ts',
         target: 'src/lib/features/projects/rfi/rfi-intake.ts',
@@ -217,7 +219,7 @@ export const JOURNEY_CASES = Object.freeze({
     Object.freeze({
       id: 'pr1-doctor-slice-counts',
       owner: '#326 PR1',
-      expect: 'fail',
+      expect: 'pass',
       kind: 'pr1-doctor-slice-counts',
       note: 'Owned by #326 PR1. Doctor slices counts per level, and per directed universe pair only for pairs that occur.',
       want: Object.freeze({
