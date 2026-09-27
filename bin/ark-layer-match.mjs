@@ -1017,6 +1017,10 @@ export function isScanExcludedRelative(relPath, config) {
     const rel = String(relPath).split(/[/\\]/).join('/');
     return scanExcludePatterns(config).some((pattern) => globToRegExp(pattern).test(rel));
 }
+/** Slice folders the universe wall uses: the rule's list, or the from-layer patterns. */
+export function peerSliceFolders(rule, layerName, layers) {
+    return resolveSliceFolders(rule, layerName, layers);
+}
 
 
 import path from 'node:path';

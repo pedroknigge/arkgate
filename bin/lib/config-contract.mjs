@@ -233,7 +233,11 @@ export const ARK_CONFIG_SCHEMA = {
                         },
                     },
                 },
-                sharedImportsSlice: { type: 'string', enum: ['deny'] },
+                sharedImportsSlice: {
+                    type: 'string',
+                    enum: ['deny', 'deny-cross-parent'],
+                    description: 'deny blocks every shared-root import of a slice. deny-cross-parent leaves that hop as a warning and, in ark-check and CI only, reports a slice that reaches another universe through a shared root. The write hook and ESLint see one edge and do not block it. arkgate 4.8.22 and older reject deny-cross-parent.',
+                },
                 childSlices: {
                     type: 'object',
                     additionalProperties: false,

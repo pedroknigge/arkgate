@@ -424,16 +424,16 @@ function compareRules(
     );
 
     if ((previous.sharedImportsSlice ?? null) !== (candidate.sharedImportsSlice ?? null)) {
-      const denying = candidate.sharedImportsSlice === 'deny';
+      const beforeMode = previous.sharedImportsSlice ?? null;
+      const afterMode = candidate.sharedImportsSlice ?? null;
+      const strengthening = sharedImportsSliceRank(afterMode) > sharedImportsSliceRank(beforeMode);
       addFinding(findings, {
         kind: 'shared-imports-slice',
         path: `${path}.sharedImportsSlice`,
-        classification: denying ? 'strengthening' : 'weakening',
-        message: denying
-          ? 'A shared root may no longer import a slice.'
-          : 'A shared root may import a slice again.',
-        before: previous.sharedImportsSlice ?? null,
-        after: candidate.sharedImportsSlice ?? null,
+        classification: strengthening ? 'strengthening' : 'weakening',
+        message: sharedImportsSliceMessage(beforeMode, afterMode),
+        before: beforeMode,
+        after: afterMode,
       });
     }
 
@@ -1103,4 +1103,23 @@ export function policyDeltaAcknowledgementMatches(
   const actualIds = sortedUnique(acknowledgement.findingIds);
   const expectedIds = sortedUnique(expected.findingIds);
   return actualIds.length === expectedIds.length && actualIds.every((id, index) => id === expectedIds[index]);
+}
+
+/** Absent < deny-cross-parent < deny. Up the rank strengthens. Down weakens. */
+function sharedImportsSliceRank(value: string | null): number {
+  if (value === 'deny') return 2;
+  if (value === 'deny-cross-parent') return 1;
+  return 0;
+}
+
+function sharedImportsSliceMessage(before: string | null, after: string | null): string {
+  if (after === 'deny') return 'A shared root may no longer import a slice.';
+  if (before === 'deny' && after === 'deny-cross-parent') {
+    return 'A shared root may import a slice again, except when that hop carries another universe.';
+  }
+  if (before === 'deny') return 'A shared root may import a slice again.';
+  if (after === 'deny-cross-parent') {
+    return 'A slice may no longer reach another universe through a shared root. ark-check and CI report that path. The write hook and ESLint see one edge at a time and do not block it.';
+  }
+  return 'A slice may reach another universe through a shared root again.';
 }

@@ -8,9 +8,15 @@ import {
   composeSliceDenialMessage,
   findDeniedEdgeDecision,
   findSharedImportsSliceBridge,
+  pathUnderSharedRoot,
+  peerSliceFolders,
   sliceFindingExtras,
+  sliceIdForPath,
+  universePairLabel,
+  type EdgeRule,
 } from '../domain/layerMatch';
 import type {
+  ArchitectureEngineEdge,
   ArchitectureEngineResult,
   ArchitectureEngineViolation,
   EvaluateArchitectureGraphInput,
@@ -162,6 +168,8 @@ export function evaluateArchitectureGraph(
     });
   }
 
+  violations.push(...crossParentViaSharedViolations(input));
+
   const cyclePolicy = String(input.config.cyclePolicy ?? 'strict').toLowerCase();
   if (cyclePolicy !== 'off') {
     const cycles = detectArchitectureCycles(graph);
@@ -179,4 +187,163 @@ export function evaluateArchitectureGraph(
   }
 
   return { violations, warnings, safety: input.safety };
+}
+
+const CROSS_PARENT_VIA_SHARED = 'CROSS_PARENT_VIA_SHARED';
+const CROSS_PARENT_VIA_SHARED_HOOK =
+  'ark-check and CI report this path. The write hook and ESLint see one edge at a time and do not block it.';
+
+type PlacedFile = { kind: 'slice'; id: string } | { kind: 'shared' } | { kind: 'other' };
+
+type ValueHop = {
+  from: string;
+  to: string;
+  line: number;
+  fromLayer: string;
+  toLayer: string;
+};
+
+function denyingCrossParentRule(
+  rules: EvaluateArchitectureGraphInput['rules'],
+  fromLayer: string,
+  toLayer: string
+): EdgeRule | undefined {
+  for (const rule of rules ?? []) {
+    if (rule.from !== fromLayer || rule.to !== toLayer) continue;
+    if (rule.allowed !== false || !rule.peerIsolation) continue;
+    if (rule.sharedImportsSlice !== 'deny-cross-parent') continue;
+    return rule;
+  }
+  return undefined;
+}
+
+function placeFile(
+  rule: EdgeRule,
+  fromLayer: string,
+  path: string,
+  layers: EvaluateArchitectureGraphInput['config']['layers']
+): PlacedFile {
+  const id = sliceIdForPath(path, peerSliceFolders(rule, fromLayer, layers), rule.sliceIdentity);
+  if (id) return { kind: 'slice', id };
+  if (pathUnderSharedRoot(path, rule.sharedRoots)) return { kind: 'shared' };
+  return { kind: 'other' };
+}
+
+/**
+ * Whole-graph pass. A slice reaches another universe only by walking shared
+ * roots. One edge cannot see that, so the write hook and ESLint do not run it.
+ * `sharedImportsSlice: "deny"` is unchanged and does not enter here.
+ */
+function crossParentViaSharedViolations(
+  input: EvaluateArchitectureGraphInput
+): ArchitectureEngineViolation[] {
+  const rules = input.rules ?? [];
+  if (!rules.some((rule) => rule.sharedImportsSlice === 'deny-cross-parent')) return [];
+
+  const outgoing = new Map<string, ValueHop[]>();
+  for (const edge of input.edges) {
+    const hop = valueHop(edge);
+    if (!hop) continue;
+    const list = outgoing.get(hop.from);
+    if (list) list.push(hop);
+    else outgoing.set(hop.from, [hop]);
+  }
+  for (const list of outgoing.values()) {
+    list.sort((left, right) => (left.to < right.to ? -1 : left.to > right.to ? 1 : left.line - right.line));
+  }
+
+  type Hit = {
+    file: string;
+    target: string;
+    line: number;
+    fromLayer: string;
+    toLayer: string;
+    fromSlice: string;
+    toSlice: string;
+    path: string[];
+  };
+  const hits = new Map<string, Hit>();
+  const starts = [...outgoing.values()].flat();
+  starts.sort((left, right) =>
+    left.from < right.from ? -1 : left.from > right.from ? 1 : left.to < right.to ? -1 : left.to > right.to ? 1 : 0
+  );
+
+  for (const hop of starts) {
+    const rule = denyingCrossParentRule(rules, hop.fromLayer, hop.toLayer);
+    if (!rule) continue;
+    const origin = placeFile(rule, hop.fromLayer, hop.from, input.config.layers);
+    const next = placeFile(rule, hop.fromLayer, hop.to, input.config.layers);
+    if (origin.kind !== 'slice' || next.kind !== 'shared') continue;
+
+    const queue: { file: string; path: string[] }[] = [{ file: hop.to, path: [hop.from, hop.to] }];
+    const seen = new Set<string>([hop.to]);
+    while (queue.length > 0) {
+      const current = queue.shift();
+      if (!current) break;
+      for (const step of outgoing.get(current.file) ?? []) {
+        const stepRule = denyingCrossParentRule(rules, step.fromLayer, step.toLayer);
+        if (!stepRule) continue;
+        const dest = placeFile(stepRule, step.fromLayer, step.to, input.config.layers);
+        if (dest.kind === 'shared') {
+          if (seen.has(step.to)) continue;
+          seen.add(step.to);
+          queue.push({ file: step.to, path: [...current.path, step.to] });
+          continue;
+        }
+        if (dest.kind !== 'slice' || dest.id.toLowerCase() === origin.id.toLowerCase()) continue;
+        const path = [...current.path, step.to];
+        const key = `${hop.from}\0${step.to}`;
+        const candidate: Hit = {
+          file: hop.from,
+          target: step.to,
+          line: hop.line,
+          fromLayer: hop.fromLayer,
+          toLayer: step.toLayer,
+          fromSlice: origin.id,
+          toSlice: dest.id,
+          path,
+        };
+        const previous = hits.get(key);
+        if (
+          !previous ||
+          path.length < previous.path.length ||
+          (path.length === previous.path.length && path.join('\0') < previous.path.join('\0'))
+        ) {
+          hits.set(key, candidate);
+        }
+      }
+    }
+  }
+
+  return [...hits.values()]
+    .sort((left, right) =>
+      left.file < right.file ? -1 : left.file > right.file ? 1 : left.target < right.target ? -1 : left.target > right.target ? 1 : 0
+    )
+    .map((hit) => {
+      const fromUniverse = universePairLabel(hit.fromSlice);
+      const toUniverse = universePairLabel(hit.toSlice);
+      return {
+        ruleId: 'LAYER_IMPORT_VIOLATION',
+        reasonId: CROSS_PARENT_VIA_SHARED,
+        file: hit.file,
+        line: hit.line,
+        fromLayer: hit.fromLayer,
+        toLayer: hit.toLayer,
+        target: hit.target,
+        peerIsolation: true,
+        ...(fromUniverse && toUniverse ? { universeFrom: fromUniverse, universeTo: toUniverse } : {}),
+        message: `${hit.fromLayer} reaches ${hit.toLayer} in another universe through a shared root (${hit.path.join(' → ')}): cross-parent via shared ${hit.fromSlice} → ${hit.toSlice}. ${CROSS_PARENT_VIA_SHARED_HOOK}`,
+      };
+    });
+}
+
+function valueHop(edge: ArchitectureEngineEdge): ValueHop | undefined {
+  if (!edge.to || edge.to === edge.from || !edge.fromLayer || !edge.toLayer) return undefined;
+  return {
+    from: edge.from,
+    to: edge.to,
+    line: edge.line,
+    fromLayer: edge.fromLayer,
+    toLayer: edge.toLayer,
+  };
 }

@@ -12,7 +12,6 @@
  * `unexpected-pass` and the journey fails until that PR flips `expect` to `pass`.
  *
  * Planned, not cases yet (#326):
- * PR2 laundering — 2 cross-universe shared paths, 0 same-universe.
  * PR3 subtree — an enforced feature's sibling crossing is an error; the others stay warnings.
  * PR4 wildcards — features/projects star to features/projects/d2d-item clears those siblings;
  *   features star-star to features/management/eos stays cross-parent, plus a config warning.
@@ -138,6 +137,7 @@ export const JOURNEYS = Object.freeze({
     Object.freeze(['ark-check', '--doctor', '--json', '--no-cache']),
     Object.freeze(['ark-check', '--json', '--no-cache', '--config', 'ark.config.child-slices.json']),
     Object.freeze(['ark-check', '--doctor', '--json', '--no-cache', '--config', 'ark.config.child-slices.json']),
+    Object.freeze(['ark-check', '--json', '--no-cache', '--config', 'ark.config.deny-cross-parent.json']),
   ]),
 });
 
@@ -226,6 +226,34 @@ export const JOURNEY_CASES = Object.freeze({
         crossParent: 5,
         crossSibling: 3,
         pairs: doctorPairs,
+      }),
+    }),
+    Object.freeze({
+      id: 'pr2-laundering',
+      owner: '#326 PR2',
+      expect: 'pass',
+      kind: 'pr2-laundering',
+      note: 'Owned by #326 PR2. deny-cross-parent reports two cross-universe paths through a shared root and leaves the same-universe path through labels.ts clean.',
+      edges: Object.freeze([
+        Object.freeze({
+          file: 'src/lib/features/management/eos/eos-summary.ts',
+          target: 'src/lib/features/operations/dispatch/dispatch-board.ts',
+        }),
+        Object.freeze({
+          file: 'src/components/features/projects/rfi/rfi-screen.tsx',
+          target: 'src/components/features/management/eos/eos-screen.tsx',
+        }),
+      ]),
+      sameUniverse: Object.freeze({
+        file: 'src/lib/features/projects/rfi/load-rfi.ts',
+        target: 'src/lib/features/projects/scm/scm-board.ts',
+      }),
+      want: Object.freeze({
+        ruleId: 'LAYER_IMPORT_VIOLATION',
+        reasonId: 'CROSS_PARENT_VIA_SHARED',
+        severity: 'error',
+        count: 2,
+        sameUniverse: 0,
       }),
     }),
   ]),

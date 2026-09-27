@@ -74,8 +74,12 @@ export type ArkConfigRule = {
   sharedRoots?: string[];
   /** Directed slice→slice edges the repo declares on purpose. */
   allowedCrossSlice?: ArkConfigCrossSliceEdge[];
-  /** When `"deny"`, a declared shared root may not import a slice. */
-  sharedImportsSlice?: 'deny';
+  /**
+   * `"deny"` blocks a shared root from importing a slice.
+   * `"deny-cross-parent"` leaves that hop allowed and asks the whole-graph
+   * check to report a slice that reaches another universe through shared.
+   */
+  sharedImportsSlice?: 'deny' | 'deny-cross-parent';
   /**
    * Optional inner wall. Absent keeps today's universe-wall output.
    * `siblings` defaults to deny. `parentMayImportChild` defaults to false.

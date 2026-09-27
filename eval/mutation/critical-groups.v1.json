@@ -4,52 +4,52 @@
   "groups": [
     {
       "id": "config-loading",
-      "note": "4.8.4 pins (467–473 version parse, 493–551 walk/load/parse) drifted onto validateLayerOwners and JSDoc after LO01 owners + trustBoundary. Retargeted to the same migrateArkConfig / load / JSON.parse decisions. #297 added sharedImportsSlice and shifted these pins by one. #308 sliceIdentity schema shifted them by seven. #326 childSlices schema shifted the same decisions by 17 lines. Skip the equivalent typeof guard (one line after the unversioned branch).",
+      "note": "4.8.4 pins (467–473 version parse, 493–551 walk/load/parse) drifted onto validateLayerOwners and JSDoc after LO01 owners + trustBoundary. Retargeted to the same migrateArkConfig / load / JSON.parse decisions. #297 added sharedImportsSlice and shifted these pins by one. #308 sliceIdentity schema shifted them by seven. #326 childSlices schema shifted the same decisions by 17 lines. #326 PR2 deny-cross-parent schema description shifted them by five. Skip the equivalent typeof guard (one line after the unversioned branch).",
       "targets": [
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 567,
-          "endLine": 570
-        },
-        {
-          "file": "src/domain/configContract.ts",
           "startLine": 572,
-          "endLine": 573
+          "endLine": 575
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 593,
-          "endLine": 594
+          "startLine": 577,
+          "endLine": 578
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 599,
-          "endLine": 600
+          "startLine": 598,
+          "endLine": 599
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 609,
-          "endLine": 611
+          "startLine": 604,
+          "endLine": 605
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 622,
-          "endLine": 622
+          "startLine": 614,
+          "endLine": 616
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 629,
-          "endLine": 629
+          "startLine": 627,
+          "endLine": 627
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 638,
-          "endLine": 641
+          "startLine": 634,
+          "endLine": 634
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 652,
-          "endLine": 652
+          "startLine": 643,
+          "endLine": 646
+        },
+        {
+          "file": "src/domain/configContract.ts",
+          "startLine": 657,
+          "endLine": 657
         }
       ]
     },
@@ -149,12 +149,12 @@
     },
     {
       "id": "peer-isolation-fail-closed",
-      "note": "DF04: peerIsolationDecision pure fail-closed core (missing paths/slices/folders, declared shared roots, declared cross-slice edges, shared-imports-slice). peerIsolationMustDeny is its boolean face. #297 shifted the function. Slice-id JSDoc and #308 sliceIdentity helpers shifted it again; retargeted to the same body. #326 inserted SliceVerdict types above the same function; the pin stays on peerIsolationDecision (814–841) and does not cover the child wall.",
+      "note": "DF04: peerIsolationDecision pure fail-closed core (missing paths/slices/folders, declared shared roots, declared cross-slice edges, shared-imports-slice). peerIsolationMustDeny is its boolean face. #297 shifted the function. Slice-id JSDoc and #308 sliceIdentity helpers shifted it again; retargeted to the same body. #326 inserted SliceVerdict types above the same function. #326 PR2 widened sharedImportsSlice and SliceReasonId above the same function (818–845). The pin does not cover the child wall or the laundering post-pass.",
       "targets": [
         {
           "file": "src/domain/layerMatch.ts",
-          "startLine": 814,
-          "endLine": 841
+          "startLine": 818,
+          "endLine": 845
         }
       ]
     },

@@ -375,6 +375,30 @@ describe('T01 semantic policy delta', () => {
     expect(result.findings).toEqual([]);
   });
 
+  it('deny-cross-parent is stronger than absent and weaker than deny', () => {
+    const withMode = (mode: 'deny' | 'deny-cross-parent') => ({
+      ...structuredClone(BASE_CONFIG),
+      rules: [{ ...structuredClone(BASE_CONFIG.rules[0]), sharedImportsSlice: mode }],
+    });
+    const added = analyzePolicyDelta({
+      baseConfig: BASE_CONFIG,
+      candidateConfig: withMode('deny-cross-parent'),
+    });
+    expect(added.classification).toBe('strengthening');
+    const loosened = analyzePolicyDelta({
+      baseConfig: withMode('deny'),
+      candidateConfig: withMode('deny-cross-parent'),
+    });
+    expect(loosened.classification).toBe('weakening');
+    expect(loosened.findings[0]?.message).toContain('another universe');
+    const removed = analyzePolicyDelta({
+      baseConfig: withMode('deny-cross-parent'),
+      candidateConfig: BASE_CONFIG,
+    });
+    expect(removed.classification).toBe('weakening');
+    expect(removed.findings[0]?.message).toContain('through a shared root again');
+  });
+
   it('removing sharedImportsSlice deny is a weakening', () => {
     const base = {
       ...structuredClone(BASE_CONFIG),
