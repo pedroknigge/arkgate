@@ -4,52 +4,52 @@
   "groups": [
     {
       "id": "config-loading",
-      "note": "4.8.4 pins (467–473 version parse, 493–551 walk/load/parse) drifted onto validateLayerOwners and JSDoc after LO01 owners + trustBoundary. Retargeted to the same migrateArkConfig / load / JSON.parse decisions. #297 added sharedImportsSlice and shifted these pins by one. #308 sliceIdentity schema shifted them by seven. #326 childSlices schema shifted the same decisions by 17 lines. #326 PR2 deny-cross-parent schema description shifted them by five. Skip the equivalent typeof guard (one line after the unversioned branch).",
+      "note": "4.8.4 pins (467–473 version parse, 493–551 walk/load/parse) drifted onto validateLayerOwners and JSDoc after LO01 owners + trustBoundary. Retargeted to the same migrateArkConfig / load / JSON.parse decisions. #297 added sharedImportsSlice and shifted these pins by one. #308 sliceIdentity schema shifted them by seven. #326 childSlices schema shifted the same decisions by 17 lines. #326 PR2 deny-cross-parent schema description shifted them by five. #326 PR3 siblings object schema plus validateChildSliceSiblings shifted the same decisions by 89 lines (661–664, 666–667, 687–688, 693–694, 703–705, 716, 723, 732–736). JSON.parse moved 90 (747) because the new load call sits above it. The pin includes that call. Skip the equivalent typeof guard (one line after the unversioned branch).",
       "targets": [
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 572,
-          "endLine": 575
+          "startLine": 661,
+          "endLine": 664
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 577,
-          "endLine": 578
+          "startLine": 666,
+          "endLine": 667
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 598,
-          "endLine": 599
+          "startLine": 687,
+          "endLine": 688
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 604,
-          "endLine": 605
+          "startLine": 693,
+          "endLine": 694
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 614,
-          "endLine": 616
+          "startLine": 703,
+          "endLine": 705
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 627,
-          "endLine": 627
+          "startLine": 716,
+          "endLine": 716
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 634,
-          "endLine": 634
+          "startLine": 723,
+          "endLine": 723
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 643,
-          "endLine": 646
+          "startLine": 732,
+          "endLine": 736
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 657,
-          "endLine": 657
+          "startLine": 747,
+          "endLine": 747
         }
       ]
     },

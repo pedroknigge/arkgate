@@ -583,7 +583,12 @@ function evaluateJourneyCases(fixture, steps) {
 }
 
 function evaluateJourneyCase(spec, steps) {
-  const config = spec.kind === 'pr2-laundering' ? 'deny-cross-parent' : null;
+  const config =
+    spec.kind === 'pr2-laundering'
+      ? 'deny-cross-parent'
+      : spec.kind === 'pr3-subtree'
+        ? 'subtree'
+        : null;
   const hierarchy = spec.kind !== 'compat-universe-wall' && spec.kind !== 'pr2-laundering';
   const check = selectStep(steps, { doctor: false, hierarchy, config });
   const doctor = selectStep(steps, { doctor: true, hierarchy, config });
@@ -637,6 +642,8 @@ function judgeJourneyCase(spec, check, doctor) {
       return judgeDoctorSliceCounts(spec, doctor);
     case 'pr2-laundering':
       return judgeLaundering(spec, check);
+    case 'pr3-subtree':
+      return judgeSubtree(spec, check);
     default:
       throw new JourneyError('case', `unknown journey case kind ${spec.kind}`);
   }
@@ -771,6 +778,37 @@ function judgeLaundering(spec, check) {
     cross.length === spec.want.count &&
     cross.every(
       (row) => row && row.ruleId === spec.want.ruleId && row.severity === spec.want.severity
+    );
+  return { met, want: spec.want, got };
+}
+
+function judgeSubtree(spec, check) {
+  const violations = check?.violations ?? [];
+  const siblings = violations.filter((row) => row.reasonId === spec.want.reasonId);
+  const enforced = spec.enforced.map((edge) =>
+    siblings.find((row) => row.file === edge.file && row.target === edge.target)
+  );
+  const advisory = spec.advisory.map((edge) =>
+    siblings.find((row) => row.file === edge.file && row.target === edge.target)
+  );
+  const got = {
+    siblingCount: siblings.length,
+    enforcedErrors: enforced.filter((row) => row && row.severity === 'error').length,
+    advisoryWarnings: advisory.filter((row) => row && row.severity === 'warning').length,
+    enforcedSeverities: uniqueSorted(enforced.filter(Boolean).map((row) => row.severity)),
+    advisorySeverities: uniqueSorted(advisory.filter(Boolean).map((row) => row.severity)),
+    ruleIds: uniqueSorted(siblings.map((row) => row.ruleId)),
+    reasonIds: uniqueSorted(siblings.map((row) => row.reasonId)),
+    crossParent: violations.filter((row) => row.reasonId === 'CROSS_PARENT_SLICE').length,
+  };
+  const named = [...enforced, ...advisory];
+  const met =
+    siblings.length === spec.want.enforcedErrors + spec.want.advisoryWarnings &&
+    got.enforcedErrors === spec.want.enforcedErrors &&
+    got.advisoryWarnings === spec.want.advisoryWarnings &&
+    got.crossParent === spec.want.crossParent &&
+    named.every(
+      (row) => row && row.ruleId === spec.want.ruleId && row.reasonId === spec.want.reasonId
     );
   return { met, want: spec.want, got };
 }

@@ -55,15 +55,17 @@ const config = {
     // #308 sliceIdentity schema shifted the same decisions by seven lines.
     // #326 childSlices schema shifted the same migrateArkConfig decisions by 17 lines.
     // #326 PR2 deny-cross-parent schema description shifted them by five.
-    'src/domain/configContract.ts:572-575',
-    'src/domain/configContract.ts:577-578',
-    'src/domain/configContract.ts:598-599',
-    'src/domain/configContract.ts:604-605',
-    'src/domain/configContract.ts:614-616',
-    'src/domain/configContract.ts:627-627',
-    'src/domain/configContract.ts:634-634',
-    'src/domain/configContract.ts:643-646',
-    'src/domain/configContract.ts:657-657',
+    // #326 PR3 siblings object schema plus validateChildSliceSiblings shifted them by 89.
+    // JSON.parse moved 90 because the new load call sits above it.
+    'src/domain/configContract.ts:661-664',
+    'src/domain/configContract.ts:666-667',
+    'src/domain/configContract.ts:687-688',
+    'src/domain/configContract.ts:693-694',
+    'src/domain/configContract.ts:703-705',
+    'src/domain/configContract.ts:716-716',
+    'src/domain/configContract.ts:723-723',
+    'src/domain/configContract.ts:732-736',
+    'src/domain/configContract.ts:747-747',
     // DF04 — selective pure truth islands (fail-closed / ack / promote honesty).
     // peerIsolationDecision is the killable fail-closed core; findDeniedEdgeDecision wires it.
     // #297 inserted the shared-imports-slice hop. Slice-id JSDoc and #308

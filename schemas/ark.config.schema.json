@@ -851,7 +851,7 @@
           "required": [
             "sliceFolders"
           ],
-          "description": "Optional inner wall under this rule. Absent keeps today's universe wall. sliceFolders names children. commonFolders and flat files are universe common. siblings is deny (default) or advisory. parentMayImportChild defaults to false. Cross-parent has no advisory knob. arkgate 4.8.22 and older reject this key.",
+          "description": "Optional inner wall under this rule. Absent keeps today's universe wall. sliceFolders names children. commonFolders and flat files are universe common. siblings is \"deny\" (default), \"advisory\", or { default, enforce }. parentMayImportChild defaults to false. Cross-parent has no advisory knob. arkgate 4.8.22 and older reject this key. A build that still types siblings as a string enum rejects the object at config load.",
           "properties": {
             "sliceFolders": {
               "type": "array",
@@ -879,10 +879,39 @@
               "minItems": 1
             },
             "siblings": {
-              "type": "string",
-              "enum": [
-                "deny",
-                "advisory"
+              "description": "\"deny\" or \"advisory\", or { default, enforce } so listed subtrees are errors while the default stays advisory. A string-enum build rejects the object at config load (must be one of deny, advisory).",
+              "oneOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "deny",
+                    "advisory"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "default"
+                  ],
+                  "properties": {
+                    "default": {
+                      "type": "string",
+                      "enum": [
+                        "deny",
+                        "advisory"
+                      ]
+                    },
+                    "enforce": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "uniqueItems": true
+                    }
+                  }
+                }
               ]
             },
             "parentMayImportChild": {
