@@ -72,10 +72,11 @@ const config = {
     'src/domain/policyDelta.ts:984-1013',
     // #291 declaration witness shifted formatCoverageDiscards / budgetDetail /
     // canPromoteInvariant. #307/#310 classifyCoverage shifted them again.
+    // #322 declaration-miss shifted them once more.
     // Pins stay on those decisions, not on the classifier.
-    'src/domain/invariantCoverage.ts:225-244',
-    'src/domain/invariantCoverage.ts:679-683',
-    'src/domain/invariantCoverage.ts:812-853',
+    'src/domain/invariantCoverage.ts:228-247',
+    'src/domain/invariantCoverage.ts:711-715',
+    'src/domain/invariantCoverage.ts:844-885',
     'src/kernel/semanticAnalysis.ts:18-49',
     'src/kernel/semanticAnalysis.ts:78-258',
     'src/kernel/workflow/Saga.ts:188-238',
