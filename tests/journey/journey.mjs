@@ -11,7 +11,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { resolveCandidate } from '../../scripts/ts-compat-matrix.mjs';
-import { JOURNEYS } from './journeys.mjs';
+import { JOURNEY_CASES, JOURNEYS } from './journeys.mjs';
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(SCRIPT_DIR, '../..');
@@ -76,7 +76,7 @@ export async function journey(fixture, steps, options = {}) {
         );
       }
       const after = snapshotTree(project);
-      const output = projectStep(step, result.stdout, { project, runRoot, version });
+      const output = projectStep(fixture, step, result.stdout, { project, runRoot, version });
       observedSteps.push({
         command: commandText(step),
         exitCode: result.status,
@@ -85,11 +85,14 @@ export async function journey(fixture, steps, options = {}) {
       });
       before = after;
     }
-    return canonicalize({
+    const observation = {
       fixture,
       schemaVersion: 1,
       steps: observedSteps,
-    });
+    };
+    const cases = evaluateJourneyCases(fixture, observedSteps);
+    if (cases) observation.cases = cases;
+    return canonicalize(observation);
   } finally {
     if (options.keep) {
       process.stderr.write(`journey keep ${project}\n`);
@@ -343,21 +346,35 @@ function diffSnapshots(before, after) {
   return diff;
 }
 
-function projectStep(step, stdout, ctx) {
+function projectStep(fixture, step, stdout, ctx) {
   let parsed;
   try {
     parsed = JSON.parse(stdout);
   } catch {
     throw new JourneyError('view', `${commandText(step)} did not print JSON\n${stdout.slice(0, 500)}`);
   }
-  const args = step.slice(1);
-  const projected = args.includes('--doctor') ? doctorView(parsed) : checkView(parsed);
+  const projected = projectFixture(fixture, step, parsed);
   const normalized = applyPlaceholders(projected, ctx);
   const residual = JSON.stringify(normalized);
   if (residual.includes(ctx.project) || residual.includes(ctx.runRoot) || residual.includes(os.homedir())) {
     throw new JourneyError('view', `${commandText(step)} observation still contains a machine path`);
   }
   return normalized;
+}
+
+/**
+ * One observation per fixture. Ledgerline keeps the invariant projection.
+ * Atlasgrid keeps slice violations, grouped warnings, and doctor slice counts.
+ * Which wall produced a row stays inside the view.
+ */
+const FIXTURE_VIEWS = {
+  ledgerline: { check: checkView, doctor: doctorView },
+  atlasgrid: { check: atlasgridCheckView, doctor: atlasgridDoctorView },
+};
+
+function projectFixture(fixture, step, parsed) {
+  const views = FIXTURE_VIEWS[fixture] ?? { check: checkView, doctor: doctorView };
+  return (step.includes('--doctor') ? views.doctor : views.check)(parsed);
 }
 
 function checkView(parsed) {
@@ -396,7 +413,7 @@ function checkView(parsed) {
 function doctorView(parsed) {
   const section = parsed?.doctor?.rulesUnderContract;
   if (!section || section.active !== true) {
-    throw new JourneyError('view', 'doctor JSON has no active doctor.rulesUnderContract');
+    return { rulesUnderContract: null };
   }
   requireFields(
     section,
@@ -434,6 +451,320 @@ function doctorView(parsed) {
       symbolEvidence,
     },
   };
+}
+
+function atlasgridCheckView(parsed) {
+  requireFields(parsed, ['valid', 'ok', 'completeness', 'violations'], 'check');
+  if (!Array.isArray(parsed.violations)) {
+    throw new JourneyError('view', 'check JSON violations must be an array');
+  }
+  const violations = parsed.violations.map((row) => projectSliceViolation(row));
+  violations.sort(compareRows(['ruleId', 'file', 'target', 'reasonId', 'severity']));
+  return {
+    valid: parsed.valid === true,
+    ok: parsed.ok === true,
+    completeness: String(parsed.completeness),
+    violations,
+    warnings: groupWarnings(parsed.warnings),
+  };
+}
+
+function atlasgridDoctorView(parsed) {
+  const base = doctorView(parsed);
+  return {
+    rulesUnderContract: base.rulesUnderContract,
+    slices: sliceSection(parsed),
+  };
+}
+
+function projectSliceViolation(row) {
+  if (!row || typeof row !== 'object') {
+    throw new JourneyError('view', 'check violation is not an object');
+  }
+  requireFields(row, ['ruleId'], 'check violation');
+  const severity =
+    typeof row.severity === 'string' ? row.severity : row.failsStrict === false ? 'warning' : 'error';
+  return {
+    ruleId: String(row.ruleId),
+    reasonId: row.reasonId == null || row.reasonId === '' ? null : String(row.reasonId),
+    severity,
+    file: row.file == null ? null : String(row.file),
+    target: row.target == null ? null : String(row.target),
+  };
+}
+
+function groupWarnings(warnings) {
+  if (warnings == null) return [];
+  if (!Array.isArray(warnings)) {
+    throw new JourneyError('view', 'check JSON warnings must be an array');
+  }
+  /** @type {Map<string, { ruleId: string, severity: string, fromLayer: string | null, toLayer: string | null, edges: object[] }>} */
+  const groups = new Map();
+  for (const warning of warnings) {
+    if (!warning || typeof warning !== 'object') {
+      throw new JourneyError('view', 'check warning is not an object');
+    }
+    const ruleId = typeof warning.ruleId === 'string' ? warning.ruleId : 'WARNING';
+    const fromLayer = warning.fromLayer == null ? null : String(warning.fromLayer);
+    const toLayer = warning.toLayer == null ? null : String(warning.toLayer);
+    const severity =
+      typeof warning.severity === 'string'
+        ? warning.severity
+        : warning.failsStrict === false
+          ? 'warning'
+          : 'error';
+    const grouped = ruleId === 'SHARED_IMPORTS_SLICE';
+    const key = grouped
+      ? `${ruleId}\0${fromLayer ?? ''}\0${toLayer ?? ''}`
+      : `${ruleId}\0${warning.file ?? ''}\0${warning.target ?? ''}\0${groups.size}`;
+    let group = groups.get(key);
+    if (!group) {
+      group = { ruleId, severity, fromLayer, toLayer, edges: [] };
+      groups.set(key, group);
+    }
+    group.edges.push({
+      file: warning.file == null ? null : String(warning.file),
+      target: warning.target == null ? null : String(warning.target),
+      toSlice: warning.toSlice == null ? null : String(warning.toSlice),
+    });
+  }
+  const listed = [...groups.values()].map((group) => {
+    group.edges.sort(compareRows(['file', 'target', 'toSlice']));
+    return {
+      ruleId: group.ruleId,
+      severity: group.severity,
+      fromLayer: group.fromLayer,
+      toLayer: group.toLayer,
+      count: group.edges.length,
+      edges: group.edges,
+    };
+  });
+  listed.sort(compareRows(['ruleId', 'fromLayer', 'toLayer']));
+  return listed;
+}
+
+function sliceSection(parsed) {
+  const slices = parsed?.doctor?.slices;
+  if (!slices || typeof slices !== 'object' || Array.isArray(slices)) return null;
+  const pairSource = slices.pairs ?? slices.directedPairs ?? null;
+  return {
+    crossParent: typeof slices.crossParent === 'number' ? slices.crossParent : null,
+    crossSibling: typeof slices.crossSibling === 'number' ? slices.crossSibling : null,
+    pairs: pairSource == null ? null : projectSlicePairs(pairSource),
+  };
+}
+
+function projectSlicePairs(value) {
+  /** @type {{ from: string, to: string, count: number }[]} */
+  const rows = [];
+  if (Array.isArray(value)) {
+    for (const row of value) {
+      if (!row || typeof row.from !== 'string' || typeof row.to !== 'string') continue;
+      if (!Number.isInteger(row.count) || row.count <= 0) continue;
+      rows.push({ from: row.from, to: row.to, count: row.count });
+    }
+  } else if (value && typeof value === 'object') {
+    for (const [key, count] of Object.entries(value)) {
+      const split = key.split('→');
+      if (split.length !== 2 || !Number.isInteger(count) || count <= 0) continue;
+      rows.push({ from: split[0].trim(), to: split[1].trim(), count });
+    }
+  } else {
+    return null;
+  }
+  rows.sort((left, right) => left.from.localeCompare(right.from) || left.to.localeCompare(right.to));
+  return rows;
+}
+
+function evaluateJourneyCases(fixture, steps) {
+  const specs = JOURNEY_CASES[fixture];
+  if (!specs) return null;
+  return specs.map((spec) => evaluateJourneyCase(spec, steps));
+}
+
+function evaluateJourneyCase(spec, steps) {
+  const check = selectStep(steps, { doctor: false, hierarchy: spec.kind !== 'compat-universe-wall' });
+  const doctor = selectStep(steps, { doctor: true, hierarchy: spec.kind !== 'compat-universe-wall' });
+  const judged = judgeJourneyCase(spec, check?.output ?? null, doctor?.output ?? null);
+  const status = caseStatus(spec.expect, judged.met);
+  return {
+    id: spec.id,
+    owner: spec.owner,
+    expect: spec.expect,
+    status,
+    met: judged.met,
+    note: spec.note,
+    ...(judged.summary ? { summary: judged.summary } : {}),
+    ...(judged.want ? { want: judged.want } : {}),
+    ...(judged.got !== undefined ? { got: judged.got } : {}),
+  };
+}
+
+function caseStatus(expect, met) {
+  if (expect === 'pass') return met ? 'pass' : 'fail';
+  if (expect === 'fail') return met ? 'unexpected-pass' : 'expected-fail';
+  throw new JourneyError('case', `case expect must be pass or fail, got ${expect}`);
+}
+
+function selectStep(steps, { doctor, hierarchy }) {
+  const matches = steps.filter((step) => step.command.includes('--doctor') === doctor);
+  if (hierarchy) {
+    const tagged = matches.find((step) => /child-slices|childSlices|hierarchy/.test(step.command));
+    if (tagged) return tagged;
+  }
+  if (!doctor) {
+    return matches.find((step) => !step.command.includes('--config')) ?? matches[0] ?? null;
+  }
+  return matches[0] ?? null;
+}
+
+function judgeJourneyCase(spec, check, doctor) {
+  switch (spec.kind) {
+    case 'compat-universe-wall':
+      return judgeCompatUniverseWall(spec, check);
+    case 'pr1-cross-parent-slice':
+      return judgeReasonedEdges(spec, check, spec.want.reasonId);
+    case 'pr1-cross-sibling-slice':
+      return judgeReasonedEdges(spec, check, spec.want.reasonId);
+    case 'pr1-child-imports-own-common':
+      return judgeChildImportsOwnCommon(spec, check);
+    case 'pr1-common-imports-child':
+      return judgeCommonImportsChild(spec, check);
+    case 'pr1-doctor-slice-counts':
+      return judgeDoctorSliceCounts(spec, doctor);
+    default:
+      throw new JourneyError('case', `unknown journey case kind ${spec.kind}`);
+  }
+}
+
+function judgeCompatUniverseWall(spec, check) {
+  const violations = (check?.violations ?? []).map((row) => ({
+    ruleId: row.ruleId,
+    reasonId: row.reasonId,
+    severity: row.severity,
+    file: row.file,
+    target: row.target,
+  }));
+  const expectedViolations = spec.edges.map((edge) => ({
+    ruleId: 'LAYER_IMPORT_VIOLATION',
+    reasonId: null,
+    severity: 'error',
+    file: edge.file,
+    target: edge.target,
+  }));
+  expectedViolations.sort(compareRows(['ruleId', 'file', 'target', 'reasonId', 'severity']));
+  const expectedWarnings = spec.warningGroups.map((group) => ({
+    ruleId: 'SHARED_IMPORTS_SLICE',
+    severity: 'warning',
+    fromLayer: group.fromLayer,
+    toLayer: group.toLayer,
+    count: group.edges.length,
+    edges: group.edges.map((edge) => ({ file: edge.file, target: edge.target, toSlice: edge.toSlice })),
+  }));
+  const met =
+    check?.valid === false &&
+    check?.ok === false &&
+    check?.completeness === 'complete' &&
+    stable(violations) === stable(expectedViolations) &&
+    stable(check?.warnings ?? []) === stable(expectedWarnings);
+  const summary = {
+    violations: violations.length,
+    ruleId: 'LAYER_IMPORT_VIOLATION',
+    reasonId: null,
+    severity: 'error',
+    pairs: spec.edges.map((edge) => ({
+      from: edge.from,
+      to: edge.to,
+      file: edge.file,
+      target: edge.target,
+    })),
+    sharedImportsSlice: {
+      groups: (check?.warnings ?? []).length,
+      edges: (check?.warnings ?? []).reduce((sum, group) => sum + (group.count ?? 0), 0),
+    },
+  };
+  return met ? { met, summary } : { met, summary, got: { violations, warnings: check?.warnings ?? [] } };
+}
+
+function judgeReasonedEdges(spec, check, reasonId) {
+  const violations = check?.violations ?? [];
+  const hits = spec.edges.map((edge) =>
+    violations.find((row) => row.file === edge.file && row.target === edge.target)
+  );
+  const present = hits.filter(Boolean);
+  const got = {
+    count: present.length,
+    ruleIds: uniqueSorted(present.map((row) => row.ruleId)),
+    reasonIds: uniqueSorted(present.map((row) => row.reasonId)),
+    severities: uniqueSorted(present.map((row) => row.severity)),
+  };
+  const met =
+    present.length === spec.want.count &&
+    hits.every(
+      (row) =>
+        row &&
+        row.ruleId === spec.want.ruleId &&
+        row.reasonId === reasonId &&
+        row.severity === spec.want.severity
+    ) &&
+    violations.filter((row) => row.reasonId === reasonId).length === spec.want.count;
+  return { met, want: spec.want, got };
+}
+
+function judgeChildImportsOwnCommon(spec, check) {
+  const violations = check?.violations ?? [];
+  const flatRepoFindings = violations.filter(
+    (row) => row.file === spec.flatRepo.file && row.target === spec.flatRepo.target
+  ).length;
+  const domainFindings = violations.filter(
+    (row) => row.file === spec.domain.file && row.target === spec.domain.target
+  ).length;
+  const crossParent = violations.filter((row) => row.reasonId === 'CROSS_PARENT_SLICE').length;
+  const got = { flatRepoFindings, domainFindings, crossParent };
+  const met =
+    flatRepoFindings === spec.want.flatRepoFindings &&
+    domainFindings === spec.want.domainFindings &&
+    crossParent === spec.want.crossParent;
+  return { met, want: spec.want, got };
+}
+
+function judgeCommonImportsChild(spec, check) {
+  const hits = (check?.violations ?? []).filter(
+    (row) => row.file === spec.edge.file && row.target === spec.edge.target
+  );
+  const got = {
+    findings: hits.length,
+    ruleIds: uniqueSorted(hits.map((row) => row.ruleId)),
+    reasonIds: uniqueSorted(hits.map((row) => row.reasonId)),
+    severities: uniqueSorted(hits.map((row) => row.severity)),
+  };
+  const met =
+    hits.length === spec.want.findings &&
+    hits.every((row) => row.ruleId === spec.want.ruleId && row.severity === spec.want.severity);
+  return { met, want: spec.want, got };
+}
+
+function judgeDoctorSliceCounts(spec, doctor) {
+  const got = doctor?.slices ?? null;
+  return { met: stable(got) === stable(spec.want), want: spec.want, got };
+}
+
+function uniqueSorted(values) {
+  return [...new Set(values)].sort((left, right) => String(left).localeCompare(String(right)));
+}
+
+function stable(value) {
+  return JSON.stringify(canonicalize(value));
+}
+
+function unacceptableCaseText(observed) {
+  const bad = (observed.cases ?? []).filter(
+    (item) => item.status === 'fail' || item.status === 'unexpected-pass'
+  );
+  if (bad.length === 0) return '';
+  return bad
+    .map((item) => `journey ${observed.fixture} ${item.id} ${item.status} (${item.owner})\n`)
+    .join('');
 }
 
 function idOf(row, label) {
@@ -575,12 +906,21 @@ async function main(argv) {
       ? await observeTwice(fixture, steps, options)
       : await journey(fixture, steps, options);
     const text = canonicalJson(observed);
+    for (const item of observed.cases ?? []) {
+      process.stdout.write(`journey ${fixture} ${item.id} ${item.status} (${item.owner})\n`);
+    }
+    const caseFailure = unacceptableCaseText(observed);
+    if (caseFailure) {
+      process.stderr.write(caseFailure);
+      failed += 1;
+    }
     if (args.out) {
       const outDir = path.join(args.out, fixture);
       fs.mkdirSync(outDir, { recursive: true });
       fs.writeFileSync(path.join(outDir, 'observed.json'), text);
     }
     if (args.update) {
+      if (caseFailure) continue;
       const previous = fs.existsSync(goldenPath(fixture)) ? fs.readFileSync(goldenPath(fixture), 'utf8') : '';
       const changed = writeGolden(fixture, observed);
       if (changed && previous) process.stdout.write(unified(previous, text));

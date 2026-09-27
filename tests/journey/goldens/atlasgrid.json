@@ -1,0 +1,298 @@
+{
+  "cases": [
+    {
+      "expect": "pass",
+      "id": "compat-universe-wall",
+      "met": true,
+      "note": "Today's universe wall: 5 cross-slice LAYER_IMPORT_VIOLATION findings and grouped SHARED_IMPORTS_SLICE warnings.",
+      "owner": "#326 PR0",
+      "status": "pass",
+      "summary": {
+        "pairs": [
+          {
+            "file": "src/components/features/management/eos/eos-screen.tsx",
+            "from": "management",
+            "target": "src/lib/features/external/portal/portal-client.ts",
+            "to": "external"
+          },
+          {
+            "file": "src/lib/features/external/vendors/vendor-sync.ts",
+            "from": "external",
+            "target": "src/lib/repositories/features/operations/fleet/fleet-repository.ts",
+            "to": "operations"
+          },
+          {
+            "file": "src/lib/features/management/budget/budget-lines.ts",
+            "from": "management",
+            "target": "src/lib/features/projects/d2d-item/d2d-item.ts",
+            "to": "projects"
+          },
+          {
+            "file": "src/lib/features/projects/rfi/load-rfi.ts",
+            "from": "projects",
+            "target": "src/lib/features/management/eos/eos-summary.ts",
+            "to": "management"
+          },
+          {
+            "file": "src/lib/repositories/features/operations/dispatch/dispatch-repository.ts",
+            "from": "operations",
+            "target": "src/lib/features/projects/scm/scm-board.ts",
+            "to": "projects"
+          }
+        ],
+        "reasonId": null,
+        "ruleId": "LAYER_IMPORT_VIOLATION",
+        "severity": "error",
+        "sharedImportsSlice": {
+          "edges": 6,
+          "groups": 3
+        },
+        "violations": 5
+      }
+    },
+    {
+      "expect": "fail",
+      "got": {
+        "count": 5,
+        "reasonIds": [
+          null
+        ],
+        "ruleIds": [
+          "LAYER_IMPORT_VIOLATION"
+        ],
+        "severities": [
+          "error"
+        ]
+      },
+      "id": "pr1-cross-parent-slice",
+      "met": false,
+      "note": "Owned by #326 PR1. Recorded red until childSlices reports CROSS_PARENT_SLICE on these five directed pairs.",
+      "owner": "#326 PR1",
+      "status": "expected-fail",
+      "want": {
+        "count": 5,
+        "reasonId": "CROSS_PARENT_SLICE",
+        "ruleId": "LAYER_IMPORT_VIOLATION",
+        "severity": "error"
+      }
+    },
+    {
+      "expect": "fail",
+      "got": {
+        "count": 0,
+        "reasonIds": [],
+        "ruleIds": [],
+        "severities": []
+      },
+      "id": "pr1-cross-sibling-slice",
+      "met": false,
+      "note": "Owned by #326 PR1. Recorded red until the child wall denies these three sibling crossings (error when siblings is deny).",
+      "owner": "#326 PR1",
+      "status": "expected-fail",
+      "want": {
+        "count": 3,
+        "reasonId": "CROSS_SIBLING_SLICE",
+        "ruleId": "LAYER_IMPORT_VIOLATION",
+        "severity": "error"
+      }
+    },
+    {
+      "expect": "fail",
+      "got": {
+        "crossParent": 0,
+        "domainFindings": 0,
+        "flatRepoFindings": 0
+      },
+      "id": "pr1-child-imports-own-common",
+      "met": false,
+      "note": "Owned by #326 PR1. A feature may import its own flat repository and its universe domain/. Recorded red until the child wall is on and those edges stay clean.",
+      "owner": "#326 PR1",
+      "status": "expected-fail",
+      "want": {
+        "crossParent": 5,
+        "domainFindings": 0,
+        "flatRepoFindings": 0
+      }
+    },
+    {
+      "expect": "fail",
+      "got": {
+        "findings": 0,
+        "reasonIds": [],
+        "ruleIds": [],
+        "severities": []
+      },
+      "id": "pr1-common-imports-child",
+      "met": false,
+      "note": "Owned by #326 PR1. Universe common must not import a child feature. Recorded red until that edge is denied.",
+      "owner": "#326 PR1",
+      "status": "expected-fail",
+      "want": {
+        "findings": 1,
+        "ruleId": "LAYER_IMPORT_VIOLATION",
+        "severity": "error"
+      }
+    },
+    {
+      "expect": "fail",
+      "got": null,
+      "id": "pr1-doctor-slice-counts",
+      "met": false,
+      "note": "Owned by #326 PR1. Doctor slices counts per level, and per directed universe pair only for pairs that occur.",
+      "owner": "#326 PR1",
+      "status": "expected-fail",
+      "want": {
+        "crossParent": 5,
+        "crossSibling": 3,
+        "pairs": [
+          {
+            "count": 1,
+            "from": "external",
+            "to": "operations"
+          },
+          {
+            "count": 1,
+            "from": "management",
+            "to": "external"
+          },
+          {
+            "count": 1,
+            "from": "management",
+            "to": "projects"
+          },
+          {
+            "count": 1,
+            "from": "operations",
+            "to": "projects"
+          },
+          {
+            "count": 1,
+            "from": "projects",
+            "to": "management"
+          }
+        ]
+      }
+    }
+  ],
+  "fixture": "atlasgrid",
+  "schemaVersion": 1,
+  "steps": [
+    {
+      "command": "ark-check --json --no-cache",
+      "exitCode": 1,
+      "filesDiff": {},
+      "output": {
+        "completeness": "complete",
+        "ok": false,
+        "valid": false,
+        "violations": [
+          {
+            "file": "src/components/features/management/eos/eos-screen.tsx",
+            "reasonId": null,
+            "ruleId": "LAYER_IMPORT_VIOLATION",
+            "severity": "error",
+            "target": "src/lib/features/external/portal/portal-client.ts"
+          },
+          {
+            "file": "src/lib/features/external/vendors/vendor-sync.ts",
+            "reasonId": null,
+            "ruleId": "LAYER_IMPORT_VIOLATION",
+            "severity": "error",
+            "target": "src/lib/repositories/features/operations/fleet/fleet-repository.ts"
+          },
+          {
+            "file": "src/lib/features/management/budget/budget-lines.ts",
+            "reasonId": null,
+            "ruleId": "LAYER_IMPORT_VIOLATION",
+            "severity": "error",
+            "target": "src/lib/features/projects/d2d-item/d2d-item.ts"
+          },
+          {
+            "file": "src/lib/features/projects/rfi/load-rfi.ts",
+            "reasonId": null,
+            "ruleId": "LAYER_IMPORT_VIOLATION",
+            "severity": "error",
+            "target": "src/lib/features/management/eos/eos-summary.ts"
+          },
+          {
+            "file": "src/lib/repositories/features/operations/dispatch/dispatch-repository.ts",
+            "reasonId": null,
+            "ruleId": "LAYER_IMPORT_VIOLATION",
+            "severity": "error",
+            "target": "src/lib/features/projects/scm/scm-board.ts"
+          }
+        ],
+        "warnings": [
+          {
+            "count": 3,
+            "edges": [
+              {
+                "file": "src/lib/shared/format.ts",
+                "target": "src/lib/features/operations/dispatch/dispatch-board.ts",
+                "toSlice": "features/operations"
+              },
+              {
+                "file": "src/lib/shared/ids.ts",
+                "target": "src/lib/features/external/portal/portal-client.ts",
+                "toSlice": "features/external"
+              },
+              {
+                "file": "src/lib/shared/labels.ts",
+                "target": "src/lib/features/projects/scm/scm-board.ts",
+                "toSlice": "features/projects"
+              }
+            ],
+            "fromLayer": "Application",
+            "ruleId": "SHARED_IMPORTS_SLICE",
+            "severity": "warning",
+            "toLayer": "Application"
+          },
+          {
+            "count": 1,
+            "edges": [
+              {
+                "file": "src/lib/shared/clock.ts",
+                "target": "src/lib/repositories/features/management/people/people-repository.ts",
+                "toSlice": "features/management"
+              }
+            ],
+            "fromLayer": "Application",
+            "ruleId": "SHARED_IMPORTS_SLICE",
+            "severity": "warning",
+            "toLayer": "Persistence"
+          },
+          {
+            "count": 2,
+            "edges": [
+              {
+                "file": "src/components/ui/button.tsx",
+                "target": "src/components/features/projects/rfi/rfi-status.tsx",
+                "toSlice": "features/projects"
+              },
+              {
+                "file": "src/components/ui/dialog.tsx",
+                "target": "src/components/features/management/eos/eos-screen.tsx",
+                "toSlice": "features/management"
+              }
+            ],
+            "fromLayer": "Presentation",
+            "ruleId": "SHARED_IMPORTS_SLICE",
+            "severity": "warning",
+            "toLayer": "Presentation"
+          }
+        ]
+      }
+    },
+    {
+      "command": "ark-check --doctor --json --no-cache",
+      "exitCode": 0,
+      "filesDiff": {
+        ".ark/ci-merge-boundary.json": "added"
+      },
+      "output": {
+        "rulesUnderContract": null,
+        "slices": null
+      }
+    }
+  ]
+}
