@@ -244,12 +244,12 @@
       }
     },
     {
-      "expect": "fail",
+      "expect": "pass",
       "got": {
         "advisorySeverities": [
-          "error"
+          "warning"
         ],
-        "advisoryWarnings": 0,
+        "advisoryWarnings": 2,
         "crossParent": 5,
         "enforcedErrors": 1,
         "enforcedSeverities": [
@@ -264,10 +264,10 @@
         "siblingCount": 3
       },
       "id": "pr3-subtree",
-      "met": false,
+      "met": true,
       "note": "Owned by #326 PR3. A sibling crossing from an enforced feature is an error. Crossings from features outside the enforce list stay warnings.",
       "owner": "#326 PR3",
-      "status": "expected-fail",
+      "status": "pass",
       "want": {
         "advisoryWarnings": 2,
         "crossParent": 5,
@@ -724,7 +724,7 @@
             "file": "src/components/features/operations/dispatch/dispatch-screen.tsx",
             "reasonId": "CROSS_SIBLING_SLICE",
             "ruleId": "LAYER_IMPORT_VIOLATION",
-            "severity": "error",
+            "severity": "warning",
             "target": "src/components/features/operations/fleet/fleet-screen.tsx"
           },
           {
@@ -766,7 +766,7 @@
             "file": "src/lib/repositories/features/management/eos/eos-repository.ts",
             "reasonId": "CROSS_SIBLING_SLICE",
             "ruleId": "LAYER_IMPORT_VIOLATION",
-            "severity": "error",
+            "severity": "warning",
             "target": "src/lib/repositories/features/management/people/people-repository.ts"
           },
           {

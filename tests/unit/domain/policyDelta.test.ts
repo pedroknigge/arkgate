@@ -635,4 +635,118 @@ describe('policyDeltaAcknowledgementMatches (DF04 pure helper)', () => {
       })
     );
   });
+
+  it('tightens an enforce-list addition and loosens a removal while default stays advisory', () => {
+    const child = {
+      sliceFolders: ['lib/features/*/*'],
+      siblings: { default: 'advisory' as const, enforce: ['features/projects/rfi'] },
+    };
+    const base = {
+      ...structuredClone(BASE_CONFIG),
+      rules: [{ ...structuredClone(BASE_CONFIG.rules[0]), childSlices: { ...child, siblings: 'advisory' as const } }],
+    };
+    const enforced = {
+      ...structuredClone(BASE_CONFIG),
+      rules: [{ ...structuredClone(BASE_CONFIG.rules[0]), childSlices: child }],
+    };
+    const added = analyzePolicyDelta({ baseConfig: base, candidateConfig: enforced });
+    expect(added.findings).toContainEqual(
+      expect.objectContaining({
+        classification: 'strengthening',
+        message: 'Sibling crossings from these subtrees are now errors.',
+        path: '$.rules[DomainModel->DomainModel].childSlices.siblings.enforce',
+      })
+    );
+    const removed = analyzePolicyDelta({ baseConfig: enforced, candidateConfig: base });
+    expect(removed.findings).toContainEqual(
+      expect.objectContaining({
+        classification: 'weakening',
+        message: 'Sibling crossings from these subtrees are advisory again.',
+      })
+    );
+    const both = analyzePolicyDelta({
+      baseConfig: enforced,
+      candidateConfig: {
+        ...structuredClone(BASE_CONFIG),
+        rules: [
+          {
+            ...structuredClone(BASE_CONFIG.rules[0]),
+            childSlices: {
+              ...child,
+              siblings: { default: 'advisory' as const, enforce: ['features/management/eos'] },
+            },
+          },
+        ],
+      },
+    });
+    expect(both.findings).toContainEqual(
+      expect.objectContaining({
+        classification: 'judgment-required',
+        message: 'Enforced sibling subtrees were added and removed in the same change.',
+      })
+    );
+    const toDeny = analyzePolicyDelta({
+      baseConfig: enforced,
+      candidateConfig: {
+        ...structuredClone(BASE_CONFIG),
+        rules: [
+          {
+            ...structuredClone(BASE_CONFIG.rules[0]),
+            childSlices: { ...child, siblings: { default: 'deny' as const } },
+          },
+        ],
+      },
+    });
+    expect(toDeny.findings).toContainEqual(
+      expect.objectContaining({
+        classification: 'strengthening',
+        message: 'Sibling crossings inside a universe are now denied.',
+      })
+    );
+    expect(
+      toDeny.findings.some((finding) => finding.id.includes('child-slices-siblings-enforce'))
+    ).toBe(false);
+    const partial = analyzePolicyDelta({
+      baseConfig: {
+        ...structuredClone(BASE_CONFIG),
+        rules: [
+          {
+            ...structuredClone(BASE_CONFIG.rules[0]),
+            childSlices: { ...child, siblings: 'deny' as const },
+          },
+        ],
+      },
+      candidateConfig: enforced,
+    });
+    expect(partial.findings).toContainEqual(
+      expect.objectContaining({
+        classification: 'weakening',
+        message: 'Sibling crossings outside the enforce list are now advisory.',
+      })
+    );
+    const inert = analyzePolicyDelta({
+      baseConfig: {
+        ...structuredClone(BASE_CONFIG),
+        rules: [
+          {
+            ...structuredClone(BASE_CONFIG.rules[0]),
+            childSlices: { sliceFolders: ['lib/features/*/*'], siblings: 'deny' as const },
+          },
+        ],
+      },
+      candidateConfig: {
+        ...structuredClone(BASE_CONFIG),
+        rules: [
+          {
+            ...structuredClone(BASE_CONFIG.rules[0]),
+            childSlices: {
+              sliceFolders: ['lib/features/*/*'],
+              siblings: { default: 'deny' as const, enforce: ['features/projects/rfi'] },
+            },
+          },
+        ],
+      },
+    });
+    expect(inert.findings.filter((finding) => finding.path.includes('siblings'))).toEqual([]);
+  });
 });

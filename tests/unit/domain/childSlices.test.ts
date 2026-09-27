@@ -6,7 +6,9 @@ import { baselineKey } from '../../../src/domain/baselineKey';
 import {
   applyAdvisorySiblingRatchet,
   anyChildWallAdvisory,
+  childWallSiblingsAdvisory,
   childSliceConfigFindings,
+  importerInEnforcedSubtree,
   composeSliceDenialMessage,
   findDeniedEdgeDecision,
   peerIsolationDenyExplanation,
@@ -235,6 +237,151 @@ describe('nested slice wall', () => {
       recorded
     );
     expect(held[0]?.failsStrict).toBe(false);
+  });
+
+  it('keeps an enforced sibling as an error and still ratchets a new advisory sibling', () => {
+    const enforced = {
+      ruleId: 'LAYER_IMPORT_VIOLATION',
+      file: 'src/enforced.ts',
+      fromLayer: 'Application',
+      toLayer: 'Application',
+      target: 'src/other.ts',
+      reasonId: 'CROSS_SIBLING_SLICE',
+      severity: 'error',
+    };
+    const advisory = {
+      ...enforced,
+      file: 'src/advisory.ts',
+      failsStrict: false as const,
+      severity: 'warning',
+    };
+    const promoted = applyAdvisorySiblingRatchet(
+      [enforced, advisory],
+      [baselineKey(enforced), baselineKey(advisory)],
+      new Set([baselineKey(enforced)])
+    );
+    expect(promoted[0]).toEqual(enforced);
+    expect(promoted[1]).toMatchObject({ failsStrict: true, severity: 'error' });
+    const held = applyAdvisorySiblingRatchet(
+      [enforced, advisory],
+      [baselineKey(enforced), baselineKey(advisory)],
+      new Set([baselineKey(advisory)])
+    );
+    expect(held[0]).toEqual(enforced);
+    expect(held[1]?.failsStrict).toBe(false);
+  });
+
+  it('denies an enforced subtree and warns the other sibling crossings', () => {
+    const rule: EdgeRule = {
+      ...childRule,
+      childSlices: {
+        ...childRule.childSlices!,
+        siblings: { default: 'advisory', enforce: ['features/projects/rfi'] },
+      },
+    };
+    const enforced = decide(
+      rule,
+      'src/lib/features/projects/rfi/load-rfi.ts',
+      'src/lib/features/projects/scm/scm-board.ts'
+    );
+    const warned = decide(
+      rule,
+      'src/lib/features/projects/scm/scm-board.ts',
+      'src/lib/features/projects/rfi/load-rfi.ts'
+    );
+    expect(sliceFindingExtras(enforced?.sliceVerdict)).toMatchObject({
+      reasonId: 'CROSS_SIBLING_SLICE',
+    });
+    expect(sliceFindingExtras(enforced?.sliceVerdict).failsStrict).toBeUndefined();
+    expect(sliceFindingExtras(warned?.sliceVerdict)).toMatchObject({
+      reasonId: 'CROSS_SIBLING_SLICE',
+      failsStrict: false,
+      severity: 'warning',
+    });
+    const byPath: EdgeRule = {
+      ...rule,
+      childSlices: {
+        ...rule.childSlices!,
+        siblings: { default: 'advisory', enforce: ['lib/features/projects/rfi'] },
+      },
+    };
+    expect(
+      sliceFindingExtras(
+        decide(
+          byPath,
+          'src/lib/features/projects/rfi/load-rfi.ts',
+          'src/lib/features/projects/scm/scm-board.ts'
+        )?.sliceVerdict
+      ).failsStrict
+    ).toBeUndefined();
+    const denyAll: EdgeRule = {
+      ...rule,
+      childSlices: {
+        ...rule.childSlices!,
+        siblings: { default: 'deny', enforce: [] },
+      },
+    };
+    expect(
+      sliceFindingExtras(
+        decide(
+          denyAll,
+          'src/lib/features/projects/scm/scm-board.ts',
+          'src/lib/features/projects/rfi/load-rfi.ts'
+        )?.sliceVerdict
+      ).failsStrict
+    ).toBeUndefined();
+  });
+
+  it('does not let an enforce list make a cross-parent advisory', () => {
+    const rule: EdgeRule = {
+      ...childRule,
+      childSlices: {
+        ...childRule.childSlices!,
+        siblings: { default: 'advisory', enforce: ['features/projects/rfi'] },
+      },
+    };
+    const parent = decide(
+      rule,
+      'src/lib/features/projects/rfi/load-rfi.ts',
+      'src/lib/features/management/eos/eos-summary.ts'
+    );
+    expect(parent?.sliceVerdict?.reasonId).toBe('CROSS_PARENT_SLICE');
+    expect(parent?.sliceVerdict?.decision).toBe('deny');
+  });
+
+  it('treats an advisory default as unfinished even when some subtrees are enforced', () => {
+    expect(childWallSiblingsAdvisory('advisory')).toBe(true);
+    expect(childWallSiblingsAdvisory('deny')).toBe(false);
+    expect(childWallSiblingsAdvisory(undefined)).toBe(false);
+    expect(childWallSiblingsAdvisory({ default: 'advisory', enforce: ['features/projects/rfi'] })).toBe(
+      true
+    );
+    expect(childWallSiblingsAdvisory({ default: 'deny', enforce: ['features/projects/rfi'] })).toBe(false);
+    expect(
+      anyChildWallAdvisory([
+        { childSlices: { siblings: { default: 'advisory', enforce: ['features/projects/rfi'] } } },
+      ])
+    ).toBe(true);
+    expect(anyChildWallAdvisory([{ childSlices: { siblings: 'deny' } }])).toBe(false);
+    expect(anyChildWallAdvisory(undefined)).toBe(false);
+  });
+
+  it('matches a child id or a subtree path and ignores bare names and stars', () => {
+    const file = 'src/lib/features/projects/rfi/load-rfi.ts';
+    const child = 'features/projects/rfi';
+    expect(importerInEnforcedSubtree(file, child, ['features/projects/rfi'])).toBe(true);
+    expect(importerInEnforcedSubtree(file, child, ['SRC/lib/features/projects/rfi'])).toBe(true);
+    expect(importerInEnforcedSubtree(file, child, ['rfi'])).toBe(false);
+    expect(importerInEnforcedSubtree(file, child, ['features/projects/*'])).toBe(false);
+    expect(importerInEnforcedSubtree(file, child, ['features/projects/scm'])).toBe(false);
+    expect(importerInEnforcedSubtree(undefined, child, ['features/projects/rfi'])).toBe(true);
+    expect(importerInEnforcedSubtree(file, undefined, ['features/projects/rfi'])).toBe(false);
+    expect(importerInEnforcedSubtree(file, child, [])).toBe(false);
+    expect(importerInEnforcedSubtree(file, child, [7 as unknown as string])).toBe(false);
+    expect(importerInEnforcedSubtree(file, child, [''])).toBe(false);
+    expect(importerInEnforcedSubtree('lib/features/projects/rfi', 'other', ['lib/features/projects/rfi'])).toBe(
+      true
+    );
   });
 
   it('keeps the check message for a plain cross-slice edge when the child wall is off', () => {

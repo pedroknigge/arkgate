@@ -259,7 +259,7 @@ export const JOURNEY_CASES = Object.freeze({
     Object.freeze({
       id: 'pr3-subtree',
       owner: '#326 PR3',
-      expect: 'fail',
+      expect: 'pass',
       kind: 'pr3-subtree',
       note: 'Owned by #326 PR3. A sibling crossing from an enforced feature is an error. Crossings from features outside the enforce list stay warnings.',
       enforced: Object.freeze([

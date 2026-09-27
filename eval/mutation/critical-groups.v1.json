@@ -149,23 +149,23 @@
     },
     {
       "id": "peer-isolation-fail-closed",
-      "note": "DF04: peerIsolationDecision pure fail-closed core (missing paths/slices/folders, declared shared roots, declared cross-slice edges, shared-imports-slice). peerIsolationMustDeny is its boolean face. #297 shifted the function. Slice-id JSDoc and #308 sliceIdentity helpers shifted it again; retargeted to the same body. #326 inserted SliceVerdict types above the same function. #326 PR2 widened sharedImportsSlice and SliceReasonId above the same function (818–845). The pin does not cover the child wall or the laundering post-pass.",
+      "note": "DF04: peerIsolationDecision pure fail-closed core (missing paths/slices/folders, declared shared roots, declared cross-slice edges, shared-imports-slice). peerIsolationMustDeny is its boolean face. #297 shifted the function. Slice-id JSDoc and #308 sliceIdentity helpers shifted it again; retargeted to the same body. #326 inserted SliceVerdict types above the same function. #326 PR2 widened sharedImportsSlice and SliceReasonId above the same function (818–845). #326 PR3 inserted the siblings object type above the same function (829–856). The pin does not cover the child wall or the laundering post-pass.",
       "targets": [
         {
           "file": "src/domain/layerMatch.ts",
-          "startLine": 818,
-          "endLine": 845
+          "startLine": 829,
+          "endLine": 856
         }
       ]
     },
     {
       "id": "policy-delta-ack-match",
-      "note": "DF04: policyDeltaAcknowledgementMatches hash + finding-id set equality. AP02 (#264) inserted adrPath JSDoc above the helper. #297 inserted the sharedImportsSlice compare. #308 inserted the sliceIdentity compare, so the helper moved again. #326 compareChildSlices shifted the same function by 93 lines (1077–1106). Retargeted to the same body.",
+      "note": "DF04: policyDeltaAcknowledgementMatches hash + finding-id set equality. AP02 (#264) inserted adrPath JSDoc above the helper. #297 inserted the sharedImportsSlice compare. #308 inserted the sliceIdentity compare, so the helper moved again. #326 compareChildSlices shifted the same function by 93 lines (1077–1106). #326 PR3 sibling enforce-list compare shifted the same function to 1129–1158. Retargeted to the same body.",
       "targets": [
         {
           "file": "src/domain/policyDelta.ts",
-          "startLine": 1077,
-          "endLine": 1106
+          "startLine": 1129,
+          "endLine": 1158
         }
       ]
     },

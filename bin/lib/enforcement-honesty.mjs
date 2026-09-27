@@ -494,7 +494,7 @@ export function buildProductHonesty(input = {}) {
     reasons.push({
       id: 'child-wall-advisory',
       message:
-        'A child wall lists siblings as advisory. Recorded crossings stay non-blocking, and a new sibling crossing past that baseline still fails. This house stays unfinished until siblings is deny.',
+        'A child wall lists siblings as advisory. Recorded crossings stay non-blocking, and a new sibling crossing past that baseline still fails. An enforce list makes those subtrees errors and does not finish the house. This house stays unfinished until siblings is deny.',
     });
   }
 

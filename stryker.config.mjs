@@ -71,12 +71,14 @@ const config = {
     // #297 inserted the shared-imports-slice hop. Slice-id JSDoc and #308
     // sliceIdentity helpers shifted peerIsolationDecision again; retargeted to the same function.
     // #326 inserted SliceVerdict types above the same function. #326 PR2 widened
-    // sharedImportsSlice and SliceReasonId above it. Same peerIsolationDecision body.
-    'src/domain/layerMatch.ts:818-845',
+    // sharedImportsSlice and SliceReasonId above it. #326 PR3 inserted the siblings
+    // object type above it. Same peerIsolationDecision body.
+    'src/domain/layerMatch.ts:829-856',
     // AP02 (#264) shifted the helper; sharedImportsSlice and #308 sliceIdentity
     // compares shifted it again. Same policyDeltaAcknowledgementMatches body.
     // #326 compareChildSlices shifted the same function by 93 lines.
-    'src/domain/policyDelta.ts:1077-1106',
+    // #326 PR3 sibling enforce-list compare shifted it to 1129-1158.
+    'src/domain/policyDelta.ts:1129-1158',
     // #291 declaration witness shifted formatCoverageDiscards / budgetDetail /
     // canPromoteInvariant. #307/#310 classifyCoverage shifted them again.
     // #322 declaration-miss shifted them once more.

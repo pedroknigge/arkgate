@@ -82,7 +82,8 @@ export type ArkConfigRule = {
   sharedImportsSlice?: 'deny' | 'deny-cross-parent';
   /**
    * Optional inner wall. Absent keeps today's universe-wall output.
-   * `siblings` defaults to deny. `parentMayImportChild` defaults to false.
+   * `siblings` defaults to deny. An object keeps that default and lists enforced subtrees.
+   * `parentMayImportChild` defaults to false.
    */
   childSlices?: ArkConfigChildSlices;
 };
@@ -91,7 +92,10 @@ export type ArkConfigChildSlices = {
   sliceFolders: string[];
   sliceIdentity?: ArkConfigSliceIdentity;
   commonFolders?: string[];
-  siblings?: 'deny' | 'advisory';
+  siblings?:
+    | 'deny'
+    | 'advisory'
+    | { default: 'deny' | 'advisory'; enforce?: string[] };
   parentMayImportChild?: boolean;
 };
 
