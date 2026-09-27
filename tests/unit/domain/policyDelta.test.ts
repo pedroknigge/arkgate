@@ -391,6 +391,12 @@ describe('T01 semantic policy delta', () => {
     });
     expect(loosened.classification).toBe('weakening');
     expect(loosened.findings[0]?.message).toContain('another universe');
+    const removed = analyzePolicyDelta({
+      baseConfig: withMode('deny-cross-parent'),
+      candidateConfig: BASE_CONFIG,
+    });
+    expect(removed.classification).toBe('weakening');
+    expect(removed.findings[0]?.message).toContain('through a shared root again');
   });
 
   it('removing sharedImportsSlice deny is a weakening', () => {

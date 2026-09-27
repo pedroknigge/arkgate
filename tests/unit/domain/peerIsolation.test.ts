@@ -1066,6 +1066,68 @@ describe('deny-cross-parent laundering (#326 PR2)', () => {
     );
     expect(result.warnings).toHaveLength(0);
   });
+
+  it('walks shared hops only and keeps the shorter cross-universe path', () => {
+    const hop = (
+      from: string,
+      to: string,
+      line: number,
+      fromLayer = 'Features',
+      toLayer = 'Features'
+    ) => ({ from, to, line, fromLayer, toLayer, kind: 'import' as const });
+    const result = evaluateArchitectureGraph({
+      config,
+      rules: [
+        { ...rule, from: 'Other', to: 'Features' },
+        { ...rule, from: 'Features', to: 'Other' },
+        { ...rule, allowed: true },
+        { ...rule, peerIsolation: false },
+        { ...rule, sharedImportsSlice: 'deny' as const },
+        rule,
+      ],
+      files: [],
+      contentViolations: [],
+      edges: [
+        { from: 'src/features/management/a.ts', to: '', line: 1, fromLayer: 'Features', toLayer: 'Features' },
+        hop('src/features/management/a.ts', 'src/features/management/a.ts', 1),
+        hop('src/features/management/a.ts', 'src/ui/skip.ts', 1, 'Features', ''),
+        hop('src/features/management/a.ts', 'src/features/operations/b.ts', 8),
+        hop('src/features/management/a.ts', 'src/other/noise.ts', 7),
+        hop('src/features/management/a.ts', 'src/ui/long.ts', 4),
+        hop('src/features/management/a.ts', 'src/ui/short.ts', 2),
+        hop('src/features/management/a.ts', 'src/ui/short.ts', 9),
+        hop('src/ui/long.ts', 'src/ui/mid.ts', 1),
+        hop('src/ui/long.ts', 'src/ui/leaf.ts', 2),
+        hop('src/ui/mid.ts', 'src/ui/long.ts', 1),
+        hop('src/ui/mid.ts', 'src/other/noise.ts', 1),
+        hop('src/ui/mid.ts', 'src/features/operations/b.ts', 1),
+        hop('src/ui/mid.ts', 'src/features/operations/b.ts', 2, 'Kernel', 'Features'),
+        hop('src/ui/short.ts', 'src/features/operations/b.ts', 1),
+        hop('src/features/projects/c.ts', 'src/ui/bridge.ts', 1),
+        hop('src/ui/bridge.ts', 'src/features/external/e.ts', 1),
+        hop('src/ui/bridge.ts', 'src/features/management/z.ts', 1),
+        hop('src/features/projects/c.ts', 'src/ui/local.ts', 1),
+        hop('src/ui/local.ts', 'src/features/projects/d.ts', 1),
+      ],
+    });
+    const hits = result.violations.filter((row) => row.reasonId === 'CROSS_PARENT_VIA_SHARED');
+    expect(hits.map((row) => `${row.file} -> ${row.target}`)).toEqual([
+      'src/features/management/a.ts -> src/features/operations/b.ts',
+      'src/features/projects/c.ts -> src/features/external/e.ts',
+      'src/features/projects/c.ts -> src/features/management/z.ts',
+    ]);
+    expect(hits[0]?.message).toContain('src/ui/short.ts');
+    expect(hits[0]?.message).not.toContain('src/ui/long.ts');
+    expect(hits[0]?.line).toBe(2);
+    const absentRules = evaluateArchitectureGraph({
+      config,
+      rules: undefined as unknown as (typeof rule)[],
+      files: [],
+      contentViolations: [],
+      edges: [],
+    });
+    expect(absentRules.violations).toEqual([]);
+  });
 });
 
 describe('peerIsolation laundering invariant (4.8.4)', () => {
