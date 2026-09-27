@@ -975,6 +975,32 @@ describe('classifyCoverage evidence (#307, #310)', () => {
     );
   });
 
+  it('accepts a typed const, including a function type with =>', () => {
+    const rows = [
+      {
+        symbol: 'PLAN_TIERS',
+        source:
+          'export const PLAN_TIERS: ReadonlyArray<{ id: string; seats: number; monthlyCents: number }> = [\n  { id: "starter", seats: 5, monthlyCents: 2900 },\n];\n',
+      },
+      {
+        symbol: 'prorate',
+        source:
+          'export const prorate: (amount: number, daysUsed: number, daysInPeriod: number) => number = (amount) => amount;\n',
+      },
+    ];
+    for (const row of rows) {
+      const ev = classifyCoverage(
+        { id, coverage: { test: false, symbol: row.symbol } },
+        { fileContents: { 'src/domain/billing/table.ts': row.source }, testFiles: [] }
+      );
+      expect(ev, row.symbol).toEqual({
+        kind: 'declaration',
+        file: 'src/domain/billing/table.ts',
+        shape: 'const',
+      });
+    }
+  });
+
   it('accepts a title that contains the other quote character', () => {
     const title = "INV-ORDER-001 — no agrega un <input type='file'> crudo";
     const ev = classifyCoverage(
@@ -982,6 +1008,28 @@ describe('classifyCoverage evidence (#307, #310)', () => {
       files(`it("${title}", () => {})\n`)
     );
     expect(ev).toEqual({ kind: 'test-title', file: 'tests/order.test.ts', title });
+  });
+
+  it('says no declaration matched when the only comment is in another file', () => {
+    const ev = classifyCoverage(
+      { id, coverage: { test: false, symbol: 'REFUND_WINDOW_DAYS' } },
+      {
+        fileContents: {
+          'src/domain/refunds/refundPolicy.ts':
+            'const REFUND_WINDOW_DAYS = 14;\nexport { REFUND_WINDOW_DAYS };\n',
+          'src/application/refunds/issueRefund.ts':
+            '// The 14-day cap is REFUND_WINDOW_DAYS in the domain policy.\n',
+        },
+        testFiles: [],
+      }
+    );
+    expect(ev).toEqual({ kind: 'declaration-miss', symbol: 'REFUND_WINDOW_DAYS' });
+    expect(describeCoverage({ id, coverage: { symbol: 'REFUND_WINDOW_DAYS' } }, ev)).toBe(
+      'no declaration matched `REFUND_WINDOW_DAYS`'
+    );
+    expect(describeCoverage({ id, coverage: { symbol: 'REFUND_WINDOW_DAYS' } }, ev)).not.toContain(
+      'appears only in a comment'
+    );
   });
 
   it('describes silence without claiming a mention', () => {

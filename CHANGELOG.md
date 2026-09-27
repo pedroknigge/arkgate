@@ -70,6 +70,12 @@ in the immutable pre-2.0 archive linked below.
   Required CI is still the shared merge line. No new skill, schema, or host.
 
 ### Fixed
+- Const-declaration coverage accepts a type annotation between the name and
+  `=`, including `=>` inside a function type (`export const X: ReadonlyArray<…> =`,
+  `export const f: (a: A) => B =`). When that declaration does not match and the
+  only comment is in a different file, the message is `no declaration matched`,
+  not "appears only in a comment"
+  (issue [#322](https://github.com/pedroknigge/arkgate/issues/322)).
 - Test-title coverage accepts a `describe`/`it` title that contains the other
   quote character, such as `it("… <input type='file'> …")`
   (issue [#323](https://github.com/pedroknigge/arkgate/issues/323)).

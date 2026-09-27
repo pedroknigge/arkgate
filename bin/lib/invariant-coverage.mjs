@@ -160,7 +160,7 @@ function declarationShape(content, name) {
         },
         {
             shape: 'const',
-            source: `(?:^|[\\s;{}])export\\s+(?:const|let|var)\\s+${n}\\s*=`,
+            source: `(?:^|[\\s;{}])export\\s+(?:const|let|var)\\s+${n}(?:\\s*:(?:[^=]|=>)+?)?\\s*=(?!>)`,
         },
         {
             shape: 'type',
@@ -382,14 +382,35 @@ function rankCoverage(invariant, files, scanTests = true) {
             }
         }
     }
-    const best = testTitle
+    let best = testTitle
         ? { kind: 'test-title', file: testTitle.file, title: testTitle.title }
         : declaration
             ? { kind: 'declaration', file: declaration.file, shape: declaration.shape }
             : mention
                 ? { kind: 'mention-only', file: mention.file, context: mention.context }
                 : { kind: 'none' };
+    if (best.kind === 'mention-only' &&
+        best.context === 'comment' &&
+        needle &&
+        symbolInCodeElsewhere(files.fileContents, tests, needle.name, best.file)) {
+        best = { kind: 'declaration-miss', symbol: needle.name };
+    }
     return { best, ...(testTitle ? { testTitle } : {}), ...(declaration ? { declaration } : {}) };
+}
+/** True when `name` survives comment/string masking in some non-test file other than `mentionFile`. */
+function symbolInCodeElsewhere(fileContents, tests, name, mentionFile) {
+    const needle = new RegExp(`(?:^|[^A-Za-z0-9_$])${escapeRegExp(name)}(?=$|[^A-Za-z0-9_$])`);
+    const mention = normalizePath(mentionFile);
+    for (const file of Object.keys(fileContents)) {
+        if (tests.has(normalizePath(file)) || normalizePath(file) === mention)
+            continue;
+        const content = fileContents[file];
+        if (!content)
+            continue;
+        if (needle.test(maskNonCode(content, true)))
+            return true;
+    }
+    return false;
 }
 /**
  * Best coverage evidence for `invariant` in `files`.
@@ -409,6 +430,7 @@ export function countsAsCoverage(ev) {
         case 'declaration':
             return true;
         case 'mention-only':
+        case 'declaration-miss':
         case 'none':
             return false;
     }
@@ -434,6 +456,8 @@ export function describeCoverage(invariant, ev) {
             return `found \`${ev.shape} ${declaredLabel(invariant)}\` in ${ev.file}`;
         case 'mention-only':
             return `${invariant.id} appears only in ${mentionWhere(ev.context)} in ${ev.file}; put it in a describe/it title`;
+        case 'declaration-miss':
+            return `no declaration matched \`${ev.symbol}\``;
         case 'none':
             return 'no scanned test names it in a describe/it title and no declared symbol was found';
     }

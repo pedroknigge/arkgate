@@ -29,13 +29,16 @@ export type MentionContext = 'test-body' | 'comment' | 'string' | 'import';
 
 /**
  * One coverage verdict. Best evidence wins: test-title, then declaration,
- * then mention-only, then none. Regexes, the test-file vs source split, and
- * `Aggregate.method` lookup stay behind this value.
+ * then mention-only, then none. A comment in another file, when the symbol
+ * still occurs in code, is `declaration-miss` and does not count.
+ * Regexes, the test-file vs source split, and `Aggregate.method` lookup stay
+ * behind this value.
  */
 export type CoverageEvidence =
   | { kind: 'test-title'; file: string; title: string }
   | { kind: 'declaration'; file: string; shape: DeclarationShape }
   | { kind: 'mention-only'; file: string; context: MentionContext }
+  | { kind: 'declaration-miss'; symbol: string }
   | { kind: 'none' };
 
 /** Invariant fields the classifier reads. A full catalog entry is assignable. */
@@ -363,7 +366,7 @@ function declarationShape(content: string, name: string): DeclarationShape | und
     },
     {
       shape: 'const',
-      source: `(?:^|[\\s;{}])export\\s+(?:const|let|var)\\s+${n}\\s*=`,
+      source: `(?:^|[\\s;{}])export\\s+(?:const|let|var)\\s+${n}(?:\\s*:(?:[^=]|=>)+?)?\\s*=(?!>)`,
     },
     {
       shape: 'type',
@@ -590,14 +593,40 @@ function rankCoverage(
     }
   }
 
-  const best: CoverageEvidence = testTitle
+  let best: CoverageEvidence = testTitle
     ? { kind: 'test-title', file: testTitle.file, title: testTitle.title }
     : declaration
       ? { kind: 'declaration', file: declaration.file, shape: declaration.shape }
       : mention
         ? { kind: 'mention-only', file: mention.file, context: mention.context }
         : { kind: 'none' };
+  if (
+    best.kind === 'mention-only' &&
+    best.context === 'comment' &&
+    needle &&
+    symbolInCodeElsewhere(files.fileContents, tests, needle.name, best.file)
+  ) {
+    best = { kind: 'declaration-miss', symbol: needle.name };
+  }
   return { best, ...(testTitle ? { testTitle } : {}), ...(declaration ? { declaration } : {}) };
+}
+
+/** True when `name` survives comment/string masking in some non-test file other than `mentionFile`. */
+function symbolInCodeElsewhere(
+  fileContents: Readonly<Record<string, string>>,
+  tests: ReadonlySet<string>,
+  name: string,
+  mentionFile: string
+): boolean {
+  const needle = new RegExp(`(?:^|[^A-Za-z0-9_$])${escapeRegExp(name)}(?=$|[^A-Za-z0-9_$])`);
+  const mention = normalizePath(mentionFile);
+  for (const file of Object.keys(fileContents)) {
+    if (tests.has(normalizePath(file)) || normalizePath(file) === mention) continue;
+    const content = fileContents[file];
+    if (!content) continue;
+    if (needle.test(maskNonCode(content, true))) return true;
+  }
+  return false;
 }
 
 /**
@@ -622,6 +651,7 @@ export function countsAsCoverage(ev: CoverageEvidence): boolean {
     case 'declaration':
       return true;
     case 'mention-only':
+    case 'declaration-miss':
     case 'none':
       return false;
   }
@@ -649,6 +679,8 @@ export function describeCoverage(invariant: CoverageInvariant, ev: CoverageEvide
       return `found \`${ev.shape} ${declaredLabel(invariant)}\` in ${ev.file}`;
     case 'mention-only':
       return `${invariant.id} appears only in ${mentionWhere(ev.context)} in ${ev.file}; put it in a describe/it title`;
+    case 'declaration-miss':
+      return `no declaration matched \`${ev.symbol}\``;
     case 'none':
       return 'no scanned test names it in a describe/it title and no declared symbol was found';
   }
