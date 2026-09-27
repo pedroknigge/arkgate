@@ -1,0 +1,36 @@
+{
+  "$schema": "https://unpkg.com/arkgate@4/schemas/ark.config.schema.json",
+  "schemaVersion": "1.3",
+  "name": "ledgerline",
+  "include": ["src"],
+  "layers": [
+    {
+      "name": "DomainModel",
+      "description": "Plans, invoices, customers, refunds, and upload rules. No I/O.",
+      "patterns": ["src/domain/**"],
+      "forbiddenGlobals": ["fetch", "process", "Date.now", "Math.random"]
+    },
+    {
+      "name": "ApplicationOrchestration",
+      "description": "Use cases that quote a plan, issue an invoice, or attach a file.",
+      "patterns": ["src/application/**"]
+    },
+    {
+      "name": "Adapters",
+      "description": "HTTP controllers and in-memory repositories.",
+      "patterns": ["src/adapters/**"]
+    }
+  ],
+  "rules": [
+    { "from": "DomainModel", "to": "ApplicationOrchestration", "allowed": false },
+    { "from": "DomainModel", "to": "Adapters", "allowed": false },
+    { "from": "ApplicationOrchestration", "to": "Adapters", "allowed": false }
+  ],
+  "coverage": {
+    "testGlobs": ["tests/**/*.test.ts"],
+    "coverageRoots": ["tests"]
+  },
+  "arkRules": {
+    "DomainModel": "arkrules/DomainModel.json"
+  }
+}

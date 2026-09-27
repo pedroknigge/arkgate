@@ -48,6 +48,10 @@ in the immutable pre-2.0 archive linked below.
   short phrase templates so the shape is visible. No new skill, schema, or flag.
 
 ### Changed
+- Internal: packed journey matrix (`journey(fixture, steps)`) installs the
+  npm tarball into a vendored fixture and compares a JSON subset to a
+  committed golden. CI runs one job per fixture. Unit tests and coverage
+  floors are unchanged.
 - Compact `--doctor` names ArkRules only when the `arkRules` map is on
   (one breath + counts, not a score). Absence stays silent. Reuses
   `rulesUnderContract` — no new schema, flag, or skill. `--doctor --all`

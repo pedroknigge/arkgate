@@ -1,0 +1,60 @@
+{
+  "fixture": "ledgerline",
+  "schemaVersion": 1,
+  "steps": [
+    {
+      "command": "ark-check --json --no-cache",
+      "exitCode": 1,
+      "filesDiff": {},
+      "output": {
+        "completeness": "complete",
+        "diagnostics": [
+          {
+            "arkruleId": "INV-REFUND-WINDOW",
+            "file": "arkrules/DomainModel.json",
+            "message": "Invariant INV-REFUND-WINDOW: no declaration matched `REFUND_WINDOW_DAYS` (tests-disappeared — a suite exists). ArkGate matches declared text; it never executes tests. Scan discarded 8 naming no catalogued invariant (loaded 30 files, kept 2 tests).",
+            "ruleId": "INVARIANT_UNCOVERED",
+            "severity": "error"
+          }
+        ],
+        "ok": false,
+        "valid": false
+      }
+    },
+    {
+      "command": "ark-check --doctor --json --no-cache",
+      "exitCode": 0,
+      "filesDiff": {
+        ".ark/ci-merge-boundary.json": "added"
+      },
+      "output": {
+        "rulesUnderContract": {
+          "covered": [
+            "INV-CUSTOMER-EMAIL-NORMALIZED",
+            "INV-INVOICE-NON-NEGATIVE",
+            "INV-PLAN-TIERS-CLOSED",
+            "INV-PRORATION-PURE",
+            "INV-UPLOAD-NO-RAW-INPUT"
+          ],
+          "symbolEvidence": [
+            {
+              "file": "src/domain/customers/customer.ts",
+              "id": "INV-CUSTOMER-EMAIL-NORMALIZED"
+            },
+            {
+              "file": "src/domain/billing/planTiers.ts",
+              "id": "INV-PLAN-TIERS-CLOSED"
+            },
+            {
+              "file": "src/domain/billing/proration.ts",
+              "id": "INV-PRORATION-PURE"
+            }
+          ],
+          "uncovered": [
+            "INV-REFUND-WINDOW"
+          ]
+        }
+      }
+    }
+  ]
+}

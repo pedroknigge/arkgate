@@ -1,0 +1,42 @@
+{
+  "schemaVersion": "1.0",
+  "layer": "DomainModel",
+  "invariants": [
+    {
+      "id": "INV-PLAN-TIERS-CLOSED",
+      "description": "Sellable plans are the typed tier table, not a free-form price.",
+      "coverage": { "test": false, "symbol": "PLAN_TIERS" },
+      "mode": "enforced"
+    },
+    {
+      "id": "INV-PRORATION-PURE",
+      "description": "A mid-cycle credit is a pure function of amount and days.",
+      "coverage": { "test": false, "symbol": "prorate" },
+      "mode": "enforced"
+    },
+    {
+      "id": "INV-UPLOAD-NO-RAW-INPUT",
+      "description": "A browser file input never crosses into the domain.",
+      "coverage": { "test": true },
+      "mode": "enforced"
+    },
+    {
+      "id": "INV-REFUND-WINDOW",
+      "description": "A refund is refused after the published window.",
+      "coverage": { "test": false, "symbol": "REFUND_WINDOW_DAYS" },
+      "mode": "enforced"
+    },
+    {
+      "id": "INV-INVOICE-NON-NEGATIVE",
+      "description": "A drafted invoice total never goes below zero.",
+      "coverage": { "test": true },
+      "mode": "enforced"
+    },
+    {
+      "id": "INV-CUSTOMER-EMAIL-NORMALIZED",
+      "description": "Changing a customer email stores the normalized form.",
+      "coverage": { "test": false, "symbol": "Customer.changeEmail" },
+      "mode": "enforced"
+    }
+  ]
+}
