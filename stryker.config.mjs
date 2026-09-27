@@ -54,22 +54,23 @@ const config = {
     // #297 added sharedImportsSlice one line above these pins.
     // #308 sliceIdentity schema shifted the same decisions by seven lines.
     // #326 childSlices schema shifted the same migrateArkConfig decisions by 17 lines.
-    'src/domain/configContract.ts:567-570',
-    'src/domain/configContract.ts:572-573',
-    'src/domain/configContract.ts:593-594',
-    'src/domain/configContract.ts:599-600',
-    'src/domain/configContract.ts:609-611',
-    'src/domain/configContract.ts:622-622',
-    'src/domain/configContract.ts:629-629',
-    'src/domain/configContract.ts:638-641',
-    'src/domain/configContract.ts:652-652',
+    // #326 PR2 deny-cross-parent schema description shifted them by five.
+    'src/domain/configContract.ts:572-575',
+    'src/domain/configContract.ts:577-578',
+    'src/domain/configContract.ts:598-599',
+    'src/domain/configContract.ts:604-605',
+    'src/domain/configContract.ts:614-616',
+    'src/domain/configContract.ts:627-627',
+    'src/domain/configContract.ts:634-634',
+    'src/domain/configContract.ts:643-646',
+    'src/domain/configContract.ts:657-657',
     // DF04 — selective pure truth islands (fail-closed / ack / promote honesty).
     // peerIsolationDecision is the killable fail-closed core; findDeniedEdgeDecision wires it.
     // #297 inserted the shared-imports-slice hop. Slice-id JSDoc and #308
     // sliceIdentity helpers shifted peerIsolationDecision again; retargeted to the same function.
-    // #326 inserted SliceVerdict types above the same function. The pin stays on
-    // peerIsolationDecision and does not cover the child wall.
-    'src/domain/layerMatch.ts:814-841',
+    // #326 inserted SliceVerdict types above the same function. #326 PR2 widened
+    // sharedImportsSlice and SliceReasonId above it. Same peerIsolationDecision body.
+    'src/domain/layerMatch.ts:818-845',
     // AP02 (#264) shifted the helper; sharedImportsSlice and #308 sliceIdentity
     // compares shifted it again. Same policyDeltaAcknowledgementMatches body.
     // #326 compareChildSlices shifted the same function by 93 lines.

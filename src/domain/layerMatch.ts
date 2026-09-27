@@ -745,7 +745,10 @@ export type PeerIsolationDecision = {
 };
 
 /** Public reason on a nested-wall finding. The ruleId stays LAYER_IMPORT_VIOLATION. */
-export type SliceReasonId = 'CROSS_PARENT_SLICE' | 'CROSS_SIBLING_SLICE';
+export type SliceReasonId =
+  | 'CROSS_PARENT_SLICE'
+  | 'CROSS_SIBLING_SLICE'
+  | 'CROSS_PARENT_VIA_SHARED';
 
 /**
  * Which wall produced the finding. `none` is an allow. `fail-closed` is a
@@ -1370,4 +1373,13 @@ export function isScanExcludedRelative(
 ): boolean {
   const rel = String(relPath).split(/[/\\]/).join('/');
   return scanExcludePatterns(config).some((pattern) => globToRegExp(pattern).test(rel));
+}
+
+/** Slice folders the universe wall uses: the rule's list, or the from-layer patterns. */
+export function peerSliceFolders(
+  rule: EdgeRule,
+  layerName: string,
+  layers: LayerConfig[] | undefined
+): string[] {
+  return resolveSliceFolders(rule, layerName, layers);
 }

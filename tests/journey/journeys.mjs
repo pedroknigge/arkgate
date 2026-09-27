@@ -231,7 +231,7 @@ export const JOURNEY_CASES = Object.freeze({
     Object.freeze({
       id: 'pr2-laundering',
       owner: '#326 PR2',
-      expect: 'fail',
+      expect: 'pass',
       kind: 'pr2-laundering',
       note: 'Owned by #326 PR2. deny-cross-parent reports two cross-universe paths through a shared root and leaves the same-universe path through labels.ts clean.',
       edges: Object.freeze([

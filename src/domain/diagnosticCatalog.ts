@@ -806,7 +806,7 @@ export function catalogWhyForRuleId(ruleId: string | null | undefined): string |
  * reasonId is not a second catalog code and is not part of the baseline key.
  */
 export type SliceReasonHint = {
-  reasonId: 'CROSS_PARENT_SLICE' | 'CROSS_SIBLING_SLICE';
+  reasonId: 'CROSS_PARENT_SLICE' | 'CROSS_SIBLING_SLICE' | 'CROSS_PARENT_VIA_SHARED';
   ruleId: 'LAYER_IMPORT_VIOLATION';
   title: string;
   why: string;
@@ -827,6 +827,13 @@ export const SLICE_REASON_HINTS: readonly SliceReasonHint[] = Object.freeze([
     title: 'Cross-sibling slice',
     why: 'This import crosses two feature slices inside one universe.',
     fix: 'Import universe-common code, or move the shared piece into the feature that owns it. Advisory siblings still fail when the count grows past the baseline.',
+  }),
+  Object.freeze({
+    reasonId: 'CROSS_PARENT_VIA_SHARED',
+    ruleId: 'LAYER_IMPORT_VIOLATION',
+    title: 'Cross-universe through a shared root',
+    why: 'A slice reaches another universe only through a shared root. ark-check and CI report this path. The write hook and ESLint see one edge at a time and do not block it.',
+    fix: 'Stop the shared root from importing the other universe, or move that import into the universe that owns it. A shared hop that stays inside one universe is allowed.',
   }),
 ]);
 

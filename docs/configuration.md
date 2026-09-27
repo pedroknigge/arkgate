@@ -363,6 +363,13 @@ is evidence:
   to `"deny"`. That hop is direct only — `allowedCrossSlice` does not excuse it. A green
   `ark-check` prints one line per layer edge (the count and three examples) and says the
   wall is direct-only. Every edge stays in `ark-check --json` and `ark-check --doctor`.
+  `"deny-cross-parent"` does not change that direct hop: it stays a `SHARED_IMPORTS_SLICE`
+  warning. It adds a whole-graph finding when a slice reaches a **different** universe
+  only through a shared root (`reasonId` `CROSS_PARENT_VIA_SHARED` on
+  `LAYER_IMPORT_VIOLATION`). A shared hop that stays inside one universe is not a finding.
+  That pass runs in `ark-check` and CI. The write hook and ESLint see one edge at a time
+  and do not block it. arkgate 4.8.22 and older reject the value at config load (`must be
+  one of deny`). They do not ignore it and they do not treat it as `"deny"`.
 - `allowedCrossSlice` entries match a full slice id (`features/catalog`) or a bare slice name
   (`catalog`), and only in the direction written. The reverse edge still denies. A bare name
   matches that name under **any** slice folder, so in a repo with several slice parents

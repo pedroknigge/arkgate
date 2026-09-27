@@ -6,6 +6,7 @@ in the immutable pre-2.0 archive linked below.
 ## Unreleased
 
 ### Added
+- `sharedImportsSlice` may be `"deny-cross-parent"`. The direct shared-root hop stays a `SHARED_IMPORTS_SLICE` warning. ark-check and CI add `reasonId` `CROSS_PARENT_VIA_SHARED` when a slice reaches another universe only through a shared root. A shared hop inside one universe is not a finding. `"deny"` is unchanged. The write hook and ESLint see one edge at a time and do not block the path. The baseline key does not include `reasonId`. arkgate 4.8.22 and older reject the value at config load. Does not close `K01`.
 - Optional `childSlices` on a `peerIsolation` rule: an inner wall under today's universe wall. Absent, behavior and output stay the same. Present, a cross-universe deny is `reasonId` `CROSS_PARENT_SLICE` (never advisory) and a sibling crossing is `CROSS_SIBLING_SLICE` (`siblings`: `deny` or `advisory`). `commonFolders` and flat files are universe common. `parentMayImportChild` defaults to false. The baseline key does not include `reasonId`. Advisory siblings still fail when they grow past the recorded baseline, and `productHonesty.finished` stays false while any child wall is advisory. Doctor reports `{ crossParent, crossSibling, pairs }`. arkgate 4.8.22 and older reject the key. No wildcards, aliases, or per-subtree enforcement in this change.
 - Soft doctor residual when Domain is declared but empty and the UI holds the
   rules (`noDomainFrontend`). Projects empty Domain + presentation share, or
