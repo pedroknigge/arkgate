@@ -19,8 +19,8 @@
     },
     "runtime": {
       "path": "packages/runtime",
-      "maxPackedBytes": 317000,
-      "maxUnpackedBytes": 1115000,
+      "maxPackedBytes": 289000,
+      "maxUnpackedBytes": 1014000,
       "maxFiles": 20,
       "measuredCandidate": {
         "sha": "0782aa5066f8b42cc70c2b9691c243ff33d6dd10",
@@ -30,7 +30,7 @@
         "unpackedBytes": 839751,
         "files": 9
       },
-      "exception": "4.3.0 train remeasure of @arkgate/runtime companion: 165,402 packed on CI 31293903842. 4.7.0 ArkRun companion DX (declarations, information package, transport, inspector, graph slices) pack 214,093 / unpacked 760,875 / 9 files. Ceiling 236,000 packed / 837,000 unpacked retains \u226510% headroom over that 4.7.0 pack (previous 181,943 packed ceiling superseded). 4.8.4 remeasure: the runtime bundle carries src/runtime + src/nestjs, which pull the domain, so this patch's additions ship inside it (coverageRoots, sharedRoots, allowedCrossSlice, filesRead are all present in packages/runtime/dist). Local pack on 0782aa5: 235,185 packed / 839,751 unpacked / 9 files \u2014 the unpacked figure crossed the previous 837,000 ceiling by 2,751 bytes (0.33%). Note the previous ceiling was exactly 10% over the 4.7.0 pack and was never remeasured across 4.8.0-4.8.3, so part of this growth predates 4.8.4. New ceilings retain >=10% headroom over the 4.8.4 measurement: 259,000 packed / 924,000 unpacked. Measured locally, not on CI, unlike the earlier entries. IT01 Linux CI pack (run 34848276803, tip 5993a02): 260,130 packed / 920,342 unpacked / 9 files \u2014 packed crossed 259,000 by 1,130 bytes. New ceilings retain \u226510% headroom over that CI measurement: 287,000 packed / 1,013,000 unpacked. #326 PR4 child-slice whole-segment match lives in domain and ships inside this bundle. Local pack on 6fff7e9: 288,070 packed / 1,012,886 unpacked / 9 files — packed crossed 287,000 by 1,070 bytes; unpacked sat 114 under 1,013,000. New ceilings retain \u226510% headroom over that local measurement: 317,000 packed / 1,115,000 unpacked."
+      "exception": "4.3.0 train remeasure of @arkgate/runtime companion: 165,402 packed on CI 31293903842. 4.7.0 ArkRun companion DX (declarations, information package, transport, inspector, graph slices) pack 214,093 / unpacked 760,875 / 9 files. Ceiling 236,000 packed / 837,000 unpacked retains \u226510% headroom over that 4.7.0 pack (previous 181,943 packed ceiling superseded). 4.8.4 remeasure: the runtime bundle carries src/runtime + src/nestjs, which pull the domain, so this patch's additions ship inside it (coverageRoots, sharedRoots, allowedCrossSlice, filesRead are all present in packages/runtime/dist). Local pack on 0782aa5: 235,185 packed / 839,751 unpacked / 9 files \u2014 the unpacked figure crossed the previous 837,000 ceiling by 2,751 bytes (0.33%). Note the previous ceiling was exactly 10% over the 4.7.0 pack and was never remeasured across 4.8.0-4.8.3, so part of this growth predates 4.8.4. New ceilings retain >=10% headroom over the 4.8.4 measurement: 259,000 packed / 924,000 unpacked. Measured locally, not on CI, unlike the earlier entries. IT01 Linux CI pack (run 34848276803, tip 5993a02): 260,130 packed / 920,342 unpacked / 9 files \u2014 packed crossed 259,000 by 1,130 bytes. New ceilings retain \u226510% headroom over that CI measurement: 287,000 packed / 1,013,000 unpacked. #326 PR4 child-slice whole-segment match lives in domain and ships inside this bundle. Measured on 6fff7e9 and on Linux CI: 288,070 packed / 1,012,886 unpacked / 9 files. Packed crossed 287,000 by 1,070 bytes. Unpacked sat 114 under 1,013,000. New ceilings are that measurement plus about 1 KB: 289,000 packed / 1,014,000 unpacked."
     }
   }
 }
