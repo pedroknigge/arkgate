@@ -277,22 +277,22 @@
       }
     },
     {
-      "expect": "fail",
+      "expect": "pass",
       "got": {
         "bareRejected": true,
-        "clearedErrors": 2,
+        "clearedErrors": 0,
         "crossParentCount": 5,
         "crossParentReason": "CROSS_PARENT_SLICE",
         "crossParentSeverity": "error",
         "keptSiblingErrors": 3,
-        "siblingCount": 5,
-        "spanWarnings": 0
+        "siblingCount": 3,
+        "spanWarnings": 1
       },
       "id": "pr4-wildcards",
-      "met": false,
+      "met": true,
       "note": "Owned by #326 PR4. features/projects/* to features/projects/d2d-item clears those sibling crossings. features/*/* to features/management/eos stays CROSS_PARENT_SLICE, and the config warns that the entry cannot cross the universe wall. A literal * on the universe allowedCrossSlice stays inert. A bare name is rejected at config load.",
       "owner": "#326 PR4",
-      "status": "expected-fail",
+      "status": "pass",
       "want": {
         "bareSnippet": "ambiguous across universes",
         "clearedErrors": 0,
@@ -905,13 +905,6 @@
             "target": "src/components/features/operations/fleet/fleet-screen.tsx"
           },
           {
-            "file": "src/components/features/projects/rfi/rfi-uses-d2d.tsx",
-            "reasonId": "CROSS_SIBLING_SLICE",
-            "ruleId": "LAYER_IMPORT_VIOLATION",
-            "severity": "error",
-            "target": "src/lib/features/projects/d2d-item/d2d-item.ts"
-          },
-          {
             "file": "src/lib/features/external/vendors/vendor-sync.ts",
             "reasonId": "CROSS_PARENT_SLICE",
             "ruleId": "LAYER_IMPORT_VIOLATION",
@@ -947,13 +940,6 @@
             "target": "src/lib/features/projects/scm/scm-board.ts"
           },
           {
-            "file": "src/lib/features/projects/scm/scm-uses-d2d.ts",
-            "reasonId": "CROSS_SIBLING_SLICE",
-            "ruleId": "LAYER_IMPORT_VIOLATION",
-            "severity": "error",
-            "target": "src/lib/features/projects/d2d-item/d2d-item.ts"
-          },
-          {
             "file": "src/lib/repositories/features/management/eos/eos-repository.ts",
             "reasonId": "CROSS_SIBLING_SLICE",
             "ruleId": "LAYER_IMPORT_VIOLATION",
@@ -982,6 +968,20 @@
             "ruleId": "CONFIG_CHILD_SLICES_VERSION",
             "severity": "warning",
             "toLayer": null
+          },
+          {
+            "count": 1,
+            "edges": [
+              {
+                "file": null,
+                "target": null,
+                "toSlice": null
+              }
+            ],
+            "fromLayer": "Presentation",
+            "ruleId": "CONFIG_CHILD_SLICE_CROSS_UNIVERSE",
+            "severity": "warning",
+            "toLayer": "Presentation"
           },
           {
             "count": 3,

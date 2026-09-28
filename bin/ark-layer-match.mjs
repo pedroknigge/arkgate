@@ -736,6 +736,76 @@ export function siblingCrossingAdvisory(siblings, fromPath, fromChild) {
     return !importerInEnforcedSubtree(fromPath, fromChild, siblings.enforce);
 }
 /**
+ * Segments of a child-slice pattern. `*` is one whole segment.
+ * A bare name, `**`, or a partial segment does not match.
+ */
+function childSlicePatternSegments(raw) {
+    if (typeof raw !== 'string')
+        return null;
+    const trimmed = trimTrailingSlashes(raw.trim().replace(/\\/g, '/')).toLowerCase();
+    if (!trimmed.includes('/'))
+        return null;
+    const parts = trimmed.split('/');
+    for (const part of parts) {
+        if (part.length === 0 || part === '.' || part === '..')
+            return null;
+        if (part.includes('*') && part !== '*')
+            return null;
+    }
+    return parts;
+}
+/** Whole-segment match. The universe list does not call this. */
+export function childSlicePatternMatches(pattern, sliceId) {
+    const want = childSlicePatternSegments(pattern);
+    const have = childSlicePatternSegments(sliceId);
+    if (!want || !have || want.length !== have.length)
+        return false;
+    for (let index = 0; index < want.length; index += 1) {
+        const segment = want[index];
+        if (segment === '*')
+            continue;
+        if (segment !== have[index])
+            return false;
+    }
+    return true;
+}
+function childCrossSliceAllowed(edges, fromChild, toChild) {
+    if (!edges?.length)
+        return false;
+    for (const edge of edges) {
+        if (!edge || typeof edge.from !== 'string' || typeof edge.to !== 'string')
+            continue;
+        if (childSlicePatternMatches(edge.from, fromChild) && childSlicePatternMatches(edge.to, toChild)) {
+            return true;
+        }
+    }
+    return false;
+}
+/**
+ * True when the two patterns can name child ids in different universes.
+ * The universe is every segment but the last. A `*` there, or two different
+ * literals, means the entry cannot be a same-universe sibling allowance.
+ */
+function childAllowanceSpansUniverses(from, to) {
+    const fromParts = childSlicePatternSegments(from);
+    const toParts = childSlicePatternSegments(to);
+    if (!fromParts || !toParts)
+        return false;
+    const fromPrefix = fromParts.slice(0, -1);
+    const toPrefix = toParts.slice(0, -1);
+    if (fromPrefix.length !== toPrefix.length)
+        return true;
+    for (let index = 0; index < fromPrefix.length; index += 1) {
+        const left = fromPrefix[index];
+        const right = toPrefix[index];
+        if (left === '*' || right === '*')
+            return true;
+        if (left !== right)
+            return true;
+    }
+    return false;
+}
+/**
  * Universe wall, then the child wall. An allow from the child wall never
  * overturns a universe deny: that deny returns before the child wall runs.
  */
@@ -788,6 +858,9 @@ export function evaluateNestedSliceWall(input) {
         toUniverse: input.toSlice,
     };
     if (fromChild && toChild && fromChild !== toChild) {
+        if (childCrossSliceAllowed(child.allowedCrossSlice, fromChild, toChild)) {
+            return allowSameUniverse;
+        }
         const advisory = siblingCrossingAdvisory(child.siblings, input.fromPath, fromChild);
         return {
             crossing: 'cross-sibling',
@@ -900,6 +973,7 @@ export function childSliceConfigFindings(rules, files) {
     const out = [];
     let versionWarned = false;
     const seenMismatch = new Set();
+    const seenSpan = new Set();
     for (const rule of rules ?? []) {
         if (!rule?.childSlices)
             continue;
@@ -929,6 +1003,23 @@ export function childSliceConfigFindings(rules, files) {
                 toLayer: rule.to,
                 path: file,
                 message: `${rule.from} → ${rule.to}: child id ${resolved.mismatched.childId} does not extend universe id ${resolved.mismatched.universeId} (${file}).`,
+            });
+        }
+        for (const edge of rule.childSlices.allowedCrossSlice ?? []) {
+            if (!edge || typeof edge.from !== 'string' || typeof edge.to !== 'string')
+                continue;
+            if (!childAllowanceSpansUniverses(edge.from, edge.to))
+                continue;
+            const key = `${edge.from.trim().toLowerCase()}\0${edge.to.trim().toLowerCase()}`;
+            if (seenSpan.has(key))
+                continue;
+            seenSpan.add(key);
+            out.push({
+                ruleId: 'CONFIG_CHILD_SLICE_CROSS_UNIVERSE',
+                failsStrict: false,
+                fromLayer: rule.from,
+                toLayer: rule.to,
+                message: `childSlices.allowedCrossSlice ${edge.from} → ${edge.to} cannot cross the universe wall. The universe wall still denies that edge.`,
             });
         }
     }

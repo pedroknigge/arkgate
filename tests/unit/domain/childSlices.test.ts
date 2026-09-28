@@ -8,6 +8,7 @@ import {
   anyChildWallAdvisory,
   childWallSiblingsAdvisory,
   childSliceConfigFindings,
+  childSlicePatternMatches,
   importerInEnforcedSubtree,
   composeSliceDenialMessage,
   findDeniedEdgeDecision,
@@ -171,6 +172,55 @@ describe('nested slice wall', () => {
     });
     expect(anyChildWallAdvisory([advisory])).toBe(true);
     expect(anyChildWallAdvisory([childRule])).toBe(false);
+  });
+
+  it('clears a matching sibling crossing and still denies another universe', () => {
+    const allowed: EdgeRule = {
+      ...childRule,
+      allowedCrossSlice: [{ from: 'features/*', to: 'features/*' }],
+      childSlices: {
+        ...childRule.childSlices!,
+        allowedCrossSlice: [
+          null as never,
+          { from: 'features/projects/*', to: 'features/projects/d2d-item' },
+          { from: 'features/*/*', to: 'features/management/eos' },
+        ],
+      },
+    };
+    expect(
+      decide(
+        allowed,
+        'src/lib/features/projects/scm/scm-board.ts',
+        'src/lib/features/projects/d2d-item/d2d-item.ts'
+      )
+    ).toBeUndefined();
+    expect(
+      decide(
+        allowed,
+        'src/lib/features/projects/rfi/load-rfi.ts',
+        'src/lib/features/projects/scm/scm-board.ts'
+      )?.sliceVerdict?.reasonId
+    ).toBe('CROSS_SIBLING_SLICE');
+    expect(
+      decide(
+        allowed,
+        'src/lib/features/projects/rfi/load-rfi.ts',
+        'src/lib/features/management/eos/eos-summary.ts'
+      )?.sliceVerdict?.reasonId
+    ).toBe('CROSS_PARENT_SLICE');
+    const warnings = childSliceConfigFindings(
+      [allowed, allowed],
+      ['src/lib/features/projects/rfi/load-rfi.ts']
+    );
+    const span = warnings.filter((row) => row.ruleId === 'CONFIG_CHILD_SLICE_CROSS_UNIVERSE');
+    expect(span).toHaveLength(1);
+    expect(span[0]?.failsStrict).toBe(false);
+    expect(span[0]?.message).toContain('cannot cross the universe wall');
+    expect(childSlicePatternMatches('features/projects/*', 'features/projects/d2d-item')).toBe(true);
+    expect(childSlicePatternMatches('features/*', 'features/projects/rfi')).toBe(false);
+    expect(childSlicePatternMatches('features/proj*', 'features/projects/rfi')).toBe(false);
+    expect(childSlicePatternMatches('*', 'features/projects')).toBe(false);
+    expect(childSlicePatternMatches('features/./rfi', 'features/rfi')).toBe(false);
   });
 
   it('treats a child id that does not extend the universe id as common and warns', () => {

@@ -289,7 +289,7 @@ export const JOURNEY_CASES = Object.freeze({
     Object.freeze({
       id: 'pr4-wildcards',
       owner: '#326 PR4',
-      expect: 'fail',
+      expect: 'pass',
       kind: 'pr4-wildcards',
       note: 'Owned by #326 PR4. features/projects/* to features/projects/d2d-item clears those sibling crossings. features/*/* to features/management/eos stays CROSS_PARENT_SLICE, and the config warns that the entry cannot cross the universe wall. A literal * on the universe allowedCrossSlice stays inert. A bare name is rejected at config load.',
       cleared: Object.freeze([

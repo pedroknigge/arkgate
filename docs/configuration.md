@@ -306,6 +306,25 @@ Rule fields:
   (`must be one of deny, advisory` at `$.rules[n].childSlices.siblings`). It does not ignore
   the object. No published release through 4.8.22 accepts `{ default, enforce }`. Ship that
   form only on a release that includes it.
+  `childSlices.allowedCrossSlice` is a directed list on the child block only:
+  `{ "from": "features/projects/*", "to": "features/projects/d2d-item" }`.
+  `*` matches one whole path segment. `**` and a partial segment (`feat*`) are
+  rejected at config load. A bare name (no `/`) is rejected, because it is
+  ambiguous across universes. The list clears only a `CROSS_SIBLING_SLICE`,
+  and only after the universe wall has allowed the edge. It never clears
+  `CROSS_PARENT_SLICE` or `CROSS_PARENT_VIA_SHARED`. A pattern that can name
+  two universes (`features/*/*` to `features/management/eos`) leaves the
+  cross-parent finding in place and warns `CONFIG_CHILD_SLICE_CROSS_UNIVERSE`
+  (`failsStrict: false`). The universe `allowedCrossSlice` does not read this
+  list and still treats `*` as a literal slice id, byte for byte with 4.8.22.
+  Adding an entry is a weakening policy delta. Removing one is strengthening.
+  Additions and removals together need a judgment. A wildcard that widens a
+  literal entry is weakening and needs the same acknowledgement. A build that
+  accepts `childSlices` and still rejects unknown fields fails at config load
+  (`unknown field` at `$.rules[n].childSlices.allowedCrossSlice`). It does not
+  ignore the key. No published release through 4.8.22 accepts the wildcard.
+  Ship it only on a release that includes this field. The write hook, ESLint,
+  snippet analysis, ark-check, and CI all see the per-edge decision.
 
 ```jsonc
 {

@@ -558,6 +558,7 @@ function compareChildSlices(
       after: candidateParent,
     });
   }
+  compareChildCrossSliceAllowances(findings, path, previous, candidate);
 }
 
 function compareSiblingEnforceList(
@@ -587,6 +588,83 @@ function compareSiblingEnforceList(
 function crossSliceKey(edge: { from: string; to: string }): string {
   // JSON, not `from->to`: a slice id containing the separator would collide.
   return JSON.stringify([edge.from, edge.to]);
+}
+
+function childCrossSliceKeys(rule: ArkConfigRule): string[] {
+  return sortedUnique((rule.childSlices?.allowedCrossSlice ?? []).map(crossSliceKey));
+}
+
+function allowanceSegments(raw: string): string[] {
+  return trimTrailingSlashes(raw.trim().replace(/\\/g, '/')).toLowerCase().split('/').filter((part) => part.length > 0);
+}
+
+/** True when `wider` is the same pattern with at least one literal segment opened to `*`. */
+function patternWidens(wider: string, narrower: string): boolean {
+  const wide = allowanceSegments(wider);
+  const narrow = allowanceSegments(narrower);
+  if (wide.length === 0 || wide.length !== narrow.length) return false;
+  let opened = false;
+  for (let index = 0; index < wide.length; index += 1) {
+    if (wide[index] === narrow[index]) continue;
+    if (wide[index] === '*' && narrow[index] !== '*') {
+      opened = true;
+      continue;
+    }
+    return false;
+  }
+  return opened;
+}
+
+function allowanceWidens(addedKey: string, removedKey: string): boolean {
+  const added = JSON.parse(addedKey) as [string, string];
+  const removed = JSON.parse(removedKey) as [string, string];
+  const fromSame = allowanceSegments(added[0]).join('/') === allowanceSegments(removed[0]).join('/');
+  const toSame = allowanceSegments(added[1]).join('/') === allowanceSegments(removed[1]).join('/');
+  const fromOpens = patternWidens(added[0], removed[0]);
+  const toOpens = patternWidens(added[1], removed[1]);
+  if (!(fromSame || fromOpens) || !(toSame || toOpens)) return false;
+  return fromOpens || toOpens;
+}
+
+/**
+ * Child-list allowances. A wildcard that only opens a literal entry is
+ * weakening. Unrelated additions and removals together need a human.
+ * The universe list does not use this widening rule.
+ */
+function compareChildCrossSliceAllowances(
+  findings: PolicyDeltaFinding[],
+  path: string,
+  previous: ArkConfigRule,
+  candidate: ArkConfigRule
+): void {
+  const before = childCrossSliceKeys(previous);
+  const after = childCrossSliceKeys(candidate);
+  if (JSON.stringify(before) === JSON.stringify(after)) return;
+  const added = after.filter((value) => !before.includes(value));
+  const removed = before.filter((value) => !after.includes(value));
+  if (added.length > 0 && removed.length > 0) {
+    const uncovered = removed.filter((oldEdge) => !added.some((next) => allowanceWidens(next, oldEdge)));
+    if (uncovered.length === 0) {
+      addFinding(findings, {
+        kind: 'child-slices-cross-slice-allowance-added',
+        path: `${path}.childSlices.allowedCrossSlice`,
+        classification: 'weakening',
+        message: 'A wildcard widened a declared sibling allowance.',
+        before,
+        after,
+      });
+      return;
+    }
+  }
+  compareDeclaredExceptions(
+    findings,
+    `${path}.childSlices.allowedCrossSlice`,
+    'child-slices-cross-slice-allowance',
+    before,
+    after,
+    'Sibling crossings inside a universe are now allowed by declaration.',
+    'Declared sibling crossings inside a universe deny again.'
+  );
 }
 
 /**

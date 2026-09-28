@@ -81,7 +81,8 @@ const config = {
     // compares shifted it again. Same policyDeltaAcknowledgementMatches body.
     // #326 compareChildSlices shifted the same function by 93 lines.
     // #326 PR3 sibling enforce-list compare shifted it to 1129-1158.
-    'src/domain/policyDelta.ts:1129-1158',
+    // #326 PR4 child allowance widening compare shifted it to 1207-1236.
+    'src/domain/policyDelta.ts:1207-1236',
     // #291 declaration witness shifted formatCoverageDiscards / budgetDetail /
     // canPromoteInvariant. #307/#310 classifyCoverage shifted them again.
     // #322 declaration-miss shifted them once more.

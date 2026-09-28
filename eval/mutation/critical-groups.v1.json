@@ -160,12 +160,12 @@
     },
     {
       "id": "policy-delta-ack-match",
-      "note": "DF04: policyDeltaAcknowledgementMatches hash + finding-id set equality. AP02 (#264) inserted adrPath JSDoc above the helper. #297 inserted the sharedImportsSlice compare. #308 inserted the sliceIdentity compare, so the helper moved again. #326 compareChildSlices shifted the same function by 93 lines (1077–1106). #326 PR3 sibling enforce-list compare shifted the same function to 1129–1158. Retargeted to the same body.",
+      "note": "DF04: policyDeltaAcknowledgementMatches hash + finding-id set equality. AP02 (#264) inserted adrPath JSDoc above the helper. #297 inserted the sharedImportsSlice compare. #308 inserted the sliceIdentity compare, so the helper moved again. #326 compareChildSlices shifted the same function by 93 lines (1077–1106). #326 PR3 sibling enforce-list compare shifted the same function to 1129–1158. #326 PR4 child allowance widening compare shifted the same function to 1207–1236. Retargeted to the same body.",
       "targets": [
         {
           "file": "src/domain/policyDelta.ts",
-          "startLine": 1129,
-          "endLine": 1158
+          "startLine": 1207,
+          "endLine": 1236
         }
       ]
     },
