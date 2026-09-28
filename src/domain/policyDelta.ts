@@ -559,6 +559,7 @@ function compareChildSlices(
     });
   }
   compareChildCrossSliceAllowances(findings, path, previous, candidate);
+  compareSliceAliases(findings, path, previous, candidate);
 }
 
 function compareSiblingEnforceList(
@@ -624,6 +625,48 @@ function allowanceWidens(addedKey: string, removedKey: string): boolean {
   const toOpens = patternWidens(added[1], removed[1]);
   if (!(fromSame || fromOpens) || !(toSame || toOpens)) return false;
   return fromOpens || toOpens;
+}
+
+function aliasEntryKey(alias: { from: string; to: string }): string {
+  return JSON.stringify([
+    trimTrailingSlashes(alias.from.trim().replace(/\\/g, '/')).toLowerCase(),
+    trimTrailingSlashes(alias.to.trim().replace(/\\/g, '/')).toLowerCase(),
+  ]);
+}
+
+function sliceAliasKeys(rule: ArkConfigRule): string[] {
+  return sortedUnique((rule.childSlices?.sliceAliases ?? []).map(aliasEntryKey));
+}
+
+/**
+ * Adding an alias puts unclassified files under both walls (strengthening).
+ * Removing one takes them back out (weakening). Both in one change, including
+ * a retarget, needs a human. A child-folder edit already returned above.
+ */
+function compareSliceAliases(
+  findings: PolicyDeltaFinding[],
+  path: string,
+  previous: ArkConfigRule,
+  candidate: ArkConfigRule
+): void {
+  const before = sliceAliasKeys(previous);
+  const after = sliceAliasKeys(candidate);
+  if (JSON.stringify(before) === JSON.stringify(after)) return;
+  const added = after.filter((value) => !before.includes(value));
+  const removed = before.filter((value) => !after.includes(value));
+  const bothWays = added.length > 0 && removed.length > 0;
+  addFinding(findings, {
+    kind: bothWays ? 'slice-aliases-changed' : added.length > 0 ? 'slice-aliases-added' : 'slice-aliases-removed',
+    path: `${path}.childSlices.sliceAliases`,
+    classification: bothWays ? 'judgment-required' : added.length > 0 ? 'strengthening' : 'weakening',
+    message: bothWays
+      ? 'Slice aliases were added and removed in the same change.'
+      : added.length > 0
+        ? 'Unclassified files are now under the slice walls.'
+        : 'Aliased files leave the slice walls.',
+    before,
+    after,
+  });
 }
 
 /**

@@ -11,7 +11,7 @@ import {
   pathUnderSharedRoot,
   peerSliceFolders,
   sliceFindingExtras,
-  sliceIdForPath,
+  resolveGovernedSlice,
   universePairLabel,
   type EdgeRule,
 } from '../domain/layerMatch';
@@ -223,7 +223,7 @@ function placeFile(
   path: string,
   layers: EvaluateArchitectureGraphInput['config']['layers']
 ): PlacedFile {
-  const id = sliceIdForPath(path, peerSliceFolders(rule, fromLayer, layers), rule.sliceIdentity);
+  const id = resolveGovernedSlice(path, rule, peerSliceFolders(rule, fromLayer, layers)).universeId;
   if (id) return { kind: 'slice', id };
   if (pathUnderSharedRoot(path, rule.sharedRoots)) return { kind: 'shared' };
   return { kind: 'other' };

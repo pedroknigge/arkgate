@@ -21,7 +21,7 @@ import { collectStatesTransitionsResidual } from './states-transitions-presence.
 import { collectStatusTransitionCatalogResidual } from './status-transition-catalog.mjs';
 import { collectNoDomainFrontendResidual } from './no-domain-frontend.mjs';
 import { collectInvariantCoverageResiduals } from './invariant-tests-path.mjs';
-import { anyChildWallAdvisory } from '../ark-layer-match.mjs';
+import { anyChildWallAdvisory, anySliceAlias } from '../ark-layer-match.mjs';
 export { printAdrPresenceHint };
 export { printDoctorCompactHuman, printDoctorDetailsHuman };
 export { summarizeRulesUnderContract };
@@ -694,7 +694,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
       github: githubForBoundary,
       adoptionStance: stanceFile,
       stewardNudge: doctorAdvisories.stewardNudge,
-      physicalCohesionResidual: physicalCohesionResidualRemains(doctorAdvisories.physicalCohesion), childWallAdvisory: anyChildWallAdvisory(config?.rules),
+      physicalCohesionResidual: physicalCohesionResidualRemains(doctorAdvisories.physicalCohesion), childWallAdvisory: anyChildWallAdvisory(config?.rules), sliceAliasDebt: anySliceAlias(config?.rules),
     });
 
   // Improvement compass: projection only — never feeds ok/valid/goal.met.

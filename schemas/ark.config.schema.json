@@ -917,6 +917,29 @@
             "parentMayImportChild": {
               "type": "boolean"
             },
+            "sliceAliases": {
+              "type": "array",
+              "minItems": 1,
+              "description": "Maps a source path glob onto a child slice id (universe id plus one child segment) so files outside the slice trees take that universe and child for both walls. A bare name, a universe id alone, an unknown universe, and a wildcard in to are rejected. The glob may not overlap a slice folder, and two aliases may not match the same file. Doctor lists each alias as an owed move. A build that rejects unknown childSlices fields fails at config load (unknown field). arkgate 4.8.22 and older reject childSlices.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "from",
+                  "to"
+                ],
+                "properties": {
+                  "from": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "to": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            },
             "allowedCrossSlice": {
               "type": "array",
               "minItems": 1,

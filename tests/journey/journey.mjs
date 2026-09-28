@@ -490,9 +490,35 @@ function atlasgridCheckView(parsed) {
 
 function atlasgridDoctorView(parsed) {
   const base = doctorView(parsed);
+  const sliceAliases = aliasSection(parsed);
   return {
     rulesUnderContract: base.rulesUnderContract,
     slices: sliceSection(parsed),
+    ...(sliceAliases ? { sliceAliases } : {}),
+  };
+}
+
+function aliasSection(parsed) {
+  const aliases = parsed?.doctor?.sliceAliases;
+  if (!aliases || typeof aliases !== 'object' || Array.isArray(aliases)) return null;
+  const moves = Array.isArray(aliases.moves) ? aliases.moves.map(projectAliasMove).filter(Boolean) : [];
+  moves.sort(compareRows(['from', 'to', 'destination']));
+  return {
+    notAScore: aliases.notAScore === true,
+    finished: aliases.finished === true,
+    debt: typeof aliases.debt === 'string' ? aliases.debt : null,
+    moves,
+  };
+}
+
+function projectAliasMove(row) {
+  if (!row || typeof row !== 'object') return null;
+  const files = Array.isArray(row.files) ? row.files.filter((file) => typeof file === 'string').sort() : [];
+  return {
+    from: typeof row.from === 'string' ? row.from : null,
+    to: typeof row.to === 'string' ? row.to : null,
+    destination: typeof row.destination === 'string' ? row.destination : null,
+    files,
   };
 }
 
@@ -602,6 +628,32 @@ function evaluateJourneyCases(fixture, steps) {
 }
 
 function evaluateJourneyCase(spec, steps) {
+  if (spec.kind === 'pr5-aliases') {
+    const check = selectStep(steps, { doctor: false, hierarchy: false, config: 'aliases.json' });
+    const doctor = selectStep(steps, { doctor: true, hierarchy: false, config: 'aliases.json' });
+    const badTarget = selectStep(steps, { doctor: false, hierarchy: false, config: 'aliases-target' });
+    const overlap = selectStep(steps, { doctor: false, hierarchy: false, config: 'aliases-overlap' });
+    const plain = selectStep(steps, { doctor: false, hierarchy: false, config: 'child-slices.json' });
+    const judged = judgeAliases(
+      spec,
+      check?.output ?? null,
+      doctor?.output ?? null,
+      badTarget?.output ?? null,
+      overlap?.output ?? null,
+      plain?.output ?? null
+    );
+    const status = caseStatus(spec.expect, judged.met);
+    return {
+      id: spec.id,
+      owner: spec.owner,
+      expect: spec.expect,
+      status,
+      met: judged.met,
+      note: spec.note,
+      ...(judged.want ? { want: judged.want } : {}),
+      ...(judged.got !== undefined ? { got: judged.got } : {}),
+    };
+  }
   if (spec.kind === 'pr4-wildcards') {
     const check = selectStep(steps, { doctor: false, hierarchy: false, config: 'wildcards.json' });
     const bare = selectStep(steps, { doctor: false, hierarchy: false, config: 'wildcards-bare' });
@@ -681,6 +733,8 @@ function judgeJourneyCase(spec, check, doctor) {
       return judgeSubtree(spec, check);
     case 'pr4-wildcards':
       throw new JourneyError('case', 'pr4-wildcards is judged with both configs');
+    case 'pr5-aliases':
+      throw new JourneyError('case', 'pr5-aliases is judged with the alias configs');
     default:
       throw new JourneyError('case', `unknown journey case kind ${spec.kind}`);
   }
@@ -898,6 +952,67 @@ function judgeWildcards(spec, check, bare) {
     got.crossParentSeverity === spec.want.severity &&
     got.spanWarnings === spec.want.spanWarnings &&
     got.bareRejected === true;
+  return { met, want: spec.want, got };
+}
+
+function judgeAliases(spec, check, doctor, badTarget, overlap, plain) {
+  const violations = check?.violations ?? [];
+  const cross = violations.find(
+    (row) => row.file === spec.crossParent.file && row.target === spec.crossParent.target
+  );
+  const sameChildFindings = violations.filter(
+    (row) => row.file === spec.sameChild.file && row.target === spec.sameChild.target
+  ).length;
+  const commonFindings = violations.filter(
+    (row) => row.file === spec.common.file && row.target === spec.common.target
+  ).length;
+  const crossParentCount = violations.filter((row) => row.reasonId === 'CROSS_PARENT_SLICE').length;
+  const siblingCount = violations.filter((row) => row.reasonId === 'CROSS_SIBLING_SLICE').length;
+  const aliases = doctor?.sliceAliases ?? null;
+  const move =
+    (aliases?.moves ?? []).find((row) => row.to === spec.want.target) ?? aliases?.moves?.[0] ?? null;
+  const debt = typeof aliases?.debt === 'string' ? aliases.debt : '';
+  const badMessage = typeof badTarget?.message === 'string' ? badTarget.message : '';
+  const overlapMessage = typeof overlap?.message === 'string' ? overlap.message : '';
+  const plainViolations = plain?.violations ?? [];
+  const got = {
+    crossParentCount,
+    crossParentReason: cross?.reasonId ?? null,
+    crossParentSeverity: cross?.severity ?? null,
+    crossParentRuleId: cross?.ruleId ?? null,
+    sameChildFindings,
+    commonFindings,
+    siblingCount,
+    doctorFinished: aliases ? aliases.finished === true : null,
+    doctorDebt: debt || null,
+    doctorFiles: move?.files ?? [],
+    doctorDestination: move?.destination ?? null,
+    doctorTarget: move?.to ?? null,
+    badTargetRejected:
+      badTarget?.configRejected === true && badMessage.includes(spec.want.badTargetSnippet),
+    overlapRejected:
+      overlap?.configRejected === true && overlapMessage.includes(spec.want.overlapSnippet),
+    plainCrossParent: plainViolations.filter((row) => row.reasonId === 'CROSS_PARENT_SLICE').length,
+    plainSibling: plainViolations.filter((row) => row.reasonId === 'CROSS_SIBLING_SLICE').length,
+  };
+  const met =
+    got.crossParentCount === spec.want.crossParentCount &&
+    got.crossParentReason === spec.want.crossParentReason &&
+    got.crossParentSeverity === spec.want.severity &&
+    got.crossParentRuleId === spec.want.ruleId &&
+    got.sameChildFindings === spec.want.sameChildFindings &&
+    got.commonFindings === spec.want.commonFindings &&
+    got.siblingCount === spec.want.siblingCount &&
+    got.doctorFinished === false &&
+    debt.includes(spec.want.debtSnippet) &&
+    debt.includes(spec.want.notFinishedSnippet) &&
+    stable(got.doctorFiles) === stable([...spec.want.files]) &&
+    got.doctorDestination === spec.want.destination &&
+    got.doctorTarget === spec.want.target &&
+    got.badTargetRejected === true &&
+    got.overlapRejected === true &&
+    got.plainCrossParent === spec.want.plainCrossParent &&
+    got.plainSibling === spec.want.plainSibling;
   return { met, want: spec.want, got };
 }
 

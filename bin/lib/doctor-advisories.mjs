@@ -37,7 +37,7 @@ import {
 } from './ark-order-doctor.mjs';
 import { composeMergePlanesHonesty } from './extra-merge-teeth.mjs';
 import { collectPrototypeShortcutsResidual } from './prototype-shortcuts.mjs';
-import { sliceCountReport, sliceIdentityCollisions } from '../ark-layer-match.mjs';
+import { sliceAliasReport, sliceCountReport, sliceIdentityCollisions } from '../ark-layer-match.mjs';
 
 export function attachExtraDoctorSections(rulesUnderContract, config, classification, findings) {
   const arkRulesMerge = {
@@ -189,6 +189,31 @@ export function printCompactExtraDoctorLines(advisories, io) {
   }
 }
 
+function stripEdgeSlashes(value, edge) {
+  let start = 0;
+  let end = value.length;
+  if (edge !== 'end') {
+    while (start < end && value[start] === '/') start += 1;
+  }
+  if (edge !== 'start') {
+    while (end > start && value[end - 1] === '/') end -= 1;
+  }
+  return value.slice(start, end);
+}
+
+/** Governed file lists are absolute. Alias globs are project-relative. */
+function aliasScanPath(root, entry) {
+  const raw = typeof entry === 'string' ? entry : typeof entry?.path === 'string' ? entry.path : '';
+  if (!raw) return null;
+  const norm = raw.replace(/\\/g, '/');
+  const base = stripEdgeSlashes(String(root ?? '').replace(/\\/g, '/'), 'end');
+  const rel =
+    base && (norm === base || norm.startsWith(`${base}/`))
+      ? stripEdgeSlashes(norm.slice(base.length), 'start')
+      : stripEdgeSlashes(norm, 'start');
+  return rel.length > 0 ? rel : null;
+}
+
 function classificationFromCoverage(cov) {
   return {
     governedPercent: cov?.governed?.percent ?? null,
@@ -257,8 +282,15 @@ export function computeDoctorAdvisories(root, config, cov, rules, files, ts, par
   });
   const sliceIdentityHits = sliceIdentityCollisions(rules ?? config?.rules);
   const slices = sliceCountReport(activeViolations);
+  const aliasFiles = [];
+  for (const entry of Array.isArray(files) ? files : []) {
+    const rel = aliasScanPath(root, entry);
+    if (rel) aliasFiles.push(rel);
+  }
+  const sliceAliases = sliceAliasReport(rules ?? config?.rules, aliasFiles);
   return {
     ...(slices ? { slices } : {}),
+    ...(sliceAliases ? { sliceAliases } : {}),
     ...(prototypeShortcuts ? { prototypeShortcuts } : {}),
     ...(sliceIdentityHits.length > 0
       ? { sliceIdentity: { notAScore: true, collisions: sliceIdentityHits } }
@@ -279,6 +311,16 @@ export function computeDoctorAdvisories(root, config, cov, rules, files, ts, par
 }
 
 export function printDoctorAdvisories(advisories, io) {
+  const sliceAliases = advisories?.sliceAliases;
+  if (sliceAliases && sliceAliases.notAScore === true && Array.isArray(sliceAliases.moves)) {
+    console.log('');
+    console.log(io.color.bold('Slice aliases (owed move)'));
+    io.line(io.warn, sliceAliases.debt);
+    for (const move of sliceAliases.moves) {
+      io.line(io.warn, `${move.from} → ${move.to}. Move these files to ${move.destination}. They are not finished.`);
+      for (const file of move.files ?? []) io.line(' ', file);
+    }
+  }
   const sliceIdentity = advisories?.sliceIdentity;
   if (Array.isArray(sliceIdentity?.collisions) && sliceIdentity.collisions.length > 0) {
     console.log('');

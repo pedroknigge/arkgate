@@ -323,8 +323,37 @@ Rule fields:
   accepts `childSlices` and still rejects unknown fields fails at config load
   (`unknown field` at `$.rules[n].childSlices.allowedCrossSlice`). It does not
   ignore the key. No published release through 4.8.22 accepts the wildcard.
-  Ship it only on a release that includes this field. The write hook, ESLint,
-  snippet analysis, ark-check, and CI all see the per-edge decision.
+  Ship it only on a release that includes this field.
+  `childSlices.sliceAliases` maps files that sit outside every slice folder onto
+  a child that already exists: `{ "from": "lib/compliance/**", "to": "features/projects/compliance" }`.
+  `to` is the universe id the universe wall already knows, plus one child segment.
+  A bare name, that universe id alone, an unknown universe, and a wildcard in `to`
+  are rejected at config load (`child of an existing universe`). The source glob
+  may cover only files the slice folders do not already classify. Overlap with a
+  universe `sliceFolders` entry or a child `sliceFolders` entry is rejected
+  (`overlaps a slice folder`). Two aliases that can match one file are rejected
+  (`two slice aliases match the same file`). An aliased file takes the target
+  universe id and the target child id for both walls, so an import into another
+  universe is `CROSS_PARENT_SLICE` and an import into another child of the same
+  universe is `CROSS_SIBLING_SLICE`. Same-child imports and imports into that
+  universe's common folders follow the existing child wall. Doctor lists every
+  alias as an owed move: the source glob, the target slice, the destination
+  folder, and the files. The section says the files are not finished. Aliases
+  are debt. `productHonesty.finished` stays false while any alias is set.
+  Adding aliases is a strengthening policy delta (unclassified files come under
+  the walls). Removing them is weakening (those files leave the walls) and needs
+  the same hash-bound acknowledgement as any other weakening. Additions and
+  removals in one change, including a retarget, are judgment-required. A folder
+  edit already asks for a judgment and covers the alias list. The baseline key
+  stays `ruleId|file|fromLayer|toLayer|target` and does not include `reasonId`.
+  The write hook, ESLint, snippet analysis, ark-check, and CI all see the alias
+  through one resolver. There is no skip flag. arkgate 4.8.22 and older reject
+  `childSlices`. A build that accepts `childSlices` and still rejects unknown
+  fields fails at config load (`unknown field` at `$.rules[n].childSlices.sliceAliases`).
+  It does not ignore the key. No published release through 4.8.22 accepts
+  `sliceAliases`. Ship a config that sets it only on a release that includes
+  this field. The write hook, ESLint, snippet analysis, ark-check, and CI all
+  see the per-edge decision.
 
 ```jsonc
 {

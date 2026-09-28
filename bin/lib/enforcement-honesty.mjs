@@ -290,6 +290,7 @@ export function buildWritePathHonesty(activeHost, hardWriteActive = false, extra
  *   activeBlockingViolations?: number | null,
  *   physicalCohesionResidual?: boolean,
  *   childWallAdvisory?: boolean,
+ *   sliceAliasDebt?: boolean,
  * }} input
  */
 export function physicalCohesionResidualRemains(cohesion) {
@@ -498,6 +499,14 @@ export function buildProductHonesty(input = {}) {
     });
   }
 
+  if (input.sliceAliasDebt === true) {
+    reasons.push({
+      id: 'slice-alias-debt',
+      message:
+        'Slice aliases are an owed move, not a destination. Aliased files are not finished until they move into the target slice folder.',
+    });
+  }
+
   // EH05: environment residual deny-list (future reason ids stay architecture debt by default).
   const ENVIRONMENT_REASON_IDS = new Set(['soft-write-host', 'native-fail-open']);
 
@@ -693,6 +702,7 @@ export function computeDoctorEnforcementHonesty({
   nativeFailClosedPolicy,
   physicalCohesionResidual,
   childWallAdvisory,
+  sliceAliasDebt,
 } = {}) {
   const coverageHonesty = buildCoverageHonesty({
     percent: governedPercent,
@@ -752,6 +762,7 @@ export function computeDoctorEnforcementHonesty({
     stewardNudge,
     physicalCohesionResidual,
     childWallAdvisory,
+    sliceAliasDebt,
   });
   return {
     coverageHonesty,

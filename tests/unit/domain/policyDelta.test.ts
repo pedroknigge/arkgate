@@ -688,6 +688,51 @@ describe('policyDeltaAcknowledgementMatches (DF04 pure helper)', () => {
     );
   });
 
+  it('puts new slice aliases under the walls and takes removed ones back out', () => {
+    const child = { sliceFolders: ['lib/features/*/*'] };
+    const alias = [{ from: 'lib/compliance/**', to: 'features/projects/compliance' }];
+    const retarget = [{ from: 'lib/compliance/**', to: 'features/projects/hold' }];
+    const withAliases = (aliases?: { from: string; to: string }[]) => ({
+      ...structuredClone(BASE_CONFIG),
+      rules: [
+        {
+          ...structuredClone(BASE_CONFIG.rules[0]),
+          sliceFolders: ['features'],
+          childSlices: { ...child, ...(aliases ? { sliceAliases: aliases } : {}) },
+        },
+      ],
+    });
+    const none = withAliases();
+    const exact = withAliases(alias);
+    const added = analyzePolicyDelta({ baseConfig: none, candidateConfig: exact });
+    const addedFinding = added.findings.find((finding) =>
+      finding.message.includes('Unclassified files are now under the slice walls.')
+    );
+    expect(addedFinding).toMatchObject({
+      classification: 'strengthening',
+      path: '$.rules[DomainModel->DomainModel].childSlices.sliceAliases',
+    });
+    expect(addedFinding?.nextAction).toBeUndefined();
+    const removed = analyzePolicyDelta({ baseConfig: exact, candidateConfig: none });
+    const removedFinding = removed.findings.find((finding) =>
+      finding.message.includes('Aliased files leave the slice walls.')
+    );
+    expect(removedFinding?.classification).toBe('weakening');
+    expect(removedFinding?.nextAction).toContain('policy-ack');
+    const both = analyzePolicyDelta({ baseConfig: exact, candidateConfig: withAliases(retarget) });
+    expect(both.findings).toContainEqual(
+      expect.objectContaining({
+        classification: 'judgment-required',
+        message: 'Slice aliases were added and removed in the same change.',
+      })
+    );
+    const slash = analyzePolicyDelta({
+      baseConfig: exact,
+      candidateConfig: withAliases([{ from: 'lib/compliance/**/', to: 'features/projects/compliance/' }]),
+    });
+    expect(slash.findings.some((finding) => finding.path.endsWith('sliceAliases'))).toBe(false);
+  });
+
   it('tightens an enforce-list addition and loosens a removal while default stays advisory', () => {
     const child = {
       sliceFolders: ['lib/features/*/*'],

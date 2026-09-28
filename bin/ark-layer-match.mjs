@@ -603,6 +603,157 @@ export function peerIsolationDecision(input) {
 export function peerIsolationMustDeny(input) {
     return peerIsolationDecision(input).denied;
 }
+export const SLICE_ALIAS_DEBT = 'Aliases are an owed move, not a destination. These files are not finished.';
+function aliasGlobPattern(glob) {
+    return trimTrailingSlashes(glob.trim().replace(/\\/g, '/')).toLowerCase();
+}
+/** Existing path glob matcher. Also accepts a leading src/ or app/. */
+function aliasGlobMatches(glob, relPath) {
+    const pattern = aliasGlobPattern(glob);
+    if (!pattern || pattern === '*' || pattern === '**')
+        return false;
+    const file = String(relPath).replace(/\\/g, '/').replace(/^\/+/, '').toLowerCase();
+    const rooted = stripSrcOrApp(file);
+    const re = globToRegExp(pattern);
+    return re.test(file) || (rooted !== file && re.test(rooted));
+}
+function splitAliasTarget(to) {
+    const parts = aliasGlobPattern(to).split('/').filter(Boolean);
+    if (parts.length < 2 || parts.some((part) => part.includes('*') || part === '.' || part === '..')) {
+        return null;
+    }
+    return { universeId: parts.slice(0, -1).join('/'), childId: parts.join('/') };
+}
+function firstSliceAlias(relPath, rule) {
+    for (const alias of rule.childSlices?.sliceAliases ?? []) {
+        if (!alias || typeof alias.from !== 'string' || typeof alias.to !== 'string')
+            continue;
+        if (!aliasGlobMatches(alias.from, relPath))
+            continue;
+        return splitAliasTarget(alias.to);
+    }
+    return null;
+}
+/**
+ * Universe id and child id for one file. An alias runs only when both walls
+ * leave the path unclassified, so a real slice folder is never overridden.
+ */
+export function resolveGovernedSlice(relPath, rule, sliceFolders) {
+    if (!relPath)
+        return {};
+    const folders = sliceFolders ?? rule.sliceFolders;
+    const universeId = sliceIdForPath(relPath, folders ? [...folders] : undefined, rule.sliceIdentity);
+    const resolved = resolveChildSliceId(relPath, universeId, rule.childSlices);
+    if (universeId || resolved.childId || resolved.mismatched) {
+        return resolved.childId ? { universeId, childId: resolved.childId } : { universeId };
+    }
+    const alias = firstSliceAlias(relPath, rule);
+    return alias ? { universeId: alias.universeId, childId: alias.childId } : {};
+}
+function childPatternDirectory(pattern, childId, identity) {
+    const segments = pattern.split(/[/\\]/).filter(Boolean).map((part) => part.toLowerCase());
+    const idParts = childId.split('/').filter(Boolean).map((part) => part.toLowerCase());
+    if (segments.length === 0 || idParts.length === 0)
+        return null;
+    if (segments.some((part) => part === '**' || (part.includes('*') && part !== '*')))
+        return null;
+    if (identity === 'stars') {
+        let lastLiteral = -1;
+        for (let index = 0; index < segments.length; index += 1) {
+            if (segments[index] !== '*')
+                lastLiteral = index;
+        }
+        if (lastLiteral < 0)
+            return null;
+        const tail = segments.slice(lastLiteral);
+        if (tail.length !== idParts.length)
+            return null;
+        for (let index = 0; index < tail.length; index += 1) {
+            if (tail[index] === '*')
+                continue;
+            if (tail[index] !== idParts[index])
+                return null;
+        }
+        return [...segments.slice(0, lastLiteral), ...idParts].join('/');
+    }
+    if (segments.length !== idParts.length)
+        return null;
+    for (let index = 0; index < segments.length; index += 1) {
+        if (segments[index] === '*')
+            continue;
+        if (segments[index] !== idParts[index])
+            return null;
+    }
+    return idParts.join('/');
+}
+function sharedDirectoryPrefix(file, dir) {
+    const left = stripSrcOrApp(file.replace(/\\/g, '/').replace(/^\/+/, '').toLowerCase()).split('/');
+    const right = dir.split('/');
+    let count = 0;
+    while (count < left.length && count < right.length && left[count] === right[count])
+        count += 1;
+    return count;
+}
+function withSourcePrefix(file, dir) {
+    const norm = file.replace(/\\/g, '/').replace(/^\/+/, '').toLowerCase();
+    if (norm.startsWith('src/') && !dir.startsWith('src/'))
+        return `src/${dir}`;
+    if (norm.startsWith('app/') && !dir.startsWith('app/'))
+        return `app/${dir}`;
+    return dir;
+}
+/** Folder the aliased file should move into. Parallel trees pick the closest prefix. */
+export function sliceAliasDestination(file, childId, child) {
+    let best = null;
+    for (const pattern of child.sliceFolders) {
+        if (typeof pattern !== 'string')
+            continue;
+        const dir = childPatternDirectory(pattern, childId, child.sliceIdentity);
+        if (!dir)
+            continue;
+        const score = sharedDirectoryPrefix(file, dir);
+        if (!best || score > best.score || (score === best.score && dir.length < best.dir.length)) {
+            best = { dir, score };
+        }
+    }
+    return best ? withSourcePrefix(file, best.dir) : '';
+}
+export function anySliceAlias(rules) {
+    return (rules ?? []).some((rule) => (rule?.childSlices?.sliceAliases?.length ?? 0) > 0);
+}
+/** Doctor list. Absent when no rule sets sliceAliases, so the key stays off. */
+export function sliceAliasReport(rules, files) {
+    if (!anySliceAlias(rules))
+        return null;
+    const moves = new Map();
+    for (const rule of rules ?? []) {
+        const child = rule?.childSlices;
+        if (!child?.sliceAliases)
+            continue;
+        for (const alias of child.sliceAliases) {
+            if (!alias || typeof alias.from !== 'string' || typeof alias.to !== 'string')
+                continue;
+            const key = `${aliasGlobPattern(alias.from)}\0${aliasGlobPattern(alias.to)}`;
+            let move = moves.get(key);
+            if (!move) {
+                move = { from: alias.from, to: alias.to, destination: '', files: [] };
+                moves.set(key, move);
+            }
+            const seen = new Set(move.files);
+            for (const file of files) {
+                if (typeof file !== 'string' || !aliasGlobMatches(alias.from, file) || seen.has(file))
+                    continue;
+                seen.add(file);
+                move.files.push(file);
+                if (!move.destination)
+                    move.destination = sliceAliasDestination(file, alias.to, child);
+            }
+        }
+    }
+    const listed = [...moves.values()].map((move) => ({ ...move, files: [...move.files].sort() }));
+    listed.sort((left, right) => left.from.localeCompare(right.from) || left.to.localeCompare(right.to));
+    return { notAScore: true, finished: false, debt: SLICE_ALIAS_DEBT, moves: listed };
+}
 /**
  * One human sentence naming which peerIsolation reason fired — so the denial
  * reports a fact about their code (`cross-slice`) or a fact about our evidence
@@ -849,8 +1000,8 @@ export function evaluateNestedSliceWall(input) {
             toUniverse: input.toSlice,
         };
     }
-    const fromChild = resolveChildSliceId(input.fromPath, input.fromSlice, child).childId;
-    const toChild = resolveChildSliceId(input.toPath, input.toSlice, child).childId;
+    const fromChild = input.fromChild ?? resolveChildSliceId(input.fromPath, input.fromSlice, child).childId;
+    const toChild = input.toChild ?? resolveChildSliceId(input.toPath, input.toSlice, child).childId;
     const allowSameUniverse = {
         crossing: 'none',
         decision: 'allow',
@@ -1088,10 +1239,10 @@ export function findDeniedEdgeDecision(rules, from, to, options) {
             const fromPath = options?.fromPath;
             const toPath = options?.toPath;
             const folders = resolveSliceFolders(rule, from, options?.layers);
-            const fromSlice = fromPath
-                ? sliceIdForPath(fromPath, folders, rule.sliceIdentity)
-                : undefined;
-            const toSlice = toPath ? sliceIdForPath(toPath, folders, rule.sliceIdentity) : undefined;
+            const fromPlace = resolveGovernedSlice(fromPath, rule, folders);
+            const toPlace = resolveGovernedSlice(toPath, rule, folders);
+            const fromSlice = fromPlace.universeId;
+            const toSlice = toPlace.universeId;
             const verdict = evaluateNestedSliceWall({
                 rule,
                 fromPath,
@@ -1099,6 +1250,8 @@ export function findDeniedEdgeDecision(rules, from, to, options) {
                 folderCount: folders.length,
                 fromSlice,
                 toSlice,
+                fromChild: fromPlace.childId,
+                toChild: toPlace.childId,
                 fromShared: !fromSlice && pathUnderSharedRoot(fromPath, rule.sharedRoots),
                 toShared: !toSlice && pathUnderSharedRoot(toPath, rule.sharedRoots),
                 crossSliceAllowed: crossSliceEdgeAllowed(rule.allowedCrossSlice, fromSlice, toSlice),
@@ -1139,8 +1292,8 @@ export function findSharedImportsSliceBridge(rules, from, to, options) {
         if (rule.sharedImportsSlice === 'deny')
             continue;
         const folders = resolveSliceFolders(rule, from, options?.layers);
-        const fromSlice = sliceIdForPath(fromPath, folders, rule.sliceIdentity);
-        const toSlice = sliceIdForPath(toPath, folders, rule.sliceIdentity);
+        const fromSlice = resolveGovernedSlice(fromPath, rule, folders).universeId;
+        const toSlice = resolveGovernedSlice(toPath, rule, folders).universeId;
         if (fromSlice || !toSlice)
             continue;
         if (!pathUnderSharedRoot(fromPath, rule.sharedRoots))
