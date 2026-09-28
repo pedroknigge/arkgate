@@ -15,7 +15,7 @@
  * as W01 layer roles: a miss costs a warning line, never a verdict.
  */
 import path from 'node:path';
-import { layerForRelativePath, sliceIdForPath } from '../ark-layer-match.mjs';
+import { layerForRelativePath, resolveGovernedSlice } from '../ark-layer-match.mjs';
 
 /** ADR 0010 D3 — corpus-calibrated, fixed. */
 const CLUSTER_MIN = 40;
@@ -135,23 +135,21 @@ function anchorIsConsolidationSubtree(anchor, concept) {
   return String(anchor).split('/').some((part) => part === concept);
 }
 
-function declaredSliceFolders(rules) {
-  const out = [];
-  const seen = new Set();
+/**
+ * Layer must match. Universe id and child id must match on every rule, using
+ * the same resolver as the walls (`sliceIdentity` included). A missing child
+ * id is universe common. Two children of one universe do not keep the slice.
+ */
+export function destinationKeepsLayerAndSlice(fromRel, toRel, layers, rules) {
+  if (layerForRelativePath(fromRel, layers) !== layerForRelativePath(toRel, layers)) return false;
   for (const rule of Array.isArray(rules) ? rules : []) {
-    const folders = Array.isArray(rule?.sliceFolders) ? rule.sliceFolders : [];
-    for (const folder of folders) {
-      if (typeof folder !== 'string' || folder.length === 0 || seen.has(folder.toLowerCase())) continue;
-      seen.add(folder.toLowerCase());
-      out.push(folder);
-    }
+    if (!rule || typeof rule !== 'object') continue;
+    const from = resolveGovernedSlice(fromRel, rule);
+    const to = resolveGovernedSlice(toRel, rule);
+    if ((from.universeId ?? '') !== (to.universeId ?? '')) return false;
+    if ((from.childId ?? '') !== (to.childId ?? '')) return false;
   }
-  return out;
-}
-
-function destinationKeepsLayerAndSlice(fromRel, toRel, layers, sliceFolders) {
-  return layerForRelativePath(fromRel, layers) === layerForRelativePath(toRel, layers)
-    && sliceIdForPath(fromRel, sliceFolders) === sliceIdForPath(toRel, sliceFolders);
+  return true;
 }
 
 function withheldPilot(concept, note) {
@@ -168,7 +166,7 @@ export function computeReshapePilot(cohesion, files, root, contract) {
   const top = cohesion?.findings?.[0];
   if (!top) return null;
   const layers = contract?.layers;
-  const sliceFolders = declaredSliceFolders(contract?.rules);
+  const rules = Array.isArray(contract?.rules) ? contract.rules : [];
   // Full anchor map: the finding's anchors are display-filtered (>= MIRROR_MIN).
   const byAnchor = new Map();
   const relOf = (abs) => path.relative(root, abs).split(path.sep).join('/');
@@ -193,7 +191,7 @@ export function computeReshapePilot(cohesion, files, root, contract) {
       const ranked = classifyPhysical(rel);
       if (!ranked || ranked.concept !== top.concept || ranked.anchor !== anchor.path) return false;
       const to = `${targetDir}/${rel.split('/').at(-1)}`;
-      return destinationKeepsLayerAndSlice(rel, to, layers, sliceFolders);
+      return destinationKeepsLayerAndSlice(rel, to, layers, rules);
     }).sort().map((rel) => ({ from: rel, to: `${targetDir}/${rel.split('/').at(-1)}` }));
     if (legal.length > 0) legalAnchors.push({ ...anchor, targetDir, legal });
   }

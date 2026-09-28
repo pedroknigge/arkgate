@@ -355,6 +355,12 @@ Rule fields:
   this field. The write hook, ESLint, snippet analysis, ark-check, and CI all
   see the per-edge decision.
 
+  Doctor may suggest moving a flat file that sits at universe level when
+  exactly one child slice imports it. The card names the file, that child, and
+  a destination folder inside the child that keeps the file's layer. It is a
+  suggestion. It is not a config field, not a finding, and not an ark-check
+  result. A file two children import stays where it is.
+
 ```jsonc
 {
   "from": "ApplicationOrchestration",

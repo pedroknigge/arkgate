@@ -438,7 +438,14 @@ clusters per anchor directory (concentration, not volume — dispersed hooks nev
 fixed corpus-calibrated thresholds; anchors under `app/`/`pages/` are `fixedByConvention` and
 never move. `reshapePilot.nextPilot` is a **proposed** one-at-a-time card (`moveSample`,
 `movesTotal`, `successSignal`, `killSwitch`, `doNot[]`) and, when proposed, the single
-`pilotLoop` extraction card if no design-weak pattern bet is ahead of it. Run it only via
+`pilotLoop` extraction card if no design-weak pattern bet is ahead of it. A flat file
+at universe level that exactly one child slice imports is a later candidate
+(`doctor.flatParentPilot`, source `flat-parent`): the file, that child, and a
+destination folder inside the child that keeps the file's layer. Two importers,
+or none, produce no card. The sentence is a suggestion with that importer as
+its evidence. It does not change ark-check. `destinationKeepsLayerAndSlice`
+uses the same slice identity as the walls, so `sliceIdentity: "stars"` cannot
+treat two children as one slice. Run a card only via
 `/ark-loop` through the write gate + atomic preflight; merges are `/ark-adopt` /
 `/ark-autopilot` judgment cards. `notAScore`, never a verdict/`designFitness` input; there
 is no apply path.

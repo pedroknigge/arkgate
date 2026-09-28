@@ -86,7 +86,9 @@ const BUDGETS = [
   // 4.0.0 ArkRules advisory section — was 280 (loc 281).
   // Improvement compass advisory HTML section — was 300.
   // Deep-module coach advisory HTML section (hot paths + deepening) — was 320.
-  { path: 'bin/lib/html-report-advisories.mjs', max: 370 },
+  // #326 PR6 flat-parent section call. The HTML body lives in flat-parent-pilot.mjs.
+  // Measured 372. Ceiling is that measurement plus a few lines.
+  { path: 'bin/lib/html-report-advisories.mjs', max: 375 },
   // Deep-module coach pure deepening candidates (Domain; notAScore).
   { path: 'src/domain/deepeningCoach.ts', max: 320 },
   { path: 'src/domain/teamParliament.ts', max: 540 },
@@ -95,6 +97,8 @@ const BUDGETS = [
   { path: 'bin/lib/deep-module-coach.mjs', max: 220 },
   // X04 R1/R2: physicalCohesion sensor + proposed reshape pilot (ADR 0010).
   { path: 'bin/lib/physical-cohesion.mjs', max: 260 },
+  // #326 PR6 flat-parent suggestion. Measured 253. Ceiling is that measurement plus a few lines.
+  { path: 'bin/lib/flat-parent-pilot.mjs', max: 256 },
   // Y01: bounded explicit verdict memory kept out of the X04 sensor/doctor orchestrator.
   { path: 'bin/lib/reshape-decisions.mjs', max: 300 },
   // Y03/Z02: count-only completeness evidence from the existing scan, not a second scanner.
