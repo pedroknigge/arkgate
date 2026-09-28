@@ -102,6 +102,16 @@ export type ArkConfigChildSlices = {
    * Clears a sibling crossing only. The universe `allowedCrossSlice` does not read this list.
    */
   allowedCrossSlice?: ArkConfigCrossSliceEdge[];
+  /**
+   * Files outside the slice trees, borrowed onto a child id until they move.
+   * `to` is the universe id plus one child segment.
+   */
+  sliceAliases?: ArkConfigSliceAlias[];
+};
+
+export type ArkConfigSliceAlias = {
+  from: string;
+  to: string;
 };
 
 export type ArkConfigCrossSliceEdge = {

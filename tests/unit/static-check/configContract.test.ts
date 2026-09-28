@@ -622,6 +622,227 @@ describe('C01 config contract', () => {
     expect(() => loadArkConfigContract(input)).toThrow(message);
   });
 
+  it.each(CONTRACT_LOADERS)('$surface accepts a slice alias onto an existing child', ({ load }) => {
+    const loaded = load({
+      ...VALID_MINIMAL_CONFIG,
+      rules: [
+        {
+          from: 'DomainModel',
+          to: 'DomainModel',
+          allowed: false,
+          peerIsolation: true,
+          sliceFolders: ['features'],
+          childSlices: {
+            sliceFolders: ['lib/features/*/*'],
+            sliceIdentity: 'stars',
+            sliceAliases: [{ from: 'lib/compliance/**', to: 'features/projects/compliance' }],
+          },
+        },
+      ],
+    });
+    expect(loaded.config.rules[0]?.childSlices?.sliceAliases).toEqual([
+      { from: 'lib/compliance/**', to: 'features/projects/compliance' },
+    ]);
+  });
+
+  it('accepts a stars-identity child one segment past the universe id', () => {
+    const loaded = loadArkConfigContract({
+      ...VALID_MINIMAL_CONFIG,
+      rules: [
+        {
+          from: 'DomainModel',
+          to: 'DomainModel',
+          allowed: false,
+          peerIsolation: true,
+          sliceFolders: ['lib/features/*/*'],
+          sliceIdentity: 'stars',
+          childSlices: {
+            sliceFolders: ['lib/features/*/*/*'],
+            sliceAliases: [
+              { from: 'lib/compliance/**', to: 'features/projects/rfi/hold' },
+              { from: 'lib/audit/**', to: 'features/projects/scm/hold' },
+            ],
+          },
+        },
+      ],
+    });
+    expect(loaded.config.rules[0]?.childSlices?.sliceAliases).toHaveLength(2);
+  });
+
+  it.each([
+    {
+      name: 'a universe id with no child segment',
+      sliceAliases: [{ from: 'lib/compliance/**', to: 'features/projects' }],
+      path: '$.rules[0].childSlices.sliceAliases[0].to',
+      message: 'child of an existing universe',
+    },
+    {
+      name: 'a bare alias target',
+      sliceAliases: [{ from: 'lib/compliance/**', to: 'compliance' }],
+      path: '$.rules[0].childSlices.sliceAliases[0].to',
+      message: 'child of an existing universe',
+    },
+    {
+      name: 'a wildcard alias target',
+      sliceAliases: [{ from: 'lib/compliance/**', to: 'features/projects/*' }],
+      path: '$.rules[0].childSlices.sliceAliases[0].to',
+      message: 'child of an existing universe',
+    },
+    {
+      name: 'an unknown universe',
+      sliceAliases: [{ from: 'lib/compliance/**', to: 'other/foo/bar' }],
+      path: '$.rules[0].childSlices.sliceAliases[0].to',
+      message: 'child of an existing universe',
+    },
+    {
+      name: 'an alias with no slice folders to name a universe',
+      omitUniverse: true,
+      sliceAliases: [{ from: 'lib/compliance/**', to: 'features/projects/compliance' }],
+      path: '$.rules[0].childSlices.sliceAliases[0].to',
+      message: 'child of an existing universe',
+    },
+    {
+      name: 'an alias that overlaps a slice folder',
+      sliceAliases: [{ from: 'lib/features/**', to: 'features/projects/compliance' }],
+      path: '$.rules[0].childSlices.sliceAliases[0].from',
+      message: 'overlaps a slice folder',
+    },
+    {
+      name: 'an alias under src that overlaps a slice folder',
+      sliceAliases: [{ from: 'src/lib/features/**', to: 'features/projects/compliance' }],
+      path: '$.rules[0].childSlices.sliceAliases[0].from',
+      message: 'overlaps a slice folder',
+    },
+    {
+      name: 'two aliases that match the same file',
+      sliceAliases: [
+        { from: 'lib/compliance/**', to: 'features/projects/compliance' },
+        { from: 'lib/compliance/hold.ts', to: 'features/projects/hold' },
+      ],
+      path: '$.rules[0].childSlices.sliceAliases[1]',
+      message: 'two slice aliases match the same file',
+    },
+    {
+      name: 'an src spelling and a bare spelling of the same alias',
+      sliceAliases: [
+        { from: 'lib/compliance/**', to: 'features/projects/compliance' },
+        { from: 'src/lib/compliance/**', to: 'features/projects/compliance' },
+      ],
+      path: '$.rules[0].childSlices.sliceAliases[1]',
+      message: 'two slice aliases match the same file',
+    },
+    {
+      name: 'a whole-tree alias',
+      sliceAliases: [{ from: '**', to: 'features/projects/compliance' }],
+      path: '$.rules[0].childSlices.sliceAliases[0].from',
+      message: 'must not cover the whole tree',
+    },
+    {
+      name: 'a partial-segment alias glob',
+      sliceAliases: [{ from: 'lib/comp*', to: 'features/projects/compliance' }],
+      path: '$.rules[0].childSlices.sliceAliases[0].from',
+      message: 'one whole path segment',
+    },
+    {
+      name: 'a non-array sliceAliases value',
+      sliceAliases: { from: 'lib/compliance/**', to: 'features/projects/compliance' },
+      path: '$.rules[0].childSlices.sliceAliases',
+      message: 'must be an array',
+    },
+    {
+      name: 'a slice alias that is not an object',
+      sliceAliases: ['lib/compliance/**'],
+      path: '$.rules[0].childSlices.sliceAliases[0]',
+      message: 'must be an object',
+    },
+    {
+      name: 'an unknown slice alias field',
+      sliceAliases: [{ from: 'lib/compliance/**', to: 'features/projects/compliance', extra: true }],
+      path: '$.rules[0].childSlices.sliceAliases[0].extra',
+      message: 'unknown field',
+    },
+    {
+      name: 'an empty alias target',
+      sliceAliases: [{ from: 'lib/compliance/**', to: '   ' }],
+      path: '$.rules[0].childSlices.sliceAliases[0].to',
+      message: 'child of an existing universe',
+    },
+    {
+      name: 'an alias glob with an empty segment',
+      sliceAliases: [{ from: 'lib//compliance/**', to: 'features/projects/compliance' }],
+      path: '$.rules[0].childSlices.sliceAliases[0].from',
+      message: 'without empty, . or ..',
+    },
+    {
+      name: 'an alias glob with a dot segment',
+      sliceAliases: [{ from: 'lib/./compliance/**', to: 'features/projects/compliance' }],
+      path: '$.rules[0].childSlices.sliceAliases[0].from',
+      message: 'without empty, . or ..',
+    },
+    {
+      name: 'an alias glob with a parent segment',
+      sliceAliases: [{ from: 'lib/../compliance/**', to: 'features/projects/compliance' }],
+      path: '$.rules[0].childSlices.sliceAliases[0].from',
+      message: 'without empty, . or ..',
+    },
+    {
+      name: 'a single-star whole-tree alias',
+      sliceAliases: [{ from: '*', to: 'features/projects/compliance' }],
+      path: '$.rules[0].childSlices.sliceAliases[0].from',
+      message: 'must not cover the whole tree',
+    },
+    {
+      name: 'a question-mark alias glob',
+      sliceAliases: [{ from: 'lib/comp?/hold.ts', to: 'features/projects/compliance' }],
+      path: '$.rules[0].childSlices.sliceAliases[0].from',
+      message: 'one whole path segment',
+    },
+    {
+      name: 'a brace alias glob',
+      sliceAliases: [{ from: 'lib/{a,b}/**', to: 'features/projects/compliance' }],
+      path: '$.rules[0].childSlices.sliceAliases[0].from',
+      message: 'one whole path segment',
+    },
+    {
+      name: 'a bracket alias glob',
+      sliceAliases: [{ from: 'lib/[ab]/**', to: 'features/projects/compliance' }],
+      path: '$.rules[0].childSlices.sliceAliases[0].from',
+      message: 'one whole path segment',
+    },
+    {
+      name: 'a short glob that reaches a slice folder',
+      sliceAliases: [{ from: 'lib/**', to: 'features/projects/compliance' }],
+      path: '$.rules[0].childSlices.sliceAliases[0].from',
+      message: 'overlaps a slice folder',
+    },
+    {
+      name: 'an app-rooted glob that overlaps a slice folder',
+      sliceAliases: [{ from: 'app/lib/features/**', to: 'features/projects/compliance' }],
+      path: '$.rules[0].childSlices.sliceAliases[0].from',
+      message: 'overlaps a slice folder',
+    },
+  ])('rejects $name', ({ sliceAliases, omitUniverse, path: issuePath, message }) => {
+    const input = {
+      ...VALID_MINIMAL_CONFIG,
+      rules: [
+        {
+          from: 'DomainModel',
+          to: 'DomainModel',
+          allowed: false,
+          peerIsolation: true,
+          ...(omitUniverse ? {} : { sliceFolders: ['features'] }),
+          childSlices: {
+            sliceFolders: ['lib/features/*/*', 'features'],
+            sliceIdentity: 'stars',
+            sliceAliases,
+          },
+        },
+      ],
+    };
+    expect(() => loadArkConfigContract(input)).toThrow(issuePath);
+    expect(() => loadArkConfigContract(input)).toThrow(message);
+  });
+
   it('skips sibling checks when rules or a rule is not an object, and allows an omitted siblings key', () => {
     expect(() => loadArkConfigContract({ ...VALID_MINIMAL_CONFIG, rules: null })).toThrow('must be an array');
     expect(() =>

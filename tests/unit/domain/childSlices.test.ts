@@ -13,6 +13,10 @@ import {
   composeSliceDenialMessage,
   findDeniedEdgeDecision,
   peerIsolationDenyExplanation,
+  resolveGovernedSlice,
+  sliceAliasReport,
+  anySliceAlias,
+  SLICE_ALIAS_DEBT,
   sliceCountReport,
   sliceFindingExtras,
   type EdgeRule,
@@ -467,5 +471,90 @@ describe('nested slice wall', () => {
       defaultMessage: 'Application must not reference Application intent billing.v1.',
     });
     expect(message).toBe('Application must not reference Application intent billing.v1.');
+  });
+});
+
+describe('slice aliases', () => {
+  const aliasRule: EdgeRule = {
+    ...childRule,
+    childSlices: {
+      ...childRule.childSlices!,
+      sliceAliases: [{ from: 'lib/compliance/**', to: 'features/projects/compliance' }],
+    },
+  };
+  const from = 'src/lib/compliance/uses-management.ts';
+
+  it('gives an unclassified file the target universe and child for both walls', () => {
+    const management = 'src/lib/features/management/eos/eos-summary.ts';
+    const sibling = 'src/lib/features/projects/rfi/load-rfi.ts';
+    const common = 'src/lib/features/projects/domain/project-codes.ts';
+    const same = 'src/lib/compliance/retention.ts';
+    expect(decide(aliasRule, from, management)?.sliceVerdict).toMatchObject({
+      reasonId: 'CROSS_PARENT_SLICE',
+      decision: 'deny',
+    });
+    expect(decide(aliasRule, from, management)?.fromSlice).toBe('features/projects');
+    expect(decide(aliasRule, from, sibling)?.sliceVerdict?.reasonId).toBe('CROSS_SIBLING_SLICE');
+    expect(decide(aliasRule, from, common)).toBeUndefined();
+    expect(decide(aliasRule, from, same)).toBeUndefined();
+    expect(decide(childRule, from, management)?.peerIsolationReason).toBe('unclassifiable-path');
+    expect(decide(childRule, from, management)?.sliceVerdict?.reasonId).toBeUndefined();
+  });
+
+  it('does not let an alias override a file the slice folders already classify', () => {
+    const hijack: EdgeRule = {
+      ...childRule,
+      childSlices: {
+        ...childRule.childSlices!,
+        sliceAliases: [{ from: 'lib/features/**', to: 'features/management/eos' }],
+      },
+    };
+    const real = 'src/lib/features/projects/rfi/load-rfi.ts';
+    const decision = decide(hijack, real, 'src/lib/features/management/eos/eos-summary.ts');
+    expect(decision?.fromSlice).toBe('features/projects');
+    expect(decision?.sliceVerdict?.reasonId).toBe('CROSS_PARENT_SLICE');
+    expect(resolveGovernedSlice(real, hijack)).toEqual({
+      universeId: 'features/projects',
+      childId: 'features/projects/rfi',
+    });
+  });
+
+  it('lists the alias as an owed move and does not call the files finished', () => {
+    const report = sliceAliasReport(
+      [aliasRule, aliasRule],
+      ['src/lib/compliance/policy.ts', 'src/lib/other/nope.ts', 'src/lib/compliance/hold.ts']
+    );
+    expect(report).toEqual({
+      notAScore: true,
+      finished: false,
+      debt: SLICE_ALIAS_DEBT,
+      moves: [
+        {
+          from: 'lib/compliance/**',
+          to: 'features/projects/compliance',
+          destination: 'src/lib/features/projects/compliance',
+          files: ['src/lib/compliance/hold.ts', 'src/lib/compliance/policy.ts'],
+        },
+      ],
+    });
+    expect(SLICE_ALIAS_DEBT).toContain('owed move');
+    expect(SLICE_ALIAS_DEBT).toContain('not finished');
+    expect(sliceAliasReport([childRule], [from])).toBeNull();
+    expect(anySliceAlias(undefined)).toBe(false);
+    expect(anySliceAlias([childRule])).toBe(false);
+    expect(anySliceAlias([aliasRule])).toBe(true);
+    expect(
+      sliceAliasReport([aliasRule], ['app/lib/compliance/hold.ts'])?.moves[0]?.destination
+    ).toBe('app/lib/features/projects/compliance');
+    expect(sliceAliasReport([aliasRule], ['lib/compliance/hold.ts'])?.moves[0]?.destination).toBe(
+      'lib/features/projects/compliance'
+    );
+    expect(resolveGovernedSlice(undefined, aliasRule)).toEqual({});
+    expect(
+      sliceAliasReport(
+        [{ ...aliasRule, childSlices: { ...aliasRule.childSlices!, sliceFolders: ['nope'] } }],
+        [from]
+      )?.moves[0]?.destination
+    ).toBe('');
   });
 });

@@ -68,7 +68,8 @@ const BUDGETS = [
   // #326 PR3 siblings object validator — was 580 (loc 670).
   // Trailing-slash scan (no polynomial regex) — was 670 (loc 682).
   // #326 PR4 child allowedCrossSlice validator (linear segment scan) — was 682 (loc 774).
-  { path: 'bin/lib/config-contract.mjs', max: 774 },
+  // #326 PR5 sliceAliases validator (segment overlap, no polynomial regex) — was 774 (loc 1050).
+  { path: 'bin/lib/config-contract.mjs', max: 1054 },
   { path: 'bin/lib/config-extras.mjs', max: 220 },
   { path: 'bin/lib/weakest-link.mjs', max: 500 },
   { path: 'bin/lib/enforcement-profiles.mjs', max: 150 },

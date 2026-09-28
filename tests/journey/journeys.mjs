@@ -324,7 +324,7 @@ export const JOURNEY_CASES = Object.freeze({
     Object.freeze({
       id: 'pr5-aliases',
       owner: '#326 PR5',
-      expect: 'fail',
+      expect: 'pass',
       kind: 'pr5-aliases',
       note: 'Owned by #326 PR5. lib/compliance/** aliased to features/projects/compliance reports CROSS_PARENT_SLICE into management. The same file may import its own child and its universe common. Doctor lists the alias as an owed move. A target that is not a child of an existing universe is rejected. An alias that overlaps a slice folder is rejected. A config without sliceAliases stays the child-slices wall.',
       crossParent: Object.freeze({

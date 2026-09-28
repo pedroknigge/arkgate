@@ -251,6 +251,31 @@ describe('child wall advisory honesty', () => {
   });
 });
 
+describe('slice alias debt honesty', () => {
+  it('keeps finished false while an alias still owes a move', () => {
+    const honest = buildProductHonesty({
+      coverageHonesty: { status: 'ok', wholeTreeGoverned: true, message: 'covered' },
+      baselineHonesty: { status: 'ok', message: 'clean' },
+      writePathHonesty: { activeHost: 'cursor', hardWriteActive: true, message: 'hard' },
+      activeBlockingViolations: 0,
+      sliceAliasDebt: true,
+    });
+    expect(honest.finished).toBe(false);
+    expect(honest.reasonIds).toContain('slice-alias-debt');
+    expect(honest.reasons?.find((reason) => reason.id === 'slice-alias-debt')?.message).toContain(
+      'owed move'
+    );
+    const clear = buildProductHonesty({
+      coverageHonesty: { status: 'ok', wholeTreeGoverned: true, message: 'covered' },
+      baselineHonesty: { status: 'ok', message: 'clean' },
+      writePathHonesty: { activeHost: 'cursor', hardWriteActive: true, message: 'hard' },
+      activeBlockingViolations: 0,
+      sliceAliasDebt: false,
+    });
+    expect(clear.reasonIds ?? []).not.toContain('slice-alias-debt');
+  });
+});
+
 describe('post-validity coaching flags', () => {
   it('design-weak post-green path forbids multi-pilot auto-apply and coaches placement', () => {
     const action = buildPostGreenNextAction({ designWeak: true })!;

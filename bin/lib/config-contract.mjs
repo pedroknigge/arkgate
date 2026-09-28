@@ -266,6 +266,20 @@ export const ARK_CONFIG_SCHEMA = {
                             ],
                         },
                         parentMayImportChild: { type: 'boolean' },
+                        sliceAliases: {
+                            type: 'array',
+                            minItems: 1,
+                            description: 'Maps a source path glob onto a child slice id (universe id plus one child segment) so files outside the slice trees take that universe and child for both walls. A bare name, a universe id alone, an unknown universe, and a wildcard in to are rejected. The glob may not overlap a slice folder, and two aliases may not match the same file. Doctor lists each alias as an owed move. A build that rejects unknown childSlices fields fails at config load (unknown field). arkgate 4.8.22 and older reject childSlices.',
+                            items: {
+                                type: 'object',
+                                additionalProperties: false,
+                                required: ['from', 'to'],
+                                properties: {
+                                    from: { type: 'string', minLength: 1 },
+                                    to: { type: 'string', minLength: 1 },
+                                },
+                            },
+                        },
                         allowedCrossSlice: {
                             type: 'array',
                             minItems: 1,
@@ -595,6 +609,268 @@ function validateChildSliceAllowedCrossSlice(candidate, issues) {
         });
     });
 }
+const ALIAS_TARGET_MESSAGE = 'must be a child of an existing universe (the universe id this rule already names, plus one child segment). A bare name, a universe id alone, an unknown universe, and a wildcard are rejected.';
+const ALIAS_OVERLAP_MESSAGE = 'overlaps a slice folder. An alias covers only files outside the slice trees.';
+const ALIAS_SAME_FILE_MESSAGE = 'two slice aliases match the same file';
+function aliasPathSegments(raw) {
+    return trimTrailingSlashes(raw.trim().replace(/\\/g, '/')).toLowerCase().split('/').filter((part) => part.length > 0);
+}
+function concreteGlobPrefix(segments) {
+    const prefix = [];
+    for (const segment of segments) {
+        if (segment.includes('*'))
+            break;
+        prefix.push(segment);
+    }
+    return prefix;
+}
+function segmentsArePrefix(prefix, full) {
+    if (prefix.length > full.length)
+        return false;
+    for (let index = 0; index < prefix.length; index += 1) {
+        if (prefix[index] !== full[index])
+            return false;
+    }
+    return true;
+}
+function anchoredSlicePrefix(entry) {
+    const segments = entry.split(/[/\\]/).filter(Boolean).map((part) => part.toLowerCase());
+    if (segments.length < 2 || segments[0] === '*' || segments[0] === '**')
+        return null;
+    if (!segments.some((part) => part === '*'))
+        return null;
+    const prefix = [];
+    for (const segment of segments) {
+        if (segment === '*' || segment === '**')
+            break;
+        if (segment.includes('*'))
+            return null;
+        prefix.push(segment);
+    }
+    return prefix.length > 0 ? prefix : null;
+}
+/** Trailing ** does not invent a slice-folder name the glob does not already reach. */
+function globOverlapsAnchored(glob, patternPrefix) {
+    const prefix = concreteGlobPrefix(glob);
+    const wild = prefix.length < glob.length;
+    const rooted = prefix[0] === 'src' || prefix[0] === 'app' ? prefix.slice(1) : prefix;
+    if (segmentsArePrefix(patternPrefix, prefix) || segmentsArePrefix(patternPrefix, rooted))
+        return true;
+    if (!wild)
+        return false;
+    return ((segmentsArePrefix(prefix, patternPrefix) && prefix.length < patternPrefix.length) ||
+        (segmentsArePrefix(prefix, ['src', ...patternPrefix]) && prefix.length < patternPrefix.length + 1) ||
+        (segmentsArePrefix(prefix, ['app', ...patternPrefix]) && prefix.length < patternPrefix.length + 1));
+}
+function globOverlapsBare(glob, name) {
+    for (let index = 0; index < glob.length; index += 1) {
+        if (glob[index] !== name && glob[index] !== '*')
+            continue;
+        const rest = glob.slice(index + 1);
+        if (rest.length >= 2)
+            return true;
+        if (rest.some((segment) => segment === '*' || segment === '**'))
+            return true;
+    }
+    const prefix = concreteGlobPrefix(glob);
+    return (prefix.length < glob.length &&
+        (prefix.length === 0 || (prefix.length === 1 && (prefix[0] === 'src' || prefix[0] === 'app'))));
+}
+function globOverlapsSliceEntry(glob, entry) {
+    const segments = entry.split(/[/\\]/).filter(Boolean).map((part) => part.toLowerCase());
+    if (segments.length === 1 && segments[0] && !segments[0].includes('*')) {
+        return globOverlapsBare(glob, segments[0]);
+    }
+    const prefix = anchoredSlicePrefix(entry);
+    return prefix ? globOverlapsAnchored(glob, prefix) : false;
+}
+function aliasGlobIssue(raw) {
+    const trimmed = trimTrailingSlashes(raw.trim().replace(/\\/g, '/'));
+    if (trimmed.length === 0)
+        return 'must be a non-empty path glob';
+    if (trimmed === '*' || trimmed === '**')
+        return 'must not cover the whole tree';
+    for (const part of trimmed.split('/')) {
+        if (part.length === 0 || part === '.' || part === '..') {
+            return 'must be a path glob without empty, . or .. segments';
+        }
+        if (part === '*' || part === '**')
+            continue;
+        if (part.includes('*') || part.includes('?') || part.includes('{') || part.includes('[')) {
+            return '* matches one whole path segment. ** is a whole segment. A partial segment is not a wildcard.';
+        }
+    }
+    return null;
+}
+function universeShapes(folders, identity) {
+    const shapes = [];
+    if (!Array.isArray(folders))
+        return shapes;
+    const stars = identity === 'stars';
+    for (const raw of folders) {
+        if (typeof raw !== 'string' || raw.length === 0)
+            continue;
+        const segments = raw.split(/[/\\]/).filter(Boolean).map((part) => part.toLowerCase());
+        if (segments.length === 1 && segments[0] && !segments[0].includes('*')) {
+            shapes.push({ literals: [segments[0], null] });
+            continue;
+        }
+        if (segments.some((part) => part === '**' || (part.includes('*') && part !== '*')))
+            continue;
+        if (!segments.includes('*'))
+            continue;
+        if (stars) {
+            let lastLiteral = -1;
+            for (let index = 0; index < segments.length; index += 1) {
+                if (segments[index] !== '*')
+                    lastLiteral = index;
+            }
+            if (lastLiteral < 0)
+                continue;
+            shapes.push({
+                literals: segments.slice(lastLiteral).map((part) => (part === '*' ? null : part)),
+            });
+            continue;
+        }
+        shapes.push({ literals: segments.map((part) => (part === '*' ? null : part)) });
+    }
+    return shapes;
+}
+function shapeMatches(shape, segments) {
+    if (shape.literals.length !== segments.length)
+        return false;
+    return shape.literals.every((literal, index) => literal === null || literal === segments[index]);
+}
+function aliasTargetIssue(raw, shapes) {
+    const trimmed = trimTrailingSlashes(raw.trim().replace(/\\/g, '/'));
+    if (trimmed.length === 0 || trimmed.split('/').some((part) => part.length === 0 || part === '.' || part === '..')) {
+        return ALIAS_TARGET_MESSAGE;
+    }
+    if (trimmed.includes('*') || !trimmed.includes('/'))
+        return ALIAS_TARGET_MESSAGE;
+    const parts = trimmed.split('/').map((part) => part.toLowerCase());
+    if (shapes.length === 0)
+        return ALIAS_TARGET_MESSAGE;
+    if (shapes.some((shape) => shapeMatches(shape, parts)))
+        return ALIAS_TARGET_MESSAGE;
+    if (shapes.some((shape) => shapeMatches(shape, parts.slice(0, -1))))
+        return null;
+    return ALIAS_TARGET_MESSAGE;
+}
+/** A leading src/ or app/ is optional at match time, so both spellings are one glob. */
+function aliasGlobVariants(segments) {
+    const head = segments[0];
+    if ((head === 'src' || head === 'app') && segments.length > 1)
+        return [segments, segments.slice(1)];
+    return [segments];
+}
+function aliasesCanMatchSameFile(left, right) {
+    const leftVariants = aliasGlobVariants(left);
+    const rightVariants = aliasGlobVariants(right);
+    for (const a of leftVariants) {
+        if (globsCanMatchSame(a, right, 0, 0, new Map()))
+            return true;
+    }
+    for (const b of rightVariants) {
+        if (globsCanMatchSame(left, b, 0, 0, new Map()))
+            return true;
+    }
+    return false;
+}
+function globsCanMatchSame(left, right, i, j, memo) {
+    const key = `${i}:${j}`;
+    const cached = memo.get(key);
+    if (cached !== undefined)
+        return cached;
+    let matched = false;
+    if (i === left.length && j === right.length)
+        matched = true;
+    else if (i < left.length && left[i] === '**') {
+        matched =
+            globsCanMatchSame(left, right, i + 1, j, memo) ||
+                (j < right.length && globsCanMatchSame(left, right, i, j + 1, memo));
+    }
+    else if (j < right.length && right[j] === '**') {
+        matched =
+            globsCanMatchSame(left, right, i, j + 1, memo) ||
+                (i < left.length && globsCanMatchSame(left, right, i + 1, j, memo));
+    }
+    else if (i < left.length && j < right.length) {
+        const a = left[i];
+        const b = right[j];
+        if (a === b || a === '*' || b === '*')
+            matched = globsCanMatchSame(left, right, i + 1, j + 1, memo);
+    }
+    memo.set(key, matched);
+    return matched;
+}
+function validateChildSliceAliases(candidate, issues) {
+    const rules = candidate.rules;
+    if (!Array.isArray(rules))
+        return;
+    rules.forEach((rule, index) => {
+        if (!isObject(rule))
+            return;
+        const child = rule.childSlices;
+        if (!isObject(child) || child.sliceAliases === undefined)
+            return;
+        const aliases = child.sliceAliases;
+        const path = `$.rules[${index}].childSlices.sliceAliases`;
+        if (!Array.isArray(aliases)) {
+            issues.push({ path, message: 'must be an array of { from, to } slice aliases' });
+            return;
+        }
+        const shapes = universeShapes(rule.sliceFolders, rule.sliceIdentity);
+        const sliceEntries = [
+            ...(Array.isArray(rule.sliceFolders) ? rule.sliceFolders : []),
+            ...(Array.isArray(child.sliceFolders) ? child.sliceFolders : []),
+        ].filter((entry) => typeof entry === 'string' && entry.length > 0);
+        const globs = [];
+        aliases.forEach((alias, aliasIndex) => {
+            const aliasPath = `${path}[${aliasIndex}]`;
+            if (!isObject(alias)) {
+                issues.push({ path: aliasPath, message: 'must be an object with from and to' });
+                return;
+            }
+            for (const key of Object.keys(alias)) {
+                if (key !== 'from' && key !== 'to') {
+                    issues.push({ path: propertyPath(aliasPath, key), message: 'unknown field' });
+                }
+            }
+            const from = alias.from;
+            const to = alias.to;
+            if (typeof from !== 'string' || from.trim().length === 0) {
+                issues.push({ path: `${aliasPath}.from`, message: 'must be a non-empty path glob' });
+            }
+            else {
+                const issue = aliasGlobIssue(from);
+                if (issue)
+                    issues.push({ path: `${aliasPath}.from`, message: issue });
+                else {
+                    const segments = aliasPathSegments(from);
+                    if (sliceEntries.some((entry) => globOverlapsSliceEntry(segments, entry))) {
+                        issues.push({ path: `${aliasPath}.from`, message: ALIAS_OVERLAP_MESSAGE });
+                    }
+                    for (const previous of globs) {
+                        if (aliasesCanMatchSameFile(previous, segments)) {
+                            issues.push({ path: aliasPath, message: ALIAS_SAME_FILE_MESSAGE });
+                            break;
+                        }
+                    }
+                    globs.push(segments);
+                }
+            }
+            if (typeof to !== 'string' || to.trim().length === 0) {
+                issues.push({ path: `${aliasPath}.to`, message: ALIAS_TARGET_MESSAGE });
+            }
+            else {
+                const issue = aliasTargetIssue(to, shapes);
+                if (issue)
+                    issues.push({ path: `${aliasPath}.to`, message: issue });
+            }
+        });
+    });
+}
 function validateLayerOwners(candidate, issues) {
     const layers = candidate.layers;
     if (!Array.isArray(layers))
@@ -727,6 +1003,7 @@ export function loadArkConfigContract(input, source = 'ark.config.json') {
     validateLayerOwners(candidate, issues);
     validateChildSliceSiblings(candidate, issues);
     validateChildSliceAllowedCrossSlice(candidate, issues);
+    validateChildSliceAliases(candidate, issues);
     if (issues.length > 0)
         throw new ArkConfigValidationError(source, issues);
     return { config: candidate, migratedFrom };
