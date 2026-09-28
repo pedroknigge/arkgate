@@ -826,7 +826,7 @@ export const SLICE_REASON_HINTS: readonly SliceReasonHint[] = Object.freeze([
     ruleId: 'LAYER_IMPORT_VIOLATION',
     title: 'Cross-sibling slice',
     why: 'This import crosses two feature slices inside one universe.',
-    fix: 'Import universe-common code, or move the shared piece into the feature that owns it. Advisory siblings still fail when the count grows past the baseline.',
+    fix: 'Import universe-common code, or move the shared piece into the feature that owns it. An enforce list makes those importer subtrees errors. Other sibling crossings stay warnings, and a new one past the baseline still fails.',
   }),
   Object.freeze({
     reasonId: 'CROSS_PARENT_VIA_SHARED',

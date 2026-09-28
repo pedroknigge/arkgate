@@ -299,7 +299,7 @@ export const ARK_CONFIG_SCHEMA = {
           additionalProperties: false,
           required: ['sliceFolders'],
           description:
-            'Optional inner wall under this rule. Absent keeps today\'s universe wall. sliceFolders names children. commonFolders and flat files are universe common. siblings is deny (default) or advisory. parentMayImportChild defaults to false. Cross-parent has no advisory knob. arkgate 4.8.22 and older reject this key.',
+            'Optional inner wall under this rule. Absent keeps today\'s universe wall. sliceFolders names children. commonFolders and flat files are universe common. siblings is "deny" (default), "advisory", or { default, enforce }. parentMayImportChild defaults to false. Cross-parent has no advisory knob. arkgate 4.8.22 and older reject this key. A build that still types siblings as a string enum rejects the object at config load.',
           properties: {
             sliceFolders: { ...stringArraySchema, minItems: 1 },
             sliceIdentity: {
@@ -307,7 +307,22 @@ export const ARK_CONFIG_SCHEMA = {
               enum: ['path', 'stars'],
             },
             commonFolders: { ...stringArraySchema, minItems: 1 },
-            siblings: { type: 'string', enum: ['deny', 'advisory'] },
+            siblings: {
+              description:
+                '"deny" or "advisory", or { default, enforce } so listed subtrees are errors while the default stays advisory. A string-enum build rejects the object at config load (must be one of deny, advisory).',
+              oneOf: [
+                { type: 'string', enum: ['deny', 'advisory'] },
+                {
+                  type: 'object',
+                  additionalProperties: false,
+                  required: ['default'],
+                  properties: {
+                    default: { type: 'string', enum: ['deny', 'advisory'] },
+                    enforce: { ...stringArraySchema },
+                  },
+                },
+              ],
+            },
             parentMayImportChild: { type: 'boolean' },
           },
         },
@@ -496,6 +511,80 @@ function validateNode(
   }
 }
 
+const SIBLING_MODES = ['deny', 'advisory'] as const;
+
+/**
+ * String enum builds reject this object before they reach a decision.
+ * The message names both forms so a bad value is obvious at config load.
+ */
+const SIBLINGS_FORM_MESSAGE =
+  'must be "deny", "advisory", or { "default": "deny" | "advisory", "enforce": ["<child id or subtree path>"] }';
+
+function validateChildSliceSiblings(candidate: Record<string, unknown>, issues: ArkConfigIssue[]): void {
+  const rules = candidate.rules;
+  if (!Array.isArray(rules)) return;
+  rules.forEach((rule, index) => {
+    if (!isObject(rule)) return;
+    const child = rule.childSlices;
+    if (!isObject(child) || child.siblings === undefined) return;
+    const siblings = child.siblings;
+    const path = `$.rules[${index}].childSlices.siblings`;
+    if (typeof siblings === 'string') {
+      if (!SIBLING_MODES.includes(siblings as (typeof SIBLING_MODES)[number])) {
+        issues.push({ path, message: SIBLINGS_FORM_MESSAGE });
+      }
+      return;
+    }
+    if (!isObject(siblings)) {
+      issues.push({ path, message: SIBLINGS_FORM_MESSAGE });
+      return;
+    }
+    for (const key of Object.keys(siblings)) {
+      if (key !== 'default' && key !== 'enforce') {
+        issues.push({ path: propertyPath(path, key), message: 'unknown field' });
+      }
+    }
+    if (siblings.default === undefined) {
+      issues.push({ path: `${path}.default`, message: 'is required' });
+    } else if (siblings.default !== 'deny' && siblings.default !== 'advisory') {
+      issues.push({ path: `${path}.default`, message: 'must be deny or advisory' });
+    }
+    if (siblings.enforce === undefined) return;
+    if (!Array.isArray(siblings.enforce)) {
+      issues.push({
+        path: `${path}.enforce`,
+        message: 'must be an array of child slice ids or subtree paths',
+      });
+      return;
+    }
+    const seen = new Set<string>();
+    siblings.enforce.forEach((entry, entryIndex) => {
+      const entryPath = `${path}.enforce[${entryIndex}]`;
+      if (typeof entry !== 'string' || entry.trim().length === 0) {
+        issues.push({ path: entryPath, message: 'must be a non-empty child slice id or subtree path' });
+        return;
+      }
+      const normalized = trimTrailingSlashes(entry.trim().replace(/\\/g, '/'));
+      if (normalized.split('/').some((part) => part.length === 0 || part === '.' || part === '..')) {
+        issues.push({ path: entryPath, message: 'must be a child slice id or subtree path without . or ..' });
+        return;
+      }
+      if (normalized.includes('*')) {
+        issues.push({
+          path: entryPath,
+          message: 'must be a child slice id or subtree path. * is not a wildcard on siblings.enforce',
+        });
+        return;
+      }
+      if (seen.has(normalized)) {
+        issues.push({ path: entryPath, message: 'duplicate enforce entry' });
+        return;
+      }
+      seen.add(normalized);
+    });
+  });
+}
+
 function validateLayerOwners(candidate: Record<string, unknown>, issues: ArkConfigIssue[]): void {
   const layers = candidate.layers;
   if (!Array.isArray(layers)) return;
@@ -643,6 +732,7 @@ export function loadArkConfigContract(
   validateArkRunExtra(candidate, issues);
   validateArkOrderExtra(candidate, issues);
   validateLayerOwners(candidate, issues);
+  validateChildSliceSiblings(candidate, issues);
   if (issues.length > 0) throw new ArkConfigValidationError(source, issues);
 
   return { config: candidate as ArkConfig, migratedFrom };
@@ -680,4 +770,16 @@ export function withArkConfigMetadata<T extends Record<string, unknown>>(
     if (key !== '$schema' && key !== 'schemaVersion') result[key] = value;
   }
   return result as T & Pick<ArkConfig, '$schema' | 'schemaVersion'>;
+}
+
+/**
+ * Trim trailing slashes without a regex.
+ *
+ * `/\/+$/` is a polynomial ReDoS on a value that comes from the repo's own
+ * contract but is still library input. A scan is linear and says the same thing.
+ */
+function trimTrailingSlashes(value: string): string {
+  let end = value.length;
+  while (end > 0 && value[end - 1] === '/') end -= 1;
+  return value.slice(0, end);
 }

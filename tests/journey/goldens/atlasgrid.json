@@ -242,6 +242,39 @@
         "sameUniverse": 0,
         "severity": "error"
       }
+    },
+    {
+      "expect": "pass",
+      "got": {
+        "advisorySeverities": [
+          "warning"
+        ],
+        "advisoryWarnings": 2,
+        "crossParent": 5,
+        "enforcedErrors": 1,
+        "enforcedSeverities": [
+          "error"
+        ],
+        "reasonIds": [
+          "CROSS_SIBLING_SLICE"
+        ],
+        "ruleIds": [
+          "LAYER_IMPORT_VIOLATION"
+        ],
+        "siblingCount": 3
+      },
+      "id": "pr3-subtree",
+      "met": true,
+      "note": "Owned by #326 PR3. A sibling crossing from an enforced feature is an error. Crossings from features outside the enforce list stay warnings.",
+      "owner": "#326 PR3",
+      "status": "pass",
+      "want": {
+        "advisoryWarnings": 2,
+        "crossParent": 5,
+        "enforcedErrors": 1,
+        "reasonId": "CROSS_SIBLING_SLICE",
+        "ruleId": "LAYER_IMPORT_VIOLATION"
+      }
     }
   ],
   "fixture": "atlasgrid",
@@ -611,6 +644,154 @@
           }
         ],
         "warnings": [
+          {
+            "count": 3,
+            "edges": [
+              {
+                "file": "src/lib/shared/format.ts",
+                "target": "src/lib/features/operations/dispatch/dispatch-board.ts",
+                "toSlice": "features/operations"
+              },
+              {
+                "file": "src/lib/shared/ids.ts",
+                "target": "src/lib/features/external/portal/portal-client.ts",
+                "toSlice": "features/external"
+              },
+              {
+                "file": "src/lib/shared/labels.ts",
+                "target": "src/lib/features/projects/scm/scm-board.ts",
+                "toSlice": "features/projects"
+              }
+            ],
+            "fromLayer": "Application",
+            "ruleId": "SHARED_IMPORTS_SLICE",
+            "severity": "warning",
+            "toLayer": "Application"
+          },
+          {
+            "count": 1,
+            "edges": [
+              {
+                "file": "src/lib/shared/clock.ts",
+                "target": "src/lib/repositories/features/management/people/people-repository.ts",
+                "toSlice": "features/management"
+              }
+            ],
+            "fromLayer": "Application",
+            "ruleId": "SHARED_IMPORTS_SLICE",
+            "severity": "warning",
+            "toLayer": "Persistence"
+          },
+          {
+            "count": 2,
+            "edges": [
+              {
+                "file": "src/components/ui/button.tsx",
+                "target": "src/components/features/projects/rfi/rfi-status.tsx",
+                "toSlice": "features/projects"
+              },
+              {
+                "file": "src/components/ui/dialog.tsx",
+                "target": "src/components/features/management/eos/eos-screen.tsx",
+                "toSlice": "features/management"
+              }
+            ],
+            "fromLayer": "Presentation",
+            "ruleId": "SHARED_IMPORTS_SLICE",
+            "severity": "warning",
+            "toLayer": "Presentation"
+          }
+        ]
+      }
+    },
+    {
+      "command": "ark-check --json --no-cache --config ark.config.subtree.json",
+      "exitCode": 1,
+      "filesDiff": {},
+      "output": {
+        "completeness": "complete",
+        "ok": false,
+        "valid": false,
+        "violations": [
+          {
+            "file": "src/components/features/management/eos/eos-screen.tsx",
+            "reasonId": "CROSS_PARENT_SLICE",
+            "ruleId": "LAYER_IMPORT_VIOLATION",
+            "severity": "error",
+            "target": "src/lib/features/external/portal/portal-client.ts"
+          },
+          {
+            "file": "src/components/features/operations/dispatch/dispatch-screen.tsx",
+            "reasonId": "CROSS_SIBLING_SLICE",
+            "ruleId": "LAYER_IMPORT_VIOLATION",
+            "severity": "warning",
+            "target": "src/components/features/operations/fleet/fleet-screen.tsx"
+          },
+          {
+            "file": "src/lib/features/external/vendors/vendor-sync.ts",
+            "reasonId": "CROSS_PARENT_SLICE",
+            "ruleId": "LAYER_IMPORT_VIOLATION",
+            "severity": "error",
+            "target": "src/lib/repositories/features/operations/fleet/fleet-repository.ts"
+          },
+          {
+            "file": "src/lib/features/management/budget/budget-lines.ts",
+            "reasonId": "CROSS_PARENT_SLICE",
+            "ruleId": "LAYER_IMPORT_VIOLATION",
+            "severity": "error",
+            "target": "src/lib/features/projects/d2d-item/d2d-item.ts"
+          },
+          {
+            "file": "src/lib/features/projects/domain/project-codes.ts",
+            "reasonId": null,
+            "ruleId": "LAYER_IMPORT_VIOLATION",
+            "severity": "error",
+            "target": "src/lib/features/projects/rfi/rfi-intake.ts"
+          },
+          {
+            "file": "src/lib/features/projects/rfi/load-rfi.ts",
+            "reasonId": "CROSS_PARENT_SLICE",
+            "ruleId": "LAYER_IMPORT_VIOLATION",
+            "severity": "error",
+            "target": "src/lib/features/management/eos/eos-summary.ts"
+          },
+          {
+            "file": "src/lib/features/projects/rfi/load-rfi.ts",
+            "reasonId": "CROSS_SIBLING_SLICE",
+            "ruleId": "LAYER_IMPORT_VIOLATION",
+            "severity": "error",
+            "target": "src/lib/features/projects/scm/scm-board.ts"
+          },
+          {
+            "file": "src/lib/repositories/features/management/eos/eos-repository.ts",
+            "reasonId": "CROSS_SIBLING_SLICE",
+            "ruleId": "LAYER_IMPORT_VIOLATION",
+            "severity": "warning",
+            "target": "src/lib/repositories/features/management/people/people-repository.ts"
+          },
+          {
+            "file": "src/lib/repositories/features/operations/dispatch/dispatch-repository.ts",
+            "reasonId": "CROSS_PARENT_SLICE",
+            "ruleId": "LAYER_IMPORT_VIOLATION",
+            "severity": "error",
+            "target": "src/lib/features/projects/scm/scm-board.ts"
+          }
+        ],
+        "warnings": [
+          {
+            "count": 1,
+            "edges": [
+              {
+                "file": null,
+                "target": null,
+                "toSlice": null
+              }
+            ],
+            "fromLayer": null,
+            "ruleId": "CONFIG_CHILD_SLICES_VERSION",
+            "severity": "warning",
+            "toLayer": null
+          },
           {
             "count": 3,
             "edges": [

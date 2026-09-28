@@ -451,9 +451,27 @@ function childSliceFoldersKey(rule: ArkConfigRule): string {
   ]);
 }
 
-function childSliceSiblings(rule: ArkConfigRule): 'deny' | 'advisory' | null {
+type SiblingPolicy = { mode: 'deny' | 'advisory'; enforce: string[] };
+
+function enforceKeys(entries: readonly string[] | undefined): string[] {
+  return sortedUnique(
+    (entries ?? []).map((entry) =>
+      trimTrailingSlashes(entry.trim().replace(/\\/g, '/')).toLowerCase()
+    )
+  );
+}
+
+/**
+ * Omitted and `"deny"` are deny-all. `"advisory"` is advisory-all.
+ * Under `default: "deny"` the enforce list does not change verdicts, so it is empty here.
+ */
+function childSliceSiblingPolicy(rule: ArkConfigRule): SiblingPolicy | null {
   if (!rule.childSlices) return null;
-  return rule.childSlices.siblings === 'advisory' ? 'advisory' : 'deny';
+  const siblings = rule.childSlices.siblings;
+  if (siblings == null || siblings === 'deny') return { mode: 'deny', enforce: [] };
+  if (siblings === 'advisory') return { mode: 'advisory', enforce: [] };
+  if (siblings.default === 'deny') return { mode: 'deny', enforce: [] };
+  return { mode: 'advisory', enforce: enforceKeys(siblings.enforce) };
 }
 
 /**
@@ -466,16 +484,16 @@ function compareChildSlices(
   previous: ArkConfigRule,
   candidate: ArkConfigRule
 ): void {
-  const before = childSliceSiblings(previous);
-  const after = childSliceSiblings(candidate);
+  const before = childSliceSiblingPolicy(previous);
+  const after = childSliceSiblingPolicy(candidate);
   if (before === null && after === null) return;
   if (before === null && after !== null) {
     addFinding(findings, {
       kind: 'child-slices-added',
       path: `${path}.childSlices`,
-      classification: after === 'advisory' ? 'judgment-required' : 'strengthening',
+      classification: after.mode === 'advisory' ? 'judgment-required' : 'strengthening',
       message:
-        after === 'advisory'
+        after.mode === 'advisory'
           ? 'A child slice wall was added with advisory sibling crossings.'
           : 'A child slice wall was added. Sibling crossings inside a universe are now denied.',
       after: candidate.childSlices,
@@ -503,18 +521,28 @@ function compareChildSlices(
     });
     return;
   }
-  if (before !== after) {
-    const weakening = after === 'advisory';
+  if (before === null || after === null) return;
+  if (before.mode !== after.mode) {
+    const weakening = after.mode === 'advisory';
     addFinding(findings, {
       kind: 'child-slices-siblings',
       path: `${path}.childSlices.siblings`,
       classification: weakening ? 'weakening' : 'strengthening',
       message: weakening
-        ? 'Sibling crossings inside a universe are now advisory.'
+        ? after.enforce.length > 0
+          ? 'Sibling crossings outside the enforce list are now advisory.'
+          : 'Sibling crossings inside a universe are now advisory.'
         : 'Sibling crossings inside a universe are now denied.',
-      before,
-      after,
+      before: before.mode,
+      after: after.mode,
     });
+  } else if (before.mode === 'advisory') {
+    compareSiblingEnforceList(
+      findings,
+      `${path}.childSlices.siblings.enforce`,
+      before.enforce,
+      after.enforce
+    );
   }
   const previousParent = previous.childSlices?.parentMayImportChild === true;
   const candidateParent = candidate.childSlices?.parentMayImportChild === true;
@@ -530,6 +558,30 @@ function compareChildSlices(
       after: candidateParent,
     });
   }
+}
+
+function compareSiblingEnforceList(
+  findings: PolicyDeltaFinding[],
+  path: string,
+  previous: string[],
+  candidate: string[]
+): void {
+  if (JSON.stringify(previous) === JSON.stringify(candidate)) return;
+  const added = candidate.filter((value) => !previous.includes(value));
+  const removed = previous.filter((value) => !candidate.includes(value));
+  const bothWays = added.length > 0 && removed.length > 0;
+  addFinding(findings, {
+    kind: bothWays ? 'child-slices-siblings-enforce-changed' : 'child-slices-siblings-enforce',
+    path,
+    classification: bothWays ? 'judgment-required' : added.length > 0 ? 'strengthening' : 'weakening',
+    message: bothWays
+      ? 'Enforced sibling subtrees were added and removed in the same change.'
+      : added.length > 0
+        ? 'Sibling crossings from these subtrees are now errors.'
+        : 'Sibling crossings from these subtrees are advisory again.',
+    before: previous,
+    after: candidate,
+  });
 }
 
 function crossSliceKey(edge: { from: string; to: string }): string {
@@ -1103,6 +1155,18 @@ export function policyDeltaAcknowledgementMatches(
   const actualIds = sortedUnique(acknowledgement.findingIds);
   const expectedIds = sortedUnique(expected.findingIds);
   return actualIds.length === expectedIds.length && actualIds.every((id, index) => id === expectedIds[index]);
+}
+
+/**
+ * Trim trailing slashes without a regex.
+ *
+ * `/\/+$/` is a polynomial ReDoS on a value that comes from the repo's own
+ * contract but is still library input. A scan is linear and says the same thing.
+ */
+function trimTrailingSlashes(value: string): string {
+  let end = value.length;
+  while (end > 0 && value[end - 1] === '/') end -= 1;
+  return value.slice(0, end);
 }
 
 /** Absent < deny-cross-parent < deny. Up the rank strengthens. Down weakens. */

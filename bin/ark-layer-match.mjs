@@ -682,6 +682,59 @@ export function resolveChildSliceId(relPath, universeId, child) {
         return { childId: raw };
     return { mismatched: { childId: raw, universeId } };
 }
+function siblingEntryKey(entry) {
+    return trimTrailingSlashes(entry.trim().replace(/\\/g, '/')).toLowerCase();
+}
+function stripSrcOrApp(value) {
+    return value.replace(/^(?:src|app)\//, '');
+}
+/** True when the importer file sits in this directory, with or without src/ or app/. */
+function pathUnderSubtree(filePath, entry) {
+    const file = filePath.replace(/\\/g, '/').replace(/^\/+/, '').toLowerCase();
+    const prefix = stripSrcOrApp(entry);
+    if (!prefix)
+        return false;
+    const rooted = stripSrcOrApp(file);
+    return (file === prefix ||
+        file.startsWith(`${prefix}/`) ||
+        rooted === prefix ||
+        rooted.startsWith(`${prefix}/`));
+}
+/**
+ * Child slice id matches exactly. A path matches the importer file's directory.
+ * Bare names do not match. `*` is not a wildcard.
+ */
+export function importerInEnforcedSubtree(fromPath, fromChild, entries) {
+    if (!fromChild || !entries?.length)
+        return false;
+    const child = fromChild.toLowerCase();
+    for (const raw of entries) {
+        if (typeof raw !== 'string')
+            continue;
+        const entry = siblingEntryKey(raw);
+        if (!entry || entry.includes('*'))
+            continue;
+        if (child === entry)
+            return true;
+        if (fromPath && pathUnderSubtree(fromPath, entry))
+            return true;
+    }
+    return false;
+}
+/**
+ * String `advisory` warns every sibling crossing. String `deny` and an absent
+ * value deny every one. An object denies the importer only when it is listed,
+ * unless `default` is already `deny`.
+ */
+export function siblingCrossingAdvisory(siblings, fromPath, fromChild) {
+    if (siblings == null || siblings === 'deny')
+        return false;
+    if (siblings === 'advisory')
+        return true;
+    if (siblings.default === 'deny')
+        return false;
+    return !importerInEnforcedSubtree(fromPath, fromChild, siblings.enforce);
+}
 /**
  * Universe wall, then the child wall. An allow from the child wall never
  * overturns a universe deny: that deny returns before the child wall runs.
@@ -735,7 +788,7 @@ export function evaluateNestedSliceWall(input) {
         toUniverse: input.toSlice,
     };
     if (fromChild && toChild && fromChild !== toChild) {
-        const advisory = child.siblings === 'advisory';
+        const advisory = siblingCrossingAdvisory(child.siblings, input.fromPath, fromChild);
         return {
             crossing: 'cross-sibling',
             decision: advisory ? 'advisory' : 'deny',
@@ -798,8 +851,17 @@ export function sliceFindingExtras(verdict) {
             : {}),
     };
 }
+/** True when this siblings value still leaves some crossings advisory. An enforce list does not finish the house. */
+export function childWallSiblingsAdvisory(siblings) {
+    if (siblings === 'advisory')
+        return true;
+    if (siblings !== null && typeof siblings === 'object') {
+        return siblings.default !== 'deny';
+    }
+    return false;
+}
 export function anyChildWallAdvisory(rules) {
-    return (rules ?? []).some((rule) => rule?.childSlices != null && rule.childSlices.siblings === 'advisory');
+    return (rules ?? []).some((rule) => rule?.childSlices != null && childWallSiblingsAdvisory(rule.childSlices.siblings));
 }
 /** Doctor counts. Null when this scan has no nested-wall reason, so the key stays absent. */
 export function sliceCountReport(violations) {

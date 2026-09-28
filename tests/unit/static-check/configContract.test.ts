@@ -242,7 +242,7 @@ const INVALID_CONTRACT_CASES = [
       ],
     },
     path: '$.rules[0].childSlices.siblings',
-    message: 'must be one of deny, advisory',
+    message: 'must be "deny", "advisory", or { "default"',
   },
   {
     name: 'an unknown non-identifier key',
@@ -384,6 +384,158 @@ describe('C01 config contract', () => {
       siblings: 'advisory',
       parentMayImportChild: false,
     });
+  });
+
+  it.each(CONTRACT_LOADERS)('$surface accepts siblings { default, enforce }', ({ load }) => {
+    const loaded = load({
+      ...VALID_MINIMAL_CONFIG,
+      rules: [
+        {
+          from: 'DomainModel',
+          to: 'DomainModel',
+          allowed: false,
+          peerIsolation: true,
+          childSlices: {
+            sliceFolders: ['lib/features/*/*'],
+            siblings: { default: 'advisory', enforce: ['features/projects/rfi'] },
+          },
+        },
+      ],
+    });
+    expect(loaded.config.rules[0]?.childSlices?.siblings).toEqual({
+      default: 'advisory',
+      enforce: ['features/projects/rfi'],
+    });
+  });
+
+  it.each([
+    {
+      name: 'a numeric siblings value',
+      siblings: 1,
+      path: '$.rules[0].childSlices.siblings',
+      message: 'must be "deny", "advisory", or { "default"',
+    },
+    {
+      name: 'an unknown siblings field',
+      siblings: { default: 'advisory', extra: true },
+      path: '$.rules[0].childSlices.siblings.extra',
+      message: 'unknown field',
+    },
+    {
+      name: 'a siblings object without default',
+      siblings: { enforce: ['features/projects/rfi'] },
+      path: '$.rules[0].childSlices.siblings.default',
+      message: 'is required',
+    },
+    {
+      name: 'a siblings default outside deny or advisory',
+      siblings: { default: 'warn' },
+      path: '$.rules[0].childSlices.siblings.default',
+      message: 'must be deny or advisory',
+    },
+    {
+      name: 'a siblings enforce value that is not an array',
+      siblings: { default: 'advisory', enforce: 'features/projects/rfi' },
+      path: '$.rules[0].childSlices.siblings.enforce',
+      message: 'must be an array of child slice ids or subtree paths',
+    },
+    {
+      name: 'an empty enforce entry',
+      siblings: { default: 'advisory', enforce: [''] },
+      path: '$.rules[0].childSlices.siblings.enforce[0]',
+      message: 'must be a non-empty child slice id or subtree path',
+    },
+    {
+      name: 'a non-string enforce entry',
+      siblings: { default: 'advisory', enforce: [7] },
+      path: '$.rules[0].childSlices.siblings.enforce[0]',
+      message: 'must be a non-empty child slice id or subtree path',
+    },
+    {
+      name: 'an enforce entry with an empty segment',
+      siblings: { default: 'advisory', enforce: ['features//rfi'] },
+      path: '$.rules[0].childSlices.siblings.enforce[0]',
+      message: 'without . or ..',
+    },
+    {
+      name: 'an enforce entry with ..',
+      siblings: { default: 'advisory', enforce: ['features/../rfi'] },
+      path: '$.rules[0].childSlices.siblings.enforce[0]',
+      message: 'without . or ..',
+    },
+    {
+      name: 'an enforce wildcard',
+      siblings: { default: 'advisory', enforce: ['features/projects/*'] },
+      path: '$.rules[0].childSlices.siblings.enforce[0]',
+      message: '* is not a wildcard on siblings.enforce',
+    },
+    {
+      name: 'a duplicate enforce entry',
+      siblings: { default: 'advisory', enforce: ['features/projects/rfi', 'features/projects/rfi'] },
+      path: '$.rules[0].childSlices.siblings.enforce[1]',
+      message: 'duplicate enforce entry',
+    },
+    {
+      name: 'a duplicate enforce entry that differs only by a trailing slash',
+      siblings: { default: 'advisory', enforce: ['features/projects/rfi', 'features/projects/rfi/'] },
+      path: '$.rules[0].childSlices.siblings.enforce[1]',
+      message: 'duplicate enforce entry',
+    },
+    {
+      name: 'an enforce entry of only slashes',
+      siblings: { default: 'advisory', enforce: ['///'] },
+      path: '$.rules[0].childSlices.siblings.enforce[0]',
+      message: 'without . or ..',
+    },
+  ])('rejects $name', ({ siblings, path: issuePath, message }) => {
+    const input = {
+      ...VALID_MINIMAL_CONFIG,
+      rules: [
+        {
+          from: 'DomainModel',
+          to: 'DomainModel',
+          allowed: false,
+          childSlices: { sliceFolders: ['lib/features/*/*'], siblings },
+        },
+      ],
+    };
+    expect(() => loadArkConfigContract(input)).toThrow(issuePath);
+    expect(() => loadArkConfigContract(input)).toThrow(message);
+  });
+
+  it('skips sibling checks when rules or a rule is not an object, and allows an omitted siblings key', () => {
+    expect(() => loadArkConfigContract({ ...VALID_MINIMAL_CONFIG, rules: null })).toThrow('must be an array');
+    expect(() =>
+      loadArkConfigContract({
+        ...VALID_MINIMAL_CONFIG,
+        rules: [null],
+      })
+    ).toThrow('must be an object');
+    const loaded = loadArkConfigContract({
+      ...VALID_MINIMAL_CONFIG,
+      rules: [
+        {
+          from: 'DomainModel',
+          to: 'DomainModel',
+          allowed: false,
+          childSlices: { sliceFolders: ['lib/features/*/*'] },
+        },
+      ],
+    });
+    expect(loaded.config.rules[0]?.childSlices?.siblings).toBeUndefined();
+    expect(() =>
+      loadArkConfigContract({
+        ...VALID_MINIMAL_CONFIG,
+        rules: [
+          {
+            from: 'DomainModel',
+            to: 'DomainModel',
+            allowed: false,
+            childSlices: 'features',
+          },
+        ],
+      })
+    ).toThrow('must be an object');
   });
 
   it('exports and publishes the schema through stable package subpaths', () => {

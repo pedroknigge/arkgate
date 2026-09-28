@@ -283,16 +283,29 @@ Rule fields:
   `domain`) and a flat file whose child id does not grow past the universe id are universe
   common. A child may import that common code. Common code may import a child only when
   `parentMayImportChild` is true (default false). `siblings` is `deny` (default, also when the
-  key is omitted) or `advisory`. The universe wall runs first. A denied cross-universe edge is
+  key is omitted), `advisory`, or `{ "default": "deny" | "advisory", "enforce": [...] }`.
+  The universe wall runs first. A denied cross-universe edge is
   `reasonId` `CROSS_PARENT_SLICE` and is never advisory. A denied sibling edge is
-  `CROSS_SIBLING_SLICE`: an error when `siblings` is `deny`, a warning (`failsStrict: false`)
-  when `advisory`. A new sibling crossing past the recorded baseline still fails in advisory
-  mode. The baseline key stays `ruleId|file|fromLayer|toLayer|target` and does not include
-  `reasonId`. `productHonesty.finished` stays false while any child wall is advisory.
-  Doctor `slices` is `{ crossParent, crossSibling, pairs }` for the directed universe pairs
-  that occur. A child id that does not extend its universe id warns
+  `CROSS_SIBLING_SLICE`: an error when `siblings` is `deny` or `{ "default": "deny" }`,
+  a warning (`failsStrict: false`) when `advisory`. With `{ "default": "advisory", "enforce" }`,
+  a crossing whose importer is listed is an error. Every other sibling crossing stays a warning.
+  `enforce` entries are child slice ids (`features/projects/rfi`) or subtree paths
+  (`lib/features/projects/rfi` or `src/lib/features/projects/rfi`). A child id matches that
+  importer's child id. A path matches when the importer file sits in that directory.
+  Bare names do not match. `*` is not a wildcard on this list. `default: "deny"` denies every
+  sibling crossing; the list cannot loosen it. A new advisory crossing past the recorded
+  baseline still fails, the same ratchet as a string `advisory`. An enforce list does not
+  change that function. The baseline key stays `ruleId|file|fromLayer|toLayer|target` and does
+  not include `reasonId`. `productHonesty.finished` stays false while any child wall is
+  advisory, including `{ "default": "advisory", "enforce": [...] }`. The list does not finish
+  the house. Doctor `slices` is `{ crossParent, crossSibling, pairs }` for the directed universe
+  pairs that occur. A child id that does not extend its universe id warns
   `CONFIG_CHILD_SLICE_EXTENDS` and is treated as universe common. arkgate 4.8.22 and older
-  reject the key (`CONFIG_CHILD_SLICES_VERSION`); ship it only on a newer release.
+  reject `childSlices` (`CONFIG_CHILD_SLICES_VERSION`). A build that still types `siblings` as
+  the string enum `deny | advisory` rejects the object at config load
+  (`must be one of deny, advisory` at `$.rules[n].childSlices.siblings`). It does not ignore
+  the object. No published release through 4.8.22 accepts `{ default, enforce }`. Ship that
+  form only on a release that includes it.
 
 ```jsonc
 {

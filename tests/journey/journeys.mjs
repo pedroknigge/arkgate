@@ -12,7 +12,6 @@
  * `unexpected-pass` and the journey fails until that PR flips `expect` to `pass`.
  *
  * Planned, not cases yet (#326):
- * PR3 subtree — an enforced feature's sibling crossing is an error; the others stay warnings.
  * PR4 wildcards — features/projects star to features/projects/d2d-item clears those siblings;
  *   features star-star to features/management/eos stays cross-parent, plus a config warning.
  * PR5 aliases — `lib/compliance/**` → `features/projects/compliance`; its import into
@@ -138,6 +137,7 @@ export const JOURNEYS = Object.freeze({
     Object.freeze(['ark-check', '--json', '--no-cache', '--config', 'ark.config.child-slices.json']),
     Object.freeze(['ark-check', '--doctor', '--json', '--no-cache', '--config', 'ark.config.child-slices.json']),
     Object.freeze(['ark-check', '--json', '--no-cache', '--config', 'ark.config.deny-cross-parent.json']),
+    Object.freeze(['ark-check', '--json', '--no-cache', '--config', 'ark.config.subtree.json']),
   ]),
 });
 
@@ -254,6 +254,36 @@ export const JOURNEY_CASES = Object.freeze({
         severity: 'error',
         count: 2,
         sameUniverse: 0,
+      }),
+    }),
+    Object.freeze({
+      id: 'pr3-subtree',
+      owner: '#326 PR3',
+      expect: 'pass',
+      kind: 'pr3-subtree',
+      note: 'Owned by #326 PR3. A sibling crossing from an enforced feature is an error. Crossings from features outside the enforce list stay warnings.',
+      enforced: Object.freeze([
+        Object.freeze({
+          file: 'src/lib/features/projects/rfi/load-rfi.ts',
+          target: 'src/lib/features/projects/scm/scm-board.ts',
+        }),
+      ]),
+      advisory: Object.freeze([
+        Object.freeze({
+          file: 'src/components/features/operations/dispatch/dispatch-screen.tsx',
+          target: 'src/components/features/operations/fleet/fleet-screen.tsx',
+        }),
+        Object.freeze({
+          file: 'src/lib/repositories/features/management/eos/eos-repository.ts',
+          target: 'src/lib/repositories/features/management/people/people-repository.ts',
+        }),
+      ]),
+      want: Object.freeze({
+        ruleId: 'LAYER_IMPORT_VIOLATION',
+        reasonId: 'CROSS_SIBLING_SLICE',
+        enforcedErrors: 1,
+        advisoryWarnings: 2,
+        crossParent: 5,
       }),
     }),
   ]),

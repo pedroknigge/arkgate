@@ -114,8 +114,8 @@ export type EdgeRule = {
 /**
  * Inner slice wall. `sliceFolders` names children under the universe.
  * A side with no child id (a flat file, or a `commonFolders` directory) is
- * universe common. `siblings` is `deny` or `advisory`. Cross-parent has no knob.
- * `parentMayImportChild` defaults to false.
+ * universe common. `siblings` is `deny`, `advisory`, or `{ default, enforce }`.
+ * Cross-parent has no knob. `parentMayImportChild` defaults to false.
  */
 export type ChildSlices = {
   sliceFolders: string[];
@@ -126,7 +126,18 @@ export type ChildSlices = {
 };
 
 /** How the child wall treats a sibling crossing. Absent means `deny`. */
-export type ChildSliceSiblings = 'deny' | 'advisory';
+export type ChildSliceSiblingsMode = 'deny' | 'advisory';
+
+/**
+ * Per-subtree sibling enforcement. `default` is everyone not listed.
+ * `enforce` names child slice ids or subtree paths. The list never loosens deny.
+ */
+export type ChildSliceSiblingsEnforce = {
+  default: ChildSliceSiblingsMode;
+  enforce?: string[];
+};
+
+export type ChildSliceSiblings = ChildSliceSiblingsMode | ChildSliceSiblingsEnforce;
 
 /**
  * Last published arkgate that rejects `childSlices`. The rule schema sets
@@ -946,6 +957,65 @@ export function resolveChildSliceId(
   return { mismatched: { childId: raw, universeId } };
 }
 
+function siblingEntryKey(entry: string): string {
+  return trimTrailingSlashes(entry.trim().replace(/\\/g, '/')).toLowerCase();
+}
+
+function stripSrcOrApp(value: string): string {
+  return value.replace(/^(?:src|app)\//, '');
+}
+
+/** True when the importer file sits in this directory, with or without src/ or app/. */
+function pathUnderSubtree(filePath: string, entry: string): boolean {
+  const file = filePath.replace(/\\/g, '/').replace(/^\/+/, '').toLowerCase();
+  const prefix = stripSrcOrApp(entry);
+  if (!prefix) return false;
+  const rooted = stripSrcOrApp(file);
+  return (
+    file === prefix ||
+    file.startsWith(`${prefix}/`) ||
+    rooted === prefix ||
+    rooted.startsWith(`${prefix}/`)
+  );
+}
+
+/**
+ * Child slice id matches exactly. A path matches the importer file's directory.
+ * Bare names do not match. `*` is not a wildcard.
+ */
+export function importerInEnforcedSubtree(
+  fromPath: string | undefined,
+  fromChild: string | undefined,
+  entries: readonly string[] | undefined
+): boolean {
+  if (!fromChild || !entries?.length) return false;
+  const child = fromChild.toLowerCase();
+  for (const raw of entries) {
+    if (typeof raw !== 'string') continue;
+    const entry = siblingEntryKey(raw);
+    if (!entry || entry.includes('*')) continue;
+    if (child === entry) return true;
+    if (fromPath && pathUnderSubtree(fromPath, entry)) return true;
+  }
+  return false;
+}
+
+/**
+ * String `advisory` warns every sibling crossing. String `deny` and an absent
+ * value deny every one. An object denies the importer only when it is listed,
+ * unless `default` is already `deny`.
+ */
+export function siblingCrossingAdvisory(
+  siblings: ChildSliceSiblings | undefined,
+  fromPath: string | undefined,
+  fromChild: string | undefined
+): boolean {
+  if (siblings == null || siblings === 'deny') return false;
+  if (siblings === 'advisory') return true;
+  if (siblings.default === 'deny') return false;
+  return !importerInEnforcedSubtree(fromPath, fromChild, siblings.enforce);
+}
+
 /**
  * Universe wall, then the child wall. An allow from the child wall never
  * overturns a universe deny: that deny returns before the child wall runs.
@@ -1009,7 +1079,7 @@ export function evaluateNestedSliceWall(input: {
     toUniverse: input.toSlice,
   };
   if (fromChild && toChild && fromChild !== toChild) {
-    const advisory = child.siblings === 'advisory';
+    const advisory = siblingCrossingAdvisory(child.siblings, input.fromPath, fromChild);
     return {
       crossing: 'cross-sibling',
       decision: advisory ? 'advisory' : 'deny',
@@ -1090,11 +1160,20 @@ export function sliceFindingExtras(verdict: SliceVerdict | undefined): {
   };
 }
 
+/** True when this siblings value still leaves some crossings advisory. An enforce list does not finish the house. */
+export function childWallSiblingsAdvisory(siblings: unknown): boolean {
+  if (siblings === 'advisory') return true;
+  if (siblings !== null && typeof siblings === 'object') {
+    return (siblings as { default?: unknown }).default !== 'deny';
+  }
+  return false;
+}
+
 export function anyChildWallAdvisory(
-  rules: readonly { childSlices?: { siblings?: string } }[] | undefined
+  rules: readonly { childSlices?: { siblings?: unknown } }[] | undefined
 ): boolean {
   return (rules ?? []).some(
-    (rule) => rule?.childSlices != null && rule.childSlices.siblings === 'advisory'
+    (rule) => rule?.childSlices != null && childWallSiblingsAdvisory(rule.childSlices.siblings)
   );
 }
 
