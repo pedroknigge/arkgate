@@ -393,7 +393,9 @@ function configRejectionView(stderr) {
 
 function projectFixture(fixture, step, parsed) {
   const views = FIXTURE_VIEWS[fixture] ?? { check: checkView, doctor: doctorView };
-  return (step.includes('--doctor') ? views.doctor : views.check)(parsed);
+  const project = step.includes('--doctor') ? views.doctor : views.check;
+  if (fixture === 'atlasgrid' && step.includes('--doctor')) return project(parsed, step);
+  return project(parsed);
 }
 
 function checkView(parsed) {
@@ -488,13 +490,46 @@ function atlasgridCheckView(parsed) {
   };
 }
 
-function atlasgridDoctorView(parsed) {
+function atlasgridDoctorView(parsed, step = '') {
   const base = doctorView(parsed);
   const sliceAliases = aliasSection(parsed);
+  const flatParent = stepIncludes(step, 'doctor-pilot.json') ? flatParentSection(parsed) : null;
   return {
     rulesUnderContract: base.rulesUnderContract,
     slices: sliceSection(parsed),
     ...(sliceAliases ? { sliceAliases } : {}),
+    ...(flatParent ? { flatParent } : {}),
+  };
+}
+
+function stepIncludes(step, token) {
+  if (Array.isArray(step)) return step.some((part) => String(part).includes(token));
+  return String(step).includes(token);
+}
+
+function flatParentSection(parsed) {
+  const section = parsed?.doctor?.flatParentPilot;
+  const moves = Array.isArray(section?.moves) ? section.moves.map(projectFlatMove).filter(Boolean) : [];
+  moves.sort(compareRows(['file']));
+  const loop = parsed?.doctor?.pilotLoop;
+  return {
+    moves,
+    pilotSource: typeof loop?.source === 'string' ? loop.source : null,
+  };
+}
+
+function projectFlatMove(row) {
+  if (!row || typeof row !== 'object') return null;
+  return {
+    file: typeof row.file === 'string' ? row.file : null,
+    importer: typeof row.importer === 'string' ? row.importer : null,
+    destination: typeof row.destination === 'string' ? row.destination : null,
+    layer: typeof row.layer === 'string' ? row.layer : null,
+    keepsLayer: row.keepsLayer === true,
+    keepsSlice: row.keepsSlice === true,
+    destinationChild: typeof row.destinationChild === 'string' ? row.destinationChild : null,
+    agreesWithWall: row.agreesWithWall === true,
+    evidence: typeof row.evidence === 'string' ? row.evidence : null,
   };
 }
 
@@ -628,6 +663,22 @@ function evaluateJourneyCases(fixture, steps) {
 }
 
 function evaluateJourneyCase(spec, steps) {
+  if (spec.kind === 'pr6-doctor') {
+    const check = selectStep(steps, { doctor: false, hierarchy: false, config: 'doctor-pilot' });
+    const doctor = selectStep(steps, { doctor: true, hierarchy: false, config: 'doctor-pilot' });
+    const judged = judgeDoctorPilot(spec, check?.output ?? null, doctor?.output ?? null);
+    const status = caseStatus(spec.expect, judged.met);
+    return {
+      id: spec.id,
+      owner: spec.owner,
+      expect: spec.expect,
+      status,
+      met: judged.met,
+      note: spec.note,
+      ...(judged.want ? { want: judged.want } : {}),
+      ...(judged.got !== undefined ? { got: judged.got } : {}),
+    };
+  }
   if (spec.kind === 'pr5-aliases') {
     const check = selectStep(steps, { doctor: false, hierarchy: false, config: 'aliases.json' });
     const doctor = selectStep(steps, { doctor: true, hierarchy: false, config: 'aliases.json' });
@@ -735,6 +786,8 @@ function judgeJourneyCase(spec, check, doctor) {
       throw new JourneyError('case', 'pr4-wildcards is judged with both configs');
     case 'pr5-aliases':
       throw new JourneyError('case', 'pr5-aliases is judged with the alias configs');
+    case 'pr6-doctor':
+      throw new JourneyError('case', 'pr6-doctor is judged with the doctor-pilot config');
     default:
       throw new JourneyError('case', `unknown journey case kind ${spec.kind}`);
   }
@@ -1013,6 +1066,49 @@ function judgeAliases(spec, check, doctor, badTarget, overlap, plain) {
     got.overlapRejected === true &&
     got.plainCrossParent === spec.want.plainCrossParent &&
     got.plainSibling === spec.want.plainSibling;
+  return { met, want: spec.want, got };
+}
+
+function judgeDoctorPilot(spec, check, doctor) {
+  const flat = doctor?.flatParent ?? null;
+  const moves = Array.isArray(flat?.moves) ? flat.moves : [];
+  const rfi = moves.find((row) => row.file === spec.want.file) ?? null;
+  const catalogCards = moves.filter((row) => String(row.file ?? '').endsWith('catalog-repository.ts')).length;
+  const violations = check?.violations ?? [];
+  const evidence = typeof rfi?.evidence === 'string' ? rfi.evidence : '';
+  const got = {
+    moveCount: moves.length,
+    catalogCards,
+    file: rfi?.file ?? null,
+    importer: rfi?.importer ?? null,
+    destination: rfi?.destination ?? null,
+    layer: rfi?.layer ?? null,
+    keepsLayer: rfi ? rfi.keepsLayer === true : null,
+    keepsSlice: rfi ? rfi.keepsSlice === true : null,
+    destinationChild: rfi?.destinationChild ?? null,
+    agreesWithWall: rfi ? rfi.agreesWithWall === true : null,
+    crossParent: violations.filter((row) => row.reasonId === 'CROSS_PARENT_SLICE').length,
+    crossSibling: violations.filter((row) => row.reasonId === 'CROSS_SIBLING_SLICE').length,
+    pilotSource: flat?.pilotSource ?? null,
+    evidenceHasSuggestion: evidence.includes(spec.want.evidenceSnippet),
+    evidenceClaimsDone: /\bdone\b/i.test(evidence) || /\bclean\b/i.test(evidence),
+  };
+  const met =
+    got.moveCount === spec.want.moveCount &&
+    got.catalogCards === spec.want.catalogCards &&
+    got.file === spec.want.file &&
+    got.importer === spec.want.importer &&
+    got.destination === spec.want.destination &&
+    got.layer === spec.want.layer &&
+    got.keepsLayer === spec.want.keepsLayer &&
+    got.keepsSlice === spec.want.keepsSlice &&
+    got.destinationChild === spec.want.importer &&
+    got.agreesWithWall === spec.want.agreesWithWall &&
+    got.crossParent === spec.want.crossParent &&
+    got.crossSibling === spec.want.crossSibling &&
+    got.pilotSource === spec.want.pilotSource &&
+    got.evidenceHasSuggestion === true &&
+    got.evidenceClaimsDone === false;
   return { met, want: spec.want, got };
 }
 

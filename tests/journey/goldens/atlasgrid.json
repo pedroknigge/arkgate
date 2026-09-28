@@ -360,6 +360,46 @@
         "siblingCount": 3,
         "target": "features/projects/compliance"
       }
+    },
+    {
+      "expect": "fail",
+      "got": {
+        "agreesWithWall": null,
+        "catalogCards": 0,
+        "crossParent": 5,
+        "crossSibling": 3,
+        "destination": null,
+        "destinationChild": null,
+        "evidenceClaimsDone": false,
+        "evidenceHasSuggestion": false,
+        "file": null,
+        "importer": null,
+        "keepsLayer": null,
+        "keepsSlice": null,
+        "layer": null,
+        "moveCount": 0,
+        "pilotSource": null
+      },
+      "id": "pr6-doctor",
+      "met": false,
+      "note": "Owned by #326 PR6. Doctor shows a move card for rfi-repository.ts: one importer, features/projects/rfi, destination inside that child, Persistence layer unchanged. catalog-repository.ts has two importers and has no card. The destination check uses the same slice identity as the walls, so this move does not keep the slice and the check agrees with the wall. ark-check findings stay the child-slices wall.",
+      "owner": "#326 PR6",
+      "status": "expected-fail",
+      "want": {
+        "agreesWithWall": true,
+        "catalogCards": 0,
+        "crossParent": 5,
+        "crossSibling": 3,
+        "destination": "src/lib/repositories/features/projects/rfi",
+        "evidenceSnippet": "suggestion",
+        "file": "src/lib/repositories/features/projects/rfi-repository.ts",
+        "importer": "features/projects/rfi",
+        "keepsLayer": true,
+        "keepsSlice": false,
+        "layer": "Persistence",
+        "moveCount": 1,
+        "pilotSource": "flat-parent"
+      }
     }
   ],
   "fixture": "atlasgrid",
@@ -1337,6 +1377,197 @@
       "output": {
         "configRejected": true,
         "message": "Invalid ArkGate config (<project>/ark.config.aliases-overlap.json):\n- $.rules[0].childSlices.sliceAliases[0].from: overlaps a slice folder. An alias covers only files outside the slice trees.\n- $.rules[1].childSlices.sliceAliases[0].from: overlaps a slice folder. An alias covers only files outside the slice trees.\n- $.rules[2].childSlices.sliceAliases[0].from: overlaps a slice folder. An alias covers only files outside the slice trees.\n- $.rules[3].childSlices.sliceAliases[0].from: overlaps a slice folder. An alias covers only files outside the slice trees.\n- $.rules[4].childSlices.sliceAliases[0].from: overlaps a slice folder. An alias covers only files outside the slice trees.\n- $.rules[5].childSlices.sliceAliases[0].from: overlaps a slice folder. An alias covers only files outside the slice trees.\n- $.rules[6].childSlices.sliceAliases[0].from: overlaps a slice folder. An alias covers only files outside the slice trees.\n- $.rules[7].childSlices.sliceAliases[0].from: overlaps a slice folder. An alias covers only files outside the slice trees.\n- $.rules[8].childSlices.sliceAliases[0].from: overlaps a slice folder. An alias covers only files outside the slice trees."
+      }
+    },
+    {
+      "command": "ark-check --json --no-cache --config ark.config.doctor-pilot.json",
+      "exitCode": 1,
+      "filesDiff": {},
+      "output": {
+        "completeness": "complete",
+        "ok": false,
+        "valid": false,
+        "violations": [
+          {
+            "file": "src/components/features/management/eos/eos-screen.tsx",
+            "reasonId": "CROSS_PARENT_SLICE",
+            "ruleId": "LAYER_IMPORT_VIOLATION",
+            "severity": "error",
+            "target": "src/lib/features/external/portal/portal-client.ts"
+          },
+          {
+            "file": "src/components/features/operations/dispatch/dispatch-screen.tsx",
+            "reasonId": "CROSS_SIBLING_SLICE",
+            "ruleId": "LAYER_IMPORT_VIOLATION",
+            "severity": "error",
+            "target": "src/components/features/operations/fleet/fleet-screen.tsx"
+          },
+          {
+            "file": "src/lib/features/external/vendors/vendor-sync.ts",
+            "reasonId": "CROSS_PARENT_SLICE",
+            "ruleId": "LAYER_IMPORT_VIOLATION",
+            "severity": "error",
+            "target": "src/lib/repositories/features/operations/fleet/fleet-repository.ts"
+          },
+          {
+            "file": "src/lib/features/management/budget/budget-lines.ts",
+            "reasonId": "CROSS_PARENT_SLICE",
+            "ruleId": "LAYER_IMPORT_VIOLATION",
+            "severity": "error",
+            "target": "src/lib/features/projects/d2d-item/d2d-item.ts"
+          },
+          {
+            "file": "src/lib/features/projects/domain/project-codes.ts",
+            "reasonId": null,
+            "ruleId": "LAYER_IMPORT_VIOLATION",
+            "severity": "error",
+            "target": "src/lib/features/projects/rfi/rfi-intake.ts"
+          },
+          {
+            "file": "src/lib/features/projects/rfi/load-rfi.ts",
+            "reasonId": "CROSS_PARENT_SLICE",
+            "ruleId": "LAYER_IMPORT_VIOLATION",
+            "severity": "error",
+            "target": "src/lib/features/management/eos/eos-summary.ts"
+          },
+          {
+            "file": "src/lib/features/projects/rfi/load-rfi.ts",
+            "reasonId": "CROSS_SIBLING_SLICE",
+            "ruleId": "LAYER_IMPORT_VIOLATION",
+            "severity": "error",
+            "target": "src/lib/features/projects/scm/scm-board.ts"
+          },
+          {
+            "file": "src/lib/repositories/features/management/eos/eos-repository.ts",
+            "reasonId": "CROSS_SIBLING_SLICE",
+            "ruleId": "LAYER_IMPORT_VIOLATION",
+            "severity": "error",
+            "target": "src/lib/repositories/features/management/people/people-repository.ts"
+          },
+          {
+            "file": "src/lib/repositories/features/operations/dispatch/dispatch-repository.ts",
+            "reasonId": "CROSS_PARENT_SLICE",
+            "ruleId": "LAYER_IMPORT_VIOLATION",
+            "severity": "error",
+            "target": "src/lib/features/projects/scm/scm-board.ts"
+          }
+        ],
+        "warnings": [
+          {
+            "count": 1,
+            "edges": [
+              {
+                "file": null,
+                "target": null,
+                "toSlice": null
+              }
+            ],
+            "fromLayer": null,
+            "ruleId": "CONFIG_CHILD_SLICES_VERSION",
+            "severity": "warning",
+            "toLayer": null
+          },
+          {
+            "count": 3,
+            "edges": [
+              {
+                "file": "src/lib/shared/format.ts",
+                "target": "src/lib/features/operations/dispatch/dispatch-board.ts",
+                "toSlice": "features/operations"
+              },
+              {
+                "file": "src/lib/shared/ids.ts",
+                "target": "src/lib/features/external/portal/portal-client.ts",
+                "toSlice": "features/external"
+              },
+              {
+                "file": "src/lib/shared/labels.ts",
+                "target": "src/lib/features/projects/scm/scm-board.ts",
+                "toSlice": "features/projects"
+              }
+            ],
+            "fromLayer": "Application",
+            "ruleId": "SHARED_IMPORTS_SLICE",
+            "severity": "warning",
+            "toLayer": "Application"
+          },
+          {
+            "count": 1,
+            "edges": [
+              {
+                "file": "src/lib/shared/clock.ts",
+                "target": "src/lib/repositories/features/management/people/people-repository.ts",
+                "toSlice": "features/management"
+              }
+            ],
+            "fromLayer": "Application",
+            "ruleId": "SHARED_IMPORTS_SLICE",
+            "severity": "warning",
+            "toLayer": "Persistence"
+          },
+          {
+            "count": 2,
+            "edges": [
+              {
+                "file": "src/components/ui/button.tsx",
+                "target": "src/components/features/projects/rfi/rfi-status.tsx",
+                "toSlice": "features/projects"
+              },
+              {
+                "file": "src/components/ui/dialog.tsx",
+                "target": "src/components/features/management/eos/eos-screen.tsx",
+                "toSlice": "features/management"
+              }
+            ],
+            "fromLayer": "Presentation",
+            "ruleId": "SHARED_IMPORTS_SLICE",
+            "severity": "warning",
+            "toLayer": "Presentation"
+          }
+        ]
+      }
+    },
+    {
+      "command": "ark-check --doctor --json --no-cache --config ark.config.doctor-pilot.json",
+      "exitCode": 0,
+      "filesDiff": {},
+      "output": {
+        "flatParent": {
+          "moves": [],
+          "pilotSource": null
+        },
+        "rulesUnderContract": null,
+        "slices": {
+          "crossParent": 5,
+          "crossSibling": 3,
+          "pairs": [
+            {
+              "count": 1,
+              "from": "external",
+              "to": "operations"
+            },
+            {
+              "count": 1,
+              "from": "management",
+              "to": "external"
+            },
+            {
+              "count": 1,
+              "from": "management",
+              "to": "projects"
+            },
+            {
+              "count": 1,
+              "from": "operations",
+              "to": "projects"
+            },
+            {
+              "count": 1,
+              "from": "projects",
+              "to": "management"
+            }
+          ]
+        }
       }
     }
   ]

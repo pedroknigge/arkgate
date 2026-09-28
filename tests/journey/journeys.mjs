@@ -11,9 +11,9 @@
  * green while the claim is unmet. When the claim starts holding, status becomes
  * `unexpected-pass` and the journey fails until that PR flips `expect` to `pass`.
  *
- * Planned, not a case yet (#326):
- * PR6 doctor — a move card for `rfi-repository.ts` (one importer); none for
- *   `catalog-repository.ts` (two importers).
+ * #326 PR6 is `pr6-doctor`: a move card for `rfi-repository.ts` (one importer);
+ * none for `catalog-repository.ts` (two importers). The destination check must
+ * agree with the walls under `sliceIdentity: "stars"`.
  */
 const crossParentEdges = Object.freeze([
   Object.freeze({
@@ -140,6 +140,8 @@ export const JOURNEYS = Object.freeze({
     Object.freeze(['ark-check', '--doctor', '--json', '--no-cache', '--config', 'ark.config.aliases.json']),
     Object.freeze(['ark-check', '--json', '--no-cache', '--config', 'ark.config.aliases-target.json']),
     Object.freeze(['ark-check', '--json', '--no-cache', '--config', 'ark.config.aliases-overlap.json']),
+    Object.freeze(['ark-check', '--json', '--no-cache', '--config', 'ark.config.doctor-pilot.json']),
+    Object.freeze(['ark-check', '--doctor', '--json', '--no-cache', '--config', 'ark.config.doctor-pilot.json']),
   ]),
 });
 
@@ -362,6 +364,28 @@ export const JOURNEY_CASES = Object.freeze({
         overlapSnippet: 'overlaps a slice folder',
         plainCrossParent: 5,
         plainSibling: 3,
+      }),
+    }),
+    Object.freeze({
+      id: 'pr6-doctor',
+      owner: '#326 PR6',
+      expect: 'fail',
+      kind: 'pr6-doctor',
+      note: 'Owned by #326 PR6. Doctor shows a move card for rfi-repository.ts: one importer, features/projects/rfi, destination inside that child, Persistence layer unchanged. catalog-repository.ts has two importers and has no card. The destination check uses the same slice identity as the walls, so this move does not keep the slice and the check agrees with the wall. ark-check findings stay the child-slices wall.',
+      want: Object.freeze({
+        moveCount: 1,
+        catalogCards: 0,
+        file: 'src/lib/repositories/features/projects/rfi-repository.ts',
+        importer: 'features/projects/rfi',
+        destination: 'src/lib/repositories/features/projects/rfi',
+        layer: 'Persistence',
+        keepsLayer: true,
+        keepsSlice: false,
+        agreesWithWall: true,
+        crossParent: 5,
+        crossSibling: 3,
+        pilotSource: 'flat-parent',
+        evidenceSnippet: 'suggestion',
       }),
     }),
   ]),
