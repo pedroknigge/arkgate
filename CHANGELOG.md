@@ -6,12 +6,6 @@ in the immutable pre-2.0 archive linked below.
 ## Unreleased
 
 ### Added
-- Doctor suggests a move for a flat file that sits at universe level when exactly one child slice imports it (`doctor.flatParentPilot`). The card names the file, that child, and a destination folder inside the child that keeps the file's layer. Two importers, or none, produce no card. The sentence is a suggestion. It does not change ark-check, `ruleId`, `reasonId`, or the baseline key. The reshape destination check uses the same slice identity as the walls, so `sliceIdentity: "stars"` does not treat two children as one slice. No new config field. Does not close `K01`.
-- `childSlices.sliceAliases` maps a folder outside the slice trees onto a child slice (`{ "from": "lib/compliance/**", "to": "features/projects/compliance" }`). The file takes that universe id and that child id for both walls, so an import into another universe is `CROSS_PARENT_SLICE`. A bare name, a universe id alone, an unknown universe, and a wildcard in `to` are rejected at config load. A glob that overlaps a slice folder is rejected. Two aliases that match the same file are rejected. Doctor lists each alias as an owed move (files, target slice, destination folder) and does not count the files as finished. Adding aliases is a strengthening policy delta. Removing them is weakening. Additions and removals together, including a retarget, need a judgment. `ruleId` stays `LAYER_IMPORT_VIOLATION`. The baseline key does not include `reasonId`. The write hook, ESLint, snippet analysis, ark-check, and CI all see the alias. A build that still rejects unknown `childSlices` fields rejects the key at config load. arkgate 4.8.22 and older reject `childSlices`. Does not close `K01`.
-- `childSlices.allowedCrossSlice` accepts a whole-segment `*` (`features/projects/*`). It clears only a `CROSS_SIBLING_SLICE` inside one universe. It does not clear `CROSS_PARENT_SLICE` or `CROSS_PARENT_VIA_SHARED`. A pattern that can name two universes warns `CONFIG_CHILD_SLICE_CROSS_UNIVERSE` and the cross-parent finding still fires. A bare name is rejected at config load. `**` and a partial segment are rejected. The universe `allowedCrossSlice` still treats `*` as a literal. Adding an entry is a weakening policy delta; a wildcard that widens a literal entry is weakening too. `ruleId` stays `LAYER_IMPORT_VIOLATION`. The baseline key does not include `reasonId`. The write hook, ESLint, ark-check, and CI all see the per-edge decision. A build that still rejects unknown `childSlices` fields rejects the key at config load. arkgate 4.8.22 and older reject `childSlices`. Does not close `K01`.
-- `childSlices.siblings` may be `{ "default": "advisory" | "deny", "enforce": [...] }`. A `CROSS_SIBLING_SLICE` whose importer is an enforced child id or subtree path is an error. Other sibling crossings stay warnings, and a new one past the recorded baseline still fails. `default: "deny"` denies every sibling crossing. The string forms `"deny"` and `"advisory"` stay the same. `ruleId` stays `LAYER_IMPORT_VIOLATION`. The baseline key does not include `reasonId`. `productHonesty.finished` stays false while `default` is advisory. An enforce list does not finish the house. The write hook, ESLint, ark-check, and CI all see the per-edge severity. A build that still types `siblings` as a string enum rejects the object at config load. Does not close `K01`.
-- `sharedImportsSlice` may be `"deny-cross-parent"`. The direct shared-root hop stays a `SHARED_IMPORTS_SLICE` warning. ark-check and CI add `reasonId` `CROSS_PARENT_VIA_SHARED` when a slice reaches another universe only through a shared root. A shared hop inside one universe is not a finding. `"deny"` is unchanged. The write hook and ESLint see one edge at a time and do not block the path. The baseline key does not include `reasonId`. arkgate 4.8.22 and older reject the value at config load. Does not close `K01`.
-- Optional `childSlices` on a `peerIsolation` rule: an inner wall under today's universe wall. Absent, behavior and output stay the same. Present, a cross-universe deny is `reasonId` `CROSS_PARENT_SLICE` (never advisory) and a sibling crossing is `CROSS_SIBLING_SLICE` (`siblings`: `deny` or `advisory`). `commonFolders` and flat files are universe common. `parentMayImportChild` defaults to false. The baseline key does not include `reasonId`. Advisory siblings still fail when they grow past the recorded baseline, and `productHonesty.finished` stays false while any child wall is advisory. Doctor reports `{ crossParent, crossSibling, pairs }`. arkgate 4.8.22 and older reject the key. Wildcards and aliases are not part of that introduction.
 - Soft doctor residual when Domain is declared but empty and the UI holds the
   rules (`noDomainFrontend`). Projects empty Domain + presentation share, or
   the existing `domain-logic-in-ui` smell. Friendly next step: one Domain file
@@ -101,6 +95,52 @@ in the immutable pre-2.0 archive linked below.
   `@2` pin (issue [#211](https://github.com/pedroknigge/arkgate/issues/211)).
   Existing configs keep whatever URL they already have. Editor completion
   matches the 4.x line you just installed.
+
+## 4.8.23 — 2026-09-28
+
+**Patch** over **4.8.22**. Hierarchical slices (2026-09-28 ART): the issue
+[#326](https://github.com/pedroknigge/arkgate/issues/326) series (approach B, nested wall). Optional `childSlices` on a
+`peerIsolation` rule adds an inner wall with `reasonId` `CROSS_PARENT_SLICE` /
+`CROSS_SIBLING_SLICE` ([#328](https://github.com/pedroknigge/arkgate/pull/328)), `sharedImportsSlice: "deny-cross-parent"`
+in ark-check and CI ([#329](https://github.com/pedroknigge/arkgate/pull/329)), per-subtree `childSlices.siblings.enforce`
+([#330](https://github.com/pedroknigge/arkgate/pull/330)), whole-segment `*` in `childSlices.allowedCrossSlice` ([#331](https://github.com/pedroknigge/arkgate/pull/331)),
+`childSlices.sliceAliases` ([#332](https://github.com/pedroknigge/arkgate/pull/332)), and a doctor move card for a flat
+universe-level file imported by exactly one child slice ([#333](https://github.com/pedroknigge/arkgate/pull/333)). The
+atlasgrid journey fixture backs the series ([#327](https://github.com/pedroknigge/arkgate/pull/327), tests only).
+**Write. Check. Ship.** **No required config migration.** Every new field is
+optional; absent, behavior and output stay the same. No `schemaVersion` bump.
+Does not close `K01` / `Z09`. This mother `ark.config.json` still
+does **not** turn `arkOrder` on.
+
+**Minimum version 4.8.23 for the new config fields.** `childSlices` (with
+`siblings` as `{ default, enforce }`, `allowedCrossSlice` wildcards, and
+`sliceAliases`) and `sharedImportsSlice: "deny-cross-parent"` need
+**arkgate 4.8.23** or newer everywhere the check runs (write hook, ESLint,
+ark-check, CI). arkgate 4.8.22 and older reject them at config load; they do
+not ignore them. Pin `arkgate@4.8.23` before committing a config that uses
+them.
+
+**Status: released** (tag `v4.8.23`). This file does not assert registry
+state; run `npm view arkgate@4.8.23 version` to confirm the package is
+available (#314).
+
+### Added
+- Optional `childSlices` on a `peerIsolation` rule: an inner wall under today's universe wall. Absent, behavior and output stay the same. Present, a cross-universe deny is `reasonId` `CROSS_PARENT_SLICE` (never advisory) and a sibling crossing is `CROSS_SIBLING_SLICE` (`siblings`: `deny` or `advisory`). `commonFolders` and flat files are universe common. `parentMayImportChild` defaults to false. The baseline key does not include `reasonId`. Advisory siblings still fail when they grow past the recorded baseline, and `productHonesty.finished` stays false while any child wall is advisory. Doctor reports `{ crossParent, crossSibling, pairs }`. arkgate 4.8.22 and older reject the key. Wildcards and aliases are not part of that introduction ([#328](https://github.com/pedroknigge/arkgate/pull/328) / [#326](https://github.com/pedroknigge/arkgate/issues/326)).
+- `sharedImportsSlice` may be `"deny-cross-parent"`. The direct shared-root hop stays a `SHARED_IMPORTS_SLICE` warning. ark-check and CI add `reasonId` `CROSS_PARENT_VIA_SHARED` when a slice reaches another universe only through a shared root. A shared hop inside one universe is not a finding. `"deny"` is unchanged. The write hook and ESLint see one edge at a time and do not block the path. The baseline key does not include `reasonId`. arkgate 4.8.22 and older reject the value at config load. Does not close `K01` ([#329](https://github.com/pedroknigge/arkgate/pull/329) / [#326](https://github.com/pedroknigge/arkgate/issues/326)).
+- `childSlices.siblings` may be `{ "default": "advisory" | "deny", "enforce": [...] }`. A `CROSS_SIBLING_SLICE` whose importer is an enforced child id or subtree path is an error. Other sibling crossings stay warnings, and a new one past the recorded baseline still fails. `default: "deny"` denies every sibling crossing. The string forms `"deny"` and `"advisory"` stay the same. `ruleId` stays `LAYER_IMPORT_VIOLATION`. The baseline key does not include `reasonId`. `productHonesty.finished` stays false while `default` is advisory. An enforce list does not finish the house. The write hook, ESLint, ark-check, and CI all see the per-edge severity. A build that still types `siblings` as a string enum rejects the object at config load. Does not close `K01` ([#330](https://github.com/pedroknigge/arkgate/pull/330) / [#326](https://github.com/pedroknigge/arkgate/issues/326)).
+- `childSlices.allowedCrossSlice` accepts a whole-segment `*` (`features/projects/*`). It clears only a `CROSS_SIBLING_SLICE` inside one universe. It does not clear `CROSS_PARENT_SLICE` or `CROSS_PARENT_VIA_SHARED`. A pattern that can name two universes warns `CONFIG_CHILD_SLICE_CROSS_UNIVERSE` and the cross-parent finding still fires. A bare name is rejected at config load. `**` and a partial segment are rejected. The universe `allowedCrossSlice` still treats `*` as a literal. Adding an entry is a weakening policy delta; a wildcard that widens a literal entry is weakening too. `ruleId` stays `LAYER_IMPORT_VIOLATION`. The baseline key does not include `reasonId`. The write hook, ESLint, ark-check, and CI all see the per-edge decision. A build that still rejects unknown `childSlices` fields rejects the key at config load. arkgate 4.8.22 and older reject `childSlices`. Does not close `K01` ([#331](https://github.com/pedroknigge/arkgate/pull/331) / [#326](https://github.com/pedroknigge/arkgate/issues/326)).
+- `childSlices.sliceAliases` maps a folder outside the slice trees onto a child slice (`{ "from": "lib/compliance/**", "to": "features/projects/compliance" }`). The file takes that universe id and that child id for both walls, so an import into another universe is `CROSS_PARENT_SLICE`. A bare name, a universe id alone, an unknown universe, and a wildcard in `to` are rejected at config load. A glob that overlaps a slice folder is rejected. Two aliases that match the same file are rejected. Doctor lists each alias as an owed move (files, target slice, destination folder) and does not count the files as finished. Adding aliases is a strengthening policy delta. Removing them is weakening. Additions and removals together, including a retarget, need a judgment. `ruleId` stays `LAYER_IMPORT_VIOLATION`. The baseline key does not include `reasonId`. The write hook, ESLint, snippet analysis, ark-check, and CI all see the alias. A build that still rejects unknown `childSlices` fields rejects the key at config load. arkgate 4.8.22 and older reject `childSlices`. Does not close `K01` ([#332](https://github.com/pedroknigge/arkgate/pull/332) / [#326](https://github.com/pedroknigge/arkgate/issues/326)).
+- Doctor suggests a move for a flat file that sits at universe level when exactly one child slice imports it (`doctor.flatParentPilot`). The card names the file, that child, and a destination folder inside the child that keeps the file's layer. Two importers, or none, produce no card. The sentence is a suggestion. It does not change ark-check, `ruleId`, `reasonId`, or the baseline key. No new config field. Does not close `K01` ([#333](https://github.com/pedroknigge/arkgate/pull/333) / [#326](https://github.com/pedroknigge/arkgate/issues/326)).
+
+### Fixed
+- Doctor's reshape destination check (`destinationKeepsLayerAndSlice`) uses
+  the same slice identity as the walls, so `sliceIdentity: "stars"` no longer
+  treats two children as one slice ([#333](https://github.com/pedroknigge/arkgate/pull/333)).
+
+### Changed
+- Internal: `atlasgrid` journey fixture for hierarchical slices, plus a compat
+  case that pins today's universe-wall findings for a config without
+  `childSlices`. Tests only. No product behavior change ([#327](https://github.com/pedroknigge/arkgate/pull/327)).
 
 ## 4.8.22 — 2026-09-27
 
