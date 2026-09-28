@@ -636,6 +636,58 @@ describe('policyDeltaAcknowledgementMatches (DF04 pure helper)', () => {
     );
   });
 
+  it('classifies child slice allowances, including a wildcard that widens a literal', () => {
+    const child = { sliceFolders: ['lib/features/*/*'] };
+    const withEdges = (edges: { from: string; to: string }[] | undefined) => ({
+      ...structuredClone(BASE_CONFIG),
+      rules: [
+        {
+          ...structuredClone(BASE_CONFIG.rules[0]),
+          childSlices: { ...child, ...(edges ? { allowedCrossSlice: edges } : {}) },
+        },
+      ],
+    });
+    const literal = [{ from: 'features/projects/rfi', to: 'features/projects/d2d-item' }];
+    const widened = [{ from: 'features/projects/*', to: 'features/projects/d2d-item' }];
+    const other = [{ from: 'features/operations/dispatch', to: 'features/operations/fleet' }];
+    const none = withEdges(undefined);
+    const exact = withEdges(literal);
+    const star = withEdges(widened);
+    const added = analyzePolicyDelta({ baseConfig: none, candidateConfig: exact });
+    expect(added.findings).toContainEqual(
+      expect.objectContaining({
+        classification: 'weakening',
+        message: 'Sibling crossings inside a universe are now allowed by declaration.',
+        path: '$.rules[DomainModel->DomainModel].childSlices.allowedCrossSlice',
+      })
+    );
+    const removed = analyzePolicyDelta({ baseConfig: exact, candidateConfig: none });
+    expect(removed.findings).toContainEqual(
+      expect.objectContaining({
+        classification: 'strengthening',
+        message: 'Declared sibling crossings inside a universe deny again.',
+      })
+    );
+    const widen = analyzePolicyDelta({ baseConfig: exact, candidateConfig: star });
+    expect(widen.findings).toContainEqual(
+      expect.objectContaining({
+        classification: 'weakening',
+        message: 'A wildcard widened a declared sibling allowance.',
+      })
+    );
+    const both = analyzePolicyDelta({ baseConfig: exact, candidateConfig: withEdges(other) });
+    expect(both.findings).toContainEqual(
+      expect.objectContaining({
+        classification: 'judgment-required',
+        path: '$.rules[DomainModel->DomainModel].childSlices.allowedCrossSlice',
+      })
+    );
+    const narrowed = analyzePolicyDelta({ baseConfig: star, candidateConfig: exact });
+    expect(narrowed.findings).toContainEqual(
+      expect.objectContaining({ classification: 'judgment-required' })
+    );
+  });
+
   it('tightens an enforce-list addition and loosens a removal while default stays advisory', () => {
     const child = {
       sliceFolders: ['lib/features/*/*'],

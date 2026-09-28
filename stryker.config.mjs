@@ -57,28 +57,32 @@ const config = {
     // #326 PR2 deny-cross-parent schema description shifted them by five.
     // #326 PR3 siblings object schema plus validateChildSliceSiblings shifted them by 89.
     // JSON.parse moved 90 because the new load call sits above it.
-    'src/domain/configContract.ts:661-664',
-    'src/domain/configContract.ts:666-667',
-    'src/domain/configContract.ts:687-688',
-    'src/domain/configContract.ts:693-694',
-    'src/domain/configContract.ts:703-705',
-    'src/domain/configContract.ts:716-716',
-    'src/domain/configContract.ts:723-723',
-    'src/domain/configContract.ts:732-736',
-    'src/domain/configContract.ts:747-747',
+    // #326 PR4 child allowedCrossSlice schema plus validator shifted them by 94.
+    // The load pin includes the new call. JSON.parse moved 95.
+    'src/domain/configContract.ts:755-758',
+    'src/domain/configContract.ts:760-761',
+    'src/domain/configContract.ts:781-782',
+    'src/domain/configContract.ts:787-788',
+    'src/domain/configContract.ts:797-799',
+    'src/domain/configContract.ts:810-810',
+    'src/domain/configContract.ts:817-817',
+    'src/domain/configContract.ts:826-831',
+    'src/domain/configContract.ts:842-842',
     // DF04 — selective pure truth islands (fail-closed / ack / promote honesty).
     // peerIsolationDecision is the killable fail-closed core; findDeniedEdgeDecision wires it.
     // #297 inserted the shared-imports-slice hop. Slice-id JSDoc and #308
     // sliceIdentity helpers shifted peerIsolationDecision again; retargeted to the same function.
     // #326 inserted SliceVerdict types above the same function. #326 PR2 widened
     // sharedImportsSlice and SliceReasonId above it. #326 PR3 inserted the siblings
-    // object type above it. Same peerIsolationDecision body.
-    'src/domain/layerMatch.ts:829-856',
+    // object type above it. #326 PR4 inserted child allowedCrossSlice above it.
+    // Same peerIsolationDecision body.
+    'src/domain/layerMatch.ts:834-861',
     // AP02 (#264) shifted the helper; sharedImportsSlice and #308 sliceIdentity
     // compares shifted it again. Same policyDeltaAcknowledgementMatches body.
     // #326 compareChildSlices shifted the same function by 93 lines.
     // #326 PR3 sibling enforce-list compare shifted it to 1129-1158.
-    'src/domain/policyDelta.ts:1129-1158',
+    // #326 PR4 child allowance widening compare shifted it to 1207-1236.
+    'src/domain/policyDelta.ts:1207-1236',
     // #291 declaration witness shifted formatCoverageDiscards / budgetDetail /
     // canPromoteInvariant. #307/#310 classifyCoverage shifted them again.
     // #322 declaration-miss shifted them once more.

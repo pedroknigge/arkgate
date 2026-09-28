@@ -104,6 +104,7 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 | [`CONFIG_SLICE_IDENTITY_COLLISION`](#CONFIG_SLICE_IDENTITY_COLLISION) | config | Starred slice prefixes share one id |
 | [`CONFIG_CHILD_SLICES_VERSION`](#CONFIG_CHILD_SLICES_VERSION) | config | childSlices needs a newer arkgate |
 | [`CONFIG_CHILD_SLICE_EXTENDS`](#CONFIG_CHILD_SLICE_EXTENDS) | config | Child slice id does not extend its universe |
+| [`CONFIG_CHILD_SLICE_CROSS_UNIVERSE`](#CONFIG_CHILD_SLICE_CROSS_UNIVERSE) | config | Child slice allowance cannot cross the universe wall |
 | [`ARK_UNKNOWN`](#ARK_UNKNOWN) | meta | Unknown diagnostic |
 
 ## Layer and dependency graph
@@ -116,7 +117,7 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 
 - **Why:** This file imported a folder it may not reach. The write doesn’t land. The same check fails the pull request.
 - **Fix:** Branch by import kind: constants/types/pure → adopt into DomainModel or SharedKernel (do not invent a port); kernel/events/bootstrap from Persistence → inject a port or move the map to SharedTypes (Persistence must not emit); define a port only when the target is a real use-case. Type-only edges use `import type`. Then preflight again. Do not weaken the layer rule without a hash-bound policy acknowledgement.
-- **Slice reasons:** the ruleId stays `LAYER_IMPORT_VIOLATION`. When a rule sets `childSlices`, the finding may also carry `reasonId` `CROSS_PARENT_SLICE` (this import crosses two universe slices; the child wall cannot allow another universe) or `CROSS_SIBLING_SLICE` (this import crosses two feature slices inside one universe). `siblings` may be `"deny"`, `"advisory"`, or `{ "default", "enforce" }`. An enforced importer (`enforce` entry is that child id or a subtree path of the file) is an error. Every other sibling crossing is a warning, and a new one past the baseline still fails. `default: "deny"` denies every sibling crossing. The baseline key does not include `reasonId`. Without `childSlices`, `reasonId` is absent on a direct edge. The write hook, ESLint, ark-check, and CI all see this per-edge severity. arkgate 4.8.22 and older reject `childSlices`. A build that still types `siblings` as a string enum rejects the object at config load (`must be one of deny, advisory`).
+- **Slice reasons:** the ruleId stays `LAYER_IMPORT_VIOLATION`. When a rule sets `childSlices`, the finding may also carry `reasonId` `CROSS_PARENT_SLICE` (this import crosses two universe slices; the child wall cannot allow another universe) or `CROSS_SIBLING_SLICE` (this import crosses two feature slices inside one universe). `siblings` may be `"deny"`, `"advisory"`, or `{ "default", "enforce" }`. An enforced importer (`enforce` entry is that child id or a subtree path of the file) is an error. Every other sibling crossing is a warning, and a new one past the baseline still fails. `default: "deny"` denies every sibling crossing. `childSlices.allowedCrossSlice` may use a whole-segment `*` and clears only a sibling crossing. It does not clear `CROSS_PARENT_SLICE` or `CROSS_PARENT_VIA_SHARED`. The universe `allowedCrossSlice` still treats `*` as a literal. The baseline key does not include `reasonId`. Without `childSlices`, `reasonId` is absent on a direct edge. The write hook, ESLint, ark-check, and CI all see this per-edge decision. arkgate 4.8.22 and older reject `childSlices`. A build that still types `siblings` as a string enum rejects the object at config load (`must be one of deny, advisory`). A build that still rejects unknown `childSlices` fields rejects `allowedCrossSlice` at config load (`unknown field`).
 - **`CROSS_PARENT_VIA_SHARED`:** `sharedImportsSlice` is `"deny-cross-parent"`. A slice reaches another universe only through a shared root. The finding's `file` is the slice that imported the shared root and `target` is the file in the other universe. The baseline key stays `ruleId|file|fromLayer|toLayer|target` and does not include `reasonId`. A shared hop that stays inside one universe is not this finding. The direct shared-root hop stays the `SHARED_IMPORTS_SLICE` warning. `"deny"` is unchanged and does not emit this reason. Doctor slice counts stay on `CROSS_PARENT_SLICE` and `CROSS_SIBLING_SLICE`. **ark-check and CI report this path. The write hook and ESLint see one edge at a time and do not block it.** arkgate 4.8.22 and older reject `"deny-cross-parent"` at config load.
 
 <a id="LAYER_INTENT_REFERENCE_VIOLATION"></a>
@@ -925,6 +926,15 @@ never opting out of knowing.
 
 - **Why:** A path resolved a child id that is not the universe id plus a further segment. The child wall does not treat that id as a child, so the edge is universe common until the folders line up.
 - **Fix:** Point childSlices.sliceFolders at children under the same universe id the outer sliceFolders already names. Doctor names the path. Advisory — it does not fail the check.
+
+<a id="CONFIG_CHILD_SLICE_CROSS_UNIVERSE"></a>
+
+### `CONFIG_CHILD_SLICE_CROSS_UNIVERSE`
+
+**Child slice allowance cannot cross the universe wall**
+
+- **Why:** childSlices.allowedCrossSlice names a pattern that can match two universes. That list clears only a sibling crossing inside one universe. The universe wall still denies the edge.
+- **Fix:** Narrow the pattern so both sides share one universe prefix (features/projects/* to features/projects/d2d-item), or remove the entry. This warning does not fail the check.
 
 ## Meta
 

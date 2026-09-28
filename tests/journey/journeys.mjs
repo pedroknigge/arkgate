@@ -12,8 +12,6 @@
  * `unexpected-pass` and the journey fails until that PR flips `expect` to `pass`.
  *
  * Planned, not cases yet (#326):
- * PR4 wildcards — features/projects star to features/projects/d2d-item clears those siblings;
- *   features star-star to features/management/eos stays cross-parent, plus a config warning.
  * PR5 aliases — `lib/compliance/**` → `features/projects/compliance`; its import into
  *   management reports cross-parent.
  * PR6 doctor — a move card for `rfi-repository.ts` (one importer); none for
@@ -138,6 +136,8 @@ export const JOURNEYS = Object.freeze({
     Object.freeze(['ark-check', '--doctor', '--json', '--no-cache', '--config', 'ark.config.child-slices.json']),
     Object.freeze(['ark-check', '--json', '--no-cache', '--config', 'ark.config.deny-cross-parent.json']),
     Object.freeze(['ark-check', '--json', '--no-cache', '--config', 'ark.config.subtree.json']),
+    Object.freeze(['ark-check', '--json', '--no-cache', '--config', 'ark.config.wildcards.json']),
+    Object.freeze(['ark-check', '--json', '--no-cache', '--config', 'ark.config.wildcards-bare.json']),
   ]),
 });
 
@@ -284,6 +284,39 @@ export const JOURNEY_CASES = Object.freeze({
         enforcedErrors: 1,
         advisoryWarnings: 2,
         crossParent: 5,
+      }),
+    }),
+    Object.freeze({
+      id: 'pr4-wildcards',
+      owner: '#326 PR4',
+      expect: 'pass',
+      kind: 'pr4-wildcards',
+      note: 'Owned by #326 PR4. features/projects/* to features/projects/d2d-item clears those sibling crossings. features/*/* to features/management/eos stays CROSS_PARENT_SLICE, and the config warns that the entry cannot cross the universe wall. A literal * on the universe allowedCrossSlice stays inert. A bare name is rejected at config load.',
+      cleared: Object.freeze([
+        Object.freeze({
+          file: 'src/lib/features/projects/scm/scm-uses-d2d.ts',
+          target: 'src/lib/features/projects/d2d-item/d2d-item.ts',
+        }),
+        Object.freeze({
+          file: 'src/components/features/projects/rfi/rfi-uses-d2d.tsx',
+          target: 'src/lib/features/projects/d2d-item/d2d-item.ts',
+        }),
+      ]),
+      keptSiblings: crossSiblingEdges,
+      crossParent: Object.freeze({
+        file: 'src/lib/features/projects/rfi/load-rfi.ts',
+        target: 'src/lib/features/management/eos/eos-summary.ts',
+      }),
+      want: Object.freeze({
+        clearedErrors: 0,
+        keptSiblingErrors: 3,
+        siblingCount: 3,
+        crossParentCount: 5,
+        crossParentReason: 'CROSS_PARENT_SLICE',
+        severity: 'error',
+        spanWarnings: 1,
+        spanRuleId: 'CONFIG_CHILD_SLICE_CROSS_UNIVERSE',
+        bareSnippet: 'ambiguous across universes',
       }),
     }),
   ]),

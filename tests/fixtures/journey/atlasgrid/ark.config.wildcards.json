@@ -53,14 +53,25 @@
         "commonFolders": [
           "domain"
         ],
-        "siblings": {
-          "default": "advisory",
-          "enforce": [
-            "features/projects/rfi"
-          ]
-        },
-        "parentMayImportChild": false
-      }
+        "siblings": "deny",
+        "parentMayImportChild": false,
+        "allowedCrossSlice": [
+          {
+            "from": "features/projects/*",
+            "to": "features/projects/d2d-item"
+          },
+          {
+            "from": "features/*/*",
+            "to": "features/management/eos"
+          }
+        ]
+      },
+      "allowedCrossSlice": [
+        {
+          "from": "features/*",
+          "to": "features/*"
+        }
+      ]
     },
     {
       "from": "Presentation",
@@ -84,14 +95,25 @@
         "commonFolders": [
           "domain"
         ],
-        "siblings": {
-          "default": "advisory",
-          "enforce": [
-            "features/projects/rfi"
-          ]
-        },
-        "parentMayImportChild": false
-      }
+        "siblings": "deny",
+        "parentMayImportChild": false,
+        "allowedCrossSlice": [
+          {
+            "from": "features/projects/*",
+            "to": "features/projects/d2d-item"
+          },
+          {
+            "from": "features/*/*",
+            "to": "features/management/eos"
+          }
+        ]
+      },
+      "allowedCrossSlice": [
+        {
+          "from": "features/*",
+          "to": "features/*"
+        }
+      ]
     },
     {
       "from": "Presentation",
@@ -115,14 +137,25 @@
         "commonFolders": [
           "domain"
         ],
-        "siblings": {
-          "default": "advisory",
-          "enforce": [
-            "features/projects/rfi"
-          ]
-        },
-        "parentMayImportChild": false
-      }
+        "siblings": "deny",
+        "parentMayImportChild": false,
+        "allowedCrossSlice": [
+          {
+            "from": "features/projects/*",
+            "to": "features/projects/d2d-item"
+          },
+          {
+            "from": "features/*/*",
+            "to": "features/management/eos"
+          }
+        ]
+      },
+      "allowedCrossSlice": [
+        {
+          "from": "features/*",
+          "to": "features/*"
+        }
+      ]
     },
     {
       "from": "Application",
@@ -146,14 +179,25 @@
         "commonFolders": [
           "domain"
         ],
-        "siblings": {
-          "default": "advisory",
-          "enforce": [
-            "features/projects/rfi"
-          ]
-        },
-        "parentMayImportChild": false
-      }
+        "siblings": "deny",
+        "parentMayImportChild": false,
+        "allowedCrossSlice": [
+          {
+            "from": "features/projects/*",
+            "to": "features/projects/d2d-item"
+          },
+          {
+            "from": "features/*/*",
+            "to": "features/management/eos"
+          }
+        ]
+      },
+      "allowedCrossSlice": [
+        {
+          "from": "features/*",
+          "to": "features/*"
+        }
+      ]
     },
     {
       "from": "Application",
@@ -177,14 +221,25 @@
         "commonFolders": [
           "domain"
         ],
-        "siblings": {
-          "default": "advisory",
-          "enforce": [
-            "features/projects/rfi"
-          ]
-        },
-        "parentMayImportChild": false
-      }
+        "siblings": "deny",
+        "parentMayImportChild": false,
+        "allowedCrossSlice": [
+          {
+            "from": "features/projects/*",
+            "to": "features/projects/d2d-item"
+          },
+          {
+            "from": "features/*/*",
+            "to": "features/management/eos"
+          }
+        ]
+      },
+      "allowedCrossSlice": [
+        {
+          "from": "features/*",
+          "to": "features/*"
+        }
+      ]
     },
     {
       "from": "Application",
@@ -208,14 +263,25 @@
         "commonFolders": [
           "domain"
         ],
-        "siblings": {
-          "default": "advisory",
-          "enforce": [
-            "features/projects/rfi"
-          ]
-        },
-        "parentMayImportChild": false
-      }
+        "siblings": "deny",
+        "parentMayImportChild": false,
+        "allowedCrossSlice": [
+          {
+            "from": "features/projects/*",
+            "to": "features/projects/d2d-item"
+          },
+          {
+            "from": "features/*/*",
+            "to": "features/management/eos"
+          }
+        ]
+      },
+      "allowedCrossSlice": [
+        {
+          "from": "features/*",
+          "to": "features/*"
+        }
+      ]
     },
     {
       "from": "Persistence",
@@ -239,14 +305,25 @@
         "commonFolders": [
           "domain"
         ],
-        "siblings": {
-          "default": "advisory",
-          "enforce": [
-            "features/projects/rfi"
-          ]
-        },
-        "parentMayImportChild": false
-      }
+        "siblings": "deny",
+        "parentMayImportChild": false,
+        "allowedCrossSlice": [
+          {
+            "from": "features/projects/*",
+            "to": "features/projects/d2d-item"
+          },
+          {
+            "from": "features/*/*",
+            "to": "features/management/eos"
+          }
+        ]
+      },
+      "allowedCrossSlice": [
+        {
+          "from": "features/*",
+          "to": "features/*"
+        }
+      ]
     },
     {
       "from": "Persistence",
@@ -270,14 +347,25 @@
         "commonFolders": [
           "domain"
         ],
-        "siblings": {
-          "default": "advisory",
-          "enforce": [
-            "features/projects/rfi"
-          ]
-        },
-        "parentMayImportChild": false
-      }
+        "siblings": "deny",
+        "parentMayImportChild": false,
+        "allowedCrossSlice": [
+          {
+            "from": "features/projects/*",
+            "to": "features/projects/d2d-item"
+          },
+          {
+            "from": "features/*/*",
+            "to": "features/management/eos"
+          }
+        ]
+      },
+      "allowedCrossSlice": [
+        {
+          "from": "features/*",
+          "to": "features/*"
+        }
+      ]
     },
     {
       "from": "Persistence",
@@ -301,18 +389,25 @@
         "commonFolders": [
           "domain"
         ],
-        "siblings": {
-          "default": "advisory",
-          "enforce": [
-            "features/projects/rfi"
-          ]
-        },
-        "parentMayImportChild": false
-      }
+        "siblings": "deny",
+        "parentMayImportChild": false,
+        "allowedCrossSlice": [
+          {
+            "from": "features/projects/*",
+            "to": "features/projects/d2d-item"
+          },
+          {
+            "from": "features/*/*",
+            "to": "features/management/eos"
+          }
+        ]
+      },
+      "allowedCrossSlice": [
+        {
+          "from": "features/*",
+          "to": "features/*"
+        }
+      ]
     }
-  ],
-  "exclude": [
-    "src/lib/features/projects/scm/scm-uses-d2d.ts",
-    "src/components/features/projects/rfi/rfi-uses-d2d.tsx"
   ]
 }

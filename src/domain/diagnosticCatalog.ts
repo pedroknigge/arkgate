@@ -700,6 +700,14 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
     'Point childSlices.sliceFolders at children under the same universe id the outer sliceFolders already names. Doctor names the path.',
     { oftenAdvisory: true }
   ),
+  entry(
+    'CONFIG_CHILD_SLICE_CROSS_UNIVERSE',
+    'config',
+    'Child slice allowance cannot cross the universe wall',
+    'childSlices.allowedCrossSlice names a pattern that can match two universes. That list clears only a sibling crossing inside one universe. The universe wall still denies the edge.',
+    'Narrow the pattern so both sides share one universe prefix (features/projects/* to features/projects/d2d-item), or remove the entry. This warning does not fail the check.',
+    { oftenAdvisory: true }
+  ),
 
   // ── literal path drift ───────────────────────────────────────────────────
   entry(
