@@ -76,7 +76,11 @@ export async function journey(fixture, steps, options = {}) {
         );
       }
       const after = snapshotTree(project);
-      const output = projectStep(fixture, step, result.stdout, { project, runRoot, version });
+      const output = projectStep(fixture, step, result.stdout, result.stderr ?? '', {
+        project,
+        runRoot,
+        version,
+      });
       observedSteps.push({
         command: commandText(step),
         exitCode: result.status,
@@ -346,11 +350,20 @@ function diffSnapshots(before, after) {
   return diff;
 }
 
-function projectStep(fixture, step, stdout, ctx) {
+function projectStep(fixture, step, stdout, stderr, ctx) {
   let parsed;
   try {
     parsed = JSON.parse(stdout);
   } catch {
+    const rejected = configRejectionView(stderr);
+    if (rejected) {
+      const normalized = applyPlaceholders(rejected, ctx);
+      const residual = JSON.stringify(normalized);
+      if (residual.includes(ctx.project) || residual.includes(ctx.runRoot) || residual.includes(os.homedir())) {
+        throw new JourneyError('view', `${commandText(step)} observation still contains a machine path`);
+      }
+      return normalized;
+    }
     throw new JourneyError('view', `${commandText(step)} did not print JSON\n${stdout.slice(0, 500)}`);
   }
   const projected = projectFixture(fixture, step, parsed);
@@ -371,6 +384,12 @@ const FIXTURE_VIEWS = {
   ledgerline: { check: checkView, doctor: doctorView },
   atlasgrid: { check: atlasgridCheckView, doctor: atlasgridDoctorView },
 };
+
+function configRejectionView(stderr) {
+  const text = String(stderr ?? '').replace(/\r\n/g, '\n').trim();
+  if (!text.includes('Invalid ArkGate config')) return null;
+  return { configRejected: true, message: text };
+}
 
 function projectFixture(fixture, step, parsed) {
   const views = FIXTURE_VIEWS[fixture] ?? { check: checkView, doctor: doctorView };
@@ -583,6 +602,22 @@ function evaluateJourneyCases(fixture, steps) {
 }
 
 function evaluateJourneyCase(spec, steps) {
+  if (spec.kind === 'pr4-wildcards') {
+    const check = selectStep(steps, { doctor: false, hierarchy: false, config: 'wildcards.json' });
+    const bare = selectStep(steps, { doctor: false, hierarchy: false, config: 'wildcards-bare' });
+    const judged = judgeWildcards(spec, check?.output ?? null, bare?.output ?? null);
+    const status = caseStatus(spec.expect, judged.met);
+    return {
+      id: spec.id,
+      owner: spec.owner,
+      expect: spec.expect,
+      status,
+      met: judged.met,
+      note: spec.note,
+      ...(judged.want ? { want: judged.want } : {}),
+      ...(judged.got !== undefined ? { got: judged.got } : {}),
+    };
+  }
   const config =
     spec.kind === 'pr2-laundering'
       ? 'deny-cross-parent'
@@ -644,6 +679,8 @@ function judgeJourneyCase(spec, check, doctor) {
       return judgeLaundering(spec, check);
     case 'pr3-subtree':
       return judgeSubtree(spec, check);
+    case 'pr4-wildcards':
+      throw new JourneyError('case', 'pr4-wildcards is judged with both configs');
     default:
       throw new JourneyError('case', `unknown journey case kind ${spec.kind}`);
   }
@@ -810,6 +847,57 @@ function judgeSubtree(spec, check) {
     named.every(
       (row) => row && row.ruleId === spec.want.ruleId && row.reasonId === spec.want.reasonId
     );
+  return { met, want: spec.want, got };
+}
+
+function judgeWildcards(spec, check, bare) {
+  const violations = check?.violations ?? [];
+  const clearedErrors = spec.cleared.filter((edge) =>
+    violations.some(
+      (row) =>
+        row.file === edge.file &&
+        row.target === edge.target &&
+        row.reasonId === 'CROSS_SIBLING_SLICE' &&
+        row.severity === 'error'
+    )
+  ).length;
+  const keptSiblingErrors = spec.keptSiblings.filter((edge) =>
+    violations.some(
+      (row) =>
+        row.file === edge.file &&
+        row.target === edge.target &&
+        row.reasonId === 'CROSS_SIBLING_SLICE' &&
+        row.severity === 'error'
+    )
+  ).length;
+  const crossParent = violations.find(
+    (row) => row.file === spec.crossParent.file && row.target === spec.crossParent.target
+  );
+  const siblingCount = violations.filter((row) => row.reasonId === 'CROSS_SIBLING_SLICE').length;
+  const crossParentCount = violations.filter((row) => row.reasonId === 'CROSS_PARENT_SLICE').length;
+  const spanWarnings = (check?.warnings ?? [])
+    .filter((group) => group.ruleId === spec.want.spanRuleId)
+    .reduce((sum, group) => sum + (group.count ?? 0), 0);
+  const bareMessage = typeof bare?.message === 'string' ? bare.message : '';
+  const got = {
+    clearedErrors,
+    keptSiblingErrors,
+    siblingCount,
+    crossParentCount,
+    crossParentReason: crossParent?.reasonId ?? null,
+    crossParentSeverity: crossParent?.severity ?? null,
+    spanWarnings,
+    bareRejected: bare?.configRejected === true && bareMessage.includes(spec.want.bareSnippet),
+  };
+  const met =
+    got.clearedErrors === spec.want.clearedErrors &&
+    got.keptSiblingErrors === spec.want.keptSiblingErrors &&
+    got.siblingCount === spec.want.siblingCount &&
+    got.crossParentCount === spec.want.crossParentCount &&
+    got.crossParentReason === spec.want.crossParentReason &&
+    got.crossParentSeverity === spec.want.severity &&
+    got.spanWarnings === spec.want.spanWarnings &&
+    got.bareRejected === true;
   return { met, want: spec.want, got };
 }
 

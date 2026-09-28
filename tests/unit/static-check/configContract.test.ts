@@ -503,6 +503,125 @@ describe('C01 config contract', () => {
     expect(() => loadArkConfigContract(input)).toThrow(message);
   });
 
+  it.each(CONTRACT_LOADERS)('$surface accepts a whole-segment child slice wildcard', ({ load }) => {
+    const loaded = load({
+      ...VALID_MINIMAL_CONFIG,
+      rules: [
+        {
+          from: 'DomainModel',
+          to: 'DomainModel',
+          allowed: false,
+          peerIsolation: true,
+          allowedCrossSlice: [{ from: '*', to: 'features/*' }],
+          childSlices: {
+            sliceFolders: ['lib/features/*/*'],
+            allowedCrossSlice: [
+              { from: 'features/projects/*', to: 'features/projects/d2d-item' },
+              { from: 'features/*/*', to: 'features/management/eos' },
+            ],
+          },
+        },
+      ],
+    });
+    expect(loaded.config.rules[0]?.allowedCrossSlice).toEqual([{ from: '*', to: 'features/*' }]);
+    expect(loaded.config.rules[0]?.childSlices?.allowedCrossSlice).toEqual([
+      { from: 'features/projects/*', to: 'features/projects/d2d-item' },
+      { from: 'features/*/*', to: 'features/management/eos' },
+    ]);
+  });
+
+  it.each([
+    {
+      name: 'a bare child slice allowance',
+      allowedCrossSlice: [{ from: 'd2d-item', to: 'features/projects/scm' }],
+      path: '$.rules[0].childSlices.allowedCrossSlice[0].from',
+      message: 'ambiguous across universes',
+    },
+    {
+      name: 'a partial-segment child slice wildcard',
+      allowedCrossSlice: [{ from: 'features/proj*', to: 'features/projects/d2d-item' }],
+      path: '$.rules[0].childSlices.allowedCrossSlice[0].from',
+      message: 'one whole path segment',
+    },
+    {
+      name: 'a double-star child slice allowance',
+      allowedCrossSlice: [{ from: 'features/**', to: 'features/projects/d2d-item' }],
+      path: '$.rules[0].childSlices.allowedCrossSlice[0].from',
+      message: 'one whole path segment',
+    },
+    {
+      name: 'a child slice allowance with an empty segment',
+      allowedCrossSlice: [{ from: 'features//projects', to: 'features/projects/d2d-item' }],
+      path: '$.rules[0].childSlices.allowedCrossSlice[0].from',
+      message: 'without empty, . or ..',
+    },
+    {
+      name: 'a child slice allowance with a dot segment',
+      allowedCrossSlice: [{ from: 'features/./projects', to: 'features/projects/d2d-item' }],
+      path: '$.rules[0].childSlices.allowedCrossSlice[0].from',
+      message: 'without empty, . or ..',
+    },
+    {
+      name: 'a child slice allowance with a parent segment',
+      allowedCrossSlice: [{ from: 'features/../projects', to: 'features/projects/d2d-item' }],
+      path: '$.rules[0].childSlices.allowedCrossSlice[0].from',
+      message: 'without empty, . or ..',
+    },
+    {
+      name: 'a non-string child slice allowance side',
+      allowedCrossSlice: [{ from: 7, to: 'features/projects/d2d-item' }],
+      path: '$.rules[0].childSlices.allowedCrossSlice[0].from',
+      message: 'must be a non-empty slice id',
+    },
+    {
+      name: 'a non-array child slice allowance',
+      allowedCrossSlice: { from: 'features/projects/*', to: 'features/projects/d2d-item' },
+      path: '$.rules[0].childSlices.allowedCrossSlice',
+      message: 'must be an array',
+    },
+    {
+      name: 'an empty child slice allowance side',
+      allowedCrossSlice: [{ from: '   ', to: 'features/projects/d2d-item' }],
+      path: '$.rules[0].childSlices.allowedCrossSlice[0].from',
+      message: 'must be a non-empty slice id',
+    },
+    {
+      name: 'a child slice allowance that is not an object',
+      allowedCrossSlice: ['features/projects/*'],
+      path: '$.rules[0].childSlices.allowedCrossSlice[0]',
+      message: 'must be an object',
+    },
+    {
+      name: 'an unknown child slice allowance field',
+      allowedCrossSlice: [{ from: 'features/projects/*', to: 'features/projects/d2d-item', extra: true }],
+      path: '$.rules[0].childSlices.allowedCrossSlice[0].extra',
+      message: 'unknown field',
+    },
+    {
+      name: 'a duplicate child slice allowance',
+      allowedCrossSlice: [
+        { from: 'features/projects/*', to: 'features/projects/d2d-item' },
+        { from: 'features/projects/*', to: 'features/projects/d2d-item/' },
+      ],
+      path: '$.rules[0].childSlices.allowedCrossSlice[1]',
+      message: 'duplicate child slice allowance',
+    },
+  ])('rejects $name', ({ allowedCrossSlice, path: issuePath, message }) => {
+    const input = {
+      ...VALID_MINIMAL_CONFIG,
+      rules: [
+        {
+          from: 'DomainModel',
+          to: 'DomainModel',
+          allowed: false,
+          childSlices: { sliceFolders: ['lib/features/*/*'], allowedCrossSlice },
+        },
+      ],
+    };
+    expect(() => loadArkConfigContract(input)).toThrow(issuePath);
+    expect(() => loadArkConfigContract(input)).toThrow(message);
+  });
+
   it('skips sibling checks when rules or a rule is not an object, and allows an omitted siblings key', () => {
     expect(() => loadArkConfigContract({ ...VALID_MINIMAL_CONFIG, rules: null })).toThrow('must be an array');
     expect(() =>

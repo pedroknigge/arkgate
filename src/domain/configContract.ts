@@ -299,7 +299,7 @@ export const ARK_CONFIG_SCHEMA = {
           additionalProperties: false,
           required: ['sliceFolders'],
           description:
-            'Optional inner wall under this rule. Absent keeps today\'s universe wall. sliceFolders names children. commonFolders and flat files are universe common. siblings is "deny" (default), "advisory", or { default, enforce }. parentMayImportChild defaults to false. Cross-parent has no advisory knob. arkgate 4.8.22 and older reject this key. A build that still types siblings as a string enum rejects the object at config load.',
+            'Optional inner wall under this rule. Absent keeps today\'s universe wall. sliceFolders names children. commonFolders and flat files are universe common. siblings is "deny" (default), "advisory", or { default, enforce }. parentMayImportChild defaults to false. allowedCrossSlice may use a whole-segment *. It clears only a sibling crossing. Cross-parent has no advisory knob. arkgate 4.8.22 and older reject this key. A build that still rejects unknown childSlices fields rejects allowedCrossSlice at config load. A build that still types siblings as a string enum rejects the object at config load.',
           properties: {
             sliceFolders: { ...stringArraySchema, minItems: 1 },
             sliceIdentity: {
@@ -324,6 +324,21 @@ export const ARK_CONFIG_SCHEMA = {
               ],
             },
             parentMayImportChild: { type: 'boolean' },
+            allowedCrossSlice: {
+              type: 'array',
+              minItems: 1,
+              description:
+                'Directed child-slice allowances. * matches one whole path segment (features/projects/*). ** and a partial segment are rejected. A bare name is rejected. This list clears only CROSS_SIBLING_SLICE. It cannot clear CROSS_PARENT_SLICE or CROSS_PARENT_VIA_SHARED. The universe allowedCrossSlice still treats * as a literal. A build that rejects unknown childSlices fields fails at config load (unknown field).',
+              items: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['from', 'to'],
+                properties: {
+                  from: { type: 'string', minLength: 1 },
+                  to: { type: 'string', minLength: 1 },
+                },
+              },
+            },
           },
         },
       },
@@ -585,6 +600,85 @@ function validateChildSliceSiblings(candidate: Record<string, unknown>, issues: 
   });
 }
 
+const BARE_CHILD_CROSS_SLICE =
+  'must be a slice id with a slash. A bare name is ambiguous across universes.';
+
+const WHOLE_SEGMENT_STAR =
+  '* matches one whole path segment. ** and a partial segment are not wildcards.';
+
+/**
+ * Whole-segment `*` is legal only on this list. A bare name is rejected.
+ * The universe allowedCrossSlice is not checked here and still treats `*` as a literal.
+ */
+function childCrossSlicePatternIssue(raw: string): string | null {
+  const trimmed = trimTrailingSlashes(raw.trim().replace(/\\/g, '/'));
+  if (trimmed.length === 0) return 'must be a non-empty slice id';
+  if (!trimmed.includes('/')) return BARE_CHILD_CROSS_SLICE;
+  const parts = trimmed.split('/');
+  for (const part of parts) {
+    if (part.length === 0 || part === '.' || part === '..') {
+      return 'must be a slice id without empty, . or .. segments';
+    }
+    if (part.includes('*') && part !== '*') return WHOLE_SEGMENT_STAR;
+  }
+  return null;
+}
+
+function childCrossSlicePatternKey(raw: string): string {
+  return trimTrailingSlashes(raw.trim().replace(/\\/g, '/')).toLowerCase();
+}
+
+function validateChildSliceAllowedCrossSlice(
+  candidate: Record<string, unknown>,
+  issues: ArkConfigIssue[]
+): void {
+  const rules = candidate.rules;
+  if (!Array.isArray(rules)) return;
+  rules.forEach((rule, index) => {
+    if (!isObject(rule)) return;
+    const child = rule.childSlices;
+    if (!isObject(child) || child.allowedCrossSlice === undefined) return;
+    const edges = child.allowedCrossSlice;
+    const path = `$.rules[${index}].childSlices.allowedCrossSlice`;
+    if (!Array.isArray(edges)) {
+      issues.push({ path, message: 'must be an array of { from, to } child slice ids' });
+      return;
+    }
+    const seen = new Set<string>();
+    edges.forEach((edge, edgeIndex) => {
+      const edgePath = `${path}[${edgeIndex}]`;
+      if (!isObject(edge)) {
+        issues.push({ path: edgePath, message: 'must be an object with from and to' });
+        return;
+      }
+      for (const key of Object.keys(edge)) {
+        if (key !== 'from' && key !== 'to') {
+          issues.push({ path: propertyPath(edgePath, key), message: 'unknown field' });
+        }
+      }
+      for (const side of ['from', 'to'] as const) {
+        const value = edge[side];
+        const sidePath = `${edgePath}.${side}`;
+        if (typeof value !== 'string' || value.trim().length === 0) {
+          issues.push({ path: sidePath, message: 'must be a non-empty slice id' });
+          continue;
+        }
+        const issue = childCrossSlicePatternIssue(value);
+        if (issue) issues.push({ path: sidePath, message: issue });
+      }
+      if (typeof edge.from !== 'string' || typeof edge.to !== 'string') return;
+      const key = `${childCrossSlicePatternKey(edge.from)}\0${childCrossSlicePatternKey(edge.to)}`;
+      if (!key.startsWith('\0') && !key.endsWith('\0')) {
+        if (seen.has(key)) {
+          issues.push({ path: edgePath, message: 'duplicate child slice allowance' });
+          return;
+        }
+        seen.add(key);
+      }
+    });
+  });
+}
+
 function validateLayerOwners(candidate: Record<string, unknown>, issues: ArkConfigIssue[]): void {
   const layers = candidate.layers;
   if (!Array.isArray(layers)) return;
@@ -733,6 +827,7 @@ export function loadArkConfigContract(
   validateArkOrderExtra(candidate, issues);
   validateLayerOwners(candidate, issues);
   validateChildSliceSiblings(candidate, issues);
+  validateChildSliceAllowedCrossSlice(candidate, issues);
   if (issues.length > 0) throw new ArkConfigValidationError(source, issues);
 
   return { config: candidate as ArkConfig, migratedFrom };

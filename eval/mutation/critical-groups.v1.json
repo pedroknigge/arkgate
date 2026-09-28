@@ -4,52 +4,52 @@
   "groups": [
     {
       "id": "config-loading",
-      "note": "4.8.4 pins (467–473 version parse, 493–551 walk/load/parse) drifted onto validateLayerOwners and JSDoc after LO01 owners + trustBoundary. Retargeted to the same migrateArkConfig / load / JSON.parse decisions. #297 added sharedImportsSlice and shifted these pins by one. #308 sliceIdentity schema shifted them by seven. #326 childSlices schema shifted the same decisions by 17 lines. #326 PR2 deny-cross-parent schema description shifted them by five. #326 PR3 siblings object schema plus validateChildSliceSiblings shifted the same decisions by 89 lines (661–664, 666–667, 687–688, 693–694, 703–705, 716, 723, 732–736). JSON.parse moved 90 (747) because the new load call sits above it. The pin includes that call. Skip the equivalent typeof guard (one line after the unversioned branch).",
+      "note": "4.8.4 pins (467–473 version parse, 493–551 walk/load/parse) drifted onto validateLayerOwners and JSDoc after LO01 owners + trustBoundary. Retargeted to the same migrateArkConfig / load / JSON.parse decisions. #297 added sharedImportsSlice and shifted these pins by one. #308 sliceIdentity schema shifted them by seven. #326 childSlices schema shifted the same decisions by 17 lines. #326 PR2 deny-cross-parent schema description shifted them by five. #326 PR3 siblings object schema plus validateChildSliceSiblings shifted the same decisions by 89 lines. #326 PR4 childSlices.allowedCrossSlice schema plus validateChildSliceAllowedCrossSlice shifted the same decisions by 94 lines (755–758, 760–761, 781–782, 787–788, 797–799, 810, 817, 826–831). The load pin includes the new call. JSON.parse moved 95 (842) because that call sits above it. Skip the equivalent typeof guard (one line after the unversioned branch).",
       "targets": [
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 661,
-          "endLine": 664
+          "startLine": 755,
+          "endLine": 758
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 666,
-          "endLine": 667
+          "startLine": 760,
+          "endLine": 761
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 687,
-          "endLine": 688
+          "startLine": 781,
+          "endLine": 782
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 693,
-          "endLine": 694
+          "startLine": 787,
+          "endLine": 788
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 703,
-          "endLine": 705
+          "startLine": 797,
+          "endLine": 799
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 716,
-          "endLine": 716
+          "startLine": 810,
+          "endLine": 810
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 723,
-          "endLine": 723
+          "startLine": 817,
+          "endLine": 817
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 732,
-          "endLine": 736
+          "startLine": 826,
+          "endLine": 831
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 747,
-          "endLine": 747
+          "startLine": 842,
+          "endLine": 842
         }
       ]
     },
@@ -149,12 +149,12 @@
     },
     {
       "id": "peer-isolation-fail-closed",
-      "note": "DF04: peerIsolationDecision pure fail-closed core (missing paths/slices/folders, declared shared roots, declared cross-slice edges, shared-imports-slice). peerIsolationMustDeny is its boolean face. #297 shifted the function. Slice-id JSDoc and #308 sliceIdentity helpers shifted it again; retargeted to the same body. #326 inserted SliceVerdict types above the same function. #326 PR2 widened sharedImportsSlice and SliceReasonId above the same function (818–845). #326 PR3 inserted the siblings object type above the same function (829–856). The pin does not cover the child wall or the laundering post-pass.",
+      "note": "DF04: peerIsolationDecision pure fail-closed core (missing paths/slices/folders, declared shared roots, declared cross-slice edges, shared-imports-slice). peerIsolationMustDeny is its boolean face. #297 shifted the function. Slice-id JSDoc and #308 sliceIdentity helpers shifted it again; retargeted to the same body. #326 inserted SliceVerdict types above the same function. #326 PR2 widened sharedImportsSlice and SliceReasonId above the same function (818–845). #326 PR3 inserted the siblings object type above the same function (829–856). #326 PR4 inserted the child allowedCrossSlice field above the same function (834–861). The pin does not cover the child wall or the laundering post-pass.",
       "targets": [
         {
           "file": "src/domain/layerMatch.ts",
-          "startLine": 829,
-          "endLine": 856
+          "startLine": 834,
+          "endLine": 861
         }
       ]
     },

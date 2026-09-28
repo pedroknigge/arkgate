@@ -91,6 +91,7 @@ export type EdgeRule = {
    * (`features/auth`) or by bare slice name (`auth`), case-insensitively — a bare
    * name matches that name under *any* slice folder, so write the full id in a repo
    * with several slice parents. Everything not declared still denies.
+   * `*` is a literal character on this list, not a wildcard.
    */
   allowedCrossSlice?: CrossSliceEdge[];
   /**
@@ -116,6 +117,8 @@ export type EdgeRule = {
  * A side with no child id (a flat file, or a `commonFolders` directory) is
  * universe common. `siblings` is `deny`, `advisory`, or `{ default, enforce }`.
  * Cross-parent has no knob. `parentMayImportChild` defaults to false.
+ * `allowedCrossSlice` here may use a whole-segment `*`. It clears only a
+ * sibling crossing, and only after the universe wall has allowed the edge.
  */
 export type ChildSlices = {
   sliceFolders: string[];
@@ -123,6 +126,8 @@ export type ChildSlices = {
   commonFolders?: string[];
   siblings?: ChildSliceSiblings;
   parentMayImportChild?: boolean;
+  /** Directed child allowances. `*` matches one whole segment. Never a universe excuse. */
+  allowedCrossSlice?: CrossSliceEdge[];
 };
 
 /** How the child wall treats a sibling crossing. Absent means `deny`. */

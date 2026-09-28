@@ -97,6 +97,11 @@ export type ArkConfigChildSlices = {
     | 'advisory'
     | { default: 'deny' | 'advisory'; enforce?: string[] };
   parentMayImportChild?: boolean;
+  /**
+   * Directed child-slice allowances. `*` is one whole path segment.
+   * Clears a sibling crossing only. The universe `allowedCrossSlice` does not read this list.
+   */
+  allowedCrossSlice?: ArkConfigCrossSliceEdge[];
 };
 
 export type ArkConfigCrossSliceEdge = {
