@@ -9,6 +9,7 @@ import {
   buildPatternBetsFromSmells,
   isNonProductionPilotPath,
 } from './design-smells.mjs';
+import { flatParentCandidates } from './flat-parent-pilot.mjs';
 
 /** Stable product id for JSON / tests. */
 export const PILOT_LOOP_ID = 'one-pilot-redoctor';
@@ -181,7 +182,7 @@ export function formatExtractionCard(card) {
  * One proposed pilot. The loop does not know designWeak or which sensor
  * produced the card — only this list.
  *
- * @typedef {'pattern-bet' | 'reshape'} PilotSource
+ * @typedef {'pattern-bet' | 'reshape' | 'flat-parent'} PilotSource
  * @typedef {{
  *   source: PilotSource,
  *   target: string,
@@ -243,10 +244,15 @@ function extractionCardFromCandidate(candidate) {
     .filter((entry) => typeof entry === 'string' && entry.length > 0)
     .slice(0, 8);
   const reshape = candidate.source === 'reshape';
+  const flatParent = candidate.source === 'flat-parent';
   return {
     id: PILOT_LOOP_ID,
-    patternBetId: reshape ? `reshape:${candidate.target}` : `pattern-b:${candidate.target}`,
-    smellId: reshape ? 'physical-cohesion' : 'unknown',
+    patternBetId: flatParent
+      ? `flat-parent:${candidate.target}`
+      : reshape
+        ? `reshape:${candidate.target}`
+        : `pattern-b:${candidate.target}`,
+    smellId: flatParent ? 'flat-parent' : reshape ? 'physical-cohesion' : 'unknown',
     pilot: candidate.target,
     pilotTarget: candidate.target,
     evidence,
@@ -262,9 +268,11 @@ function extractionCardFromCandidate(candidate) {
     loopStep: 'one-pilot',
     reDoctor: 'ark-check --doctor --json',
     rePlan: 'ark-check --plan --json',
-    next: reshape
-      ? '/ark-loop (one reshape pilot) | re-doctor after pilot'
-      : '/ark-autopilot (one cluster / one B pilot) | re-doctor after pilot',
+    next: flatParent
+      ? '/ark-loop (one flat-parent suggestion) | re-doctor after the move'
+      : reshape
+        ? '/ark-loop (one reshape pilot) | re-doctor after pilot'
+        : '/ark-autopilot (one cluster / one B pilot) | re-doctor after pilot',
   };
 }
 
@@ -272,8 +280,10 @@ function extractionCardFromCandidate(candidate) {
  * Normalize design-weak pattern bets and a proposed reshape pilot into one list.
  * Pattern bets stay in selector rank (best first) and are omitted unless
  * design fitness is design-weak, so that path keeps today's card. A reshape
- * card is appended when physical cohesion proposes one. Doctor builds this
- * list after advisories, so the loop never depends on call order.
+ * card is appended when physical cohesion proposes one. A flat-parent move
+ * is appended after that: one file with one importer waits behind a card the
+ * loop already promised. Doctor builds this list after advisories, so the
+ * loop never depends on call order.
  *
  * @param {{
  *   designWeak?: boolean,
@@ -316,6 +326,9 @@ export function collectPilotCandidates(designFitness = {}, advisories = {}) {
           : 'revert this move set; nothing else was touched',
       ...(Array.isArray(card.doNot) ? { doNot: card.doNot } : {}),
     });
+  }
+  for (const candidate of flatParentCandidates(advisories?.flatParentPilot)) {
+    candidates.push(candidate);
   }
   return candidates;
 }

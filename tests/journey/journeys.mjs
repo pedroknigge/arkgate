@@ -369,7 +369,7 @@ export const JOURNEY_CASES = Object.freeze({
     Object.freeze({
       id: 'pr6-doctor',
       owner: '#326 PR6',
-      expect: 'fail',
+      expect: 'pass',
       kind: 'pr6-doctor',
       note: 'Owned by #326 PR6. Doctor shows a move card for rfi-repository.ts: one importer, features/projects/rfi, destination inside that child, Persistence layer unchanged. catalog-repository.ts has two importers and has no card. The destination check uses the same slice identity as the walls, so this move does not keep the slice and the check agrees with the wall. ark-check findings stay the child-slices wall.',
       want: Object.freeze({

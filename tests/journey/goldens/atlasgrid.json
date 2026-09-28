@@ -362,29 +362,29 @@
       }
     },
     {
-      "expect": "fail",
+      "expect": "pass",
       "got": {
-        "agreesWithWall": null,
+        "agreesWithWall": true,
         "catalogCards": 0,
         "crossParent": 5,
         "crossSibling": 3,
-        "destination": null,
-        "destinationChild": null,
+        "destination": "src/lib/repositories/features/projects/rfi",
+        "destinationChild": "features/projects/rfi",
         "evidenceClaimsDone": false,
-        "evidenceHasSuggestion": false,
-        "file": null,
-        "importer": null,
-        "keepsLayer": null,
-        "keepsSlice": null,
-        "layer": null,
-        "moveCount": 0,
-        "pilotSource": null
+        "evidenceHasSuggestion": true,
+        "file": "src/lib/repositories/features/projects/rfi-repository.ts",
+        "importer": "features/projects/rfi",
+        "keepsLayer": true,
+        "keepsSlice": false,
+        "layer": "Persistence",
+        "moveCount": 1,
+        "pilotSource": "flat-parent"
       },
       "id": "pr6-doctor",
-      "met": false,
+      "met": true,
       "note": "Owned by #326 PR6. Doctor shows a move card for rfi-repository.ts: one importer, features/projects/rfi, destination inside that child, Persistence layer unchanged. catalog-repository.ts has two importers and has no card. The destination check uses the same slice identity as the walls, so this move does not keep the slice and the check agrees with the wall. ark-check findings stay the child-slices wall.",
       "owner": "#326 PR6",
-      "status": "expected-fail",
+      "status": "pass",
       "want": {
         "agreesWithWall": true,
         "catalogCards": 0,
@@ -1533,8 +1533,20 @@
       "filesDiff": {},
       "output": {
         "flatParent": {
-          "moves": [],
-          "pilotSource": null
+          "moves": [
+            {
+              "agreesWithWall": true,
+              "destination": "src/lib/repositories/features/projects/rfi",
+              "destinationChild": "features/projects/rfi",
+              "evidence": "One child imports src/lib/repositories/features/projects/rfi-repository.ts (features/projects/rfi). Move it into src/lib/repositories/features/projects/rfi. The Persistence layer stays. This is a suggestion with that importer as its evidence.",
+              "file": "src/lib/repositories/features/projects/rfi-repository.ts",
+              "importer": "features/projects/rfi",
+              "keepsLayer": true,
+              "keepsSlice": false,
+              "layer": "Persistence"
+            }
+          ],
+          "pilotSource": "flat-parent"
         },
         "rulesUnderContract": null,
         "slices": {

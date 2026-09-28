@@ -11,6 +11,7 @@ import {
   computePhysicalCohesion,
   printPhysicalCohesionSection,
 } from './physical-cohesion.mjs';
+import { collectFlatParentPilot, printFlatParentPilot } from './flat-parent-pilot.mjs';
 import {
   computeDecisionAwareReshapePilot,
   computeReshapeDecisionMemory,
@@ -129,6 +130,12 @@ export function printCompactExtraDoctorLines(advisories, io) {
     for (const collision of sliceIdentity.collisions) {
       io.line(io.warn, collision.message);
     }
+  }
+  const flatMoves = advisories?.flatParentPilot?.moves;
+  if (Array.isArray(flatMoves) && flatMoves.length > 0 && typeof flatMoves[0]?.evidence === 'string') {
+    console.log('');
+    io.line(io.warn, flatMoves[0].evidence);
+    if (flatMoves.length > 1) io.line(' ', `${flatMoves.length - 1} more flat-parent suggestion(s) in --doctor --all`);
   }
   const noDomain = advisories?.noDomainFrontend;
   if (noDomain?.ask) {
@@ -288,9 +295,16 @@ export function computeDoctorAdvisories(root, config, cov, rules, files, ts, par
     if (rel) aliasFiles.push(rel);
   }
   const sliceAliases = sliceAliasReport(rules ?? config?.rules, aliasFiles);
+  const flatParentPilot = collectFlatParentPilot({
+    root,
+    files: aliasFiles,
+    rules: rules ?? config?.rules,
+    layers: config?.layers,
+  });
   return {
     ...(slices ? { slices } : {}),
     ...(sliceAliases ? { sliceAliases } : {}),
+    ...(flatParentPilot ? { flatParentPilot } : {}),
     ...(prototypeShortcuts ? { prototypeShortcuts } : {}),
     ...(sliceIdentityHits.length > 0
       ? { sliceIdentity: { notAScore: true, collisions: sliceIdentityHits } }
@@ -311,6 +325,7 @@ export function computeDoctorAdvisories(root, config, cov, rules, files, ts, par
 }
 
 export function printDoctorAdvisories(advisories, io) {
+  printFlatParentPilot(advisories?.flatParentPilot, io);
   const sliceAliases = advisories?.sliceAliases;
   if (sliceAliases && sliceAliases.notAScore === true && Array.isArray(sliceAliases.moves)) {
     console.log('');
