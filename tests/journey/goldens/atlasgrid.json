@@ -304,6 +304,56 @@
         "spanRuleId": "CONFIG_CHILD_SLICE_CROSS_UNIVERSE",
         "spanWarnings": 1
       }
+    },
+    {
+      "expect": "fail",
+      "got": {
+        "badTargetRejected": false,
+        "commonFindings": 0,
+        "crossParentCount": 0,
+        "crossParentReason": null,
+        "crossParentRuleId": null,
+        "crossParentSeverity": null,
+        "doctorDebt": null,
+        "doctorDestination": null,
+        "doctorFiles": [],
+        "doctorFinished": null,
+        "doctorTarget": null,
+        "overlapRejected": false,
+        "plainCrossParent": 5,
+        "plainSibling": 3,
+        "sameChildFindings": 0,
+        "siblingCount": 0
+      },
+      "id": "pr5-aliases",
+      "met": false,
+      "note": "Owned by #326 PR5. lib/compliance/** aliased to features/projects/compliance reports CROSS_PARENT_SLICE into management. The same file may import its own child and its universe common. Doctor lists the alias as an owed move. A target that is not a child of an existing universe is rejected. An alias that overlaps a slice folder is rejected. A config without sliceAliases stays the child-slices wall.",
+      "owner": "#326 PR5",
+      "status": "expected-fail",
+      "want": {
+        "badTargetSnippet": "child of an existing universe",
+        "commonFindings": 0,
+        "crossParentCount": 6,
+        "crossParentReason": "CROSS_PARENT_SLICE",
+        "debtSnippet": "owed move",
+        "destination": "src/lib/features/projects/compliance",
+        "files": [
+          "src/lib/compliance/audit-note.ts",
+          "src/lib/compliance/hold.ts",
+          "src/lib/compliance/policy.ts",
+          "src/lib/compliance/retention.ts",
+          "src/lib/compliance/uses-management.ts"
+        ],
+        "notFinishedSnippet": "not finished",
+        "overlapSnippet": "overlaps a slice folder",
+        "plainCrossParent": 5,
+        "plainSibling": 3,
+        "ruleId": "LAYER_IMPORT_VIOLATION",
+        "sameChildFindings": 0,
+        "severity": "error",
+        "siblingCount": 3,
+        "target": "features/projects/compliance"
+      }
     }
   ],
   "fixture": "atlasgrid",
@@ -1050,6 +1100,42 @@
       "output": {
         "configRejected": true,
         "message": "Invalid ArkGate config (<project>/ark.config.wildcards-bare.json):\n- $.rules[0].childSlices.allowedCrossSlice[0].from: must be a slice id with a slash. A bare name is ambiguous across universes."
+      }
+    },
+    {
+      "command": "ark-check --json --no-cache --config ark.config.aliases.json",
+      "exitCode": 2,
+      "filesDiff": {},
+      "output": {
+        "configRejected": true,
+        "message": "Invalid ArkGate config (<project>/ark.config.aliases.json):\n- $.rules[0].childSlices.sliceAliases: unknown field\n- $.rules[1].childSlices.sliceAliases: unknown field\n- $.rules[2].childSlices.sliceAliases: unknown field\n- $.rules[3].childSlices.sliceAliases: unknown field\n- $.rules[4].childSlices.sliceAliases: unknown field\n- $.rules[5].childSlices.sliceAliases: unknown field\n- $.rules[6].childSlices.sliceAliases: unknown field\n- $.rules[7].childSlices.sliceAliases: unknown field\n- $.rules[8].childSlices.sliceAliases: unknown field"
+      }
+    },
+    {
+      "command": "ark-check --doctor --json --no-cache --config ark.config.aliases.json",
+      "exitCode": 2,
+      "filesDiff": {},
+      "output": {
+        "configRejected": true,
+        "message": "Invalid ArkGate config (<project>/ark.config.aliases.json):\n- $.rules[0].childSlices.sliceAliases: unknown field\n- $.rules[1].childSlices.sliceAliases: unknown field\n- $.rules[2].childSlices.sliceAliases: unknown field\n- $.rules[3].childSlices.sliceAliases: unknown field\n- $.rules[4].childSlices.sliceAliases: unknown field\n- $.rules[5].childSlices.sliceAliases: unknown field\n- $.rules[6].childSlices.sliceAliases: unknown field\n- $.rules[7].childSlices.sliceAliases: unknown field\n- $.rules[8].childSlices.sliceAliases: unknown field"
+      }
+    },
+    {
+      "command": "ark-check --json --no-cache --config ark.config.aliases-target.json",
+      "exitCode": 2,
+      "filesDiff": {},
+      "output": {
+        "configRejected": true,
+        "message": "Invalid ArkGate config (<project>/ark.config.aliases-target.json):\n- $.rules[0].childSlices.sliceAliases: unknown field\n- $.rules[1].childSlices.sliceAliases: unknown field\n- $.rules[2].childSlices.sliceAliases: unknown field\n- $.rules[3].childSlices.sliceAliases: unknown field\n- $.rules[4].childSlices.sliceAliases: unknown field\n- $.rules[5].childSlices.sliceAliases: unknown field\n- $.rules[6].childSlices.sliceAliases: unknown field\n- $.rules[7].childSlices.sliceAliases: unknown field\n- $.rules[8].childSlices.sliceAliases: unknown field"
+      }
+    },
+    {
+      "command": "ark-check --json --no-cache --config ark.config.aliases-overlap.json",
+      "exitCode": 2,
+      "filesDiff": {},
+      "output": {
+        "configRejected": true,
+        "message": "Invalid ArkGate config (<project>/ark.config.aliases-overlap.json):\n- $.rules[0].childSlices.sliceAliases: unknown field\n- $.rules[1].childSlices.sliceAliases: unknown field\n- $.rules[2].childSlices.sliceAliases: unknown field\n- $.rules[3].childSlices.sliceAliases: unknown field\n- $.rules[4].childSlices.sliceAliases: unknown field\n- $.rules[5].childSlices.sliceAliases: unknown field\n- $.rules[6].childSlices.sliceAliases: unknown field\n- $.rules[7].childSlices.sliceAliases: unknown field\n- $.rules[8].childSlices.sliceAliases: unknown field"
       }
     }
   ]

@@ -55,23 +55,13 @@
         ],
         "siblings": "deny",
         "parentMayImportChild": false,
-        "allowedCrossSlice": [
+        "sliceAliases": [
           {
-            "from": "features/projects/*",
-            "to": "features/projects/d2d-item"
-          },
-          {
-            "from": "features/*/*",
-            "to": "features/management/eos"
+            "from": "lib/features/**",
+            "to": "features/projects/compliance"
           }
         ]
-      },
-      "allowedCrossSlice": [
-        {
-          "from": "features/*",
-          "to": "features/*"
-        }
-      ]
+      }
     },
     {
       "from": "Presentation",
@@ -97,23 +87,13 @@
         ],
         "siblings": "deny",
         "parentMayImportChild": false,
-        "allowedCrossSlice": [
+        "sliceAliases": [
           {
-            "from": "features/projects/*",
-            "to": "features/projects/d2d-item"
-          },
-          {
-            "from": "features/*/*",
-            "to": "features/management/eos"
+            "from": "lib/features/**",
+            "to": "features/projects/compliance"
           }
         ]
-      },
-      "allowedCrossSlice": [
-        {
-          "from": "features/*",
-          "to": "features/*"
-        }
-      ]
+      }
     },
     {
       "from": "Presentation",
@@ -139,23 +119,13 @@
         ],
         "siblings": "deny",
         "parentMayImportChild": false,
-        "allowedCrossSlice": [
+        "sliceAliases": [
           {
-            "from": "features/projects/*",
-            "to": "features/projects/d2d-item"
-          },
-          {
-            "from": "features/*/*",
-            "to": "features/management/eos"
+            "from": "lib/features/**",
+            "to": "features/projects/compliance"
           }
         ]
-      },
-      "allowedCrossSlice": [
-        {
-          "from": "features/*",
-          "to": "features/*"
-        }
-      ]
+      }
     },
     {
       "from": "Application",
@@ -181,23 +151,13 @@
         ],
         "siblings": "deny",
         "parentMayImportChild": false,
-        "allowedCrossSlice": [
+        "sliceAliases": [
           {
-            "from": "features/projects/*",
-            "to": "features/projects/d2d-item"
-          },
-          {
-            "from": "features/*/*",
-            "to": "features/management/eos"
+            "from": "lib/features/**",
+            "to": "features/projects/compliance"
           }
         ]
-      },
-      "allowedCrossSlice": [
-        {
-          "from": "features/*",
-          "to": "features/*"
-        }
-      ]
+      }
     },
     {
       "from": "Application",
@@ -223,23 +183,13 @@
         ],
         "siblings": "deny",
         "parentMayImportChild": false,
-        "allowedCrossSlice": [
+        "sliceAliases": [
           {
-            "from": "features/projects/*",
-            "to": "features/projects/d2d-item"
-          },
-          {
-            "from": "features/*/*",
-            "to": "features/management/eos"
+            "from": "lib/features/**",
+            "to": "features/projects/compliance"
           }
         ]
-      },
-      "allowedCrossSlice": [
-        {
-          "from": "features/*",
-          "to": "features/*"
-        }
-      ]
+      }
     },
     {
       "from": "Application",
@@ -265,23 +215,13 @@
         ],
         "siblings": "deny",
         "parentMayImportChild": false,
-        "allowedCrossSlice": [
+        "sliceAliases": [
           {
-            "from": "features/projects/*",
-            "to": "features/projects/d2d-item"
-          },
-          {
-            "from": "features/*/*",
-            "to": "features/management/eos"
+            "from": "lib/features/**",
+            "to": "features/projects/compliance"
           }
         ]
-      },
-      "allowedCrossSlice": [
-        {
-          "from": "features/*",
-          "to": "features/*"
-        }
-      ]
+      }
     },
     {
       "from": "Persistence",
@@ -307,23 +247,13 @@
         ],
         "siblings": "deny",
         "parentMayImportChild": false,
-        "allowedCrossSlice": [
+        "sliceAliases": [
           {
-            "from": "features/projects/*",
-            "to": "features/projects/d2d-item"
-          },
-          {
-            "from": "features/*/*",
-            "to": "features/management/eos"
+            "from": "lib/features/**",
+            "to": "features/projects/compliance"
           }
         ]
-      },
-      "allowedCrossSlice": [
-        {
-          "from": "features/*",
-          "to": "features/*"
-        }
-      ]
+      }
     },
     {
       "from": "Persistence",
@@ -349,23 +279,13 @@
         ],
         "siblings": "deny",
         "parentMayImportChild": false,
-        "allowedCrossSlice": [
+        "sliceAliases": [
           {
-            "from": "features/projects/*",
-            "to": "features/projects/d2d-item"
-          },
-          {
-            "from": "features/*/*",
-            "to": "features/management/eos"
+            "from": "lib/features/**",
+            "to": "features/projects/compliance"
           }
         ]
-      },
-      "allowedCrossSlice": [
-        {
-          "from": "features/*",
-          "to": "features/*"
-        }
-      ]
+      }
     },
     {
       "from": "Persistence",
@@ -391,26 +311,17 @@
         ],
         "siblings": "deny",
         "parentMayImportChild": false,
-        "allowedCrossSlice": [
+        "sliceAliases": [
           {
-            "from": "features/projects/*",
-            "to": "features/projects/d2d-item"
-          },
-          {
-            "from": "features/*/*",
-            "to": "features/management/eos"
+            "from": "lib/features/**",
+            "to": "features/projects/compliance"
           }
         ]
-      },
-      "allowedCrossSlice": [
-        {
-          "from": "features/*",
-          "to": "features/*"
-        }
-      ]
+      }
     }
   ],
   "exclude": [
-    "src/lib/compliance/uses-management.ts"
+    "src/lib/features/projects/scm/scm-uses-d2d.ts",
+    "src/components/features/projects/rfi/rfi-uses-d2d.tsx"
   ]
 }

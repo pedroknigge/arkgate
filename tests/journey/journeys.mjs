@@ -11,9 +11,7 @@
  * green while the claim is unmet. When the claim starts holding, status becomes
  * `unexpected-pass` and the journey fails until that PR flips `expect` to `pass`.
  *
- * Planned, not cases yet (#326):
- * PR5 aliases — `lib/compliance/**` → `features/projects/compliance`; its import into
- *   management reports cross-parent.
+ * Planned, not a case yet (#326):
  * PR6 doctor — a move card for `rfi-repository.ts` (one importer); none for
  *   `catalog-repository.ts` (two importers).
  */
@@ -138,6 +136,10 @@ export const JOURNEYS = Object.freeze({
     Object.freeze(['ark-check', '--json', '--no-cache', '--config', 'ark.config.subtree.json']),
     Object.freeze(['ark-check', '--json', '--no-cache', '--config', 'ark.config.wildcards.json']),
     Object.freeze(['ark-check', '--json', '--no-cache', '--config', 'ark.config.wildcards-bare.json']),
+    Object.freeze(['ark-check', '--json', '--no-cache', '--config', 'ark.config.aliases.json']),
+    Object.freeze(['ark-check', '--doctor', '--json', '--no-cache', '--config', 'ark.config.aliases.json']),
+    Object.freeze(['ark-check', '--json', '--no-cache', '--config', 'ark.config.aliases-target.json']),
+    Object.freeze(['ark-check', '--json', '--no-cache', '--config', 'ark.config.aliases-overlap.json']),
   ]),
 });
 
@@ -317,6 +319,49 @@ export const JOURNEY_CASES = Object.freeze({
         spanWarnings: 1,
         spanRuleId: 'CONFIG_CHILD_SLICE_CROSS_UNIVERSE',
         bareSnippet: 'ambiguous across universes',
+      }),
+    }),
+    Object.freeze({
+      id: 'pr5-aliases',
+      owner: '#326 PR5',
+      expect: 'fail',
+      kind: 'pr5-aliases',
+      note: 'Owned by #326 PR5. lib/compliance/** aliased to features/projects/compliance reports CROSS_PARENT_SLICE into management. The same file may import its own child and its universe common. Doctor lists the alias as an owed move. A target that is not a child of an existing universe is rejected. An alias that overlaps a slice folder is rejected. A config without sliceAliases stays the child-slices wall.',
+      crossParent: Object.freeze({
+        file: 'src/lib/compliance/uses-management.ts',
+        target: 'src/lib/features/management/eos/eos-summary.ts',
+      }),
+      sameChild: Object.freeze({
+        file: 'src/lib/compliance/uses-management.ts',
+        target: 'src/lib/compliance/retention.ts',
+      }),
+      common: Object.freeze({
+        file: 'src/lib/compliance/uses-management.ts',
+        target: 'src/lib/features/projects/domain/project-codes.ts',
+      }),
+      want: Object.freeze({
+        ruleId: 'LAYER_IMPORT_VIOLATION',
+        crossParentReason: 'CROSS_PARENT_SLICE',
+        severity: 'error',
+        crossParentCount: 6,
+        siblingCount: 3,
+        sameChildFindings: 0,
+        commonFindings: 0,
+        target: 'features/projects/compliance',
+        destination: 'src/lib/features/projects/compliance',
+        debtSnippet: 'owed move',
+        notFinishedSnippet: 'not finished',
+        files: Object.freeze([
+          'src/lib/compliance/audit-note.ts',
+          'src/lib/compliance/hold.ts',
+          'src/lib/compliance/policy.ts',
+          'src/lib/compliance/retention.ts',
+          'src/lib/compliance/uses-management.ts',
+        ]),
+        badTargetSnippet: 'child of an existing universe',
+        overlapSnippet: 'overlaps a slice folder',
+        plainCrossParent: 5,
+        plainSibling: 3,
       }),
     }),
   ]),
