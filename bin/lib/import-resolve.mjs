@@ -56,7 +56,19 @@ export function readTsconfigAliases(ts, root) {
     if (!configPath) return { baseUrl: root, aliases: [] };
     const read = ts.readConfigFile(configPath, ts.sys.readFile);
     if (read.error) return { baseUrl: root, aliases: [] };
-    const parsed = ts.parseJsonConfigFileContent(read.config, ts.sys, path.dirname(configPath));
+    // Options-only parse: `fileNames` are unused here. With the real `ts.sys` the
+    // parser walked the whole `include` tree on every write-hook call (#205 twin).
+    const optionsOnlyHost = {
+      useCaseSensitiveFileNames: ts.sys.useCaseSensitiveFileNames,
+      readDirectory: () => [],
+      fileExists: (fileName) => ts.sys.fileExists(fileName),
+      readFile: (fileName) => ts.sys.readFile(fileName),
+    };
+    const parsed = ts.parseJsonConfigFileContent(
+      read.config,
+      optionsOnlyHost,
+      path.dirname(configPath)
+    );
     const opts = parsed.options || {};
     const baseUrl = opts.baseUrl || path.dirname(configPath);
     const aliases = [];

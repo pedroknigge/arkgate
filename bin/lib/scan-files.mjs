@@ -32,6 +32,17 @@ function isInsideRoot(root, target) {
  * Internal symlink directories are followed once (TypeScript follows them too),
  * while escaping links fail closed instead of reading arbitrary filesystem paths.
  */
+/**
+ * Return `value` flattened. V8 keeps path.join / concatenation results as rope
+ * strings (a tree of segment objects); the per-file syscalls of the generic walk
+ * branch flattened them as a side effect. Without it, every retained path kept its
+ * rope alive and a 20k-file walk peaked ~70 MB higher. ToNumber flattens in place.
+ */
+function flatString(value) {
+  void Number(value);
+  return value;
+}
+
 export function walk(dir, files = [], options = {}) {
   let state = options.state;
   if (!state) {
@@ -67,6 +78,7 @@ export function walk(dir, files = [], options = {}) {
       !state.visitedFiles.has(resolved)
     ) {
       state.visitedFiles.add(resolved);
+      state.onFile?.(dir, resolved);
       files.push(dir);
     }
     return files;
@@ -84,6 +96,25 @@ export function walk(dir, files = [], options = {}) {
     } else if (entry.isSymbolicLink()) {
       if (isSkippedSourceDir(entry.name)) continue;
       walk(full, files, { state });
+    } else if (entry.isFile()) {
+      // A regular (non-link) file inside an already-resolved directory: its real
+      // path is that directory's real path plus its name. Same result as the
+      // per-file lstat + realpath of the generic branch, without two syscalls
+      // and two Stats objects for every source file.
+      if (!isGovernableSourceFile(entry.name)) continue;
+      state.observeInput?.(path.resolve(full), 'lstat');
+      state.observeInput?.(path.resolve(full), 'realpath');
+      // `resolved` is already a normalized real path and an entry name has no
+      // separator, so plain concatenation equals path.join(resolved, name).
+      const real = flatString(
+        resolved.endsWith(path.sep)
+          ? `${resolved}${entry.name}`
+          : `${resolved}${path.sep}${entry.name}`
+      );
+      if (state.visitedFiles.has(real)) continue;
+      state.visitedFiles.add(real);
+      state.onFile?.(full, real);
+      files.push(flatString(full));
     } else if (isGovernableSourceFile(entry.name)) {
       walk(full, files, { state });
     }
@@ -138,6 +169,7 @@ export function collectGovernedFiles(root, config, options = {}) {
     visitedDirectories: new Set(),
     visitedFiles: new Set(),
     onDirectory: options.onDirectory,
+    onFile: options.onFile,
     observeInput: options.observeInput,
   };
   const raw = (config.include ?? []).flatMap((entry) =>

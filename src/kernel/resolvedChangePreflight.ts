@@ -12,9 +12,10 @@ import type {
   ArchitectureEngineViolation,
   PreflightResolvedChangeInput,
   PreparedChangeFile,
+  ResolvedAnalysisResult,
   ResolvedChangePreflightResult,
 } from './analysisTypes';
-import { analyzeResolvedProject } from './resolvedAnalysis';
+import { analyzeCanonicalResolvedProject } from './resolvedAnalysis';
 
 function canonicalChangePath(value: string): string | undefined {
   const portable = value.replace(/\\/g, '/');
@@ -62,6 +63,7 @@ function identityViolations(
       message: `Base and candidate facts must use the same ${field}.`,
     }));
 }
+
 
 function preparedChange(
   change: AnalysisFileChange,
@@ -127,6 +129,30 @@ function ratchetPreExistingArkRules(
 }
 
 /**
+ * What the verdict reads from the base analysis: completeness, the edges when a
+ * change map asks for convergence, and only the ArkRules-plane findings the
+ * pre-existing-debt ratchet counts. The rest of the base IR is released early.
+ */
+function baseAnalysisSummary(
+  analysis: ResolvedAnalysisResult,
+  keepEdges: boolean
+): Pick<ResolvedAnalysisResult, 'completeness' | 'completenessReasons'> & {
+  ir: Pick<ResolvedAnalysisResult['ir'], 'edges' | 'violations' | 'warnings'>;
+} {
+  return {
+    completeness: analysis.completeness,
+    completenessReasons: analysis.completenessReasons,
+    ir: {
+      edges: keepEdges ? analysis.ir.edges : [],
+      violations: analysis.ir.violations.filter((violation) =>
+        isArkRulesPlaneRule(violation.ruleId)
+      ),
+      warnings: analysis.ir.warnings.filter((warning) => isArkRulesPlaneRule(warning.ruleId)),
+    },
+  };
+}
+
+/**
  * Validate that the supplied candidate is exactly the declared in-memory
  * overlay, then return its canonical resolved verdict. No project file is read
  * or written here.
@@ -134,14 +160,35 @@ function ratchetPreExistingArkRules(
 export function preflightResolvedChange(
   input: PreflightResolvedChangeInput
 ): ResolvedChangePreflightResult {
-  const baseFacts = loadResolvedCandidateFacts(input.baseFacts);
-  const candidateFacts = loadResolvedCandidateFacts(input.candidateFacts);
-  const base = analyzeResolvedProject({
-    ...(input.baseAnalysisInputs ?? {}),
-    contract: input.contract,
-    facts: baseFacts,
-  });
-  const candidate = analyzeResolvedProject({
+  return preflightCanonicalChange(
+    input,
+    loadResolvedCandidateFacts(input.baseFacts),
+    loadResolvedCandidateFacts(input.candidateFacts)
+  );
+}
+
+/**
+ * Preflight over facts that are already canonical (validated once). Loading
+ * canonical facts again is an identity, so this skips the re-validation copies
+ * the analysis would otherwise make of both whole-project fact sets.
+ */
+export function preflightCanonicalChange(
+  input: PreflightResolvedChangeInput,
+  baseFacts: ResolvedCandidateFacts,
+  candidateFacts: ResolvedCandidateFacts
+): ResolvedChangePreflightResult {
+  // Keep only what the verdict reads from the base analysis, so its full IR is
+  // released before the candidate analysis runs (two whole-project IRs were
+  // live at once).
+  const base = baseAnalysisSummary(
+    analyzeCanonicalResolvedProject({
+      ...(input.baseAnalysisInputs ?? {}),
+      contract: input.contract,
+      facts: baseFacts,
+    }),
+    input.changeMap !== undefined
+  );
+  const candidate = analyzeCanonicalResolvedProject({
     ...(input.candidateAnalysisInputs ?? {}),
     contract: input.contract,
     facts: candidateFacts,

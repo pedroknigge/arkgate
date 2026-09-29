@@ -2,6 +2,7 @@
  * Architecture check pipeline: content scan → import graph → layer edges → cycles.
  * Extracted from ark-check entry (R3). Entry remains orchestration + presentation.
  */
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { summarizeParseHealth } from './parse-health.mjs';
 import {
@@ -128,7 +129,11 @@ function hintCacheKey(root, scopedFiles, arkRules) {
         `${rule.sensor ?? ''}\0${rule.mode ?? ''}\0${(rule.appliesTo ?? []).join(',')}`
     )
     .join('\n');
-  return `${path.resolve(root)}\0${filesPart}\0${rulesPart}`;
+  // A full-tree key lists every governed file; retaining up to HINT_CACHE_CAP of
+  // those raw strings in a long-lived MCP process held megabytes per entry.
+  return createHash('sha256')
+    .update(`${path.resolve(root)}\0${filesPart}\0${rulesPart}`)
+    .digest('hex');
 }
 
 function rememberHintCache(key, value) {

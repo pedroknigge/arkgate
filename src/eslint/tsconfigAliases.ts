@@ -33,6 +33,8 @@ type ParsedEntry = { chain: ChainStamp[]; result: TsconfigAliasSet };
 
 const nearestCache = new Map<string, string | null>();
 const parsedCache = new Map<string, ParsedEntry>();
+/** Keep the parsed-chain cache small in a long-lived editor process. */
+const PARSED_CACHE_CAP = 64;
 
 function fileStamp(file: string): string {
   try {
@@ -136,8 +138,19 @@ function loadChain(
   const parents = typeof ext === 'string' ? [ext] : Array.isArray(ext) ? ext : [];
   for (const parentSpec of parents) {
     if (typeof parentSpec !== 'string') continue;
-    const parentFile = resolveExtends(file, substituteConfigDir(parentSpec, rootConfigDir));
-    if (!parentFile) continue;
+    const resolvedSpec = substituteConfigDir(parentSpec, rootConfigDir);
+    const parentFile = resolveExtends(file, resolvedSpec);
+    if (!parentFile) {
+      // A relative/absolute parent that does not exist yet still invalidates the
+      // cached parse the moment it appears.
+      if (resolvedSpec.startsWith('.') || path.isAbsolute(resolvedSpec)) {
+        const base = path.resolve(path.dirname(file), resolvedSpec);
+        for (const candidate of [base, `${base}.json`]) {
+          chain.push({ file: candidate, stamp: fileStamp(candidate) });
+        }
+      }
+      continue;
+    }
     const parent = loadChain(parentFile, rootConfigDir, depth + 1, seen, chain);
     if (parent.baseUrl !== undefined) effective.baseUrl = parent.baseUrl;
     if (parent.paths !== undefined) {
@@ -194,6 +207,10 @@ export function aliasesForTsconfig(tsconfigPath: string): TsconfigAliasSet {
   const rootConfigDir = path.dirname(tsconfigPath);
   const effective = loadChain(tsconfigPath, rootConfigDir, 0, new Set(), chain);
   const result = buildAliasSet(effective, rootConfigDir);
+  if (!parsedCache.has(tsconfigPath) && parsedCache.size >= PARSED_CACHE_CAP) {
+    const oldest = parsedCache.keys().next().value;
+    if (oldest !== undefined) parsedCache.delete(oldest);
+  }
   parsedCache.set(tsconfigPath, { chain, result });
   return result;
 }

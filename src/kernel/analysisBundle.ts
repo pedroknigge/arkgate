@@ -4,8 +4,14 @@ import {
   type ResolvedCandidateFacts,
   type ResolvedCandidateFactsInput,
 } from '../domain/analysis';
-import type { AnalysisContract, ResolvedAnalysisResult } from './analysisTypes';
+import type {
+  AnalysisContract,
+  PreflightResolvedChangeInput,
+  ResolvedAnalysisResult,
+  ResolvedChangePreflightResult,
+} from './analysisTypes';
 import { analyzeCanonicalResolvedProject } from './resolvedAnalysis';
+import { preflightCanonicalChange, preflightResolvedChange } from './resolvedChangePreflight';
 import type { ArkgatePinEvidence } from '../domain/configVersionFloor';
 
 const trustedResolvedFacts = new WeakSet<ResolvedCandidateFacts>();
@@ -58,6 +64,22 @@ export function analyzeTrustedResolvedProject(input: {
     throw new Error('Trusted resolved analysis requires immutable in-process canonical facts.');
   }
   return analyzeCanonicalResolvedProject(input);
+}
+
+/**
+ * Atomic preflight for facts this bundle instance created (immutable, already
+ * canonical): no second validation copy of either whole-project fact set.
+ * Any other input takes the validating path.
+ */
+export function preflightTrustedResolvedChange(
+  input: PreflightResolvedChangeInput
+): ResolvedChangePreflightResult {
+  const base = input.baseFacts as ResolvedCandidateFacts;
+  const candidate = input.candidateFacts as ResolvedCandidateFacts;
+  if (!trustedResolvedFacts.has(base) || !trustedResolvedFacts.has(candidate)) {
+    return preflightResolvedChange(input);
+  }
+  return preflightCanonicalChange(input, base, candidate);
 }
 
 export * from './analysis';

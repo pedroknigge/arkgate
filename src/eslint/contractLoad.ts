@@ -74,11 +74,39 @@ export type LoadedArkContract = {
 
 type CachedContract = {
   source: string;
+  /** Cheap change stamp of the root config; a match skips re-reading its text. */
+  stamp: string | null;
+  /** Config the ArkRules reference stamps were computed from (parsed once). */
+  refConfig: ArkConfig | null;
   refStamps: string;
   result: LoadedArkContract;
 };
 
 const contractCache = new Map<string, CachedContract>();
+const CONTRACT_CACHE_CAP = 64;
+
+/**
+ * Cheap change stamp for a small config file. Every rule re-reads the contract for
+ * every linted file; a stat is enough to know the text is unchanged.
+ */
+function configFileStamp(file: string): string | null {
+  try {
+    const stat = fs.statSync(file, { throwIfNoEntry: false });
+    if (!stat?.isFile()) return null;
+    return `${stat.mtimeMs}:${stat.size}:${stat.ino}`;
+  } catch {
+    return null;
+  }
+}
+
+/** Keep the per-path cache small in a long-lived editor process. */
+function rememberContract(configPath: string, entry: CachedContract): void {
+  if (!contractCache.has(configPath) && contractCache.size >= CONTRACT_CACHE_CAP) {
+    const oldest = contractCache.keys().next().value;
+    if (oldest !== undefined) contractCache.delete(oldest);
+  }
+  contractCache.set(configPath, entry);
+}
 
 function arkRulesRefs(config: ArkConfig | null): Array<[string, string]> {
   const refs = config?.arkRules;
@@ -157,22 +185,32 @@ function resolveContract(configPath: string, source: string): LoadedArkContract 
  * contract comes back as `error` (cached by source text and referenced-file stamps).
  */
 export function loadArkContract(configPath: string): LoadedArkContract {
+  const root = path.dirname(configPath);
+  const stamp = configFileStamp(configPath);
+  const cached = contractCache.get(configPath);
+  if (cached && stamp !== null && cached.stamp === stamp) {
+    if (refStampsFor(root, cached.refConfig) === cached.refStamps) return cached.result;
+  }
   let source: string;
   try {
     source = fs.readFileSync(configPath, 'utf8');
   } catch {
     return { config: null, arkRules: emptyEffectiveArkRules(), error: null, fingerprint: null };
   }
-  const root = path.dirname(configPath);
-  const cached = contractCache.get(configPath);
   if (cached?.source === source) {
-    const stamps = refStampsFor(root, cached.result.config ?? safeConfig(source, configPath));
-    if (stamps === cached.refStamps) return cached.result;
+    const stamps = refStampsFor(root, cached.refConfig);
+    if (stamps === cached.refStamps) {
+      cached.stamp = stamp;
+      return cached.result;
+    }
   }
   const result = resolveContract(configPath, source);
-  contractCache.set(configPath, {
+  const refConfig = result.config ?? safeConfig(source, configPath);
+  rememberContract(configPath, {
     source,
-    refStamps: refStampsFor(root, result.config ?? safeConfig(source, configPath)),
+    stamp,
+    refConfig,
+    refStamps: refStampsFor(root, refConfig),
     result,
   });
   return result;

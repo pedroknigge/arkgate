@@ -107,12 +107,12 @@
     },
     {
       "id": "resolved-candidate-facts",
-      "note": "resolvedCompilerInputPaths body after its TypeScript-API guard (realpath + candidate collection) through resolveRelativeFallback and resolveDependency (unresolved / resolved-project / resolved-external). The readConfigFile guard line stays outside the pin. The arkorder/arkrun receiver-trace merges shifted the same code to 739-789.",
+      "note": "resolvedCompilerInputPaths body after its TypeScript-API guard (realpath + candidate collection) through resolveRelativeFallback and resolveDependency (unresolved / resolved-project / resolved-external). The readConfigFile guard line stays outside the pin. The arkorder/arkrun receiver-trace merges shifted the same code to 739-789. The memory pass (lazy source reads, path reuse, resolution memo) shifted it to 786-839.",
       "targets": [
         {
           "file": "bin/lib/resolved-candidate-facts.mjs",
-          "startLine": 739,
-          "endLine": 789
+          "startLine": 786,
+          "endLine": 839
         }
       ]
     },
@@ -151,12 +151,12 @@
     },
     {
       "id": "peer-isolation-fail-closed",
-      "note": "DF04: peerIsolationDecision pure fail-closed core (missing paths/slices/folders, declared shared roots, declared cross-slice edges, shared-imports-slice). peerIsolationMustDeny is its boolean face. #297 shifted the function. Slice-id JSDoc and #308 sliceIdentity helpers shifted it again; retargeted to the same body. #326 inserted SliceVerdict types above the same function. #326 PR2 widened sharedImportsSlice and SliceReasonId above the same function (818–845). #326 PR3 inserted the siblings object type above the same function (829–856). #326 PR4 inserted the child allowedCrossSlice field above the same function (834–861). #326 PR5 inserted the SliceAlias type above the same function (844–871). The pin does not cover the child wall, the alias resolver, or the laundering post-pass. The #335 sharedImportsSlice mode/stop helpers and the #336 ratchet field were inserted above the same function (895–922). The stars-identity JSDoc correction above it shifted it to 897–924.",
+      "note": "DF04: peerIsolationDecision pure fail-closed core (missing paths/slices/folders, declared shared roots, declared cross-slice edges, shared-imports-slice). peerIsolationMustDeny is its boolean face. #297 shifted the function. Slice-id JSDoc and #308 sliceIdentity helpers shifted it again; retargeted to the same body. #326 inserted SliceVerdict types above the same function. #326 PR2 widened sharedImportsSlice and SliceReasonId above the same function (818–845). #326 PR3 inserted the siblings object type above the same function (829–856). #326 PR4 inserted the child allowedCrossSlice field above the same function (834–861). #326 PR5 inserted the SliceAlias type above the same function (844–871). The pin does not cover the child wall, the alias resolver, or the laundering post-pass. The #335 sharedImportsSlice mode/stop helpers and the #336 ratchet field were inserted above the same function (895–922). The stars-identity JSDoc correction above it shifted it to 897–924. The memory pass cached parsed sliceFolders entries above the same function (923–950).",
       "targets": [
         {
           "file": "src/domain/layerMatch.ts",
-          "startLine": 897,
-          "endLine": 924
+          "startLine": 923,
+          "endLine": 950
         }
       ]
     },

@@ -37,8 +37,9 @@ const config = {
     // 4.8.4 pinned 74-114 (the whole function). classifiedFileCount + JSDoc
     // growth moved the greenfield exemption and refuse return past 114.
     'bin/lib/analysis-completeness.mjs:81-141',
-    // Receiver-trace merges shifted the same resolver body to 739-789.
-    'bin/lib/resolved-candidate-facts.mjs:739-789',
+    // Receiver-trace merges shifted the same resolver body to 739-789; the memory
+    // pass (lazy source reads, path reuse, resolution memo) shifted it to 786-839.
+    'bin/lib/resolved-candidate-facts.mjs:786-839',
     // managed-upgrade force-preserve covered by fieldGapS4 unit tests; not in critical
     // mutation groups for 4.1.0 (NoCoverage noise on toml-section branch residual).
     'bin/lib/resident-hook.mjs:115-162',
@@ -84,8 +85,9 @@ const config = {
     // object type above it. #326 PR4 inserted child allowedCrossSlice above it.
     // #326 PR5 inserted the SliceAlias type above it. Same peerIsolationDecision body.
     // #335/#336 mode, stop, and ratchet types above it moved it to 895-922; the
-    // stars-identity JSDoc correction moved it to 897-924.
-    'src/domain/layerMatch.ts:897-924',
+    // stars-identity JSDoc correction moved it to 897-924; the memory pass
+    // sliceFolders parse cache moved it to 923-950.
+    'src/domain/layerMatch.ts:923-950',
     // AP02 (#264) shifted the helper; sharedImportsSlice and #308 sliceIdentity
     // compares shifted it again. Same policyDeltaAcknowledgementMatches body.
     // #326 compareChildSlices shifted the same function by 93 lines.
