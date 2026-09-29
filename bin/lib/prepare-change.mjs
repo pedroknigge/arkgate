@@ -3,12 +3,13 @@ import path from 'node:path';
 import {
   loadArchitectureChangeMap,
   loadContract,
-  preflightResolvedChange,
+  preflightTrustedResolvedChange,
 } from './analysis-engine.mjs';
 import { createAdapterResult } from './adapter-contract.mjs';
 import { isGovernableSourceFile } from './scan-files.mjs';
 import {
   canonicalizeCandidateChanges,
+  createResolverIngestCache,
   resolveCandidateFacts,
 } from './resolved-candidate-facts.mjs';
 import { effectiveAnalysisConfig } from './analysis-policy.mjs';
@@ -129,20 +130,27 @@ export function prepareChangeFromRoot({
     changes: normalizedChanges,
   });
   for (const change of canonicalChanges) assertGovernedSource(effectiveConfig, change.path);
+  // Files the overlay does not touch are parsed once for both trees.
+  const ingestCache = createResolverIngestCache(contract.config);
   const baseFacts = resolveCandidateFacts({
     root,
     config: contract.config,
     ts,
+    ingestCache,
     ...(tsconfig ? { tsconfig } : {}),
   });
   const candidateFacts = resolveCandidateFacts({
     root,
     config: contract.config,
     ts,
+    ingestCache,
     changes: normalizedOverlayChanges,
     ...(tsconfig ? { tsconfig } : {}),
   });
-  const result = preflightResolvedChange({
+  ingestCache.records.clear();
+  // Both fact sets were created (validated, frozen) by this bundle instance just
+  // above: skip re-validating two whole-project copies of each.
+  const result = preflightTrustedResolvedChange({
     contract,
     baseFacts,
     candidateFacts,

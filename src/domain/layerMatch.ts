@@ -424,16 +424,39 @@ export function sliceIdForPath(
   const bare = new Set<string>();
   for (const raw of sliceFolders) {
     if (typeof raw !== 'string' || raw.length === 0) continue;
-    if (isAnchoredSliceEntry(raw)) {
-      const anchored = anchoredSliceId(parts, raw, identity);
+    const entry = parsedSliceFolder(raw);
+    if (entry.anchored) {
+      const anchored = anchoredSliceIdFromPattern(parts, entry.anchored, identity);
       if (anchored) return anchored;
       continue;
     }
-    if (!raw.includes('/') && !raw.includes('\\') && !raw.includes('*')) {
-      bare.add(raw.toLowerCase());
-    }
+    if (entry.bare !== undefined) bare.add(entry.bare);
   }
   return bareSliceId(parts, bare);
+}
+
+/** One declared `sliceFolders` entry, parsed once (the entry set is config-sized). */
+type ParsedSliceFolder = { anchored?: string[]; bare?: string };
+const parsedSliceFolders = new Map<string, ParsedSliceFolder>();
+
+/**
+ * `sliceIdForPath` runs for every edge endpoint under every peerIsolation rule.
+ * Re-splitting the same declared entries per call dominated the allocation of
+ * a large-repo analysis; the parse depends only on the entry text.
+ */
+function parsedSliceFolder(raw: string): ParsedSliceFolder {
+  const cached = parsedSliceFolders.get(raw);
+  if (cached) return cached;
+  let parsed: ParsedSliceFolder = {};
+  if (isAnchoredSliceEntry(raw)) {
+    parsed = { anchored: anchoredSlicePattern(raw) };
+  } else if (!raw.includes('/') && !raw.includes('\\') && !raw.includes('*')) {
+    parsed = { bare: raw.toLowerCase() };
+  }
+  // Bounded: entries come from contracts, but a long-lived process may see many.
+  if (parsedSliceFolders.size >= 1024) parsedSliceFolders.clear();
+  parsedSliceFolders.set(raw, parsed);
+  return parsed;
 }
 
 /** A starred prefix with a real leading directory, not a bare name and not `*`. */
@@ -444,15 +467,18 @@ function isAnchoredSliceEntry(entry: string): boolean {
   return segments.some((part) => part === '*');
 }
 
-function anchoredSliceId(
-  parts: string[],
-  raw: string,
-  identity: SliceIdentity
-): string | undefined {
-  const pattern = raw
+function anchoredSlicePattern(raw: string): string[] {
+  return raw
     .split(/[/\\]/)
     .filter((part) => part.length > 0)
     .map((part) => part.toLowerCase());
+}
+
+function anchoredSliceIdFromPattern(
+  parts: string[],
+  pattern: readonly string[],
+  identity: SliceIdentity
+): string | undefined {
   const offsets = anchorOffsets(parts, pattern[0] ?? '');
   for (const offset of offsets) {
     const id = bindAnchoredSlice(parts, pattern, offset, identity);
@@ -476,7 +502,7 @@ function anchoredSliceId(
  */
 function bindAnchoredSlice(
   parts: string[],
-  pattern: string[],
+  pattern: readonly string[],
   offset: number,
   identity: SliceIdentity = 'path'
 ): string | undefined {

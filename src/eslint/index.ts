@@ -155,15 +155,43 @@ export function findConfigPath(startFile: string): string | null {
   }
 }
 
-const _configCache = new Map<string, { source: string; config: ArkConfig }>();
+const _configCache = new Map<string, { source: string; stamp: string; config: ArkConfig }>();
+
+/**
+ * Cheap change stamp for a small config file. Every rule re-reads the contract
+ * for every linted file; a stat is enough to know the text is unchanged.
+ */
+function fileStamp(file: string): string | null {
+  try {
+    const stat = fs.statSync(file, { throwIfNoEntry: false });
+    if (!stat?.isFile()) return null;
+    return `${stat.mtimeMs}:${stat.size}:${stat.ino}`;
+  } catch {
+    return null;
+  }
+}
+
+/** Keep the per-path caches small in a long-lived editor process. */
+function rememberBounded<K, V>(cache: Map<K, V>, key: K, value: V, cap = 64): void {
+  if (!cache.has(key) && cache.size >= cap) {
+    const oldest = cache.keys().next().value as K;
+    cache.delete(oldest);
+  }
+  cache.set(key, value);
+}
 
 export function loadArkConfig(configPath: string): ArkConfig | null {
   if (!fs.existsSync(configPath)) return null;
-  const source = fs.readFileSync(configPath, 'utf8');
+  const stamp = fileStamp(configPath);
   const cached = _configCache.get(configPath);
-  if (cached?.source === source) return cached.config;
+  if (cached && stamp !== null && cached.stamp === stamp) return cached.config;
+  const source = fs.readFileSync(configPath, 'utf8');
+  if (cached?.source === source) {
+    cached.stamp = stamp ?? '';
+    return cached.config;
+  }
   const config = parseArkConfigJson(source, configPath).config;
-  _configCache.set(configPath, { source, config });
+  rememberBounded(_configCache, configPath, { source, stamp: stamp ?? '', config });
   return config;
 }
 
@@ -199,6 +227,15 @@ function existingSourceFile(base: string): string | null {
   return null;
 }
 
+const _tsconfigAliasCache = new Map<
+  string,
+  {
+    consulted: Array<[string, string | null]>;
+    baseUrl: string;
+    aliases: Array<{ from: string; to: string }>;
+  }
+>();
+
 /**
  * Read tsconfig paths/baseUrl for ESLint alias parity (P0-C).
  * JSONC-tolerant strip of // and /* comments; supports simple extends of a relative JSON.
@@ -221,7 +258,16 @@ export function readTsconfigPathAliases(
   }
   if (!configPath) return { baseUrl: startDir, aliases: [] };
 
+  // Every aliased import used to re-read and re-parse the tsconfig chain. Reuse
+  // the parse while every file it consulted keeps the same stamp.
+  const cached = _tsconfigAliasCache.get(configPath);
+  if (cached && cached.consulted.every(([file, stamp]) => fileStamp(file) === stamp)) {
+    return { baseUrl: cached.baseUrl, aliases: cached.aliases.map((alias) => ({ ...alias })) };
+  }
+  const consulted: Array<[string, string | null]> = [];
+
   const loadJsonc = (file: string): Record<string, unknown> | null => {
+    consulted.push([file, fileStamp(file)]);
     try {
       let text = fs.readFileSync(file, 'utf8');
       // Strip // line comments and /* */ blocks outside strings (best-effort).
@@ -248,7 +294,9 @@ export function readTsconfigPathAliases(
     const ext = json.extends;
     if (typeof ext === 'string' && !ext.startsWith('@')) {
       const parentPath = path.resolve(path.dirname(file), ext.endsWith('.json') ? ext : `${ext}.json`);
-      if (fs.existsSync(parentPath)) {
+      const parentExists = fs.existsSync(parentPath);
+      if (!parentExists) consulted.push([parentPath, null]);
+      if (parentExists) {
         const parent = mergePaths(parentPath, depth + 1);
         baseUrl = baseUrl ?? parent.baseUrl;
         paths = { ...(parent.paths ?? {}), ...(paths ?? {}) };
@@ -268,6 +316,11 @@ export function readTsconfigPathAliases(
     aliases.push({ from, to: String(targets[0]).replace(/\*$/, '') });
   }
   aliases.sort((a, b) => b.from.length - a.from.length);
+  rememberBounded(_tsconfigAliasCache, configPath, {
+    consulted,
+    baseUrl,
+    aliases: aliases.map((alias) => ({ ...alias })),
+  });
   return { baseUrl, aliases };
 }
 

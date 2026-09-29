@@ -109,8 +109,8 @@
       "targets": [
         {
           "file": "bin/lib/resolved-candidate-facts.mjs",
-          "startLine": 736,
-          "endLine": 786
+          "startLine": 783,
+          "endLine": 835
         }
       ]
     },
@@ -149,12 +149,12 @@
     },
     {
       "id": "peer-isolation-fail-closed",
-      "note": "DF04: peerIsolationDecision pure fail-closed core (missing paths/slices/folders, declared shared roots, declared cross-slice edges, shared-imports-slice). peerIsolationMustDeny is its boolean face. #297 shifted the function. Slice-id JSDoc and #308 sliceIdentity helpers shifted it again; retargeted to the same body. #326 inserted SliceVerdict types above the same function. #326 PR2 widened sharedImportsSlice and SliceReasonId above the same function (818–845). #326 PR3 inserted the siblings object type above the same function (829–856). #326 PR4 inserted the child allowedCrossSlice field above the same function (834–861). #326 PR5 inserted the SliceAlias type above the same function (844–871). The pin does not cover the child wall, the alias resolver, or the laundering post-pass.",
+      "note": "DF04: peerIsolationDecision pure fail-closed core (missing paths/slices/folders, declared shared roots, declared cross-slice edges, shared-imports-slice). peerIsolationMustDeny is its boolean face. #297 shifted the function. Slice-id JSDoc and #308 sliceIdentity helpers shifted it again; retargeted to the same body. #326 inserted SliceVerdict types above the same function. #326 PR2 widened sharedImportsSlice and SliceReasonId above the same function (818–845). #326 PR3 inserted the siblings object type above the same function (829–856). #326 PR4 inserted the child allowedCrossSlice field above the same function (834–861). #326 PR5 inserted the SliceAlias type above the same function (844–871). The memory pass cached parsed sliceFolders entries above the same function (870–897). The pin does not cover the child wall, the alias resolver, or the laundering post-pass.",
       "targets": [
         {
           "file": "src/domain/layerMatch.ts",
-          "startLine": 844,
-          "endLine": 871
+          "startLine": 870,
+          "endLine": 897
         }
       ]
     },

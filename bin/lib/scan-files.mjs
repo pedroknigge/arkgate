@@ -67,6 +67,7 @@ export function walk(dir, files = [], options = {}) {
       !state.visitedFiles.has(resolved)
     ) {
       state.visitedFiles.add(resolved);
+      state.onFile?.(dir, resolved);
       files.push(dir);
     }
     return files;
@@ -84,6 +85,19 @@ export function walk(dir, files = [], options = {}) {
     } else if (entry.isSymbolicLink()) {
       if (isSkippedSourceDir(entry.name)) continue;
       walk(full, files, { state });
+    } else if (entry.isFile()) {
+      // A regular (non-link) file inside an already-resolved directory: its real
+      // path is that directory's real path plus its name. Same result as the
+      // per-file lstat + realpath of the generic branch, without two syscalls
+      // and two Stats objects for every source file.
+      if (!isGovernableSourceFile(entry.name)) continue;
+      state.observeInput?.(path.resolve(full), 'lstat');
+      state.observeInput?.(path.resolve(full), 'realpath');
+      const real = path.join(resolved, entry.name);
+      if (state.visitedFiles.has(real)) continue;
+      state.visitedFiles.add(real);
+      state.onFile?.(full, real);
+      files.push(full);
     } else if (isGovernableSourceFile(entry.name)) {
       walk(full, files, { state });
     }
@@ -138,6 +152,7 @@ export function collectGovernedFiles(root, config, options = {}) {
     visitedDirectories: new Set(),
     visitedFiles: new Set(),
     onDirectory: options.onDirectory,
+    onFile: options.onFile,
     observeInput: options.observeInput,
   };
   const raw = (config.include ?? []).flatMap((entry) =>

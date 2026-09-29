@@ -35,7 +35,7 @@ const config = {
     // 4.8.4 pinned 74-114 (the whole function). classifiedFileCount + JSDoc
     // growth moved the greenfield exemption and refuse return past 114.
     'bin/lib/analysis-completeness.mjs:81-141',
-    'bin/lib/resolved-candidate-facts.mjs:736-786',
+    'bin/lib/resolved-candidate-facts.mjs:783-835',
     // managed-upgrade force-preserve covered by fieldGapS4 unit tests; not in critical
     // mutation groups for 4.1.0 (NoCoverage noise on toml-section branch residual).
     'bin/lib/resident-hook.mjs:115-162',
@@ -78,7 +78,7 @@ const config = {
     // sharedImportsSlice and SliceReasonId above it. #326 PR3 inserted the siblings
     // object type above it. #326 PR4 inserted child allowedCrossSlice above it.
     // #326 PR5 inserted the SliceAlias type above it. Same peerIsolationDecision body.
-    'src/domain/layerMatch.ts:844-871',
+    'src/domain/layerMatch.ts:870-897',
     // AP02 (#264) shifted the helper; sharedImportsSlice and #308 sliceIdentity
     // compares shifted it again. Same policyDeltaAcknowledgementMatches body.
     // #326 compareChildSlices shifted the same function by 93 lines.

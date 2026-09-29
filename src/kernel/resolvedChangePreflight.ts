@@ -12,9 +12,10 @@ import type {
   ArchitectureEngineViolation,
   PreflightResolvedChangeInput,
   PreparedChangeFile,
+  ResolvedAnalysisResult,
   ResolvedChangePreflightResult,
 } from './analysisTypes';
-import { analyzeResolvedProject } from './resolvedAnalysis';
+import { analyzeCanonicalResolvedProject } from './resolvedAnalysis';
 
 function canonicalChangePath(value: string): string | undefined {
   const portable = value.replace(/\\/g, '/');
@@ -63,6 +64,19 @@ function identityViolations(
     }));
 }
 
+function baseAnalysisSummary(
+  analysis: ResolvedAnalysisResult,
+  keepEdges: boolean
+): Pick<ResolvedAnalysisResult, 'completeness' | 'completenessReasons'> & {
+  ir: { edges: ResolvedAnalysisResult['ir']['edges'] };
+} {
+  return {
+    completeness: analysis.completeness,
+    completenessReasons: analysis.completenessReasons,
+    ir: { edges: keepEdges ? analysis.ir.edges : [] },
+  };
+}
+
 function preparedChange(
   change: AnalysisFileChange,
   path: string,
@@ -87,10 +101,34 @@ function preparedChange(
 export function preflightResolvedChange(
   input: PreflightResolvedChangeInput
 ): ResolvedChangePreflightResult {
-  const baseFacts = loadResolvedCandidateFacts(input.baseFacts);
-  const candidateFacts = loadResolvedCandidateFacts(input.candidateFacts);
-  const base = analyzeResolvedProject({ contract: input.contract, facts: baseFacts });
-  const candidate = analyzeResolvedProject({ contract: input.contract, facts: candidateFacts });
+  return preflightCanonicalChange(
+    input,
+    loadResolvedCandidateFacts(input.baseFacts),
+    loadResolvedCandidateFacts(input.candidateFacts)
+  );
+}
+
+/**
+ * Preflight over facts that are already canonical (validated once). Loading
+ * canonical facts again is an identity, so this skips the re-validation copies
+ * the analysis would otherwise make of both whole-project fact sets.
+ */
+export function preflightCanonicalChange(
+  input: PreflightResolvedChangeInput,
+  baseFacts: ResolvedCandidateFacts,
+  candidateFacts: ResolvedCandidateFacts
+): ResolvedChangePreflightResult {
+  // Keep only what the verdict reads from the base analysis, so its full IR is
+  // released before the candidate analysis runs (two whole-project IRs were
+  // live at once).
+  const base = baseAnalysisSummary(
+    analyzeCanonicalResolvedProject({ contract: input.contract, facts: baseFacts }),
+    input.changeMap !== undefined
+  );
+  const candidate = analyzeCanonicalResolvedProject({
+    contract: input.contract,
+    facts: candidateFacts,
+  });
   const baseByPath = new Map(baseFacts.files.map((file) => [file.path, file] as const));
   const candidateByPath = new Map(
     candidateFacts.files.map((file) => [file.path, file] as const)
