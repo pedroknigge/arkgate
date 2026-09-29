@@ -89,8 +89,16 @@ export function preflightResolvedChange(
 ): ResolvedChangePreflightResult {
   const baseFacts = loadResolvedCandidateFacts(input.baseFacts);
   const candidateFacts = loadResolvedCandidateFacts(input.candidateFacts);
-  const base = analyzeResolvedProject({ contract: input.contract, facts: baseFacts });
-  const candidate = analyzeResolvedProject({ contract: input.contract, facts: candidateFacts });
+  const base = analyzeResolvedProject({
+    ...(input.baseAnalysisInputs ?? {}),
+    contract: input.contract,
+    facts: baseFacts,
+  });
+  const candidate = analyzeResolvedProject({
+    ...(input.candidateAnalysisInputs ?? {}),
+    contract: input.contract,
+    facts: candidateFacts,
+  });
   const baseByPath = new Map(baseFacts.files.map((file) => [file.path, file] as const));
   const candidateByPath = new Map(
     candidateFacts.files.map((file) => [file.path, file] as const)

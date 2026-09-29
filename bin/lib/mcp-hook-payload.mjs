@@ -138,50 +138,151 @@ export function normalizeHookPayload(payload, grokHookEvent = Boolean(process.en
   };
 }
 
-export function applyCodexUpdatePatch(current, lines) {
-  let source = current.split('\n');
-  let cursor = 0;
-  const hunks = [];
-  let hunk = null;
-  for (const line of lines) {
-    if (line.startsWith('@@')) {
-      if (hunk) hunks.push(hunk);
-      hunk = { anchor: line.slice(2).trim(), entries: [] };
-    } else if (/^[ +\-]/.test(line)) {
-      if (!hunk) return null;
-      hunk.entries.push(line);
+/** Realpath of the nearest existing ancestor plus the missing tail (never throws). */
+export function canonicalPathLoose(candidate) {
+  const absolute = path.resolve(candidate);
+  let existing = absolute;
+  const missing = [];
+  while (!fs.existsSync(existing)) {
+    const parent = path.dirname(existing);
+    if (parent === existing) return absolute;
+    missing.unshift(path.basename(existing));
+    existing = parent;
+  }
+  try {
+    return path.join(fs.realpathSync(existing), ...missing);
+  } catch {
+    return absolute;
+  }
+}
+
+function relativeInside(root, candidate) {
+  const relative = path.relative(root, candidate);
+  if (relative === '' || relative === '..' || relative.startsWith(`..${path.sep}`)) return null;
+  if (path.isAbsolute(relative)) return null;
+  return relative;
+}
+
+/**
+ * Project-relative path when `filePath` is inside `root` under the caller's spelling
+ * or, failing that, the canonical (realpath) spelling — /tmp vs /private/tmp, a
+ * symlinked checkout. Null only when the path is truly outside the root.
+ */
+export function relativeToHookRoot(root, filePath) {
+  const absolute = path.resolve(root, filePath);
+  const direct = relativeInside(path.resolve(root), absolute);
+  if (direct !== null) return direct;
+  return relativeInside(canonicalPathLoose(root), canonicalPathLoose(absolute));
+}
+
+const CODEX_FILE_DIRECTIVE = /^\*\*\* (Add|Update|Delete) File: (.+)$/;
+const CODEX_MOVE_DIRECTIVE = /^\*\*\* Move to: (.+)$/;
+const CODEX_END_OF_FILE = '*** End of File';
+
+/** Codex-style sequence seek: exact, then trailing-whitespace, then trimmed match. */
+function seekSequence(source, pattern, start, eof) {
+  if (pattern.length === 0) return start;
+  if (pattern.length > source.length) return -1;
+  const normalizers = [(line) => line, (line) => line.trimEnd(), (line) => line.trim()];
+  const lastStart = source.length - pattern.length;
+  for (const normalize of normalizers) {
+    const matchesAt = (at) =>
+      pattern.every((line, index) => normalize(source[at + index]) === normalize(line));
+    if (eof && lastStart >= start && matchesAt(lastStart)) return lastStart;
+    for (let at = start; at <= lastStart; at += 1) {
+      if (matchesAt(at)) return at;
     }
   }
-  if (hunk) hunks.push(hunk);
-  for (const { anchor, entries } of hunks) {
+  return -1;
+}
+
+/**
+ * Parse one Update File body into chunks. The first chunk may omit its `@@` header;
+ * `*** End of File` may close a chunk; a bare empty line is an empty context line.
+ * Returns null for any line outside the Codex apply_patch grammar.
+ */
+export function parseCodexUpdateChunks(lines) {
+  const body = [...lines];
+  while (body.length > 0 && body[body.length - 1] === '') body.pop();
+  const chunks = [];
+  let chunk = null;
+  for (let index = 0; index < body.length; index += 1) {
+    const line = body[index];
+    if (line.startsWith('@@')) {
+      if (chunk) chunks.push(chunk);
+      chunk = { anchor: line.slice(2).trim(), entries: [], eof: false };
+      continue;
+    }
+    if (line === CODEX_END_OF_FILE) {
+      const next = body[index + 1];
+      if (!chunk || chunk.entries.length === 0 || (next !== undefined && !next.startsWith('@@'))) {
+        return null;
+      }
+      chunk.eof = true;
+      continue;
+    }
+    if (line === '' || /^[ +\-]/.test(line)) {
+      if (!chunk) {
+        // Only the FIRST chunk may omit `@@` (implicit, anchorless).
+        if (chunks.length > 0) return null;
+        chunk = { anchor: '', entries: [], eof: false };
+      }
+      if (chunk.eof) return null;
+      chunk.entries.push(line === '' ? ' ' : line);
+      continue;
+    }
+    return null;
+  }
+  if (chunk) chunks.push(chunk);
+  if (chunks.length === 0 || chunks.some((entry) => entry.entries.length === 0)) return null;
+  return chunks;
+}
+
+export function applyCodexUpdatePatch(current, lines) {
+  const chunks = parseCodexUpdateChunks(lines);
+  if (!chunks) return null;
+  const source = current.split('\n');
+  // Codex matches against the file's lines without the final newline's empty tail.
+  if (source.length > 0 && source[source.length - 1] === '') source.pop();
+  let cursor = 0;
+  for (const { anchor, entries, eof } of chunks) {
     if (anchor) {
-      const anchorAt = source.findIndex((line, index) => index >= cursor && line === anchor);
+      const anchorAt = seekSequence(source, [anchor], cursor, false);
       if (anchorAt < 0) return null;
       cursor = anchorAt + 1;
     }
     const oldLines = entries.filter((line) => !line.startsWith('+')).map((line) => line.slice(1));
     const newLines = entries.filter((line) => !line.startsWith('-')).map((line) => line.slice(1));
-    let found = -1;
-    for (let at = cursor; at <= source.length - oldLines.length; at += 1) {
-      if (oldLines.every((line, index) => source[at + index] === line)) {
-        found = at;
-        break;
-      }
+    let found;
+    if (oldLines.length === 0) {
+      // Pure insertion lands at the end of the file (Codex semantics).
+      found = source.length;
+    } else {
+      found = seekSequence(source, oldLines, cursor, eof);
+      if (found < 0) return null;
     }
-    if (found < 0) return null;
     source.splice(found, oldLines.length, ...newLines);
     cursor = found + newLines.length;
   }
-  return source.join('\n');
+  return `${source.join('\n')}\n`;
+}
+
+function codexPatchTarget(root, rawPath) {
+  const relative = relativeToHookRoot(root, rawPath.trim());
+  if (relative === null) return null;
+  return {
+    filePath: path.resolve(root, relative),
+    path: relative.split(path.sep).join('/'),
+  };
 }
 
 export function codexPatchWrites(patch, root) {
   if (typeof patch !== 'string') {
     return { writes: [], complete: false };
   }
-  const lines = patch.split('\n');
-  const begin = lines.indexOf('*** Begin Patch');
-  const end = lines.indexOf('*** End Patch', begin + 1);
+  const lines = patch.replace(/\r\n/g, '\n').split('\n');
+  const begin = lines.findIndex((line) => line.trim() === '*** Begin Patch');
+  const end = lines.findIndex((line, index) => index > begin && line.trim() === '*** End Patch');
   if (begin < 0 || end <= begin) return { writes: [], complete: false };
   const writes = [];
   const seenPaths = new Set();
@@ -191,31 +292,35 @@ export function codexPatchWrites(patch, root) {
   ].every((line) => line.trim() === '');
   let sawFileDirective = false;
   for (let index = begin + 1; index < end; index += 1) {
-    const match = lines[index].match(/^\*\*\* (Add|Update|Delete) File: (.+)$/);
+    const match = lines[index].match(CODEX_FILE_DIRECTIVE);
     if (!match) {
       if (lines[index].trim() !== '') complete = false;
       continue;
     }
     sawFileDirective = true;
     const [, action, relativePath] = match;
+    let moveTo = null;
+    if (action === 'Update') {
+      const move = (lines[index + 1] ?? '').match(CODEX_MOVE_DIRECTIVE);
+      if (move) {
+        moveTo = move[1];
+        index += 1;
+      }
+    }
     const body = [];
-    for (index += 1; index < end && !lines[index].startsWith('*** '); index += 1) {
+    // Hunk bodies end only at the next file directive or End Patch — never at
+    // `*** End of File`, which belongs to the hunk grammar.
+    for (index += 1; index < end && !CODEX_FILE_DIRECTIVE.test(lines[index]); index += 1) {
       body.push(lines[index]);
     }
     index -= 1;
-    const filePath = path.resolve(root, relativePath);
-    const rel = path.relative(root, filePath);
-    if (
-      seenPaths.has(filePath) ||
-      rel.startsWith(`..${path.sep}`) ||
-      rel === '..' ||
-      path.isAbsolute(rel)
-    ) {
+    const target = codexPatchTarget(root, relativePath);
+    if (!target || seenPaths.has(target.filePath)) {
       complete = false;
       continue;
     }
-    seenPaths.add(filePath);
-    const canonicalRelativePath = rel.split(path.sep).join('/');
+    seenPaths.add(target.filePath);
+    const { filePath, path: canonicalRelativePath } = target;
     if (action === 'Delete') {
       if (body.some((line) => line.trim() !== '') || !fs.existsSync(filePath)) {
         complete = false;
@@ -224,39 +329,54 @@ export function codexPatchWrites(patch, root) {
       writes.push({ path: canonicalRelativePath, filePath, delete: true });
       continue;
     }
-    let content;
     if (action === 'Add') {
+      const addBody = [...body];
+      while (addBody.length > 0 && addBody[addBody.length - 1] === '') addBody.pop();
       if (
-        body.length === 0 ||
+        addBody.length === 0 ||
         fs.existsSync(filePath) ||
-        body.some((line) => !line.startsWith('+'))
+        addBody.some((line) => !line.startsWith('+'))
       ) {
         complete = false;
         continue;
       }
-      content = body.filter((line) => line.startsWith('+')).map((line) => line.slice(1)).join('\n');
-      if (body.some((line) => line.startsWith('+'))) content += '\n';
-    } else {
-      if (
-        !body.some((line) => line.startsWith('@@')) ||
-        body.some((line) => !line.startsWith('@@') && !/^[ +\-]/.test(line))
-      ) {
-        complete = false;
-        continue;
-      }
-      let current;
-      try {
-        current = fs.readFileSync(filePath, 'utf8');
-      } catch {
-        complete = false;
-        continue;
-      }
-      content = applyCodexUpdatePatch(current, body);
-      if (content === null) complete = false;
-    }
-    if (typeof content === 'string') {
+      const content = `${addBody.map((line) => line.slice(1)).join('\n')}\n`;
       writes.push({ path: canonicalRelativePath, filePath, content });
+      continue;
     }
+    let current;
+    try {
+      current = fs.readFileSync(filePath, 'utf8');
+    } catch {
+      complete = false;
+      continue;
+    }
+    const content = applyCodexUpdatePatch(current, body);
+    if (content === null) {
+      complete = false;
+      continue;
+    }
+    if (moveTo === null) {
+      writes.push({ path: canonicalRelativePath, filePath, content });
+      continue;
+    }
+    // `*** Move to:` — judge the patched content at its destination, delete the source.
+    const destination = codexPatchTarget(root, moveTo);
+    if (!destination) {
+      complete = false;
+      continue;
+    }
+    if (destination.filePath === filePath) {
+      writes.push({ path: canonicalRelativePath, filePath, content });
+      continue;
+    }
+    if (seenPaths.has(destination.filePath) || fs.existsSync(destination.filePath)) {
+      complete = false;
+      continue;
+    }
+    seenPaths.add(destination.filePath);
+    writes.push({ path: destination.path, filePath: destination.filePath, content });
+    writes.push({ path: canonicalRelativePath, filePath, delete: true });
   }
   return { writes, complete: complete && sawFileDirective };
 }

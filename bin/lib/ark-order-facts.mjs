@@ -36,6 +36,45 @@ function stripCommentsPreservingLines(content) {
         .replace(/\/\*[\s\S]*?\*\//g, (block) => block.replace(/[^\n]/g, ' '))
         .replace(/(^|[^:])\/\/.*$/gm, (line) => line.replace(/\/\/.*$/, (c) => ' '.repeat(c.length)));
 }
+/**
+ * Specifiers naming `arkgate/order` in one source text (static import / export-from,
+ * `require()`, `import()`). Editor-path twin of the resolved dependency facts the
+ * kernel-in-domain sensor reads in CI — syntax only, no layer verdict here.
+ */
+export function extractArkOrderModuleImportsFromSource(file, content) {
+    const source = stripCommentsPreservingLines(content);
+    const out = [];
+    const fromRe = /\b(import|export)(\s+type)?\s+(?:[^;]*?\s+from\s*)?['"]([^'"]+)['"]/g;
+    let match;
+    while ((match = fromRe.exec(source)) !== null) {
+        const specifier = match[3] ?? '';
+        if (!isArkOrderModuleSpecifier(specifier))
+            continue;
+        out.push({
+            from: file,
+            specifier,
+            kind: match[1] === 'export' ? 'export' : 'import',
+            typeOnly: Boolean(match[2]),
+            line: lineAt(content, match.index),
+            resolution: 'resolved-external',
+        });
+    }
+    const callRe = /\b(require|import)\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
+    while ((match = callRe.exec(source)) !== null) {
+        const specifier = match[2] ?? '';
+        if (!isArkOrderModuleSpecifier(specifier))
+            continue;
+        out.push({
+            from: file,
+            specifier,
+            kind: match[1] === 'import' ? 'dynamic-import' : 'require',
+            typeOnly: false,
+            line: lineAt(content, match.index),
+            resolution: 'resolved-external',
+        });
+    }
+    return out;
+}
 export function extractArkOrderPlaneCallsFromSource(file, content) {
     const source = stripCommentsPreservingLines(content);
     const facts = [];

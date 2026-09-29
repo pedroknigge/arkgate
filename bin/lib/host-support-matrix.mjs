@@ -37,7 +37,9 @@ function hostProfile(label, hookPath, hookSurface, hookOperations, hardWrite, re
     }),
     // Host-native "deny when the checker cannot run" flag (FS-permission analog).
     // required = schema field must be true for hard-write evidence (Cursor failClosed).
-    // unsupported = host has no documented flag; hook-crash behavior is host-owned.
+    // unsupported = host has no documented flag. ark-mcp --hook fails closed itself
+    // (exit 2 / host deny) when its checker cannot run for a governed source write;
+    // only a crash of node itself before the launcher runs stays host-owned.
     // none = advisory host; no local write block.
     nativeFailClosed: extras.nativeFailClosed ?? (hardWrite ? 'unsupported' : 'none'),
     // EH07 minimum ops matrix (hard=false for soft hosts on every listed op).

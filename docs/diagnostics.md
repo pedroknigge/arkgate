@@ -72,6 +72,7 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 | [`CANDIDATE_CONTENT_HASH_MISMATCH`](#CANDIDATE_CONTENT_HASH_MISMATCH) | preflight | Candidate content hash mismatch |
 | [`UNDECLARED_CANDIDATE_CHANGE`](#UNDECLARED_CANDIDATE_CHANGE) | preflight | Undeclared candidate change |
 | [`ATOMIC_PREFLIGHT_UNAVAILABLE`](#ATOMIC_PREFLIGHT_UNAVAILABLE) | preflight | Atomic preflight unavailable |
+| [`WRITE_GATE_UNAVAILABLE`](#WRITE_GATE_UNAVAILABLE) | preflight | Write gate could not run |
 | [`DESIGN_SMELL_REGRESSION`](#DESIGN_SMELL_REGRESSION) | preflight | Design smell regression on base-relative ratchet |
 | [`ANALYSIS_PARSE_INCOMPLETE`](#ANALYSIS_PARSE_INCOMPLETE) | analysis | Parse incomplete |
 | [`LEXICAL_EVIDENCE_INCOMPLETE`](#LEXICAL_EVIDENCE_INCOMPLETE) | analysis | Lexical evidence incomplete |
@@ -604,6 +605,15 @@ Haken slaving: few slow keys (ξ) determine derived fast state. Field ingest nev
 - **Why:** The host/MCP path could not run the atomic preflight engine (missing facts, incomplete setup, or unsupported mode).
 - **Fix:** Use resolved-candidate facts / ark_prepare_change with a complete batch, or fall back to ark-check on disk. Do not treat missing preflight as green.
 
+<a id="WRITE_GATE_UNAVAILABLE"></a>
+
+### `WRITE_GATE_UNAVAILABLE`
+
+**Write gate could not run**
+
+- **Why:** The write gate could not load its own inputs (`ark.config.json` missing, unreadable, or invalid; a referenced ArkRules file missing or invalid; or the built library missing), so it cannot judge this governed source write. No checker, no write: the hook blocks instead of letting the write through unchecked.
+- **Fix:** Fix the reported input (repair `ark.config.json` or the ArkRules file, or run `npm run build` / reinstall arkgate from npm), then retry the same write. Do not remove the hook to get past it.
+
 <a id="DESIGN_SMELL_REGRESSION"></a>
 
 ### `DESIGN_SMELL_REGRESSION`
@@ -631,7 +641,7 @@ Haken slaving: few slow keys (ξ) determine derived fast state. Field ingest nev
 **Lexical evidence incomplete**
 
 - **Why:** This check only saw one file, so it cannot fully prove how the import resolves. The result is provisional — `ark-check` on the project is the authority.
-- **Fix:** Run `npx arkgate-check --root . --config ark.config.json` to confirm. Do not call `ark_prepare_change` from a hook deny.
+- **Fix:** For a complete verdict, run `npx arkgate-check --root . --config ark.config.json` (or `ark_prepare_change` over MCP with the full candidate batch). Read `lexicalValid` for the one-file result. The write hook adds its own hook-only note to its deny text.
 
 <a id="ANALYSIS_COVERS_NO_FILES"></a>
 

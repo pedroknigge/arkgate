@@ -4,6 +4,7 @@
 import {
   extractArkOrderGenericUpdatesFromSource,
   extractArkOrderIngestWritesXiFromSource,
+  extractArkOrderModuleImportsFromSource,
   extractArkOrderPlaneCallsFromSource,
   extractArkOrderReleaseKeyCountsFromSource,
   extractArkOrderXiFieldWritesFromSource,
@@ -373,22 +374,36 @@ export function evaluateArkOrderEditorSensors(input: {
   source: string;
   fromLayer: string | null | undefined;
   intentPrefixes?: readonly string[];
+  /** Same extra-plane teeth floor ark-check applies (omitted = teeth allowed). */
+  classification?: ExtraMergeTeethClassification;
 }): ArkOrderSensorFinding[] {
   if (!input.arkOrder) return [];
   const planeCalls = extractArkOrderPlaneCallsFromSource(input.file, input.source);
   const genericUpdates = extractArkOrderGenericUpdatesFromSource(input.file, input.source);
   const xiKeys = input.arkOrder.xiKeys ?? [];
+  // kernel-in-domain needs the file's own layer (name + intent prefixes) and the
+  // arkgate/order specifiers of this one source — the write-path twin of CI facts.
+  const layers: ArkConfigLayer[] = input.fromLayer
+    ? [
+        {
+          name: input.fromLayer,
+          patterns: [],
+          intentPrefixes: [...(input.intentPrefixes ?? [])],
+        } as ArkConfigLayer,
+      ]
+    : [];
   return evaluateArkOrderSensors({
     arkOrder: input.arkOrder,
-    layers: [],
+    layers,
     planeCalls,
     genericUpdates,
     planeRootHits: [],
     xiFieldWrites: extractArkOrderXiFieldWritesFromSource(input.file, input.source, xiKeys),
     ingestWritesXi: extractArkOrderIngestWritesXiFromSource(input.file, input.source),
     releaseKeyCounts: extractArkOrderReleaseKeyCountsFromSource(input.file, input.source),
-    dependencies: [],
+    dependencies: extractArkOrderModuleImportsFromSource(input.file, input.source),
     layerForFile: () => input.fromLayer,
+    ...(input.classification ? { classification: input.classification } : {}),
   }).findings.filter(
     (item) =>
       item.sensor === 'arkorder-generic-update' ||

@@ -794,9 +794,9 @@ export function runInstallAgentGates(args) {
     }
     if (tools.has('codex') && !args.compact) {
       console.log('  Codex write path (honest):');
-      console.log('    - Local: advisory MCP + best-effort .codex/hooks.json (not a hard boundary).');
-      console.log('    - Hard merge backstop: CI --strict-merge + required status check.');
-      console.log('    - Not equivalent to Claude/Grok PreToolUse hard-write + repair.');
+      console.log('    - Local: .codex/hooks.json PreToolUse hard-blocks a complete local apply_patch (Codex CLI / local Desktop) once the project is trusted and a hook run is runtime-observed; on disk it is configured, not verified.');
+      console.log('    - Outside that claim (hosted tools, hook opt-out, shell writes, incomplete patch reconstruction): CI --strict-merge + required status check.');
+      console.log('    - Repair envelopes may emit, but Codex reinjection is not guaranteed (unlike Claude/Grok hard-write + repair).');
     }
     if (args.codexHome) {
       console.log(

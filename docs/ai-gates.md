@@ -721,8 +721,23 @@ If your runtime can run a shell command before file writes and pass the tool pay
 - Grok: `{ "decision": "deny", "reason": "…" }` on stdout when blocked
 - Antigravity: **stdout `decision` is required** — allow → `{ "decision": "allow" }`; deny →
   `{ "decision": "deny", "reason": "…" }` (exit 2 still set on deny)
-- plumbing problems (no stdin, non-source files, files outside `--root`) never block; Antigravity
-  still emits `{ "decision": "allow" }` on those fail-open paths
+- plumbing problems (no stdin, malformed payload, non-file tools, non-source files, files outside
+  `--root`) never block; Antigravity still emits `{ "decision": "allow" }` on those fail-open paths.
+  "Outside `--root`" is judged after realpath: `/tmp` vs `/private/tmp` or a symlinked checkout is
+  the same workspace and is gated
+- a gate that **cannot run** blocks every governed source write (exit `2`, `WRITE_GATE_UNAVAILABLE`,
+  plus the host deny JSON): `ark.config.json` missing / unparsable / invalid, a referenced ArkRules
+  file missing or invalid, or `dist/` missing or broken. No checker, no write. A write to
+  `ark.config.json` itself is still allowed so the contract can be repaired, but a write that would
+  leave it unloadable is denied
+- Codex `apply_patch`: the full grammar is reconstructed (`*** End of File`, a first hunk without
+  `@@`, `*** Move to:` judged at the destination). A patch that truly cannot be reconstructed is
+  allowed with a stderr notice and stays CI-backed
+- the hook runs the same file-local extra planes CI runs on that file: enforced ArkRun editor
+  sensors, enforced ArkRules structure sensors (`ARKRULE_STRUCTURE`), and enforced ArkOrder editor
+  sensors (`ARKORDER_KERNEL_IN_DOMAIN`, `ARKORDER_GENERIC_UPDATE`, …), under the same
+  classification floor. Cross-file evidence (invariant coverage, missing plane roots) stays
+  CI-authoritative
 
 ## ESLint (editor feedback) — bounded parity envelope
 
