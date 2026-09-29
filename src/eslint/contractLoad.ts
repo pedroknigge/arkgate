@@ -13,7 +13,7 @@ import path from 'node:path';
 import { parseArkConfigJson, type ArkConfig } from '../domain/configContract';
 import { resolveEffectiveContract } from '../domain/effectiveContract';
 import { emptyEffectiveArkRules, type EffectiveArkRules } from '../domain/arkRulesContract';
-import { isScanExcludedRelative } from '../domain/layerMatch';
+import { isScanExcludedRelative, resolveSliceRulePlan } from '../domain/layerMatch';
 import {
   lintedFilename,
   sourceCodeFor,
@@ -108,12 +108,95 @@ function rememberContract(configPath: string, entry: CachedContract): void {
   contractCache.set(configPath, entry);
 }
 
-function arkRulesRefs(config: ArkConfig | null): Array<[string, string]> {
+const SOURCE_FILE_NAME = /\.[cm]?[tj]sx?$/;
+const TEST_FILE_NAME =
+  /(^test(?:[-_.]).*|\.(spec|test)(?:-d)?\.)(tsx?|jsx?|mjsx?|cjsx?|mts|cts)$/i;
+const SKIPPED_SOURCE_DIRS = new Set([
+  'node_modules',
+  'dist',
+  'coverage',
+  'bench',
+  'benches',
+  'benchmark',
+  'benchmarks',
+  'docs',
+  'documentation',
+  'example',
+  'examples',
+  'fixture',
+  'fixtures',
+  'testdata',
+  'playground',
+  'scaffold',
+  'scaffolds',
+  '__tests__',
+  '__mocks__',
+  'e2e',
+  'test',
+  'tests',
+]);
+
+function isGovernableSourceName(name: string): boolean {
+  return SOURCE_FILE_NAME.test(name) && !name.endsWith('.d.ts') && !TEST_FILE_NAME.test(name);
+}
+
+/** Central `arkRules` values, string or array, as project-relative paths. */
+function arkRulesRefs(config: ArkConfig | null): string[] {
   const refs = config?.arkRules;
   if (!refs || typeof refs !== 'object') return [];
-  return Object.entries(refs).filter(
-    (entry): entry is [string, string] => typeof entry[1] === 'string'
-  );
+  const paths: string[] = [];
+  for (const value of Object.values(refs)) {
+    if (typeof value === 'string' && value.length > 0) paths.push(value);
+    else if (Array.isArray(value)) {
+      for (const entry of value) {
+        if (typeof entry === 'string' && entry.length > 0) paths.push(entry);
+      }
+    }
+  }
+  return paths;
+}
+
+/**
+ * Governed source index for `resolveSliceRulePlan`. Same include / exclude
+ * membership as the CLI walk, so the editor reads only planned slice files.
+ */
+function governedRelativeFiles(root: string, config: ArkConfig): string[] {
+  const include = config.include && config.include.length > 0 ? config.include : ['src'];
+  const files: string[] = [];
+  const walk = (dir: string): void => {
+    let entries: fs.Dirent[];
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      if (entry.name.startsWith('.')) continue;
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (SKIPPED_SOURCE_DIRS.has(entry.name)) continue;
+        walk(full);
+        continue;
+      }
+      if (!entry.isFile() || !isGovernableSourceName(entry.name)) continue;
+      const rel = path.relative(root, full).split(path.sep).join('/');
+      if (!rel || rel.startsWith('..') || isScanExcludedRelative(rel, config)) continue;
+      files.push(rel);
+    }
+  };
+  for (const entry of include) {
+    const includeRoot = String(entry).replace(/\\/g, '/').replace(/^\.\//, '').replace(/\/$/, '');
+    walk(path.resolve(root, includeRoot === '.' ? '' : includeRoot));
+  }
+  return files;
+}
+
+function plannedSlicePaths(config: ArkConfig, governedFiles: readonly string[]): string[] {
+  return resolveSliceRulePlan({
+    files: governedFiles,
+    rules: config.rules,
+    layers: config.layers.map((layer) => layer.name),
+  }).map((entry) => entry.path);
 }
 
 /** Read a referenced ArkRules file only when it stays inside the project root. */
@@ -129,9 +212,25 @@ function readReferencedFile(root: string, rel: string): string | undefined {
   }
 }
 
+function contractSourcePaths(config: ArkConfig | null, governedFiles: readonly string[]): string[] {
+  if (!config) return [];
+  const seen = new Set<string>();
+  const paths: string[] = [];
+  const add = (rel: string) => {
+    const key = rel.replace(/\\/g, '/').replace(/^\.\//, '');
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    paths.push(key);
+  };
+  for (const rel of arkRulesRefs(config)) add(rel);
+  for (const rel of plannedSlicePaths(config, governedFiles)) add(rel);
+  return paths;
+}
+
 function refStampsFor(root: string, config: ArkConfig | null): string {
-  return arkRulesRefs(config)
-    .map(([, rel]) => {
+  const governed = config ? governedRelativeFiles(root, config) : [];
+  return contractSourcePaths(config, governed)
+    .map((rel) => {
       try {
         const stat = fs.statSync(path.resolve(root, rel));
         return `${rel}:${stat.mtimeMs}:${stat.size}`;
@@ -154,9 +253,10 @@ function resolveContract(configPath: string, source: string): LoadedArkContract 
   } catch (error) {
     return { config: null, arkRules: emptyEffectiveArkRules(), error: errorText(error), fingerprint: null };
   }
-  const refs = arkRulesRefs(config);
+  const governedFiles = governedRelativeFiles(root, config);
+  const paths = contractSourcePaths(config, governedFiles);
   const hash = createHash('sha256').update(source);
-  if (refs.length === 0) {
+  if (paths.length === 0) {
     return {
       config,
       arkRules: emptyEffectiveArkRules(),
@@ -165,7 +265,7 @@ function resolveContract(configPath: string, source: string): LoadedArkContract 
     };
   }
   const fileContents: Record<string, string> = {};
-  for (const [, rel] of refs) {
+  for (const rel of paths) {
     const content = readReferencedFile(root, rel);
     if (content === undefined) continue;
     const key = rel.replace(/\\/g, '/').replace(/^\.\//, '');
@@ -173,7 +273,10 @@ function resolveContract(configPath: string, source: string): LoadedArkContract 
     hash.update(`\0${key}\0${content}`);
   }
   try {
-    const effective = resolveEffectiveContract({ config, fileContents }, configPath);
+    const effective = resolveEffectiveContract(
+      { config, fileContents, governedFiles },
+      configPath
+    );
     return { config, arkRules: effective.arkRules, error: null, fingerprint: hash.digest('hex') };
   } catch (error) {
     return { config: null, arkRules: emptyEffectiveArkRules(), error: errorText(error), fingerprint: null };

@@ -58,6 +58,8 @@ export type ArkRuleProvenance = {
   sourceFile: string;
   ruleId: string;
   layer: string;
+  /** Set when the rule was read from a child-slice file. Absent on central files. */
+  childId?: string;
 };
 
 export type EffectiveStructureRule = ArkRuleStructureEntry & {
@@ -76,6 +78,8 @@ export type EffectiveArkRules = {
     string,
     {
       sourceFile: string;
+      /** Every file merged into this layer, central paths first. Absent on older catalogs. */
+      sourceFiles?: string[];
       structure: EffectiveStructureRule[];
       invariants: EffectiveInvariantRule[];
     }

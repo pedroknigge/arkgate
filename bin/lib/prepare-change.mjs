@@ -15,7 +15,7 @@ import {
 import { effectiveAnalysisConfig } from './analysis-policy.mjs';
 import { isScanExcludedRelative } from '../ark-shared.mjs';
 import { classifyChangeSet, evaluateTeamGate } from './team-parliament.mjs';
-import { loadEffectiveArkRulesFromDisk } from './effective-contract-load.mjs';
+import { arkRulesLoadFailed, loadEffectiveArkRulesFromDisk } from './effective-contract-load.mjs';
 import {
   coverageOptionsFromConfig,
   invariantIdsFromCatalog,
@@ -201,13 +201,7 @@ export function prepareChangeFromRoot({
   // and a broken reference fails closed instead of silently dropping the catalog.
   const arkRulesLoad = loadEffectiveArkRulesFromDisk(root, effectiveConfig);
   if (arkRulesLoad.errors.length > 0) {
-    const message = arkRulesLoad.errors
-      .map((issue) => (typeof issue === 'string' ? issue : `- ${issue.path}: ${issue.message}`))
-      .join('\n');
-    const error = new Error(`Invalid Effective Contract (${contractSource}):\n${message}`);
-    error.code = 'ARKRULES_LOAD_FAILED';
-    error.issues = arkRulesLoad.errors;
-    throw error;
+    throw arkRulesLoadFailed(contractSource, arkRulesLoad.errors);
   }
   const contract = loadContract(effectiveConfig, contractSource, {
     arkRules: arkRulesLoad.arkRules,

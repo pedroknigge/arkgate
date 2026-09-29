@@ -175,6 +175,8 @@ ArkGate has **always-on Layers** plus opt-in extras. The user chooses extras; yo
 
 
 ### Place + ArkRules
+- `arkRules[<Layer>]` may be one path or a list of paths. A child wall may set `childSlices.arkRulesFile` to `arkrules.<Layer>.json`. That file lives at the slice root. Its id in findings is `<childId>#<localId>`. Doctor lists it on `rulesUnderContract.bySlice`. When `ark_place` returns `sliceRules`, those are the ids for this file's slice.
+- A `sliceAliases` entry with `"pinned": true` stays put (a framework route). `reason` is a label only. Do not treat a pinned route as finished while another alias is still an owed move.
 - Choose layer from contract **and** check structure sensors for that layer (private state, factory, thin adapter, writes-via-aggregate).
 - Scaffold to satisfy **[ArkRules]** when present; state which sensors apply.
 - Persistence **writes** (insert/update/delete against a driver) go through a Domain aggregate + persistence adapter. Application/Feature files that import Prisma/pg/Supabase and call `.insert` / `.create` are **[ArkRules]** `writes-via-aggregate`. Do not invent `Externals/` or `admission.ts`.

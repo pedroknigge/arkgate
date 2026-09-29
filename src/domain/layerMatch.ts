@@ -131,6 +131,10 @@ export type SliceAlias = {
   from: string;
   /** Child slice id: the universe id plus one child segment. */
   to: string;
+  /** True: this path stays. It is listed, and it is not an owed move. */
+  pinned?: boolean;
+  /** Doctor label. A label alone does not pin. */
+  reason?: string;
 };
 
 export type ChildSlices = {
@@ -145,6 +149,11 @@ export type ChildSlices = {
   allowedCrossSlice?: CrossSliceEdge[];
   /** Unclassified files governed as this child. Debt, not a destination. */
   sliceAliases?: SliceAlias[];
+  /**
+   * Filename read at each child root this wall already resolved.
+   * `<Layer>` is the only token (`arkrules.<Layer>.json`).
+   */
+  arkRulesFile?: string;
 };
 
 /** How the child wall treats a sibling crossing. Absent means `deny`. */
@@ -1010,12 +1019,26 @@ export type SliceAliasMove = {
   advisory?: string;
 };
 
+export type SliceAliasPinned = {
+  from: string;
+  to: string;
+  destination: string;
+  files: string[];
+  reason?: string;
+  unknownUniverse?: true;
+  advisory?: string;
+};
+
 export type SliceAliasReport = {
   notAScore: true;
   finished: false;
   debt: string;
   moves: SliceAliasMove[];
+  /** Present when a pinned alias matched. Owed moves stay on `moves`. */
+  pinned?: SliceAliasPinned[];
 };
+
+const PINNED_ALIAS_NOTE = 'Pinned aliases stay where they are. They are not an owed move.';
 
 function aliasGlobPattern(glob: string): string {
   return trimTrailingSlashes(glob.trim().replace(/\\/g, '/')).toLowerCase();
@@ -1299,6 +1322,100 @@ export function anySliceAlias(
   return (rules ?? []).some((rule) => (rule?.childSlices?.sliceAliases?.length ?? 0) > 0);
 }
 
+/** True when an alias is still an owed move. `pinned: true` does not count. A reason alone does. */
+export function sliceAliasOwesMove(
+  rules: readonly { childSlices?: { sliceAliases?: readonly { pinned?: boolean }[] } }[] | undefined
+): boolean {
+  return (rules ?? []).some((rule) =>
+    (rule?.childSlices?.sliceAliases ?? []).some((alias) => alias?.pinned !== true)
+  );
+}
+
+const SLICE_RULE_LAYER_TOKEN = '<Layer>';
+
+export type SliceRulePlanEntry = {
+  path: string;
+  childId: string;
+  layer: string;
+  defaultAppliesTo: string[];
+};
+
+function sliceRuleFileName(pattern: string, layer: string): string | null {
+  const token = SLICE_RULE_LAYER_TOKEN;
+  if (!pattern.includes(token) || pattern.split(token).length !== 2) return null;
+  if (/[*\\/]/.test(pattern)) return null;
+  const name = pattern.replace(token, layer);
+  if (!name || name.includes('..')) return null;
+  return name;
+}
+
+/**
+ * Child-slice ArkRules files this wall already named.
+ * Roots come from the governed file index. The pattern is a filename, not a search.
+ */
+export function resolveSliceRulePlan(input: {
+  files: readonly string[];
+  rules: readonly EdgeRule[] | undefined;
+  layers: readonly string[];
+}): SliceRulePlanEntry[] {
+  const layers = [...new Set(input.layers.filter((name) => typeof name === 'string' && name.length > 0))].sort();
+  const entries: SliceRulePlanEntry[] = [];
+  const seen = new Set<string>();
+  for (const rule of input.rules ?? []) {
+    const child = rule?.childSlices;
+    const pattern = child?.arkRulesFile;
+    if (!child || typeof pattern !== 'string') continue;
+    const roots = new Map<string, string>();
+    for (const file of input.files) {
+      if (typeof file !== 'string' || file.length === 0) continue;
+      const universeId = rule.sliceFolders?.length
+        ? sliceIdForPath(file, rule.sliceFolders, rule.sliceIdentity)
+        : undefined;
+      const resolved = resolveChildSliceId(file, universeId, child);
+      if (!resolved.childId || roots.has(resolved.childId)) continue;
+      const root = sliceAliasDestination(file, resolved.childId, child);
+      if (root) roots.set(resolved.childId, root);
+    }
+    for (const [childId, sliceRoot] of [...roots.entries()].sort((left, right) => left[0].localeCompare(right[0]))) {
+      for (const layer of layers) {
+        const name = sliceRuleFileName(pattern, layer);
+        if (!name) continue;
+        const rel = `${sliceRoot}/${name}`.replace(/\\/g, '/');
+        if (seen.has(`${layer}\0${rel}`)) continue;
+        seen.add(`${layer}\0${rel}`);
+        entries.push({
+          path: rel,
+          childId,
+          layer,
+          defaultAppliesTo: [`${sliceRoot}/**`],
+        });
+      }
+    }
+  }
+  return entries;
+}
+
+/** Ids from the effective catalog that belong to the child slice of this file. */
+export function sliceRuleIdsForFile(
+  filePath: string,
+  rules: readonly EdgeRule[] | undefined,
+  catalog: readonly { id: string; childId?: string }[]
+): string[] {
+  const childIds = new Set<string>();
+  for (const rule of rules ?? []) {
+    if (!rule?.childSlices) continue;
+    const universeId = rule.sliceFolders?.length
+      ? sliceIdForPath(filePath, rule.sliceFolders, rule.sliceIdentity)
+      : undefined;
+    const resolved = resolveChildSliceId(filePath, universeId, rule.childSlices);
+    if (resolved.childId) childIds.add(resolved.childId);
+  }
+  return catalog
+    .filter((row) => typeof row.childId === 'string' && childIds.has(row.childId))
+    .map((row) => row.id)
+    .sort();
+}
+
 /** Doctor list. Absent when no rule sets sliceAliases, so the key stays off. */
 export function sliceAliasReport(
   rules: readonly EdgeRule[] | undefined,
@@ -1306,16 +1423,26 @@ export function sliceAliasReport(
 ): SliceAliasReport | null {
   if (!anySliceAlias(rules)) return null;
   const moves = new Map<string, SliceAliasMove>();
+  const pinned = new Map<string, SliceAliasPinned>();
   for (const rule of rules ?? []) {
     const child = rule?.childSlices;
     if (!child?.sliceAliases) continue;
     for (const alias of child.sliceAliases) {
       if (!alias || typeof alias.from !== 'string' || typeof alias.to !== 'string') continue;
       const key = `${aliasGlobPattern(alias.from)}\0${aliasGlobPattern(alias.to)}`;
-      let move = moves.get(key);
+      const bucket = alias.pinned === true ? pinned : moves;
+      let move = bucket.get(key);
       if (!move) {
-        move = { from: alias.from, to: alias.to, destination: '', files: [] };
-        moves.set(key, move);
+        move = {
+          from: alias.from,
+          to: alias.to,
+          destination: '',
+          files: [],
+          ...(alias.pinned === true && typeof alias.reason === 'string' && alias.reason.length > 0
+            ? { reason: alias.reason }
+            : {}),
+        };
+        bucket.set(key, move);
       }
       const seen = new Set(move.files);
       for (const file of files) {
@@ -1327,7 +1454,7 @@ export function sliceAliasReport(
     }
   }
   const universes = knownUniverseIds(rules, files);
-  const listed = [...moves.values()].map((move) => {
+  const decorate = <T extends SliceAliasMove | SliceAliasPinned>(move: T): T => {
     const target = splitAliasTarget(move.to);
     const unknown = universes !== null && target !== null && !universes.has(target.universeId);
     return {
@@ -1340,9 +1467,20 @@ export function sliceAliasReport(
           }
         : {}),
     };
-  });
-  listed.sort((left, right) => left.from.localeCompare(right.from) || left.to.localeCompare(right.to));
-  return { notAScore: true, finished: false, debt: SLICE_ALIAS_DEBT, moves: listed };
+  };
+  const listed = [...moves.values()].map((move) => decorate(move));
+  const pinnedListed = [...pinned.values()].map((move) => decorate(move));
+  const byAlias = (left: { from: string; to: string }, right: { from: string; to: string }) =>
+    left.from.localeCompare(right.from) || left.to.localeCompare(right.to);
+  listed.sort(byAlias);
+  pinnedListed.sort(byAlias);
+  return {
+    notAScore: true,
+    finished: false,
+    debt: listed.length > 0 ? SLICE_ALIAS_DEBT : PINNED_ALIAS_NOTE,
+    moves: listed,
+    ...(pinnedListed.length > 0 ? { pinned: pinnedListed } : {}),
+  };
 }
 
 /**

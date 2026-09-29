@@ -9,11 +9,11 @@ route that cannot move. `src/lib/compliance/hold.ts` is a real owed move.
 unpinned. The slice files (`arkrules.DomainModel.json`) are not referenced.
 `arkrules/orphan.json` is the top-level drift file the check already warns about.
 
-Later configs are the #341 claims. They are red until a design is implemented:
+Later configs are the #341 claims:
 
 - `ark.config.array.json` — `arkRules.DomainModel` is two paths.
 - `ark.config.duplicate.json` — those two paths share `INV-DUP`.
-- `ark.config.discovery.json` — `arkRulesDiscovery.sliceFiles` is `arkrules.<Layer>.json`.
+- `ark.config.discovery.json` — `childSlices.arkRulesFile` is `arkrules.<Layer>.json`.
   `include` omits `scm`, so the escaping file is not a governed child root.
 - `ark.config.escape.json` — the same discovery, with `scm` governed. Its rule file
   sets `appliesTo` outside the slice.

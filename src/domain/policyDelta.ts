@@ -1016,9 +1016,34 @@ function indexEffectiveRules(arkRules: EffectiveArkRules | undefined): {
   return { structure, invariants };
 }
 
+function arkRulesRefPaths(value: unknown): string[] {
+  if (typeof value === 'string') return value.length > 0 ? [value] : [];
+  if (!Array.isArray(value)) return [];
+  return value.filter((entry): entry is string => typeof entry === 'string' && entry.length > 0);
+}
+
+function arkRulesLayerSources(arkRules: EffectiveArkRules | undefined, layer: string): string[] {
+  if (!arkRules) return [];
+  const paths = new Set<string>();
+  for (const rule of [...arkRules.structure, ...arkRules.invariants]) {
+    if (rule.provenance?.layer === layer && rule.provenance.sourceFile) paths.add(rule.provenance.sourceFile);
+  }
+  return [...paths];
+}
+
+/** Config paths plus discovered source files for one layer. */
+function arkRulesCatalogPaths(
+  configValue: unknown,
+  arkRules: EffectiveArkRules | undefined,
+  layer: string
+): string[] {
+  return [...new Set([...arkRulesRefPaths(configValue), ...arkRulesLayerSources(arkRules, layer)])].sort();
+}
+
 /**
  * ADR 0012 / AR02 — classify ArkRules reference map and effective rule transitions.
  * add/promote → strengthening; demote/delete → weakening; path/sensor rewrite → judgment.
+ * A discovered slice file is one arkrules-ref-added or arkrules-ref-removed, keyed by its path.
  */
 function compareArkRules(
   findings: PolicyDeltaFinding[],
@@ -1033,32 +1058,31 @@ function compareArkRules(
   );
   const baseRefs = base.arkRules ?? {};
   const candidateRefs = candidate.arkRules ?? {};
-  const layers = [...new Set([...Object.keys(baseRefs), ...Object.keys(candidateRefs)])].sort();
-  for (const layer of layers) {
+  const layers = new Set<string>([...Object.keys(baseRefs), ...Object.keys(candidateRefs)]);
+  for (const rule of [
+    ...(baseArkRules?.structure ?? []),
+    ...(baseArkRules?.invariants ?? []),
+    ...(candidateArkRules?.structure ?? []),
+    ...(candidateArkRules?.invariants ?? []),
+  ]) {
+    if (rule.provenance?.layer) layers.add(rule.provenance.layer);
+  }
+  for (const layer of [...layers].sort()) {
     const before = baseRefs[layer];
     const after = candidateRefs[layer];
     const path = `$.arkRules[${layer}]`;
-    if (before === undefined && after !== undefined) {
-      addFinding(findings, {
-        kind: 'arkrules-ref-added',
-        path,
-        classification: 'strengthening',
-        message: `ArkRules reference for layer ${layer} was added.`,
-        after,
-      });
-      continue;
-    }
-    if (before !== undefined && after === undefined) {
-      addFinding(findings, {
-        kind: 'arkrules-ref-removed',
-        path,
-        classification: 'weakening',
-        message: `ArkRules reference for layer ${layer} was removed.`,
-        before,
-      });
-      continue;
-    }
-    if (before !== after) {
+    const beforePaths = arkRulesCatalogPaths(before, baseArkRules, layer);
+    const afterPaths = arkRulesCatalogPaths(after, candidateArkRules, layer);
+    if (beforePaths.join('\0') === afterPaths.join('\0')) continue;
+    if (
+      typeof before === 'string' &&
+      typeof after === 'string' &&
+      before !== after &&
+      beforePaths.length === 1 &&
+      afterPaths.length === 1 &&
+      beforePaths[0] === before &&
+      afterPaths[0] === after
+    ) {
       addFinding(findings, {
         kind: 'arkrules-ref-path-changed',
         path,
@@ -1066,6 +1090,29 @@ function compareArkRules(
         message: `ArkRules file path for layer ${layer} changed; verify the effective rules still match intent.`,
         before,
         after,
+      });
+      continue;
+    }
+    const beforeSet = new Set(beforePaths);
+    const afterSet = new Set(afterPaths);
+    for (const added of afterPaths) {
+      if (beforeSet.has(added)) continue;
+      addFinding(findings, {
+        kind: 'arkrules-ref-added',
+        path: added,
+        classification: 'strengthening',
+        message: `ArkRules reference for layer ${layer} was added (${added}).`,
+        after: added,
+      });
+    }
+    for (const removed of beforePaths) {
+      if (afterSet.has(removed)) continue;
+      addFinding(findings, {
+        kind: 'arkrules-ref-removed',
+        path: removed,
+        classification: 'weakening',
+        message: `ArkRules reference for layer ${layer} was removed (${removed}).`,
+        before: removed,
       });
     }
   }

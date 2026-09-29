@@ -41,7 +41,7 @@ the project API is unusable. See the distribution and completeness boundary in
 ark start → ark start --apply → ark-check --doctor
   day to day: compact router / MCP place + validate + check
   guided work: install skill pack → /ark-autopilot
-  optional: arkRules map + arkrules/*.json (intra-layer; starts advisory)
+  optional: arkRules map (one path or a list) + arkrules/*.json, or childSlices.arkRulesFile at a slice root (intra-layer; starts advisory)
 ```
 
 `arkgate-check --doctor` shows what's wrong and what to do first. From **4.0.0**, doctor may
@@ -1421,7 +1421,7 @@ The server exposes these thirteen tools. Every tool accepts the additive
 | `ark_manifest` | No non-project args: return the machine-readable architecture contract with an authoritative binding after the identity handshake. |
 | `validate_code` | `{ source, layer?, filePath? }`: single-file lexical check (layer plane plus the enforced ArkRun / ArkRules structure / ArkOrder sensors CI runs on that file); infer the layer from `filePath` when possible. Always partial: `valid:false` / `isError:true` until complete-candidate preflight — read `lexicalValid` for the one-file verdict. Not a hook; hard blocking is `arkgate-mcp --hook`. |
 | `ark_check` | `{ strict?, baseline? }`: run the full project architecture check. `verdict` separates `identity`, `completeness`, `graph`, `coverage`, `gates`, and `overallOk`; no individual green fact substitutes for the combined verdict. |
-| `ark_policy_delta` | `{ baseConfig, candidateConfig?, baseArkRuleFiles?, candidateArkRuleFiles?, acknowledgement? }`: classify a complete contract transition, ArkRules included; never edits the contract. `baseArkRuleFiles` (`{ "<path from baseConfig.arkRules>": <file JSON> }`) is required when `baseConfig` maps `arkRules`. Weakening / new layer / new allow edge needs `adrPath` on the acknowledgement. |
+| `ark_policy_delta` | `{ baseConfig, candidateConfig?, baseArkRuleFiles?, candidateArkRuleFiles?, acknowledgement? }`: classify a complete contract transition, ArkRules included; never edits the contract. `baseArkRuleFiles` (`{ "<path from baseConfig.arkRules>": <file JSON> }`) is required when `baseConfig` maps `arkRules`. Include each `childSlices.arkRulesFile` path in that map when the wall discovers one. Weakening / new layer / new allow edge needs `adrPath` on the acknowledgement. |
 | `ark_coverage` | No args: report per-layer counts, every unclassified file, unmatched layers, and missing rule edges. |
 | `ark_place` | `{ filePath, description? }`: resolve the governed home for `filePath` (fail-closed without it; never invents a path) and return its import/global constraints. |
 | `ark_prepare_write` | `{ source, filePath, description?, layer? }`: compose placement and snippet validation, with hashes and a mechanical-safe patch when available. `filePath` is required (fail-closed). Partial like `validate_code`: read `lexicalValid`. |

@@ -44,17 +44,23 @@
       }
     },
     {
-      "expect": "fail",
+      "expect": "pass",
       "got": {
-        "ids": [],
-        "ok": false,
-        "sourceFiles": []
+        "ids": [
+          "INV-SHARED-CODES",
+          "INV-UNIVERSE-CODES"
+        ],
+        "ok": true,
+        "sourceFiles": [
+          "arkrules/DomainModel.json",
+          "arkrules/DomainModel.shared.json"
+        ]
       },
       "id": "341-array-merge",
-      "met": false,
+      "met": true,
       "note": "Owned by #341. arkRules.DomainModel as two paths merges both ids. The DomainModel layer lists both source files. Last-file-wins on byLayer is not a merge.",
       "owner": "#341",
-      "status": "expected-fail",
+      "status": "pass",
       "want": {
         "ids": [
           "INV-SHARED-CODES",
@@ -68,40 +74,51 @@
       }
     },
     {
-      "expect": "fail",
+      "expect": "pass",
       "got": {
         "configRejected": true,
-        "hasCode": false,
-        "hasId": false
+        "hasCode": true,
+        "hasId": true
       },
       "id": "341-duplicate-id",
-      "met": false,
+      "met": true,
       "note": "Owned by #341. Two central files that share INV-DUP fail config load with ARKRULE_DUPLICATE_ID. The id is named in the message.",
       "owner": "#341",
-      "status": "expected-fail",
+      "status": "pass",
       "want": {
         "code": "ARKRULE_DUPLICATE_ID",
         "id": "INV-DUP"
       }
     },
     {
-      "expect": "fail",
+      "expect": "pass",
       "got": {
-        "bySlice": null,
+        "bySlice": [
+          {
+            "appliesTo": [
+              "src/features/projects/rfi/**"
+            ],
+            "ids": [
+              "features/projects/rfi#rfi-intake"
+            ],
+            "slice": "features/projects/rfi",
+            "sourceFile": "src/features/projects/rfi/arkrules.DomainModel.json"
+          }
+        ],
         "hasBareId": false,
         "hasEscapedId": false,
-        "hasSliceId": false,
-        "hasUniverse": false,
-        "ok": false,
-        "policyHashDiffers": false,
+        "hasSliceId": true,
+        "hasUniverse": true,
+        "ok": true,
+        "policyHashDiffers": true,
         "referencedUnreferenced": false,
-        "rulesActive": false
+        "rulesActive": true
       },
       "id": "341-discovery",
-      "met": false,
+      "met": true,
       "note": "Owned by #341. A governed child root contributes arkrules.<Layer>.json. The id is features/projects/rfi#rfi-intake. Default appliesTo is the slice directory. The central id stays. scm is outside include, so its escaping file is not a child root. policyHash differs from the string-only config. The referenced slice file is not ARKRULE_FILE_UNREFERENCED. Doctor lists the rule on the slice.",
       "owner": "#341",
-      "status": "expected-fail",
+      "status": "pass",
       "want": {
         "bareId": "rfi-intake",
         "bySlice": [
@@ -123,19 +140,19 @@
       }
     },
     {
-      "expect": "fail",
+      "expect": "pass",
       "got": {
         "configRejected": true,
         "enforcesEscaped": false,
-        "hasCode": false,
-        "namesFile": false,
+        "hasCode": true,
+        "namesFile": true,
         "ok": false
       },
       "id": "341-scope-escapes",
-      "met": false,
+      "met": true,
       "note": "Owned by #341. scm/arkrules.DomainModel.json sets appliesTo on the RFI slice. Config load fails closed with ARKRULE_SCOPE_ESCAPES_SLICE and names that file. The escaping id is not enforced.",
       "owner": "#341",
-      "status": "expected-fail",
+      "status": "pass",
       "want": {
         "code": "ARKRULE_SCOPE_ESCAPES_SLICE",
         "escapedId": "scm-board",
@@ -143,25 +160,24 @@
       }
     },
     {
-      "expect": "fail",
+      "expect": "pass",
       "got": {
-        "missing": [
-          "src/features/projects/arkrules.DomainModel.json",
-          "src/features/projects/rfi/arkrules.DomainModel.json",
-          "src/features/projects/scm/arkrules.DomainModel.json"
-        ],
+        "missing": [],
         "unreferencedFiles": [
           "arkrules/DomainModel.dup-a.json",
           "arkrules/DomainModel.dup-b.json",
           "arkrules/DomainModel.shared.json",
-          "arkrules/orphan.json"
+          "arkrules/orphan.json",
+          "src/features/projects/arkrules.DomainModel.json",
+          "src/features/projects/rfi/arkrules.DomainModel.json",
+          "src/features/projects/scm/arkrules.DomainModel.json"
         ]
       },
       "id": "341-unreferenced-slice",
-      "met": false,
+      "met": true,
       "note": "Owned by #341. With discovery off, ARKRULE_FILE_UNREFERENCED covers the slice files and the universe-level lookalike, not only top-level arkrules/*.json.",
       "owner": "#341",
-      "status": "expected-fail",
+      "status": "pass",
       "want": {
         "files": [
           "arkrules/orphan.json",
@@ -172,19 +188,21 @@
       }
     },
     {
-      "expect": "fail",
+      "expect": "pass",
       "got": {
         "debt": false,
-        "ok": false,
+        "ok": true,
         "owed": [],
-        "pinnedFiles": [],
-        "pinnedReason": null
+        "pinnedFiles": [
+          "src/app/projects/rfi/page.tsx"
+        ],
+        "pinnedReason": "framework-route"
       },
       "id": "341-pinned-route",
-      "met": false,
+      "met": true,
       "note": "Owned by #341. A pinned framework route is not an owed move and does not set slice-alias-debt. Doctor lists it under pinned, with reason framework-route. Other honesty reasons may remain.",
       "owner": "#341",
-      "status": "expected-fail",
+      "status": "pass",
       "want": {
         "debt": false,
         "file": "src/app/projects/rfi/page.tsx",
@@ -194,19 +212,19 @@
       }
     },
     {
-      "expect": "fail",
+      "expect": "pass",
       "got": {
-        "complianceDestination": null,
-        "debt": false,
-        "ok": false,
+        "complianceDestination": "src/features/projects/compliance",
+        "debt": true,
+        "ok": true,
         "routeOwed": false,
-        "routePinned": false
+        "routePinned": true
       },
       "id": "341-pinned-keeps-real-debt",
-      "met": false,
+      "met": true,
       "note": "Owned by #341. Pinning the route does not clear the compliance alias. The route is listed under pinned and is absent from owed moves. slice-alias-debt stays because compliance is still an owed move.",
       "owner": "#341",
-      "status": "expected-fail",
+      "status": "pass",
       "want": {
         "compliance": "src/lib/compliance/hold.ts",
         "complianceDestination": "src/features/projects/compliance",
@@ -286,26 +304,61 @@
           "arkrules/DomainModel.dup-a.json",
           "arkrules/DomainModel.dup-b.json",
           "arkrules/DomainModel.shared.json",
-          "arkrules/orphan.json"
+          "arkrules/orphan.json",
+          "src/features/projects/arkrules.DomainModel.json",
+          "src/features/projects/rfi/arkrules.DomainModel.json",
+          "src/features/projects/scm/arkrules.DomainModel.json"
         ]
       }
     },
     {
       "command": "ark-check --json --no-cache --config ark.config.array.json",
-      "exitCode": 2,
+      "exitCode": 0,
       "filesDiff": {},
       "output": {
-        "configRejected": true,
-        "message": "Invalid ArkGate config (<project>/ark.config.array.json):\n- $.arkRules.DomainModel: must be a string; received array"
+        "completeness": "complete",
+        "ok": true,
+        "policyHash": "fnv1a-f9586995",
+        "valid": true,
+        "violationRuleIds": []
       }
     },
     {
       "command": "ark-check --doctor --json --no-cache --config ark.config.array.json",
-      "exitCode": 2,
+      "exitCode": 0,
       "filesDiff": {},
       "output": {
-        "configRejected": true,
-        "message": "Invalid ArkGate config (<project>/ark.config.array.json):\n- $.arkRules.DomainModel: must be a string; received array"
+        "bySlice": null,
+        "honestyReasonIds": [
+          "coverage-partial",
+          "design-weak",
+          "merge-boundary-not-required",
+          "package-version-dual-truth",
+          "residual-pilot"
+        ],
+        "invariantIds": [
+          "INV-SHARED-CODES",
+          "INV-UNIVERSE-CODES"
+        ],
+        "layers": [
+          {
+            "name": "DomainModel",
+            "sourceFiles": [
+              "arkrules/DomainModel.json",
+              "arkrules/DomainModel.shared.json"
+            ]
+          }
+        ],
+        "rulesActive": true,
+        "sliceAliases": null,
+        "unreferencedFiles": [
+          "arkrules/DomainModel.dup-a.json",
+          "arkrules/DomainModel.dup-b.json",
+          "arkrules/orphan.json",
+          "src/features/projects/arkrules.DomainModel.json",
+          "src/features/projects/rfi/arkrules.DomainModel.json",
+          "src/features/projects/scm/arkrules.DomainModel.json"
+        ]
       }
     },
     {
@@ -314,25 +367,67 @@
       "filesDiff": {},
       "output": {
         "configRejected": true,
-        "message": "Invalid ArkGate config (<project>/ark.config.duplicate.json):\n- $.arkRules.DomainModel: must be a string; received array"
+        "message": "Invalid ArkGate config (<project>/ark.config.duplicate.json):\n- $.arkRules[\"DomainModel\"]: ARKRULE_DUPLICATE_ID: INV-DUP is declared in arkrules/DomainModel.dup-a.json, arkrules/DomainModel.dup-b.json"
       }
     },
     {
       "command": "ark-check --json --no-cache --config ark.config.discovery.json",
-      "exitCode": 2,
+      "exitCode": 0,
       "filesDiff": {},
       "output": {
-        "configRejected": true,
-        "message": "Invalid ArkGate config (<project>/ark.config.discovery.json):\n- $.arkRulesDiscovery: unknown field"
+        "completeness": "complete",
+        "ok": true,
+        "policyHash": "fnv1a-4b093fc9",
+        "valid": true,
+        "violationRuleIds": []
       }
     },
     {
       "command": "ark-check --doctor --json --no-cache --config ark.config.discovery.json",
-      "exitCode": 2,
+      "exitCode": 0,
       "filesDiff": {},
       "output": {
-        "configRejected": true,
-        "message": "Invalid ArkGate config (<project>/ark.config.discovery.json):\n- $.arkRulesDiscovery: unknown field"
+        "bySlice": [
+          {
+            "appliesTo": [
+              "src/features/projects/rfi/**"
+            ],
+            "ids": [
+              "features/projects/rfi#rfi-intake"
+            ],
+            "slice": "features/projects/rfi",
+            "sourceFile": "src/features/projects/rfi/arkrules.DomainModel.json"
+          }
+        ],
+        "honestyReasonIds": [
+          "coverage-partial",
+          "design-weak",
+          "merge-boundary-not-required",
+          "package-version-dual-truth",
+          "residual-pilot"
+        ],
+        "invariantIds": [
+          "features/projects/rfi#rfi-intake",
+          "INV-UNIVERSE-CODES"
+        ],
+        "layers": [
+          {
+            "name": "DomainModel",
+            "sourceFiles": [
+              "arkrules/DomainModel.json",
+              "src/features/projects/rfi/arkrules.DomainModel.json"
+            ]
+          }
+        ],
+        "rulesActive": true,
+        "sliceAliases": null,
+        "unreferencedFiles": [
+          "arkrules/DomainModel.dup-a.json",
+          "arkrules/DomainModel.dup-b.json",
+          "arkrules/DomainModel.shared.json",
+          "arkrules/orphan.json",
+          "src/features/projects/arkrules.DomainModel.json"
+        ]
       }
     },
     {
@@ -341,43 +436,143 @@
       "filesDiff": {},
       "output": {
         "configRejected": true,
-        "message": "Invalid ArkGate config (<project>/ark.config.escape.json):\n- $.arkRulesDiscovery: unknown field"
+        "message": "Invalid ArkGate config (<project>/ark.config.escape.json):\n- src/features/projects/scm/arkrules.DomainModel.json: ARKRULE_SCOPE_ESCAPES_SLICE: src/features/projects/scm/arkrules.DomainModel.json appliesTo src/features/projects/rfi/** escapes features/projects/scm"
       }
     },
     {
       "command": "ark-check --json --no-cache --config ark.config.pinned-only.json",
-      "exitCode": 2,
+      "exitCode": 0,
       "filesDiff": {},
       "output": {
-        "configRejected": true,
-        "message": "Invalid ArkGate config (<project>/ark.config.pinned-only.json):\n- $.rules[0].childSlices.sliceAliases[0].pinned: unknown field\n- $.rules[0].childSlices.sliceAliases[0].reason: unknown field\n- $.rules[0].childSlices.sliceAliases[0].pinned: unknown field\n- $.rules[0].childSlices.sliceAliases[0].reason: unknown field"
+        "completeness": "complete",
+        "ok": true,
+        "policyHash": "fnv1a-fbf8388e",
+        "valid": true,
+        "violationRuleIds": []
       }
     },
     {
       "command": "ark-check --doctor --json --no-cache --config ark.config.pinned-only.json",
-      "exitCode": 2,
+      "exitCode": 0,
       "filesDiff": {},
       "output": {
-        "configRejected": true,
-        "message": "Invalid ArkGate config (<project>/ark.config.pinned-only.json):\n- $.rules[0].childSlices.sliceAliases[0].pinned: unknown field\n- $.rules[0].childSlices.sliceAliases[0].reason: unknown field\n- $.rules[0].childSlices.sliceAliases[0].pinned: unknown field\n- $.rules[0].childSlices.sliceAliases[0].reason: unknown field"
+        "bySlice": null,
+        "honestyReasonIds": [
+          "coverage-partial",
+          "design-weak",
+          "merge-boundary-not-required",
+          "package-version-dual-truth",
+          "residual-pilot"
+        ],
+        "invariantIds": [
+          "INV-UNIVERSE-CODES"
+        ],
+        "layers": [
+          {
+            "name": "DomainModel",
+            "sourceFiles": [
+              "arkrules/DomainModel.json"
+            ]
+          }
+        ],
+        "rulesActive": true,
+        "sliceAliases": {
+          "debt": "Pinned aliases stay where they are. They are not an owed move.",
+          "finished": false,
+          "moves": [],
+          "pinned": [
+            {
+              "files": [
+                "src/app/projects/rfi/page.tsx"
+              ],
+              "from": "src/app/**",
+              "reason": "framework-route",
+              "to": "features/projects/rfi"
+            }
+          ]
+        },
+        "unreferencedFiles": [
+          "arkrules/DomainModel.dup-a.json",
+          "arkrules/DomainModel.dup-b.json",
+          "arkrules/DomainModel.shared.json",
+          "arkrules/orphan.json",
+          "src/features/projects/arkrules.DomainModel.json",
+          "src/features/projects/rfi/arkrules.DomainModel.json",
+          "src/features/projects/scm/arkrules.DomainModel.json"
+        ]
       }
     },
     {
       "command": "ark-check --json --no-cache --config ark.config.pinned.json",
-      "exitCode": 2,
+      "exitCode": 0,
       "filesDiff": {},
       "output": {
-        "configRejected": true,
-        "message": "Invalid ArkGate config (<project>/ark.config.pinned.json):\n- $.rules[0].childSlices.sliceAliases[0].pinned: unknown field\n- $.rules[0].childSlices.sliceAliases[0].reason: unknown field\n- $.rules[0].childSlices.sliceAliases[0].pinned: unknown field\n- $.rules[0].childSlices.sliceAliases[0].reason: unknown field"
+        "completeness": "complete",
+        "ok": true,
+        "policyHash": "fnv1a-244b6822",
+        "valid": true,
+        "violationRuleIds": []
       }
     },
     {
       "command": "ark-check --doctor --json --no-cache --config ark.config.pinned.json",
-      "exitCode": 2,
+      "exitCode": 0,
       "filesDiff": {},
       "output": {
-        "configRejected": true,
-        "message": "Invalid ArkGate config (<project>/ark.config.pinned.json):\n- $.rules[0].childSlices.sliceAliases[0].pinned: unknown field\n- $.rules[0].childSlices.sliceAliases[0].reason: unknown field\n- $.rules[0].childSlices.sliceAliases[0].pinned: unknown field\n- $.rules[0].childSlices.sliceAliases[0].reason: unknown field"
+        "bySlice": null,
+        "honestyReasonIds": [
+          "coverage-partial",
+          "design-weak",
+          "merge-boundary-not-required",
+          "package-version-dual-truth",
+          "residual-pilot",
+          "slice-alias-debt"
+        ],
+        "invariantIds": [
+          "INV-UNIVERSE-CODES"
+        ],
+        "layers": [
+          {
+            "name": "DomainModel",
+            "sourceFiles": [
+              "arkrules/DomainModel.json"
+            ]
+          }
+        ],
+        "rulesActive": true,
+        "sliceAliases": {
+          "debt": "Aliases are an owed move, not a destination. These files are not finished.",
+          "finished": false,
+          "moves": [
+            {
+              "destination": "src/features/projects/compliance",
+              "files": [
+                "src/lib/compliance/hold.ts"
+              ],
+              "from": "src/lib/compliance/**",
+              "to": "features/projects/compliance"
+            }
+          ],
+          "pinned": [
+            {
+              "files": [
+                "src/app/projects/rfi/page.tsx"
+              ],
+              "from": "src/app/**",
+              "reason": "framework-route",
+              "to": "features/projects/rfi"
+            }
+          ]
+        },
+        "unreferencedFiles": [
+          "arkrules/DomainModel.dup-a.json",
+          "arkrules/DomainModel.dup-b.json",
+          "arkrules/DomainModel.shared.json",
+          "arkrules/orphan.json",
+          "src/features/projects/arkrules.DomainModel.json",
+          "src/features/projects/rfi/arkrules.DomainModel.json",
+          "src/features/projects/scm/arkrules.DomainModel.json"
+        ]
       }
     }
   ]

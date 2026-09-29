@@ -36,14 +36,12 @@
       "childSlices": {
         "sliceFolders": ["features/*/*"],
         "sliceIdentity": "stars",
-        "siblings": "deny"
+        "siblings": "deny",
+        "arkRulesFile": "arkrules.<Layer>.json"
       }
     }
   ],
   "arkRules": {
     "DomainModel": "arkrules/DomainModel.json"
-  },
-  "arkRulesDiscovery": {
-    "sliceFiles": "arkrules.<Layer>.json"
   }
 }

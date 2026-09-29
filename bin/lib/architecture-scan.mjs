@@ -16,6 +16,7 @@ import { effectiveAnalysisConfig } from './analysis-policy.mjs';
 import { resolveCandidateFacts } from './resolved-candidate-facts.mjs';
 import {
   arkRulesDriftWarnings,
+  arkRulesLoadFailed,
   loadEffectiveArkRulesFromDisk,
 } from './effective-contract-load.mjs';
 import {
@@ -206,13 +207,7 @@ export function resolveArchitectureSnapshot({
     observeInput,
   });
   if (arkRulesLoad.errors.length > 0) {
-    const message = arkRulesLoad.errors
-      .map((issue) => `- ${issue.path}: ${issue.message}`)
-      .join('\n');
-    const err = new Error(`Invalid Effective Contract (${configPath}):\n${message}`);
-    err.code = 'ARKRULES_LOAD_FAILED';
-    err.issues = arkRulesLoad.errors;
-    throw err;
+    throw arkRulesLoadFailed(configPath, arkRulesLoad.errors);
   }
   const loadedContract = loadContract(effectiveConfig, configPath, {
     arkRules: arkRulesLoad.arkRules,

@@ -28,6 +28,7 @@ import { createImportTargetResolver } from './lib/import-resolve.mjs';
 import { validateWithAutoPatch, resolveImportFileAbs } from './lib/auto-patch.mjs';
 import { composePrepareWrite } from './lib/prepare-write.mjs';
 import { placementDescriptionFields } from './lib/layer-description.mjs';
+import { sliceRuleIdsForFile } from './ark-layer-match.mjs';
 import { loadArkConfigContract } from './lib/config-contract.mjs';
 import { loadEffectiveArkRulesFromDisk } from './lib/effective-contract-load.mjs';
 import { loadArkRulesContract } from './lib/arkrules-contract.mjs';
@@ -2859,6 +2860,11 @@ export async function runArkMcp({ hookInput, hookRoot } = {}) {
       rules.some((rule) => !rule.allowed && rule.from === layerName && rule.to === to)
     );
     const mayImport = otherNames.filter((name) => !mustNotImport.includes(name));
+    const sliceCatalog = [
+      ...(args.arkRulesSnapshot?.arkRules?.structure ?? []),
+      ...(args.arkRulesSnapshot?.arkRules?.invariants ?? []),
+    ].map((row) => ({ id: row.id, childId: row.provenance?.childId }));
+    const sliceRules = sliceRuleIdsForFile(filePath, rules, sliceCatalog);
     return withGolden({
       filePath,
       layer: layerName,
@@ -2866,6 +2872,7 @@ export async function runArkMcp({ hookInput, hookRoot } = {}) {
       ...placementDescriptionFields(layerMeta),
       forbiddenGlobals: layerMeta?.forbiddenGlobals ?? [],
       ...(layerMeta?.mayImportInfrastructure ? { mayImportInfrastructure: true } : {}),
+      ...(sliceRules.length > 0 ? { sliceRules } : {}),
       mayImport,
       mustNotImport,
       note:

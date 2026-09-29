@@ -66,10 +66,15 @@ export const CHILD_SLICES_SCHEMA_DEF = {
             minLength: 1,
             description: 'Text for inner-wall findings (CROSS_SIBLING_SLICE and universe common importing a child). The rule message stays the universe-wall text (CROSS_PARENT_SLICE and fail-closed denies). Absent: ArkGate default text, never the rule message. arkgate 4.8.23 and older reject this field (unknown field).',
         },
+        arkRulesFile: {
+            type: 'string',
+            minLength: 1,
+            description: 'Filename read at each child slice root this wall already resolved. The only token is <Layer>, replaced with a declared layer name (arkrules.<Layer>.json). No slash and no wildcard. A discovered file that omits appliesTo is scoped to that slice directory. Explicit appliesTo outside the slice fails config load (ARKRULE_SCOPE_ESCAPES_SLICE). The effective id is <childId>#<localId>. A build that rejects unknown childSlices fields fails at config load (unknown field).',
+        },
         sliceAliases: {
             type: 'array',
             minItems: 1,
-            description: 'Maps a source path glob onto a child slice id (universe id plus one child segment) so files outside the slice trees take that universe and child for both walls. A path without a wildcard also covers everything under it, as sharedRoots does. A bare name, a universe id alone, a target outside every universe shape, and a wildcard in to are rejected. Under stars identity a target written against the 4.8.23 stars id (star bindings before the last literal dropped, e.g. api/v1/x for modules/*/api/*) still loads when it maps to one universe shape, and ark-check warns CONFIG_SLICE_LEGACY_STARS_ID with the new id; it is rejected only when it maps to more than one shape. Config load checks only the shape; doctor reports a target universe no file belongs to. The glob may not overlap a slice folder, and two aliases may not match the same file. Doctor lists each alias as an owed move. A build that rejects unknown childSlices fields fails at config load (unknown field). arkgate 4.8.22 and older reject childSlices.',
+            description: 'Maps a source path glob onto a child slice id (universe id plus one child segment) so files outside the slice trees take that universe and child for both walls. A path without a wildcard also covers everything under it, as sharedRoots does. A bare name, a universe id alone, a target outside every universe shape, and a wildcard in to are rejected. Under stars identity a target written against the 4.8.23 stars id (star bindings before the last literal dropped, e.g. api/v1/x for modules/*/api/*) still loads when it maps to one universe shape, and ark-check warns CONFIG_SLICE_LEGACY_STARS_ID with the new id; it is rejected only when it maps to more than one shape. Config load checks only the shape; doctor reports a target universe no file belongs to. The glob may not overlap a slice folder, and two aliases may not match the same file. Doctor lists each unpinned alias as an owed move. pinned true lists the alias separately and does not count it as debt. reason is a doctor label and does not pin by itself. A build that rejects unknown childSlices fields fails at config load (unknown field). arkgate 4.8.22 and older reject childSlices.',
             items: {
                 type: 'object',
                 additionalProperties: false,
@@ -77,6 +82,15 @@ export const CHILD_SLICES_SCHEMA_DEF = {
                 properties: {
                     from: { type: 'string', minLength: 1 },
                     to: { type: 'string', minLength: 1 },
+                    pinned: {
+                        type: 'boolean',
+                        description: 'True when a framework forces the path to stay. The alias is not an owed move and does not clear other honesty debt.',
+                    },
+                    reason: {
+                        type: 'string',
+                        minLength: 1,
+                        description: 'Doctor label, such as framework-route. A label alone does not pin.',
+                    },
                 },
             },
         },
@@ -117,6 +131,7 @@ export function validateSliceContract(candidate, issues) {
     validateChildSliceSiblings(candidate, issues);
     validateChildSliceAllowedCrossSlice(candidate, issues);
     validateChildSliceAliases(candidate, issues);
+    validateChildSliceArkRulesFile(candidate, issues);
 }
 // childSlices on a rule without peerIsolation: true + allowed: false is inert. 4.8.23
 // loaded it, so config load keeps accepting it; ark-check warns CONFIG_CHILD_SLICES_INERT
@@ -632,6 +647,29 @@ function globsCanMatchSame(left, right, i, j, memo) {
     memo.set(key, matched);
     return matched;
 }
+const ARK_RULES_FILE_MESSAGE = 'must be a filename with exactly one <Layer> token and no slash or wildcard (arkrules.<Layer>.json)';
+export function validateChildSliceArkRulesFile(candidate, issues) {
+    const rules = candidate.rules;
+    if (!Array.isArray(rules))
+        return;
+    rules.forEach((rule, index) => {
+        if (!isObject(rule))
+            return;
+        const child = rule.childSlices;
+        if (!isObject(child) || child.arkRulesFile === undefined)
+            return;
+        const path = `$.rules[${index}].childSlices.arkRulesFile`;
+        const pattern = child.arkRulesFile;
+        if (typeof pattern !== 'string' || pattern.length === 0) {
+            issues.push({ path, message: ARK_RULES_FILE_MESSAGE });
+            return;
+        }
+        const parts = pattern.split('<Layer>');
+        if (parts.length !== 2 || /[*\\/]/.test(pattern) || pattern.includes('..')) {
+            issues.push({ path, message: ARK_RULES_FILE_MESSAGE });
+        }
+    });
+}
 export function validateChildSliceAliases(candidate, issues) {
     const rules = candidate.rules;
     if (!Array.isArray(rules))
@@ -661,7 +699,7 @@ export function validateChildSliceAliases(candidate, issues) {
                 return;
             }
             for (const key of Object.keys(alias)) {
-                if (key !== 'from' && key !== 'to') {
+                if (key !== 'from' && key !== 'to' && key !== 'pinned' && key !== 'reason') {
                     issues.push({ path: propertyPath(aliasPath, key), message: 'unknown field' });
                 }
             }

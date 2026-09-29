@@ -132,12 +132,17 @@ Top-level fields:
   `enforced`. Declaring nothing stays silent unless any invariant is already enforced — then
   missing roots fail closed (`INVARIANT_COVERAGE_ROOTS_MISSING`), because otherwise coverage can
   certify a test the project never declared a runner root for.
-- **`arkRules`** (optional, schema `1.1+`) — map of layer name → project-relative path to an
-  ArkRules file (e.g. `"DomainModel": "arkrules/DomainModel.json"`). Keys must match a declared
-  layer. Missing/invalid referenced files **fail closed**. A `arkrules/*.json` file the map
-  does not reference (or any such file when the map is absent) is advisory drift:
-  `ARKRULE_FILE_UNREFERENCED` in check `warnings`, `rulesUnderContract.unreferencedFiles` in
-  doctor, and `arkRulesCatalog.unreferencedFiles` in MCP `ark_manifest`. It never fails the check.
+- **`arkRules`** (optional, schema `1.1+`) — map of layer name → one project-relative path, or a
+  list of paths merged into that layer's catalog (`"DomainModel": "arkrules/DomainModel.json"`
+  or `"DomainModel": ["arkrules/DomainModel.json", "arkrules/DomainModel.shared.json"]`). A
+  string keeps today's behaviour. Keys must match a declared layer. The same effective id in
+  two files is `ARKRULE_DUPLICATE_ID` and config load fails closed. Missing or invalid
+  referenced files **fail closed**. A `arkrules/*.json` file the map does not reference, and a
+  slice file named `arkrules.<Layer>.json` beside governed code that discovery did not read,
+  is advisory drift: `ARKRULE_FILE_UNREFERENCED` in check `warnings`,
+  `rulesUnderContract.unreferencedFiles` in doctor, and `arkRulesCatalog.unreferencedFiles` in
+  MCP `ark_manifest`. It never fails the check. Doctor `rulesUnderContract.bySlice` lists the
+  rules a child slice contributed. `ark_place` shows those ids as `sliceRules` next to the layer.
 - **`arkRun`** (optional, schema `1.2+`) — inline ArkRun extra (`mode`, `kernelRoots`
   (`compositionRoots` alias), `managedLayers`, `requireDeclarations`). Absence is silent. Unknown keys fail closed.
   `managedLayers` must name existing `layers[].name` values. Empty `compositionRoots` in
@@ -429,9 +434,23 @@ Rule fields:
   universe is `CROSS_PARENT_SLICE` and an import into another child of the same
   universe is `CROSS_SIBLING_SLICE`. Same-child imports and imports into that
   universe's common folders follow the existing child wall. Doctor lists every
-  alias as an owed move: the source glob, the target slice, the destination
-  folder, and the files. The section says the files are not finished. Aliases
-  are debt. `productHonesty.finished` stays false while any alias is set.
+  unpinned alias as an owed move: the source glob, the target slice, the destination
+  folder, and the files. The section says those files are not finished.
+  `"pinned": true` lists the alias under pinned instead. `reason` (for example
+  `"framework-route"`) is the label doctor prints. A reason alone does not pin.
+  A pinned route is not `slice-alias-debt` and does not clear any other honesty
+  reason, so `productHonesty.finished` stays false while real debt remains.
+  `childSlices.arkRulesFile` is a filename at each child root the wall already
+  resolved (`"arkrules.<Layer>.json"`). `<Layer>` is the only token. The file is
+  law: it enters `policyHash`, and a path added or removed is one
+  `arkrules-ref-added` or `arkrules-ref-removed`. The effective id is
+  `<childId>#<localId>`. Omitting `appliesTo` scopes the rule to the slice
+  directory. An explicit `appliesTo` outside that directory is
+  `ARKRULE_SCOPE_ESCAPES_SLICE` and config load fails closed. A filename
+  `arkrules.<Layer>.json` is a law path for mixed-law classification. An older
+  build rejects the array form, `arkRulesFile`, `pinned`, and `reason` at config
+  load. Aliases
+  are debt while any unpinned alias remains. `productHonesty.finished` stays false while that debt, or any other honesty reason, remains.
   Adding aliases is a strengthening policy delta (unclassified files come under
   the walls). Removing them is weakening (those files leave the walls) and needs
   the same hash-bound acknowledgement as any other weakening. Additions and
@@ -817,7 +836,8 @@ MCP clients can call `ark_policy_delta` with the previous `baseConfig`, an optio
 contract (the current project contract is the default), and the same optional acknowledgement.
 When `baseConfig` maps `arkRules`, pass the base catalog as data in `baseArkRuleFiles`
 (`{ "<path from baseConfig.arkRules>": <ArkRules file JSON> }`); without it the call is refused
-instead of returning a config-only verdict. The candidate catalog is read from disk when the
+instead of returning a config-only verdict. When `childSlices.arkRulesFile` is set, include each
+discovered slice file in that same map, keyed by its project-relative path. The candidate catalog is read from disk when the
 candidate is omitted or maps the same `arkRules` files as the project contract (after the loader's
 normalisation, so the project `ark.config.json` passed verbatim counts); otherwise pass
 `candidateArkRuleFiles` in the same shape.

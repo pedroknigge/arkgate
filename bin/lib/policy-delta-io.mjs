@@ -7,6 +7,7 @@ import {
   directoryArkRulesReader,
   loadEffectiveArkRules,
   loadEffectiveArkRulesFromDisk,
+  normalizeProjectRelativePath,
   objectArkRulesReader,
 } from './effective-contract-load.mjs';
 import {
@@ -16,6 +17,7 @@ import {
 } from './invariant-coverage-io.mjs';
 import { evaluateInvariantCoverage } from './invariant-coverage.mjs';
 import { attachPolicyAdrNote } from './adr-path.mjs';
+import { collectGovernedFiles } from './scan-files.mjs';
 
 function readJsonFile(filePath, label) {
   if (!fs.existsSync(filePath)) throw new Error(`${label} not found: ${filePath}`);
@@ -95,6 +97,20 @@ function configPathInRepository(root, configPath, top) {
  * ArkRules files at the base ref, relative to the project root inside the repository.
  * A path absent at the ref (added by the candidate) reads as `missing`.
  */
+function baseRefSourceFiles(top, ref, prefix) {
+  const shown = runGit(top, ['ls-tree', '-r', '--name-only', ref]);
+  if (shown.status !== 0) return [];
+  const rootPrefix = prefix ? `${prefix}/` : '';
+  const files = [];
+  for (const line of shown.stdout.split('\n')) {
+    if (!line) continue;
+    if (rootPrefix && !line.startsWith(rootPrefix)) continue;
+    const rel = rootPrefix ? line.slice(rootPrefix.length) : line;
+    if (/\.[cm]?[tj]sx?$/.test(rel) && !rel.endsWith('.d.ts')) files.push(rel);
+  }
+  return files;
+}
+
 function baseRefArkRulesReader(root, top, ref) {
   const prefix = path
     .relative(fs.realpathSync(top), fs.realpathSync(root))
@@ -102,6 +118,7 @@ function baseRefArkRulesReader(root, top, ref) {
     .join('/');
   const spec = (rel) => `${ref}:${prefix ? `${prefix}/` : ''}${rel}`;
   return {
+    files: baseRefSourceFiles(top, ref, prefix),
     readArkRulesFile: (rel) => {
       const shown = runGit(top, ['show', spec(rel)]);
       if (shown.status === 0) return { ok: true, content: shown.stdout };
@@ -131,11 +148,16 @@ export function resolvePolicyBaseConfig({
     // A base config FILE carries its ArkRules next to it (same relative paths as the
     // project), never from the candidate working tree: that would compare the
     // candidate catalog with itself and hide every demotion/deletion.
+    const baseRoot = fs.realpathSync(path.dirname(absolute));
+    const include = Array.isArray(config.include) && config.include.length > 0 ? config.include : ['src'];
     return {
       config,
       source: absolute,
       ref: null,
-      readArkRulesFile: directoryArkRulesReader(fs.realpathSync(path.dirname(absolute))),
+      files: collectGovernedFiles(baseRoot, { ...config, include })
+        .map((file) => path.relative(baseRoot, file).split(path.sep).join('/'))
+        .filter((rel) => rel && !rel.startsWith('..')),
+      readArkRulesFile: directoryArkRulesReader(baseRoot),
     };
   }
 
@@ -201,6 +223,7 @@ export function readPolicyAcknowledgement(root, acknowledgementPath) {
 export function loadBaseArkRules(base) {
   const loaded = loadEffectiveArkRules(base.config, base.readArkRulesFile, {
     missingAsEmpty: base.ref != null,
+    ...(Array.isArray(base.files) ? { files: base.files } : {}),
   });
   if (loaded.errors.length > 0) {
     const message = loaded.errors.map((issue) => `- ${issue.path}: ${issue.message}`).join('\n');
@@ -218,6 +241,17 @@ export function loadBaseArkRules(base) {
 function hasArkRulesMap(config) {
   const refs = config?.arkRules;
   return Boolean(refs && typeof refs === 'object' && Object.keys(refs).length > 0);
+}
+
+/** Paths in a supplied catalog. A slice rule file is enough for the child wall to name it. */
+function catalogPaths(files) {
+  if (!files || typeof files !== 'object') return [];
+  const out = [];
+  for (const key of Object.keys(files)) {
+    const rel = normalizeProjectRelativePath(String(key));
+    if (rel) out.push(rel);
+  }
+  return out;
 }
 
 function loadedOrThrow(loaded, label) {
@@ -275,7 +309,9 @@ export function resolvePolicyDeltaArkRules({
       );
     }
     baseArkRules = loadedOrThrow(
-      loadEffectiveArkRules(baseConfig, objectArkRulesReader(baseArkRuleFiles)),
+      loadEffectiveArkRules(baseConfig, objectArkRulesReader(baseArkRuleFiles), {
+        files: catalogPaths(baseArkRuleFiles),
+      }),
       'Base'
     );
   } else {
@@ -285,7 +321,9 @@ export function resolvePolicyDeltaArkRules({
   let candidateArkRules;
   if (candidateArkRuleFiles && typeof candidateArkRuleFiles === 'object') {
     candidateArkRules = loadedOrThrow(
-      loadEffectiveArkRules(candidateConfig, objectArkRulesReader(candidateArkRuleFiles)),
+      loadEffectiveArkRules(candidateConfig, objectArkRulesReader(candidateArkRuleFiles), {
+        files: catalogPaths(candidateArkRuleFiles),
+      }),
       'Candidate'
     );
   } else if (candidateIsProjectConfig) {

@@ -248,9 +248,23 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
     'ARKRULE_FILE_UNREFERENCED',
     'arkrules',
     'ArkRules file not referenced',
-    'A JSON file under arkrules/ is not referenced by the arkRules map in ark.config.json (or no map exists), so none of its rules are enforced or reported. Drift looks like governance until someone notices.',
-    'Reference the file from arkRules ("<Layer>": "arkrules/<file>.json"), or delete it. Advisory only: it never fails the check.',
+    'A JSON file under arkrules/, or a slice file named arkrules.<Layer>.json beside governed code, is not in the effective catalog, so none of its rules are enforced. Drift looks like governance until someone notices.',
+    'Reference a central file from arkRules, set childSlices.arkRulesFile so a slice file is discovered, or delete it. Advisory only: it never fails the check.',
     { oftenAdvisory: true }
+  ),
+  entry(
+    'ARKRULE_DUPLICATE_ID',
+    'arkrules',
+    'ArkRule id declared more than once',
+    'Two ArkRules files in one layer declare the same effective id. Central ids stay bare. A slice file is namespaced as <childId>#<localId>, so the same local id in two slices is not a duplicate.',
+    'Rename one id, or split the files onto different slices. Config load fails closed. The catalog is not enforced until the id is unique.'
+  ),
+  entry(
+    'ARKRULE_SCOPE_ESCAPES_SLICE',
+    'arkrules',
+    'Slice ArkRule appliesTo leaves its slice',
+    'A file discovered from childSlices.arkRulesFile set appliesTo to a glob that can match outside that child slice. The default, when appliesTo is omitted, is the slice directory.',
+    'Narrow appliesTo to the slice directory, or omit it. Config load fails closed. The escaping rule is not enforced.'
   ),
   entry(
     'INVARIANT_CATALOG_EMPTY',

@@ -122,11 +122,20 @@ export type ArkConfigChildSlices = {
    * `to` is the universe id plus one child segment.
    */
   sliceAliases?: ArkConfigSliceAlias[];
+  /**
+   * Filename at each child slice root. `<Layer>` is the only token.
+   * Example: `arkrules.<Layer>.json`.
+   */
+  arkRulesFile?: string;
 };
 
 export type ArkConfigSliceAlias = {
   from: string;
   to: string;
+  /** True: the path stays. It is not an owed move and does not clear other honesty debt. */
+  pinned?: boolean;
+  /** Doctor label, such as `framework-route`. A label alone does not pin. */
+  reason?: string;
 };
 
 export type ArkConfigCrossSliceEdge = {
@@ -165,7 +174,10 @@ export type ArkConfigCoverage = {
  * ADR 0012 — optional map of layer name → project-relative ArkRules file path.
  * Absence changes no inter-layer verdict.
  */
-export type ArkConfigArkRulesRefs = Record<string, string>;
+/** One path, or several paths merged into that layer's catalog. */
+export type ArkConfigArkRulesRef = string | string[];
+
+export type ArkConfigArkRulesRefs = Record<string, ArkConfigArkRulesRef>;
 
 /** ADR 0020 — advisory never adds merge teeth; enforced is the extra's merge plane. */
 export type ArkConfigArkRunMode = 'advisory' | 'enforced';

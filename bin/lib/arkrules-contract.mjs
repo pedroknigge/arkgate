@@ -328,39 +328,136 @@ export function parseArkRulesJson(json, source = 'arkrules.json', expectedLayer)
     }
     return loadArkRulesContract(input, source, expectedLayer);
 }
+function effectiveRuleId(part, localId) {
+    return part.childId ? `${part.childId}#${localId}` : localId;
+}
+function effectiveAppliesTo(part, appliesTo) {
+    if (appliesTo && appliesTo.length > 0)
+        return [...appliesTo];
+    if (part.childId && part.defaultAppliesTo && part.defaultAppliesTo.length > 0) {
+        return [...part.defaultAppliesTo];
+    }
+    return undefined;
+}
+function provenanceFor(part, localId) {
+    return {
+        sourceFile: part.sourceFile,
+        ruleId: effectiveRuleId(part, localId),
+        layer: part.layer,
+        ...(part.childId ? { childId: part.childId } : {}),
+    };
+}
+/**
+ * True when every path the glob can match stays under the slice root.
+ * A wider prefix, a `**` that is not the last segment, or `..` escapes.
+ */
+export function appliesToPatternInsideSlice(pattern, sliceRoot) {
+    const root = sliceRoot.replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
+    const value = pattern.trim().replace(/\\/g, '/').replace(/^\.\//, '').toLowerCase();
+    if (!value || !root || value.includes('..'))
+        return false;
+    if (value === root || value === `${root}/**` || value === `${root}/*`)
+        return true;
+    if (value.startsWith(`${root}/`)) {
+        const parts = value.slice(root.length + 1).split('/');
+        const globStar = parts.indexOf('**');
+        if (globStar !== -1 && globStar !== parts.length - 1)
+            return false;
+        return parts.every((part) => part.length > 0);
+    }
+    const bareRoot = root.replace(/^(?:src|app)\//, '');
+    const bareValue = value.replace(/^(?:src|app)\//, '');
+    if (bareRoot !== root || bareValue !== value)
+        return appliesToPatternInsideSlice(bareValue, bareRoot);
+    return false;
+}
+/** Explicit appliesTo on a discovered file that can match outside its slice. */
+export function sliceScopeEscapes(part) {
+    if (!part.childId || !part.defaultAppliesTo?.length)
+        return [];
+    const sliceRoot = String(part.defaultAppliesTo[0]).replace(/\/\*\*$/, '');
+    const escapes = [];
+    const entries = [...(part.file.structure ?? []), ...(part.file.invariants ?? [])];
+    for (const entry of entries) {
+        for (const pattern of entry.appliesTo ?? []) {
+            if (!appliesToPatternInsideSlice(pattern, sliceRoot))
+                escapes.push({ id: entry.id, pattern });
+        }
+    }
+    return escapes;
+}
+/** Effective ids declared by more than one part. Central ids stay bare; slice ids are namespaced. */
+export function duplicateArkRuleIds(parts) {
+    const seen = new Map();
+    const dupes = new Map();
+    for (const part of parts) {
+        const localIds = [
+            ...(part.file.structure ?? []).map((entry) => entry.id),
+            ...(part.file.invariants ?? []).map((entry) => entry.id),
+        ];
+        for (const localId of localIds) {
+            const id = effectiveRuleId(part, localId);
+            const key = `${part.layer}\0${id}`;
+            const existing = seen.get(key);
+            if (!existing) {
+                seen.set(key, { id, layer: part.layer, sourceFiles: [part.sourceFile] });
+                continue;
+            }
+            const row = dupes.get(key) ?? { id, layer: part.layer, sourceFiles: [...existing.sourceFiles] };
+            if (!row.sourceFiles.includes(part.sourceFile))
+                row.sourceFiles.push(part.sourceFile);
+            dupes.set(key, row);
+        }
+    }
+    return [...dupes.values()];
+}
 /**
  * Build the Effective Contract from already-validated ArkRules files.
- * Callers supply `{ layer → { sourceFile, file } }` after resolving references.
+ * Same-layer parts merge. A child id namespaces the effective id and does not rewrite the file.
  */
 export function buildEffectiveArkRules(parts) {
     const byLayer = {};
     const structure = [];
     const invariants = [];
-    const ordered = [...parts].sort((a, b) => a.layer.localeCompare(b.layer));
+    const ordered = [...parts].sort((a, b) => a.layer.localeCompare(b.layer) || a.sourceFile.localeCompare(b.sourceFile));
     for (const part of ordered) {
-        const structureRules = (part.file.structure ?? []).map((entry) => ({
-            ...entry,
-            mode: normalizeMode(entry.mode),
-            provenance: {
+        const structureRules = (part.file.structure ?? []).map((entry) => {
+            const appliesTo = effectiveAppliesTo(part, entry.appliesTo);
+            return {
+                ...entry,
+                id: effectiveRuleId(part, entry.id),
+                ...(appliesTo ? { appliesTo } : { appliesTo: undefined }),
+                mode: normalizeMode(entry.mode),
+                provenance: provenanceFor(part, entry.id),
+            };
+        });
+        const invariantRules = (part.file.invariants ?? []).map((entry) => {
+            const appliesTo = effectiveAppliesTo(part, entry.appliesTo);
+            return {
+                ...entry,
+                id: effectiveRuleId(part, entry.id),
+                ...(appliesTo ? { appliesTo } : { appliesTo: undefined }),
+                mode: normalizeMode(entry.mode),
+                provenance: provenanceFor(part, entry.id),
+            };
+        });
+        const bucket = byLayer[part.layer];
+        if (!bucket) {
+            byLayer[part.layer] = {
                 sourceFile: part.sourceFile,
-                ruleId: entry.id,
-                layer: part.layer,
-            },
-        }));
-        const invariantRules = (part.file.invariants ?? []).map((entry) => ({
-            ...entry,
-            mode: normalizeMode(entry.mode),
-            provenance: {
-                sourceFile: part.sourceFile,
-                ruleId: entry.id,
-                layer: part.layer,
-            },
-        }));
-        byLayer[part.layer] = {
-            sourceFile: part.sourceFile,
-            structure: structureRules,
-            invariants: invariantRules,
-        };
+                sourceFiles: [part.sourceFile],
+                structure: structureRules,
+                invariants: invariantRules,
+            };
+        }
+        else {
+            if (!bucket.sourceFiles)
+                bucket.sourceFiles = [bucket.sourceFile];
+            if (!bucket.sourceFiles.includes(part.sourceFile))
+                bucket.sourceFiles.push(part.sourceFile);
+            bucket.structure.push(...structureRules);
+            bucket.invariants.push(...invariantRules);
+        }
         structure.push(...structureRules);
         invariants.push(...invariantRules);
     }

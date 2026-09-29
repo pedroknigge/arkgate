@@ -52,7 +52,7 @@ export type LoadContractOptions = {
 };
 
 function hasActiveArkRules(
-  config: { arkRules?: Record<string, string> },
+  config: { arkRules?: Record<string, unknown> },
   arkRules: EffectiveArkRules
 ): boolean {
   return (

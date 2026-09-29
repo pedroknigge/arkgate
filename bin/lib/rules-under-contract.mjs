@@ -100,6 +100,39 @@ function arkOrderMergeInput(config, residualCount = 0) {
   };
 }
 
+function rulesBySlice(arkRules) {
+  const groups = new Map();
+  const rows = [...(arkRules?.structure ?? []), ...(arkRules?.invariants ?? [])];
+  for (const entry of rows) {
+    const childId = entry?.provenance?.childId;
+    const sourceFile = entry?.provenance?.sourceFile;
+    if (typeof childId !== 'string' || typeof sourceFile !== 'string') continue;
+    const key = `${childId}\0${sourceFile}`;
+    let group = groups.get(key);
+    if (!group) {
+      group = {
+        slice: childId,
+        layer: entry.provenance?.layer ?? null,
+        sourceFile,
+        ids: [],
+        appliesTo: [],
+      };
+      groups.set(key, group);
+    }
+    if (typeof entry.id === 'string' && !group.ids.includes(entry.id)) group.ids.push(entry.id);
+    for (const pattern of entry.appliesTo ?? []) {
+      if (typeof pattern === 'string' && !group.appliesTo.includes(pattern)) group.appliesTo.push(pattern);
+    }
+  }
+  return [...groups.values()]
+    .map((group) => ({
+      ...group,
+      ids: [...group.ids].sort(),
+      appliesTo: [...group.appliesTo].sort(),
+    }))
+    .sort((left, right) => left.slice.localeCompare(right.slice) || left.sourceFile.localeCompare(right.sourceFile));
+}
+
 /** ADR 0012 D2 drift: arkrules/*.json no arkRules entry references (advisory). */
 function unreferencedArkRulesFiles(loaded) {
   const files = (loaded?.warnings ?? []).map((w) => w.path).filter(Boolean);
@@ -180,6 +213,7 @@ export function summarizeRulesUnderContract(root, config, facts, classification,
         return {
           name,
           sourceFile: part.sourceFile ?? null,
+          ...(Array.isArray(part.sourceFiles) ? { sourceFiles: [...part.sourceFiles] } : {}),
           structureRules: (part.structure ?? []).length,
           invariants: layerInvariants.length,
           coveredInvariants: covered,
@@ -280,6 +314,7 @@ export function summarizeRulesUnderContract(root, config, facts, classification,
       partialCoverage: coverage.partial,
       testFilesScanned: coverageInputs.testFiles.length,
       layers,
+      ...(rulesBySlice(loaded.arkRules).length > 0 ? { bySlice: rulesBySlice(loaded.arkRules) } : {}),
       structure,
       structureTruncated,
       uncovered,

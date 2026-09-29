@@ -23,7 +23,7 @@
  *
  * #341 is `slicelaw`: co-located feature rules and a framework route.
  * `expect: 'pass'` is today's string catalog, and the unpinned app route still
- * counting as an owed move. `expect: 'fail'` records claims that are still red.
+ * counting as an owed move. The seven #341 claims expect pass.
  * The journey stays green while a claim is unmet. When it starts holding,
  * status becomes `unexpected-pass` until that PR flips `expect` to `pass`.
  */
@@ -526,7 +526,7 @@ export const JOURNEY_CASES = Object.freeze({
     Object.freeze({
       id: '341-array-merge',
       owner: '#341',
-      expect: 'fail',
+      expect: 'pass',
       kind: 'slicelaw-array',
       note: 'Owned by #341. arkRules.DomainModel as two paths merges both ids. The DomainModel layer lists both source files. Last-file-wins on byLayer is not a merge.',
       want: Object.freeze({
@@ -538,7 +538,7 @@ export const JOURNEY_CASES = Object.freeze({
     Object.freeze({
       id: '341-duplicate-id',
       owner: '#341',
-      expect: 'fail',
+      expect: 'pass',
       kind: 'slicelaw-duplicate',
       note: 'Owned by #341. Two central files that share INV-DUP fail config load with ARKRULE_DUPLICATE_ID. The id is named in the message.',
       want: Object.freeze({
@@ -549,7 +549,7 @@ export const JOURNEY_CASES = Object.freeze({
     Object.freeze({
       id: '341-discovery',
       owner: '#341',
-      expect: 'fail',
+      expect: 'pass',
       kind: 'slicelaw-discovery',
       note: 'Owned by #341. A governed child root contributes arkrules.<Layer>.json. The id is features/projects/rfi#rfi-intake. Default appliesTo is the slice directory. The central id stays. scm is outside include, so its escaping file is not a child root. policyHash differs from the string-only config. The referenced slice file is not ARKRULE_FILE_UNREFERENCED. Doctor lists the rule on the slice.',
       want: Object.freeze({
@@ -571,7 +571,7 @@ export const JOURNEY_CASES = Object.freeze({
     Object.freeze({
       id: '341-scope-escapes',
       owner: '#341',
-      expect: 'fail',
+      expect: 'pass',
       kind: 'slicelaw-escape',
       note: 'Owned by #341. scm/arkrules.DomainModel.json sets appliesTo on the RFI slice. Config load fails closed with ARKRULE_SCOPE_ESCAPES_SLICE and names that file. The escaping id is not enforced.',
       want: Object.freeze({
@@ -583,7 +583,7 @@ export const JOURNEY_CASES = Object.freeze({
     Object.freeze({
       id: '341-unreferenced-slice',
       owner: '#341',
-      expect: 'fail',
+      expect: 'pass',
       kind: 'slicelaw-unreferenced',
       note: 'Owned by #341. With discovery off, ARKRULE_FILE_UNREFERENCED covers the slice files and the universe-level lookalike, not only top-level arkrules/*.json.',
       want: Object.freeze({
@@ -598,7 +598,7 @@ export const JOURNEY_CASES = Object.freeze({
     Object.freeze({
       id: '341-pinned-route',
       owner: '#341',
-      expect: 'fail',
+      expect: 'pass',
       kind: 'slicelaw-pinned-only',
       note: 'Owned by #341. A pinned framework route is not an owed move and does not set slice-alias-debt. Doctor lists it under pinned, with reason framework-route. Other honesty reasons may remain.',
       want: Object.freeze({
@@ -612,7 +612,7 @@ export const JOURNEY_CASES = Object.freeze({
     Object.freeze({
       id: '341-pinned-keeps-real-debt',
       owner: '#341',
-      expect: 'fail',
+      expect: 'pass',
       kind: 'slicelaw-pinned-mixed',
       note: 'Owned by #341. Pinning the route does not clear the compliance alias. The route is listed under pinned and is absent from owed moves. slice-alias-debt stays because compliance is still an owed move.',
       want: Object.freeze({
