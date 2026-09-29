@@ -320,10 +320,11 @@ export function applyAgainstRatchet({
   changedPaths,
   occurrenceKeys,
   rules,
+  layers,
 }) {
   const baseRaw = readJsonMaybe(gitShowText(root, againstRef, '.ark-baseline.json'));
   const baseKeys = new Set(baselineKeysFromDocument(baseRaw));
-  const judged = baseRaw ? applyAdvisorySiblingRatchet(violations, occurrenceKeys, baseKeys, { rules }) : violations;
+  const judged = baseRaw ? applyAdvisorySiblingRatchet(violations, occurrenceKeys, baseKeys, { rules, layers }) : violations;
   const vsBaseActive = judged.filter((_, index) => !baseKeys.has(occurrenceKeys[index]));
   const changedSet = new Set(changedPaths ?? []);
   // A CROSS_PARENT_VIA_SHARED path belongs to the change when any file on it changed.

@@ -52,6 +52,18 @@ describe('slice reason on adapter diagnostics', () => {
     expect(diagnostic.nextAction).toBe(`${sliceReasonHint('CROSS_SIBLING_SLICE')!.fix} Then preflight again.`);
   });
 
+  it('a blocking sibling crossing gets only the action; an advisory one also gets the ratchet note', () => {
+    const hint = sliceReasonHint('CROSS_SIBLING_SLICE')!;
+    expect(hint.fix).not.toMatch(/stay warnings|childSlices\.message|ratchet/);
+    const blocking = deterministicNextAction({ ...sibling, failsStrict: undefined });
+    expect(blocking).toBe(`${hint.fix} Then preflight again.`);
+    const advisory = deterministicNextAction({ ...sibling, failsStrict: false });
+    expect(advisory).toContain(hint.advisoryNote!);
+    expect(advisory).toContain('ratchet');
+    expect(enrichViolationWithFixClass({ ...sibling }).enthusiastHint).not.toContain('ratchet');
+    expect(enrichViolationWithFixClass({ ...sibling, failsStrict: false }).enthusiastHint).toContain(hint.advisoryNote!);
+  });
+
   it('reads the reason from gate details and keeps it out of the baseline key', () => {
     const { reasonId, universeFrom, universeTo, ...rest } = sibling;
     void universeFrom;

@@ -306,7 +306,10 @@ Rule fields:
   only over advisory crossings. `siblings.ratchet` on the object form picks it:
   absent — on only when the baseline in use already records at least one advisory
   crossing of that rule, and then only a crossing past that recorded count fails (an empty
-  baseline, or one frozen before the child wall, promotes nothing); `true` — any unrecorded
+  baseline, or one frozen before the child wall, promotes nothing). The recorded count is
+  what the baseline holds for that rule: a key whose crossing was removed still counts when
+  the rule still classifies that edge as an advisory sibling crossing, so swapping one
+  recorded crossing for a new one keeps the count and stays a warning; `true` — any unrecorded
   advisory crossing fails whenever a baseline is in use (the durable lock); `false` — measure
   only, never fails (doctor `slices.crossSibling` still counts). A recorded enforced crossing
   never switches the advisory ratchet on. A promoted finding says why and names
@@ -489,7 +492,11 @@ is evidence:
   or passes through a stop file, so a path through it is not a crossing. A `stopAt` entry
   matches like a shared root (anchored, optional leading `src/` or `app/`, a plain folder
   covers its subtree) or like an alias glob (`kernel/registrations/**` against
-  `src/kernel/registrations/x.ts`); a blanket `*` / `**` is rejected. A stop file must still
+  `src/kernel/registrations/x.ts`). Config load rejects an entry that covers the whole
+  tree (`*`, `**`, `src`, `src/**`, `app/**`, `*/**`) or a whole layer root of that rule
+  (layer `src/lib/**` with `lib/**`), since it would stop every shared node and silence
+  the walk: `must not cover the whole tree` / `must not cover a whole layer root of this
+  rule`. A stop file must still
   sit under `sharedRoots`; `stopAt` does not classify files and does not silence the direct
   `SHARED_IMPORTS_SLICE` warning. A slice destination that matches a stop is still reported.
   Each finding carries `via` (the shared hops). Doctor `sharedWalkHubs` names a shared file

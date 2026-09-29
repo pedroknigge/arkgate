@@ -200,7 +200,8 @@ export const SLICE_REASON_HINTS = Object.freeze([
         ruleId: 'LAYER_IMPORT_VIOLATION',
         title: 'Cross-sibling slice',
         why: 'This import crosses two feature slices inside one universe.',
-        fix: 'Import universe-common code, or move the shared piece into the feature that owns it. An enforce list makes those importer subtrees errors. Other sibling crossings stay warnings. A new one fails only when the baseline already records an advisory crossing of this rule, or when siblings.ratchet is true; ratchet false measures only. The rule message describes the universe wall; set childSlices.message for this finding\'s text.',
+        fix: 'Import universe-common code, or move the shared piece into the feature that owns it.',
+        advisoryNote: 'This crossing is a warning (siblings advisory). With a baseline in use, a new one fails only when the baseline already records an advisory crossing of this rule and the count grows, or when siblings.ratchet is true; ratchet false measures only.',
     }),
     Object.freeze({
         reasonId: 'CROSS_PARENT_VIA_SHARED',

@@ -558,7 +558,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     : 0;
   const activeCount = violations.length - suppressed;
   // productHonesty: blocking = failsStrict !== false only, after the same sibling ratchet as --baseline.
-  const judged = baseline.exists ? applyAdvisorySiblingRatchet(violations, occurrenceKeys, baseline.keys, { rules }) : violations;
+  const judged = baseline.exists ? applyAdvisorySiblingRatchet(violations, occurrenceKeys, baseline.keys, { rules, layers: config?.layers }) : violations;
   const blockingActive = judged.filter((v, i) => v.failsStrict !== false && !(baseline.exists && baseline.keys.has(occurrenceKeys[i]))).length;
   const emptyScopeEarly = cov.emptyScope === true || cov.governed.totalFiles === 0;
   const presentationRowEarly = cov.layers.find((r) => r.name === 'PresentationAdapters');

@@ -134,17 +134,72 @@ export function validateChildSlicesHost(candidate, issues) {
     });
 }
 const SHARED_IMPORTS_SLICE_FORM_MESSAGE = 'must be "deny", "deny-cross-parent", or { "mode": "deny-cross-parent", "stopAt": ["<composition root path or glob>"] }';
-function stopAtEntryIssue(raw) {
+const STOP_AT_WHOLE_TREE = 'must not cover the whole tree. Name the composition root itself (bootstrap file, DI registrations folder).';
+function isWildcardSegment(part) {
+    return part === '*' || part === '**';
+}
+/**
+ * Literal folder a path or glob covers: leading src/ or app/ dropped (the walk
+ * matches with or without them), trailing whole-segment wildcards dropped (a
+ * folder, `folder/*` and `folder/**` all stop the whole subtree). Null when a
+ * wildcard sits before a literal, so the entry is partial by construction.
+ */
+function coveredFolder(value) {
+    let parts = value.toLowerCase().split('/').filter((part) => part.length > 0 && part !== '.');
+    if (parts[0] === 'src' || parts[0] === 'app')
+        parts = parts.slice(1);
+    let end = parts.length;
+    while (end > 0 && isWildcardSegment(parts[end - 1] ?? ''))
+        end -= 1;
+    const base = parts.slice(0, end);
+    return base.some((part) => part.includes('*')) ? null : base;
+}
+function isPrefixOf(prefix, full) {
+    return prefix.length <= full.length && prefix.every((part, index) => full[index] === part);
+}
+/** Layer roots the rule walks. A stop that covers one silences the walk for that whole layer. */
+function ruleLayerFolders(candidate, rule) {
+    const layers = candidate.layers;
+    if (!Array.isArray(layers))
+        return [];
+    const names = new Set([rule.from, rule.to].filter((name) => typeof name === 'string'));
+    const folders = [];
+    for (const layer of layers) {
+        if (!isObject(layer) || typeof layer.name !== 'string' || !names.has(layer.name))
+            continue;
+        const patterns = Array.isArray(layer.patterns) ? layer.patterns : [];
+        for (const pattern of patterns) {
+            if (typeof pattern !== 'string')
+                continue;
+            const parts = pattern.replace(/\\/g, '/').split('/');
+            const firstWildcard = parts.findIndex((part) => part.includes('*'));
+            const literal = firstWildcard === -1 ? parts : parts.slice(0, firstWildcard);
+            const folder = coveredFolder(literal.join('/'));
+            if (folder)
+                folders.push(folder);
+        }
+    }
+    return folders;
+}
+function stopAtEntryIssue(raw, layerFolders) {
     const trimmed = trimTrailingSlashes(raw.trim().replace(/\\/g, '/'));
     if (trimmed.length === 0)
         return 'must be a non-empty path or glob';
     const bare = trimmed.replace(/^[./]+/, '');
     if (bare === '' || bare === '*' || bare === '**')
-        return 'must not cover the whole tree';
+        return STOP_AT_WHOLE_TREE;
     for (const part of trimmed.split('/')) {
         if (part.length === 0 || part === '.' || part === '..') {
             return 'must be a path or glob without empty, . or .. segments';
         }
+    }
+    const folder = coveredFolder(trimmed);
+    if (folder === null)
+        return null;
+    if (folder.length === 0)
+        return STOP_AT_WHOLE_TREE;
+    if (layerFolders.some((layer) => isPrefixOf(folder, layer))) {
+        return 'must not cover a whole layer root of this rule. Name the composition root itself (bootstrap file, DI registrations folder).';
     }
     return null;
 }
@@ -192,13 +247,14 @@ export function validateSharedImportsSlice(candidate, issues) {
             return;
         }
         const seen = new Set();
+        const layerFolders = ruleLayerFolders(candidate, rule);
         stopAt.forEach((entry, entryIndex) => {
             const entryPath = `${path}.stopAt[${entryIndex}]`;
             if (typeof entry !== 'string') {
                 issues.push({ path: entryPath, message: 'must be a non-empty path or glob' });
                 return;
             }
-            const issue = stopAtEntryIssue(entry);
+            const issue = stopAtEntryIssue(entry, layerFolders);
             if (issue) {
                 issues.push({ path: entryPath, message: issue });
                 return;

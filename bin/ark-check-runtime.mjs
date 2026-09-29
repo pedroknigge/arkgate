@@ -1588,6 +1588,7 @@ async function main() {
       changedPaths,
       occurrenceKeys: baselineOccurrenceKeys(violations),
       rules,
+      layers: config.layers,
     });
     activeViolations = ratcheted.activeViolations;
     suppressed = ratcheted.suppressed;
@@ -1595,7 +1596,7 @@ async function main() {
     const baseline = readBaseline(root, args.baseline);
     if (baseline.exists) {
       const occurrenceKeys = baselineOccurrenceKeys(violations);
-      const judged = applyAdvisorySiblingRatchet(violations, occurrenceKeys, baseline.keys, { rules });
+      const judged = applyAdvisorySiblingRatchet(violations, occurrenceKeys, baseline.keys, { rules, layers: config.layers });
       suppressed = judged.filter((_, index) => baseline.keys.has(occurrenceKeys[index]));
       activeViolations = judged.filter((_, index) => !baseline.keys.has(occurrenceKeys[index]));
       const currentKeys = new Set(occurrenceKeys);

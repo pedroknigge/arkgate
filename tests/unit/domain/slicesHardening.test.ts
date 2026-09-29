@@ -507,6 +507,29 @@ describe('sharedImportsSlice stopAt (#335)', () => {
     expect(() => load({ mode: 'deny-cross-parent', stopAt: ['a', 'A/'] })).toThrow('duplicate stopAt entry');
     expect(() => load({ mode: 'deny-cross-parent', stopAt: ['a'], foo: 1 })).toThrow(`${path}.foo: unknown field`);
   });
+
+  it('config load rejects a stop that covers the whole tree or a whole layer root of the rule', () => {
+    const srcLayers = [{ name: 'Application', patterns: ['src/**'] }];
+    for (const loader of [loadArkConfigContract, loadGeneratedArkConfigContract]) {
+      const loadWith = (ruleLayers: typeof layers, entry: string) => () =>
+        loader({
+          include: ['src'],
+          layers: ruleLayers,
+          rules: [{ ...universeRule, sharedImportsSlice: { mode: 'deny-cross-parent', stopAt: [entry] } }],
+        });
+      for (const blanket of ['src/**', 'src', 'src/', 'app/**', '*/**', '*/*', 'src/*/**', '**/*']) {
+        expect(loadWith(srcLayers, blanket), blanket).toThrow('must not cover the whole tree');
+      }
+      // Layer src/lib/**: lib and lib/** stop every node the rule walks.
+      for (const layerRoot of ['lib/**', 'lib', 'src/lib/*', 'SRC/Lib/**']) {
+        expect(loadWith(layers, layerRoot), layerRoot).toThrow('must not cover a whole layer root of this rule');
+      }
+      for (const ok of ['kernel/bootstrap.ts', 'kernel/registrations/**', 'lib/shared/**', 'features/**', '**/registrations/**']) {
+        expect(loadWith(srcLayers, ok), ok).not.toThrow();
+        expect(loadWith(layers, ok), ok).not.toThrow();
+      }
+    }
+  });
 });
 
 const siblingViolation = (file: string, fromLayer = 'Application') => ({
@@ -559,6 +582,40 @@ describe('advisory sibling ratchet (#336)', () => {
       applyAdvisorySiblingRatchet([a], [baselineKey(a)], new Set([baselineKey(a)]), { rules: [ratchetRule(advisory)] })[0]
         ?.failsStrict
     ).toBe(false);
+  });
+
+  it('auto: the recorded count is what the baseline holds, not what is still present', () => {
+    const real = (from: string, to: string) => ({
+      ...siblingViolation(`src/lib/features/projects/${from}.ts`),
+      target: `src/lib/features/projects/${to}.ts`,
+    });
+    const base = ratchetRule(advisory);
+    const rule: EdgeRule = { ...base, childSlices: { ...base.childSlices!, sliceIdentity: 'stars' } };
+    expect(
+      findDeniedEdgeDecision([rule], 'Application', 'Application', {
+        fromPath: 'src/lib/features/projects/scm/x.ts',
+        toPath: 'src/lib/features/projects/rfi/x.ts',
+        layers,
+      })?.sliceVerdict
+    ).toMatchObject({ reasonId: 'CROSS_SIBLING_SLICE', decision: 'advisory' });
+    const x = real('scm/x', 'rfi/x');
+    const y = real('scm/y', 'rfi/y');
+    const z = real('scm/z', 'rfi/z');
+    const judge = (rows: (typeof x)[], recorded: (typeof x)[]) =>
+      applyAdvisorySiblingRatchet(rows, rows.map((row) => baselineKey(row)), new Set(recorded.map((row) => baselineKey(row))), {
+        rules: [rule],
+        layers,
+      }).map((row) => row.failsStrict);
+    // Swap the only recorded crossing: the count stays 1, so the new one stays a warning.
+    expect(judge([y], [x])).toEqual([false]);
+    // The ratchet stays armed: growing past the recorded count fails the unrecorded ones.
+    expect(judge([y, z], [x])).toEqual([true, true]);
+    // Two recorded, one swapped: same count, nothing promoted.
+    expect(judge([x, y], [x, z])).toEqual([false, false]);
+    // A stale key the rule no longer calls a sibling crossing does not arm it.
+    const sameFeature = real('scm/x', 'scm/other');
+    expect(judge([y], [sameFeature])).toEqual([false]);
+    expect(judge([y, z], [sameFeature])).toEqual([false, false]);
   });
 
   it('per rule: a recorded crossing in one rule does not arm another rule', () => {

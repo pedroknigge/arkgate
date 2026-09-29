@@ -243,7 +243,7 @@ export function layerForRelativePath(relPath, layers) {
  * With `sliceIdentity` `"path"` (the default) the slice id includes the
  * literal prefix plus the star bindings (`lib/features/projects/rfi`), so
  * parallel trees get different ids. With `"stars"` it is the last literal
- * plus those star bindings. A star never binds the filename; a file directly
+ * plus every star binding, including one before the last literal. A star never binds the filename; a file directly
  * under the last bound directory keeps that directory as its slice.
  */
 export function sliceIdForPath(relPath, sliceFolders, sliceIdentity) {
@@ -1311,14 +1311,53 @@ export function siblingRatchetMode(siblings) {
     return 'auto';
 }
 /**
+ * How many advisory sibling crossings of one rule the baseline records. A key
+ * still present counts when its current row is in the group. A stale key (the
+ * crossing was removed) counts when the rule still classifies that edge as an
+ * advisory sibling crossing, so replacing a recorded crossing neither disarms
+ * the ratchet nor looks like growth.
+ */
+function recordedAdvisorySiblingCount(input) {
+    const { rule } = input;
+    let recorded = 0;
+    for (const key of input.recordedKeys) {
+        if (input.groupKeys.has(key)) {
+            recorded += 1;
+            continue;
+        }
+        if (!rule || input.currentKeys.has(key))
+            continue;
+        const parts = key.split('|');
+        if (parts.length !== 5)
+            continue;
+        const [ruleId = '', file = '', fromLayer = '', toLayer = '', rawTarget = ''] = parts;
+        if (!input.ruleIds.has(ruleId) || fromLayer !== rule.from || toLayer !== rule.to)
+            continue;
+        const target = rawTarget.replace(/#\d+$/, '');
+        if (!file || !target)
+            continue;
+        const verdict = findDeniedEdgeDecision([rule], fromLayer, toLayer, {
+            fromPath: file,
+            toPath: target,
+            layers: input.layers,
+        })?.sliceVerdict;
+        if (verdict?.reasonId === 'CROSS_SIBLING_SLICE' && verdict.decision === 'advisory')
+            recorded += 1;
+    }
+    return recorded;
+}
+/**
  * Advisory sibling crossings past the recorded baseline become blocking, per
  * directed rule. Only advisory (`failsStrict: false`) crossings count; an
  * enforced crossing never switches the ratchet on. For each rule:
  *
  * - `ratchet` absent (every string form too): on only when the baseline
- *   already records at least one current advisory crossing of that rule, and
- *   only when that rule's advisory count grew past what is recorded. An empty
- *   baseline, or one frozen before the child wall, promotes nothing.
+ *   records at least one advisory sibling crossing of that rule (a key still
+ *   present, or a stale key that the rule still classifies as one), and only
+ *   when that rule's current advisory count grew past the recorded count.
+ *   Swapping a recorded crossing for a new one keeps the count and stays a
+ *   warning. An empty baseline, or one frozen before the child wall, promotes
+ *   nothing.
  * - `ratchet: true`: any unrecorded advisory crossing of the rule is promoted.
  * - `ratchet: false`: never promoted.
  *
@@ -1341,6 +1380,7 @@ export function applyAdvisorySiblingRatchet(violations, occurrenceKeys, recorded
     }
     if (groups.size === 0)
         return [...violations];
+    const currentKeys = new Set(occurrenceKeys);
     const promote = new Set();
     for (const indexes of groups.values()) {
         const first = violations[indexes[0] ?? 0];
@@ -1353,13 +1393,18 @@ export function applyAdvisorySiblingRatchet(violations, occurrenceKeys, recorded
         const mode = siblingRatchetMode(rule?.childSlices?.siblings);
         if (mode === 'never')
             continue;
-        let recorded = 0;
-        for (const index of indexes) {
-            if (recordedKeys.has(occurrenceKeys[index] ?? ''))
-                recorded += 1;
+        if (mode === 'auto') {
+            const recorded = recordedAdvisorySiblingCount({
+                rule: rule,
+                ruleIds: new Set(indexes.map((index) => String(violations[index]?.ruleId ?? ''))),
+                groupKeys: new Set(indexes.map((index) => occurrenceKeys[index] ?? '')),
+                currentKeys,
+                recordedKeys,
+                layers: options?.layers,
+            });
+            if (recorded === 0 || indexes.length <= recorded)
+                continue;
         }
-        if (mode === 'auto' && (recorded === 0 || indexes.length <= recorded))
-            continue;
         for (const index of indexes) {
             if (!recordedKeys.has(occurrenceKeys[index] ?? ''))
                 promote.add(index);

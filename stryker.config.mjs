@@ -80,8 +80,9 @@ const config = {
     // sharedImportsSlice and SliceReasonId above it. #326 PR3 inserted the siblings
     // object type above it. #326 PR4 inserted child allowedCrossSlice above it.
     // #326 PR5 inserted the SliceAlias type above it. Same peerIsolationDecision body.
-    // #335/#336 mode, stop, and ratchet types above it moved it to 895-922.
-    'src/domain/layerMatch.ts:895-922',
+    // #335/#336 mode, stop, and ratchet types above it moved it to 895-922; the
+    // stars-identity JSDoc correction moved it to 897-924.
+    'src/domain/layerMatch.ts:897-924',
     // AP02 (#264) shifted the helper; sharedImportsSlice and #308 sliceIdentity
     // compares shifted it again. Same policyDeltaAcknowledgementMatches body.
     // #326 compareChildSlices shifted the same function by 93 lines.

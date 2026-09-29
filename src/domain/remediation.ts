@@ -7,7 +7,7 @@
  * @see docs/package-surface.md (stable: JSON violation enrich fields within a major)
  */
 
-import { sliceReasonHint } from './diagnosticCatalog';
+import { sliceReasonHint, type SliceReasonHint } from './diagnosticCatalog';
 
 export type RemediationClass = 'mechanical-safe' | 'judgment' | 'deferred';
 
@@ -141,10 +141,15 @@ export function classifyLayerImportKind(
   return 'unknown';
 }
 
+/** The reason's fix, plus its advisory note only when this finding is a warning. */
+function sliceHintAction(hint: SliceReasonHint, violation: ArkViolationLike): string {
+  return violation.failsStrict === false && hint.advisoryNote ? `${hint.fix} ${hint.advisoryNote}` : hint.fix;
+}
+
 export function layerImportNextAction(violation: ArkViolationLike): string {
   // A nested-wall reason has its own fix. It wins over the generic peer text.
   const hint = sliceReasonHint(typeof violation.reasonId === 'string' ? violation.reasonId : undefined);
-  if (hint) return `${hint.fix} Then preflight again.`;
+  if (hint) return `${sliceHintAction(hint, violation)} Then preflight again.`;
   if (violation.typeOnly || violation.targetTypeOnlyExports || violation.namedBindingsTypeOnly) {
     return 'Move the referenced type to a mutually allowed layer, use `import type`, then preflight again.';
   }
@@ -558,7 +563,7 @@ export function enrichViolationWithFixClass<T extends ArkViolationLike>(
         enriched.fixClass = 'cross-slice-boundary';
         enriched.effort = 'medium';
         enriched.enthusiastHint = hint
-          ? `${hint.why} ${hint.fix}`
+          ? `${hint.why} ${sliceHintAction(hint, violation)}`
           : 'Cross-slice import blocked (peerIsolation). Do not import another feature/context directly — extract shared code to a shared layer, or coordinate via events/ports. Moving code across slices is a judgment call, not a mechanical auto-fix.';
       } else {
         const kind = classifyLayerImportKind(typeof violation.target === 'string' ? violation.target : '', {

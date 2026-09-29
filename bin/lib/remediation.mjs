@@ -68,11 +68,15 @@ export function classifyLayerImportKind(target, extra) {
         return 'unknown';
     return 'unknown';
 }
+/** The reason's fix, plus its advisory note only when this finding is a warning. */
+function sliceHintAction(hint, violation) {
+    return violation.failsStrict === false && hint.advisoryNote ? `${hint.fix} ${hint.advisoryNote}` : hint.fix;
+}
 export function layerImportNextAction(violation) {
     // A nested-wall reason has its own fix. It wins over the generic peer text.
     const hint = sliceReasonHint(typeof violation.reasonId === 'string' ? violation.reasonId : undefined);
     if (hint)
-        return `${hint.fix} Then preflight again.`;
+        return `${sliceHintAction(hint, violation)} Then preflight again.`;
     if (violation.typeOnly || violation.targetTypeOnlyExports || violation.namedBindingsTypeOnly) {
         return 'Move the referenced type to a mutually allowed layer, use `import type`, then preflight again.';
     }
@@ -438,7 +442,7 @@ export function enrichViolationWithFixClass(violation) {
                 enriched.fixClass = 'cross-slice-boundary';
                 enriched.effort = 'medium';
                 enriched.enthusiastHint = hint
-                    ? `${hint.why} ${hint.fix}`
+                    ? `${hint.why} ${sliceHintAction(hint, violation)}`
                     : 'Cross-slice import blocked (peerIsolation). Do not import another feature/context directly — extract shared code to a shared layer, or coordinate via events/ports. Moving code across slices is a judgment call, not a mechanical auto-fix.';
             }
             else {
