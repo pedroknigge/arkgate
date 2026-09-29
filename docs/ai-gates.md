@@ -771,6 +771,14 @@ reports on **`ark/architecture-advisory`** instead, which `recommended` sets to 
 
 So `eslint` exits `0` wherever `arkgate-check` exits `0` for these findings, and a Next.js
 build that runs ESLint does not fail on them. The warning text names the ark-check rule id.
+The blocking rule and `architecture-advisory` share one evaluation per file, so enabling both
+does not resolve a file's imports twice.
+
+A hand-written config that turns on single rules without `architecture-advisory` does not
+lose these findings. They fall back to the blocking rule id, at that rule's level, with the
+text `[<ark-check rule id>; advisory — does not fail ark-check. Enable
+ark/architecture-advisory …]`. Add `'ark/architecture-advisory': 'warn'` to see them as
+warnings instead.
 There is no baseline in the editor: a new advisory crossing past the recorded baseline, which
 fails in CI, is still only a warning here.
 
@@ -786,11 +794,27 @@ exits `2`), and other rules and files keep linting.
 
 **`eslint --cache`.** The plugin has `meta` (`arkgate@<version>`), so an upgrade invalidates
 cached results. `configs.recommended` also carries `settings.ark.contractHash`, a fingerprint of
-the `ark.config.json` (and referenced ArkRules files) found from the directory where ESLint
-loads its config. Editing the contract therefore invalidates the cache too. Not covered by the
-fingerprint: a second `ark.config.json` deeper in a monorepo, `tsconfig.json` edits, and a
-cross-file target that appears or disappears. Use `--cache-strategy content`, clear the cache,
-or rely on `ark-check` / CI, which stay the source of truth.
+the `ark.config.json` (and referenced ArkRules files) found by walking up from the **current
+working directory** of the process that reads `configs.recommended` — not from the config
+file's directory. Editing that contract therefore invalidates the cache too. When ESLint runs
+from another directory (`eslint -c some/dir/eslint.config.js` from elsewhere, or an editor
+whose cwd is a workspace root above the project), the fingerprint covers a different contract
+or none. Pin it to the config file's directory yourself:
+
+```js
+// eslint.config.js
+import ark, { contractFingerprint } from 'arkgate/eslint';
+const contractHash = contractFingerprint(import.meta.dirname);
+export default [
+  ark.configs.recommended,
+  ...(contractHash ? [{ settings: { ark: { contractHash } } }] : []),
+];
+```
+
+Not covered by the fingerprint: a second `ark.config.json` deeper in a monorepo,
+`tsconfig.json` edits, and a cross-file target that appears or disappears. Use
+`--cache-strategy content`, clear the cache, or rely on `ark-check` / CI, which stay the
+source of truth.
 
 **Exact layer-edge parity envelope:** the linted production source is inside `include`,
 outside configured/generated exclusions, parse-clean, and uses a static `import`/`export` with

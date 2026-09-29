@@ -454,24 +454,30 @@ describe('Z04 resolved adapter differential corpus', () => {
     ]);
     // Error findings report on the blocking rule, warning findings (type-only placement
     // debt) on the warn-level advisory rule; together they carry the CLI diagnostics.
+    // Both rule contexts inherit ESLint's per-run file context, as in a real lint run.
     const reports: JsonResult[] = [];
-    for (const rule of [noDomainInfraImports, architectureAdvisory]) {
-      const listener = rule.create({
-        getFilename: () => path.join(root, 'src/domain/syntax.ts'),
-        options: [],
-        report: (descriptor: JsonResult) => reports.push(descriptor),
-      });
-      listener.ImportDeclaration({
-        type: 'ImportDeclaration',
-        source: { value: '../kernel/relative' },
-        loc: { start: { line: 1 } },
-      });
-      listener.ImportDeclaration({
+    const fileContext = Object.freeze({
+      filename: path.join(root, 'src/domain/syntax.ts'),
+      sourceCode: { text: '', getText: () => '' },
+    });
+    const listeners = [noDomainInfraImports, architectureAdvisory].map((rule) =>
+      rule.create(
+        Object.assign(Object.create(fileContext), {
+          options: [],
+          report: (descriptor: JsonResult) => reports.push(descriptor),
+        }),
+      ),
+    );
+    for (const node of [
+      { type: 'ImportDeclaration', source: { value: '../kernel/relative' }, loc: { start: { line: 1 } } },
+      {
         type: 'ImportDeclaration',
         source: { value: '../kernel/types' },
         importKind: 'type',
         loc: { start: { line: 9 } },
-      });
+      },
+    ]) {
+      for (const listener of listeners) listener.ImportDeclaration?.(node);
     }
     expect(reports.map(({ diagnostic }) => diagnostic)).toEqual([
       cliRun.data.diagnostics.find(

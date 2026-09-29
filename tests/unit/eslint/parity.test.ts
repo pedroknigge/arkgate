@@ -150,12 +150,13 @@ describe('ESLint ↔ ark-check parity', () => {
         .every((d) => d.severity === 'warning')
     ).toBe(true);
 
-    // ESLint severity is per rule id: the blocking rule stays silent (ark-check exits 0),
-    // the warn-level advisory rule carries the placement debt.
+    // ESLint severity is per rule id: the warn-level advisory rule carries the placement
+    // debt. Without that rule, the blocking rule reports it tagged advisory, never as its
+    // own forbiddenImport message.
     const typeOnlyNode = { source: { value: '../infra/db' }, importKind: 'type' };
     const blocking = createContext(domainFile);
     noDomainInfraImports.create(blocking.context).ImportDeclaration(typeOnlyNode);
-    expect(blocking.reports).toHaveLength(0);
+    expect(blocking.reports.map((r) => r.messageId)).toEqual(['advisoryFallback']);
     const { context, reports } = createContext(domainFile);
     architectureAdvisory.create(context).ImportDeclaration(typeOnlyNode);
     expect(reports).toHaveLength(1);

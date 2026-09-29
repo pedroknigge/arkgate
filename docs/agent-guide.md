@@ -1245,7 +1245,8 @@ envelope only), `ark/no-arkorder-kernel-in-domain` / `ark/no-arkorder-generic-up
 (ArkOrder extra), `ark/arkrules-structure` (ArkRules structure sensors, file-local),
 `ark/no-raw-event-publish`, and `ark/require-publish-source`. Findings ark-check reports as
 warnings (type-only placement debt, advisory slice walls, advisory extras) report on the
-warn-level `ark/architecture-advisory`, so ESLint errors only where ark-check fails. An
+warn-level `ark/architecture-advisory`, so ESLint errors only where ark-check fails (a
+config without that rule gets them on the blocking rule id, tagged advisory). An
 invalid contract is one `configInvalid` error per file, not a crash. See
 [ai-gates.md](ai-gates.md#eslint-editor-feedback--bounded-parity-envelope).
 

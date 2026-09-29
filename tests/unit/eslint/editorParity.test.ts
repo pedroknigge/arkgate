@@ -13,7 +13,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import plugin, { contractFingerprint } from '../../../src/eslint/index';
-import { errorCount, lintText, type LintMessage } from './eslintHarness';
+import { errorCount, interpolate, lintText, type LintMessage } from './eslintHarness';
 
 const CHECK = path.resolve('bin/ark-check.mjs');
 const temps: string[] = [];
@@ -209,24 +209,46 @@ describe('layer edges: per-edge severity and the real denial text', () => {
       'src/domain/a.ts': "import type { Row } from '../infra/db';\nexport type A = Row;\n",
     });
     expect(arkCheck(root).ok).toBe(true);
-    // acorn cannot parse `import type`; drive the same listeners with the TS-ESTree shape.
-    const reports: Array<{ severity: 1 | 2; messageId: string }> = [];
-    const levels = plugin.configs.recommended.rules as Record<string, string>;
-    for (const [qualified, level] of Object.entries(levels)) {
-      const rule = plugin.rules[qualified.replace('ark/', '')]!;
-      const listener = rule.create({
+    // acorn cannot parse `import type`; drive the same listeners with the TS-ESTree shape,
+    // on ESLint's per-run file context (every rule context inherits from it).
+    const lintTypeOnly = (levels: Record<string, string>) => {
+      const reports: Array<{ ruleId: string; severity: 1 | 2; messageId: string; text: string }> = [];
+      const fileContext = Object.freeze({
         filename: path.join(root, 'src/domain/a.ts'),
-        report: (d: Record<string, unknown>) =>
-          reports.push({ severity: level === 'error' ? 2 : 1, messageId: String(d.messageId) }),
+        sourceCode: { text: '', getText: () => '' },
       });
-      listener.ImportDeclaration?.({
+      const listeners = Object.entries(levels).map(([qualified, level]) => {
+        const rule = plugin.rules[qualified.replace('ark/', '')]!;
+        const context = Object.assign(Object.create(fileContext), {
+          report: (d: Record<string, unknown>) =>
+            reports.push({
+              ruleId: qualified,
+              severity: level === 'error' ? 2 : 1,
+              messageId: String(d.messageId),
+              text: interpolate(rule.meta.messages[String(d.messageId)]!, d.data as never),
+            }),
+        });
+        return rule.create(context);
+      });
+      const node = {
         type: 'ImportDeclaration',
         importKind: 'type',
         source: { value: '../infra/db' },
         loc: { start: { line: 1, column: 0 } },
-      });
-    }
-    expect(reports).toEqual([{ severity: 1, messageId: 'advisory' }]);
+      };
+      for (const listener of listeners) listener.ImportDeclaration?.(node);
+      return reports;
+    };
+    const recommended = lintTypeOnly(plugin.configs.recommended.rules as Record<string, string>);
+    expect(recommended.map(({ severity, messageId }) => ({ severity, messageId }))).toEqual([
+      { severity: 1, messageId: 'advisory' },
+    ]);
+    // A config that enables only the blocking rule still sees the finding, tagged advisory.
+    const single = lintTypeOnly({ 'ark/no-domain-infra-imports': 'warn' });
+    expect(single).toHaveLength(1);
+    expect(single[0]).toMatchObject({ ruleId: 'ark/no-domain-infra-imports', messageId: 'advisoryFallback' });
+    expect(single[0]!.text).toContain('LAYER_IMPORT_VIOLATION; advisory — does not fail ark-check');
+    expect(single[0]!.text).toContain('Enable ark/architecture-advisory');
   });
 });
 

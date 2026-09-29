@@ -516,7 +516,9 @@ describe('P0-C ESLint tsconfig path alias resolution', () => {
       specifiers: [{ type: 'ImportSpecifier', importKind: 'type' }],
       loc: { start: { line: 1, column: 0 } },
     };
-    // Warning-severity findings never report on the error-level rule id.
+    // Warning-severity findings never report as the error-level rule's own message: alone,
+    // the blocking rule tags them advisory (advisoryFallback); with the advisory rule enabled
+    // on the same lint run they report there instead.
     const blocking: Array<Record<string, unknown>> = [];
     noDomainInfraImports
       .create({
@@ -525,7 +527,7 @@ describe('P0-C ESLint tsconfig path alias resolution', () => {
         sourceCode: { getScope: () => undefined },
       })
       .ImportDeclaration?.(typeOnlyNode);
-    expect(blocking).toHaveLength(0);
+    expect(blocking.map((desc) => desc.messageId)).toEqual(['advisoryFallback']);
     const reports: Array<Record<string, unknown>> = [];
     const listener = architectureAdvisory.create({
       filename: domainFile,

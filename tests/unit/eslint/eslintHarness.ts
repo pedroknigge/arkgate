@@ -2,7 +2,8 @@
  * Minimal ESLint-9-shaped runner for the Ark plugin (eslint itself is not a repo dependency).
  *
  * Mirrors what matters for editor parity: rules from `configs.recommended` with their
- * configured severity, one shared SourceCode per file (buffer text), ESTree nodes with
+ * configured severity, one per-run file context (shared SourceCode, buffer text) that every
+ * rule context inherits from, ESTree nodes with
  * `parent` + `loc`, messageId validation, ESLint's `{{placeholder}}` interpolation, and
  * ESLint's 1-based column (`loc.start.column + 1`).
  */
@@ -59,6 +60,7 @@ export function lintText(
     {};
   const ast = parse(text, { ecmaVersion: 'latest', sourceType: 'module', locations: true });
   const sourceCode = { text, getText: () => text };
+  const fileContext = Object.freeze({ filename, physicalFilename: filename, sourceCode });
   const messages: LintMessage[] = [];
   const listeners: Array<{ ruleId: string; listener: Listener }> = [];
 
@@ -67,11 +69,9 @@ export function lintText(
     const rule = plugin.rules[name];
     if (!rule) throw new Error(`unknown rule ${qualified}`);
     const severity = level === 'error' ? 2 : 1;
-    const context = {
+    // ESLint 9/10 build every rule context on one per-run FileContext (`fileContext.extend`).
+    const context = Object.assign(Object.create(fileContext), {
       id: qualified,
-      filename,
-      physicalFilename: filename,
-      sourceCode,
       options: [],
       report(descriptor: Record<string, any>) {
         const messageId = descriptor.messageId as string;
@@ -91,7 +91,7 @@ export function lintText(
           diagnostic: descriptor.diagnostic,
         });
       },
-    };
+    });
     listeners.push({ ruleId: qualified, listener: rule.create(context) });
   }
 

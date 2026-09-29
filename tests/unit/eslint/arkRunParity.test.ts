@@ -197,10 +197,11 @@ describe('RN06 ESLint ↔ ark-check ArkRun envelope', () => {
       specifiers: [{ type: 'ImportSpecifier' }],
       loc: { start: { line: 1 } },
     };
-    // Blocking rule id stays silent: ESLint severity is per rule, not per report.
+    // ESLint severity is per rule, not per report: alone, the blocking rule tags the
+    // finding advisory instead of reporting it as its own blocking message.
     const blocking = createContext(domainFile);
     noArkRunKernelInDomain.create(blocking.context).ImportDeclaration(importNode);
-    expect(blocking.reports).toHaveLength(0);
+    expect(blocking.reports.map((r) => r.messageId)).toEqual(['advisoryFallback']);
     // The warn-level advisory rule carries the same finding.
     const { context, reports } = createContext(domainFile);
     architectureAdvisory.create(context).ImportDeclaration(importNode);

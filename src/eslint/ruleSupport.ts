@@ -1,18 +1,13 @@
 /**
- * Shared ESLint adapter plumbing: context shapes, report channels, and the contract guard.
- *
- * ESLint picks a report's severity from the rule's configured level; a report descriptor
- * cannot carry its own severity. So findings ark-check treats as non-blocking
- * (`failsStrict: false` → adapter severity `warning`: type-only placement debt, advisory
- * slice walls, advisory arkRun / arkOrder / ArkRules) never report on the blocking rule ids.
- * They report on `ark/architecture-advisory`, which the recommended config sets to `warn`.
- * Both channels run the same evaluators through the same `reportAdapterDiagnostic` call.
+ * Shared ESLint adapter plumbing: context shapes, filename / source helpers, and the
+ * adapter-diagnostic report path. Channel routing lives in reportChannels.ts.
  */
 import {
   toAdapterDiagnostic,
   type AdapterDiagnostic,
   type AdapterViolationInput,
 } from '../domain/adapterContract';
+import { deliverReport } from './reportChannels';
 
 export type AstNode = {
   type?: string;
@@ -131,23 +126,7 @@ export function editorSourceText(context: RuleContext): string | null {
   return typeof sourceCode.text === 'string' ? sourceCode.text : null;
 }
 
-// ── Report channels ────────────────────────────────────────────────────────
-
-export const ADVISORY_MESSAGE_ID = 'advisory';
-export const ADVISORY_MESSAGE = '{{message}} [{{ruleId}}; advisory — does not fail ark-check]';
-
-const advisoryContexts = new WeakSet<object>();
-
-/** Wrap a context so inner rules report only non-blocking findings, as `advisory`. */
-export function advisoryContext(context: RuleContext): RuleContext {
-  const wrapped = Object.create(context) as RuleContext;
-  advisoryContexts.add(wrapped);
-  return wrapped;
-}
-
-function isAdvisoryChannel(context: RuleContext): boolean {
-  return advisoryContexts.has(context);
-}
+// ── Reporting ──────────────────────────────────────────────────────────────
 
 function reportLocation(
   node: AstNode,
@@ -159,8 +138,9 @@ function reportLocation(
 }
 
 /**
- * Build the adapter diagnostic and report it on the channel the finding belongs to:
- * blocking rules report only `error` diagnostics, the advisory rule only `warning` ones.
+ * Build the adapter diagnostic and deliver it to the rule id that owns it: blocking
+ * findings to the evaluating rule, non-blocking ones to `ark/architecture-advisory`
+ * (see reportChannels.ts).
  */
 export function reportAdapterDiagnostic(
   context: RuleContext,
@@ -176,20 +156,14 @@ export function reportAdapterDiagnostic(
       violation.column ??
       (typeof node.loc?.start?.column === 'number' ? node.loc.start.column + 1 : undefined),
   });
-  const nonBlocking = diagnostic.severity === 'warning';
-  const advisory = isAdvisoryChannel(context);
-  if (nonBlocking !== advisory) return diagnostic;
-  const location = reportLocation(node, diagnostic.location.line);
-  if (advisory) {
-    context.report({
-      ...location,
-      messageId: ADVISORY_MESSAGE_ID,
-      data: { message: diagnostic.message, ruleId: diagnostic.ruleId },
-      diagnostic,
-    });
-  } else {
-    context.report({ ...location, messageId, ...(data ? { data } : {}), diagnostic });
-  }
+  deliverReport(context, {
+    nonBlocking: diagnostic.severity === 'warning',
+    location: reportLocation(node, diagnostic.location.line),
+    messageId,
+    ...(data ? { data } : {}),
+    advisoryData: { message: diagnostic.message, ruleId: diagnostic.ruleId },
+    diagnostic,
+  });
   return diagnostic;
 }
 

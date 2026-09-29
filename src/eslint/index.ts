@@ -8,9 +8,10 @@
  * no Kernel imports.
  *
  * Severity: ESLint takes severity from the rule level, never from a report. Blocking rule
- * ids report only findings that fail ark-check; non-blocking findings (type-only placement
+ * ids report findings that fail ark-check; non-blocking findings (type-only placement
  * debt, advisory slice walls, advisory arkRun / arkOrder / ArkRules) report on
- * `ark/architecture-advisory`, which `configs.recommended` sets to `warn`.
+ * `ark/architecture-advisory`, which `configs.recommended` sets to `warn`. When that rule
+ * is not enabled, they fall back to the blocking rule id, tagged as advisory.
  */
 import path from 'node:path';
 import {
@@ -42,10 +43,8 @@ import {
 } from './contractLoad';
 import { noForbiddenGlobals as noForbiddenGlobalsRule } from './globalsRule';
 import { noRawEventPublish as noRawEventPublishRule, requirePublishSource as requirePublishSourceRule } from './publishRules';
+import { ADVISORY_MESSAGE, ADVISORY_MESSAGE_ID, createChannelListeners } from './reportChannels';
 import {
-  ADVISORY_MESSAGE,
-  ADVISORY_MESSAGE_ID,
-  advisoryContext,
   lintedFilename,
   mergeListeners,
   reportAdapterDiagnostic,
@@ -428,8 +427,11 @@ const architectureAdvisoryRule: ArkRule = {
   create(context: RuleContext): RuleListener {
     // An invalid contract is reported once by the blocking rules; stay silent here.
     if (contractErrorForFile(lintedFilename(context))) return {};
-    const wrapped = advisoryContext(context);
-    return mergeListeners(softCapableRules.map((rule) => rule.create(wrapped)));
+    // Shares one evaluation per file with the blocking rules (reportChannels.ts): no rule
+    // resolves a file's imports twice.
+    return mergeListeners(
+      softCapableRules.map((rule) => createChannelListeners(rule, context, 'advisory'))
+    );
   },
 };
 

@@ -22,6 +22,11 @@ import {
   type RuleContext,
   type RuleListener,
 } from './ruleSupport';
+import {
+  ADVISORY_FALLBACK_MESSAGE,
+  ADVISORY_FALLBACK_MESSAGE_ID,
+  createChannelListeners,
+} from './reportChannels';
 
 const NEGATIVE_LOOKUP_TTL_MS = 2000;
 const configPathCache = new Map<string, { found: string | null; at: number }>();
@@ -227,11 +232,15 @@ export function withContractGuard(rule: ArkRule): ArkRule {
   return {
     meta: {
       ...rule.meta,
-      messages: { ...rule.meta.messages, [CONFIG_INVALID_MESSAGE_ID]: CONFIG_INVALID_MESSAGE },
+      messages: {
+        ...rule.meta.messages,
+        [CONFIG_INVALID_MESSAGE_ID]: CONFIG_INVALID_MESSAGE,
+        [ADVISORY_FALLBACK_MESSAGE_ID]: ADVISORY_FALLBACK_MESSAGE,
+      },
     },
     create(context: RuleContext): RuleListener {
       const error = contractErrorForFile(lintedFilename(context));
-      if (!error) return rule.create(context);
+      if (!error) return createChannelListeners(rule, context, 'blocking');
       return {
         Program(node: AstNode) {
           const sourceCode = sourceCodeFor(context);
