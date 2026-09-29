@@ -168,7 +168,8 @@
     "clean": "rm -rf dist",
     "release:npm": "node scripts/release-npm.mjs",
     "prepublishOnly": "npm run build",
-    "bench:hook-path": "node scripts/hook-path-bench.mjs"
+    "bench:hook-path": "node scripts/hook-path-bench.mjs",
+    "bench:memory": "node scripts/memory-bench.mjs"
   },
   "dependencies": {
     "typescript-ark-host": "npm:typescript@6.0.3"
