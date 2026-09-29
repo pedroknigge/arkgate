@@ -353,7 +353,7 @@ function gitPaths(root, args, label) {
 }
 
 function gitBlob(root, commit, relativePath) {
-  const result = git(root, ['show', `${commit}:${relativePath}`]);
+  const result = git(root, ['show', `${commit}:./${relativePath}`]);
   if (result.status !== 0) {
     throw new Error(`base file unavailable (${relativePath}): ${(result.stderr || '').trim()}`);
   }
@@ -415,7 +415,7 @@ export function evaluateGitDesignDelta({
       .map((relativePath) => ({ path: relativePath, content: gitBlob(root, commit, relativePath) }));
     const candidateRecords = currentRecords(root, config);
     const touchedPaths = [
-      ...gitPaths(root, ['diff', '--name-only', '-z', commit, '--'], 'candidate diff failed'),
+      ...gitPaths(root, ['diff', '--relative', '--name-only', '-z', commit, '--'], 'candidate diff failed'),
       ...gitPaths(root, ['ls-files', '--others', '--exclude-standard', '-z'], 'untracked-file scan failed'),
     ];
     const golden = loadGoldenPattern(root);

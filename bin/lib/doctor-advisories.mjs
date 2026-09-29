@@ -38,7 +38,12 @@ import {
 } from './ark-order-doctor.mjs';
 import { composeMergePlanesHonesty } from './extra-merge-teeth.mjs';
 import { collectPrototypeShortcutsResidual } from './prototype-shortcuts.mjs';
-import { sliceAliasReport, sliceCountReport, sliceIdentityCollisions } from '../ark-layer-match.mjs';
+import {
+  crossParentViaSharedHubs,
+  sliceAliasReport,
+  sliceCountReport,
+  sliceIdentityCollisions,
+} from '../ark-layer-match.mjs';
 
 export function attachExtraDoctorSections(rulesUnderContract, config, classification, findings) {
   const arkRulesMerge = {
@@ -57,6 +62,7 @@ export function attachExtraDoctorSections(rulesUnderContract, config, classifica
     findings,
     classification,
     arkRules: arkRulesMerge,
+    layerFlow: { layers: config?.layers, rules: config?.rules },
   });
   const arkOrder = summarizeArkOrderSection({
     arkOrder: config?.arkOrder,
@@ -289,6 +295,7 @@ export function computeDoctorAdvisories(root, config, cov, rules, files, ts, par
   });
   const sliceIdentityHits = sliceIdentityCollisions(rules ?? config?.rules);
   const slices = sliceCountReport(activeViolations);
+  const sharedWalkHubs = crossParentViaSharedHubs(activeViolations);
   const aliasFiles = [];
   for (const entry of Array.isArray(files) ? files : []) {
     const rel = aliasScanPath(root, entry);
@@ -300,9 +307,12 @@ export function computeDoctorAdvisories(root, config, cov, rules, files, ts, par
     files: aliasFiles,
     rules: rules ?? config?.rules,
     layers: config?.layers,
+    facts,
+    ts,
   });
   return {
     ...(slices ? { slices } : {}),
+    ...(sharedWalkHubs ? { sharedWalkHubs } : {}),
     ...(sliceAliases ? { sliceAliases } : {}),
     ...(flatParentPilot ? { flatParentPilot } : {}),
     ...(prototypeShortcuts ? { prototypeShortcuts } : {}),
@@ -319,6 +329,10 @@ export function computeDoctorAdvisories(root, config, cov, rules, files, ts, par
     // P1M: pass classification so extraMergeTeeth cannot arm at 0% governed.
     stewardNudge: collectStewardNudge(root, config),
     rulesUnderContract,
+    // AR15: doctor.rulesMigration — inventoried / under contract / frozen (not a score).
+    ...(rulesUnderContract?.rulesMigration
+      ? { rulesMigration: rulesUnderContract.rulesMigration }
+      : {}),
     arkRun,
     arkOrder,
   };
@@ -333,8 +347,18 @@ export function printDoctorAdvisories(advisories, io) {
     io.line(io.warn, sliceAliases.debt);
     for (const move of sliceAliases.moves) {
       io.line(io.warn, `${move.from} → ${move.to}. Move these files to ${move.destination}. They are not finished.`);
+      if (move.advisory) io.line(io.warn, move.advisory);
       for (const file of move.files ?? []) io.line(' ', file);
     }
+  }
+  const hubs = advisories?.sharedWalkHubs;
+  if (hubs && hubs.notAScore === true && Array.isArray(hubs.hubs) && hubs.hubs.length > 0) {
+    console.log('');
+    console.log(io.color.bold('Shared walk hubs (not a score)'));
+    for (const hub of hubs.hubs) {
+      io.line(io.warn, `${hub.file} sits on ${hub.count} of ${hubs.total} CROSS_PARENT_VIA_SHARED paths.`);
+    }
+    io.line(' ', io.color.dim(`Next: ${hubs.nextAction}`));
   }
   const sliceIdentity = advisories?.sliceIdentity;
   if (Array.isArray(sliceIdentity?.collisions) && sliceIdentity.collisions.length > 0) {

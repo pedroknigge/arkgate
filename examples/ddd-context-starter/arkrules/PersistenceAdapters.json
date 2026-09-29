@@ -4,7 +4,7 @@
   "layer": "PersistenceAdapters",
   "structure": [
     {
-      "id": "thin-adapter",
+      "id": "thin-persistence-adapter",
       "sensor": "thin-adapter",
       "mode": "advisory",
       "description": "Persistence adapters implement ports without domain branching."

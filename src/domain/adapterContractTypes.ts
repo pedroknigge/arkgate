@@ -76,6 +76,12 @@ export type AdapterDiagnostic = {
     arkruleId?: string;
     /** AR03 — ArkRules source file path. */
     arkruleSource?: string;
+    /** Nested-wall reason. Not part of the baseline key. */
+    reasonId?: 'CROSS_PARENT_SLICE' | 'CROSS_SIBLING_SLICE' | 'CROSS_PARENT_VIA_SHARED';
+    /** Last segment of the importer universe id, with a reasonId. */
+    universeFrom?: string;
+    /** Last segment of the importee universe id, with a reasonId. */
+    universeTo?: string;
   };
   /** Added in schema 1.1; optional in TypeScript so 1.0 consumer-owned values remain valid. */
   nextAction?: string;
@@ -268,6 +274,11 @@ export const ARK_ANALYSIS_RESULT_SCHEMA = {
               edgeKind: { type: 'string', minLength: 1 },
               arkruleId: { type: 'string', minLength: 1 },
               arkruleSource: { type: 'string', minLength: 1 },
+              reasonId: {
+                enum: ['CROSS_PARENT_SLICE', 'CROSS_SIBLING_SLICE', 'CROSS_PARENT_VIA_SHARED'],
+              },
+              universeFrom: { type: 'string', minLength: 1 },
+              universeTo: { type: 'string', minLength: 1 },
             },
           },
           nextAction: { type: 'string', minLength: 1 },

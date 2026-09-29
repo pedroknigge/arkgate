@@ -7,6 +7,8 @@
  * @see docs/package-surface.md (stable: JSON violation enrich fields within a major)
  */
 
+import { sliceReasonHint, type SliceReasonHint } from './diagnosticCatalog';
+
 export type RemediationClass = 'mechanical-safe' | 'judgment' | 'deferred';
 
 export const REMEDIATION_CLASSES: readonly RemediationClass[] = [
@@ -95,6 +97,8 @@ export type ArkViolationLike = {
   toLayer?: string;
   target?: string;
   [key: string]: unknown;
+  /** Nested-wall reason (CROSS_PARENT_SLICE, CROSS_SIBLING_SLICE, CROSS_PARENT_VIA_SHARED). */
+  reasonId?: string;
 };
 
 /**
@@ -137,7 +141,15 @@ export function classifyLayerImportKind(
   return 'unknown';
 }
 
+/** The reason's fix, plus its advisory note only when this finding is a warning. */
+function sliceHintAction(hint: SliceReasonHint, violation: ArkViolationLike): string {
+  return violation.failsStrict === false && hint.advisoryNote ? `${hint.fix} ${hint.advisoryNote}` : hint.fix;
+}
+
 export function layerImportNextAction(violation: ArkViolationLike): string {
+  // A nested-wall reason has its own fix. It wins over the generic peer text.
+  const hint = sliceReasonHint(typeof violation.reasonId === 'string' ? violation.reasonId : undefined);
+  if (hint) return `${sliceHintAction(hint, violation)} Then preflight again.`;
   if (violation.typeOnly || violation.targetTypeOnlyExports || violation.namedBindingsTypeOnly) {
     return 'Move the referenced type to a mutually allowed layer, use `import type`, then preflight again.';
   }
@@ -288,6 +300,11 @@ export function deterministicNextAction(violation: ArkViolationLike): string {
   switch (violation.ruleId) {
     case 'LAYER_IMPORT_VIOLATION':
       return layerImportNextAction(violation);
+    case 'CONFIG_CHILD_SLICES_VERSION':
+      // The finding already names the pinned file and the version to bump to.
+      return typeof violation.nextAction === 'string' && violation.nextAction.length > 0
+        ? violation.nextAction
+        : 'Bump the pinned arkgate named in the finding to the version it gives, then run Ark again.';
     case 'FORBIDDEN_GLOBAL':
       return `Inject ${violation.target ?? 'the capability'} through a port, test at the public interface, then preflight again.`;
     case 'CAPABILITY_VIOLATION':
@@ -541,11 +558,13 @@ export function enrichViolationWithFixClass<T extends ArkViolationLike>(
           : violation.targetTypeOnlyExports
             ? 'The imported module only exports types — use `import type` and place the type in a layer both sides may share.'
             : 'This is a type-only import — move the type to a layer both sides may share, or relocate the file to match its role.';
-      } else if (violation.peerIsolation) {
+      } else if (violation.peerIsolation || sliceReasonHint(violation.reasonId)) {
+        const hint = sliceReasonHint(violation.reasonId);
         enriched.fixClass = 'cross-slice-boundary';
         enriched.effort = 'medium';
-        enriched.enthusiastHint =
-          'Cross-slice import blocked (peerIsolation). Do not import another feature/context directly — extract shared code to a shared layer, or coordinate via events/ports. Moving code across slices is a judgment call, not a mechanical auto-fix.';
+        enriched.enthusiastHint = hint
+          ? `${hint.why} ${sliceHintAction(hint, violation)}`
+          : 'Cross-slice import blocked (peerIsolation). Do not import another feature/context directly — extract shared code to a shared layer, or coordinate via events/ports. Moving code across slices is a judgment call, not a mechanical auto-fix.';
       } else {
         const kind = classifyLayerImportKind(typeof violation.target === 'string' ? violation.target : '', {
           fromLayer: typeof violation.fromLayer === 'string' ? violation.fromLayer : undefined,
@@ -657,6 +676,7 @@ export function enrichViolationWithFixClass<T extends ArkViolationLike>(
     case 'ARKORDER_XI_TTL':
     case 'ARKORDER_STALE_SIGMA':
     case 'ARKORDER_UNVALVED_RELEASE':
+    case 'ARKORDER_STALE_PROPOSAL':
       enriched.fixClass = 'arkorder-usage';
       enriched.effort = 'medium';
       enriched.enthusiastHint =
@@ -678,6 +698,8 @@ export function enrichViolationWithFixClass<T extends ArkViolationLike>(
                         ? 'Refresh σ. ξ does not expire.'
                         : violation.ruleId === 'ARKORDER_UNVALVED_RELEASE'
                           ? 'The choice is already frozen. proposeRelease then apply — do not call release() again with a different value.'
+                          : violation.ruleId === 'ARKORDER_STALE_PROPOSAL'
+                            ? 'That proposal was computed against an older pattern. Propose again, review the new blast radius, then apply.'
                   : 'Call createOrderPlane from arkgate/order in a listed plane root so the app actually freezes a pattern.';
       break;
     default:

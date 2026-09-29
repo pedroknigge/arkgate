@@ -56,6 +56,20 @@ function runInit(root: string, extraArgs: string[] = []) {
   }
 }
 
+/**
+ * Declare arkgate in package.json (merging any existing fields). Generated commands use the
+ * project's own runner only when arkgate is a local dependency; unpinned projects get
+ * `npx -y -p arkgate@<exact>` instead (see tests/unit/static-check/unpinnedArkgateRunner.test.ts).
+ */
+function pinArkgate(root: string, fields: Record<string, unknown> = {}) {
+  const file = path.join(root, 'package.json');
+  const current = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : { name: 'fixture' };
+  fs.writeFileSync(
+    file,
+    `${JSON.stringify({ ...current, ...fields, devDependencies: { ...(current.devDependencies ?? {}), arkgate: '^4.8.0' } }, null, 2)}\n`
+  );
+}
+
 function runInstallAgentGates(root: string, extraArgs: string[] = []) {
   try {
     const stdout = execFileSync(
@@ -254,6 +268,7 @@ describe('ark-check --install-agent-gates', () => {
   it('writes starter agent and CI gate templates without requiring an existing config', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-agent-gates-'));
     fs.writeFileSync(path.join(root, 'package-lock.json'), '{}\n');
+    pinArkgate(root);
 
     const result = runInstallAgentGates(root);
     expect(result.status).toBe(0);
@@ -322,6 +337,7 @@ describe('ark-check --install-agent-gates', () => {
   it('generates package-manager-consistent GitHub workflows', () => {
     const pnpmRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-agent-gates-pnpm-'));
     fs.writeFileSync(path.join(pnpmRoot, 'pnpm-lock.yaml'), '\n');
+    pinArkgate(pnpmRoot);
 
     const pnpm = runInstallAgentGates(pnpmRoot);
     expect(pnpm.status).toBe(0);
@@ -337,6 +353,7 @@ describe('ark-check --install-agent-gates', () => {
 
     const yarnRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-agent-gates-yarn-'));
     fs.writeFileSync(path.join(yarnRoot, 'yarn.lock'), '\n');
+    pinArkgate(yarnRoot);
 
     const yarn = runInstallAgentGates(yarnRoot);
     expect(yarn.status).toBe(0);
@@ -357,6 +374,7 @@ describe('ark-check --install-agent-gates', () => {
     // policy violation. They must follow the detected package manager like the workflow.
     const pnpmRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-gates-pnpm-cmd-'));
     fs.writeFileSync(path.join(pnpmRoot, 'pnpm-lock.yaml'), '\n');
+    pinArkgate(pnpmRoot);
     const pnpm = runInstallAgentGates(pnpmRoot, ['--tools', 'claude,cursor,codex']);
     expect(pnpm.status).toBe(0);
 
@@ -383,6 +401,7 @@ describe('ark-check --install-agent-gates', () => {
     // yarn follows too; npm (default) still says npx — unchanged behavior.
     const yarnRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-gates-yarn-cmd-'));
     fs.writeFileSync(path.join(yarnRoot, 'yarn.lock'), '\n');
+    pinArkgate(yarnRoot);
     expect(runInstallAgentGates(yarnRoot, ['--tools', 'claude']).status).toBe(0);
     const yarnAgents = fs.readFileSync(path.join(yarnRoot, 'AGENTS.md'), 'utf8');
     expect(yarnAgents).toContain('yarn ark-check --root . --config ark.config.json --strict-config');
@@ -390,6 +409,7 @@ describe('ark-check --install-agent-gates', () => {
 
     const npmRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-gates-npm-cmd-'));
     fs.writeFileSync(path.join(npmRoot, 'package-lock.json'), '{}\n');
+    pinArkgate(npmRoot);
     expect(runInstallAgentGates(npmRoot, ['--tools', 'claude']).status).toBe(0);
     const npmAgents = fs.readFileSync(path.join(npmRoot, 'AGENTS.md'), 'utf8');
     expect(npmAgents).toContain('npx ark-check --root . --config ark.config.json --strict-config');
@@ -398,7 +418,7 @@ describe('ark-check --install-agent-gates', () => {
   it('does not let a stray pnpm-lock.yaml hijack an npm project into pnpm', () => {
     // npm project (package-lock.json) that also carries a leftover pnpm-lock.yaml.
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-pm-conflict-'));
-    fs.writeFileSync(path.join(root, 'package.json'), '{"name":"x"}\n');
+    pinArkgate(root, { name: 'x' });
     fs.writeFileSync(path.join(root, 'package-lock.json'), '{}\n');
     fs.writeFileSync(path.join(root, 'pnpm-lock.yaml'), 'lockfileVersion: 5.4\n');
     expect(runInstallAgentGates(root, ['--tools', 'claude']).status).toBe(0);
@@ -415,10 +435,7 @@ describe('ark-check --install-agent-gates', () => {
   it('honors the packageManager field over a conflicting lockfile', () => {
     // A genuine pnpm repo that still carries a package-lock.json declares itself via the field.
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-pm-field-'));
-    fs.writeFileSync(
-      path.join(root, 'package.json'),
-      '{"name":"x","packageManager":"pnpm@9.1.0"}\n'
-    );
+    pinArkgate(root, { name: 'x', packageManager: 'pnpm@9.1.0' });
     fs.writeFileSync(path.join(root, 'package-lock.json'), '{}\n');
     expect(runInstallAgentGates(root, ['--tools', 'claude']).status).toBe(0);
     const agents = fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8');
@@ -440,6 +457,7 @@ describe('ark-check --install-agent-gates', () => {
   it('migrates a stale command runner in existing gate files without clobbering them', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-migrate-'));
     fs.writeFileSync(path.join(root, 'pnpm-lock.yaml'), '\n');
+    pinArkgate(root);
     fs.mkdirSync(path.join(root, '.claude'), { recursive: true });
     // Pre-1.11 gate files carrying the stale `npx` runner + a customization to preserve.
     fs.writeFileSync(
@@ -512,6 +530,7 @@ describe('ark-check --install-agent-gates', () => {
     // then re-prepended ark-mcp while arkgate-mcp remained → broken stdio argv.
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-migrate-double-'));
     fs.writeFileSync(path.join(root, 'package-lock.json'), '{}\n');
+    pinArkgate(root);
     fs.mkdirSync(path.join(root, '.cursor'), { recursive: true });
     fs.writeFileSync(
       path.join(root, '.mcp.json'),
@@ -652,6 +671,7 @@ jobs:
   it('names the CI steps so an install failure does not read as an architecture failure', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-agent-gates-steps-'));
     fs.writeFileSync(path.join(root, 'package-lock.json'), '{}\n');
+    pinArkgate(root);
 
     const result = runInstallAgentGates(root);
     expect(result.status).toBe(0);
@@ -805,6 +825,7 @@ jobs:
 
   it('keeps the agent contract in sync between AGENTS.md and the Cursor rule', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-agent-gates-sync-'));
+    pinArkgate(root);
 
     const result = runInstallAgentGates(root, ['--tools', 'cursor']);
     expect(result.status).toBe(0);
@@ -1551,6 +1572,7 @@ describe('ark init', () => {
   it('generated CI enables corepack before actions/setup-node so pnpm cache resolves', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-ci-order-'));
     fs.writeFileSync(path.join(root, 'pnpm-lock.yaml'), '\n');
+    pinArkgate(root);
     expect(runInstallAgentGates(root, ['--tools', 'claude']).status).toBe(0);
     const workflow = fs.readFileSync(path.join(root, '.github/workflows/ark-check.yml'), 'utf8');
     expect(workflow).toContain('corepack enable');
@@ -3055,6 +3077,7 @@ describe('ark-check --install-agent-gates instruction-tier tools', () => {
 
   it('writes the shared instruction rule for explicitly selected tools', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-gates-tier-'));
+    pinArkgate(root);
     const result = runInstallAgentGates(root, [
       '--tools',
       'windsurf,cline,copilot,kiro,roo,continue,gemini',

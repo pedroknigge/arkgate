@@ -304,3 +304,86 @@ describe('destinationKeepsLayerAndSlice under stars', () => {
     expect(destinationKeepsLayerAndSlice(from, 'src/lib/features/projects/rfi/load-rfi.ts', layers, [rule])).toBe(false);
   });
 });
+
+describe('flat parent pilot counts every resolved importer (slice audit)', () => {
+  const appLayers = [{ name: 'Application', patterns: ['src/lib/**'] }];
+  const appRule = {
+    from: 'Application',
+    to: 'Application',
+    allowed: false,
+    peerIsolation: true,
+    sliceFolders: ['features'],
+    childSlices: {
+      sliceFolders: ['lib/features/*/*'],
+      sliceIdentity: 'stars' as const,
+      commonFolders: ['domain'],
+      siblings: 'deny' as const,
+    },
+  };
+
+  function fixture() {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-flat-parent-audit-'));
+    temps.push(root);
+    write(root, 'tsconfig.json', JSON.stringify({ compilerOptions: { baseUrl: '.', paths: { '@/*': ['src/*'] } } }));
+    return root;
+  }
+
+  it('a flat file one child and universe common import stays in place', () => {
+    const root = fixture();
+    const files = [
+      write(root, 'src/lib/features/orders/pay-helper.ts', 'export const h = 1;\n'),
+      write(root, 'src/lib/features/orders/pay/a.ts', "import { h } from '../pay-helper';\nexport const a = h;\n"),
+      write(root, 'src/lib/features/orders/domain/common.ts', "import { h } from '../pay-helper';\nexport const c = h;\n"),
+    ];
+    expect(collectFlatParentPilot({ root, files, rules: [appRule], layers: appLayers })).toBeNull();
+  });
+
+  it('a flat file one child imports relatively and another through a tsconfig alias stays in place', async () => {
+    const root = fixture();
+    const tsModule = await import('typescript');
+    const files = [
+      write(root, 'src/lib/features/orders/ship-helper.ts', 'export const s = 1;\n'),
+      write(root, 'src/lib/features/orders/ship/a.ts', "import { s } from '../ship-helper';\nexport const a = s;\n"),
+      write(
+        root,
+        'src/lib/features/orders/pay/b.ts',
+        "import { s } from '@/lib/features/orders/ship-helper';\nexport const b = s;\n"
+      ),
+    ];
+    const ts = (tsModule as { default?: unknown }).default ?? tsModule;
+    expect(collectFlatParentPilot({ root, files, rules: [appRule], layers: appLayers, ts })).toBeNull();
+  });
+
+  it('uses resolved dependency facts when doctor has them, and still suggests a true single importer', () => {
+    const root = fixture();
+    const files = [
+      write(root, 'src/lib/features/orders/ship-helper.ts', 'export const s = 1;\n'),
+      write(root, 'src/lib/features/orders/ship/a.ts', 'export const a = 1;\n'),
+      write(root, 'src/lib/features/orders/pay/b.ts', 'export const b = 1;\n'),
+    ];
+    const dep = (from: string) => ({
+      from,
+      target: 'src/lib/features/orders/ship-helper.ts',
+      resolution: 'resolved-project',
+    });
+    expect(
+      collectFlatParentPilot({
+        root,
+        files,
+        rules: [appRule],
+        layers: appLayers,
+        facts: { dependencies: [dep(files[1]!), dep(files[2]!)] },
+      })
+    ).toBeNull();
+    const one = collectFlatParentPilot({
+      root,
+      files,
+      rules: [appRule],
+      layers: appLayers,
+      facts: { dependencies: [dep(files[1]!)] },
+    });
+    expect(one?.moves.map((move: { file: string; destination: string }) => [move.file, move.destination])).toEqual([
+      ['src/lib/features/orders/ship-helper.ts', 'src/lib/features/orders/ship'],
+    ]);
+  });
+});

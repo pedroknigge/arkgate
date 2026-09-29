@@ -22,7 +22,7 @@ const SAFE_IF = /^(?:['"]?true['"]?|['"]?\$\{\{\s*(?:true|always\(\))\s*\}\}['"]
 const SAFE_NEEDS_IF = /^['"]?\$\{\{\s*always\(\)\s*\}\}['"]?$/i;
 const SAFE_CONTINUE = /^['"]?false['"]?$/i;
 const ENV_PREFIX = /^(?:(?:env\s+)?(?:[A-Za-z_][A-Za-z0-9_]*=(?:"[^"]*"|'[^']*'|\S+)\s+)*)/;
-const DIRECT_ARK = /^(?:(?:npx|yarn)\s+(?:arkgate-check|ark-check)(?=\s|$)|pnpm(?:\s+--\S+)*\s+exec\s+(?:arkgate-check|ark-check)(?=\s|$)|node\s+(?:\S+\/)?bin\/(?:arkgate-check|ark-check)\.mjs(?=\s|$)|(?:arkgate-check|ark-check)(?=\s|$))/;
+const DIRECT_ARK = /^(?:(?:npx(?:\s+(?:-y|--yes))?(?:\s+(?:-p\s+|--package[\s=])arkgate(?:@\S+)?)?|yarn)\s+(?:arkgate-check|ark-check)(?=\s|$)|pnpm(?:\s+--\S+)*\s+exec\s+(?:arkgate-check|ark-check)(?=\s|$)|node\s+(?:\S+\/)?bin\/(?:arkgate-check|ark-check)\.mjs(?=\s|$)|(?:arkgate-check|ark-check)(?=\s|$))/;
 const CHECK_SCRIPT = /^(?:(?:npm|pnpm)\s+run\s+check:architecture(?=\s|$)|yarn(?:\s+run)?\s+check:architecture(?=\s|$))/;
 const FAIL_CLOSED = /(?:^|\s)--(?:strict|strict-merge|require-gates)(?=\s|$)/;
 

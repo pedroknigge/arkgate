@@ -12,9 +12,10 @@ import type {
   ArchitectureEngineViolation,
   PreflightResolvedChangeInput,
   PreparedChangeFile,
+  ResolvedAnalysisResult,
   ResolvedChangePreflightResult,
 } from './analysisTypes';
-import { analyzeResolvedProject } from './resolvedAnalysis';
+import { analyzeCanonicalResolvedProject } from './resolvedAnalysis';
 
 function canonicalChangePath(value: string): string | undefined {
   const portable = value.replace(/\\/g, '/');
@@ -63,6 +64,7 @@ function identityViolations(
     }));
 }
 
+
 function preparedChange(
   change: AnalysisFileChange,
   path: string,
@@ -80,6 +82,77 @@ function preparedChange(
 }
 
 /**
+ * ArkRules-plane findings (structure sensors, invariant catalog / coverage). Their
+ * debt is frozen per project with `ark-check --update-baseline`, and the write hook
+ * ratchets it per file, so the atomic verdict must not charge it to an unrelated patch.
+ */
+function isArkRulesPlaneRule(ruleId: string): boolean {
+  return ruleId.startsWith('ARKRULE_') || ruleId.startsWith('INVARIANT_');
+}
+
+function ratchetKey(violation: ArchitectureEngineViolation): string {
+  const arkruleId = typeof violation.arkruleId === 'string' ? violation.arkruleId : '';
+  return [
+    violation.ruleId,
+    violation.file ?? '',
+    arkruleId,
+    violation.target ?? violation.message,
+  ].join('|');
+}
+
+/**
+ * Ratchet (same philosophy as the write hook and `ark-check --baseline`): an
+ * ArkRules-plane finding the base tree already has is pre-existing debt, reported as
+ * a non-blocking warning (`preExisting: true`, `failsStrict: false`). Occurrences are
+ * counted, so a patch that adds a second copy of the same finding still blocks.
+ * Layer-plane findings keep the full-tree verdict.
+ */
+function ratchetPreExistingArkRules(
+  baseViolations: readonly ArchitectureEngineViolation[],
+  candidateViolations: readonly ArchitectureEngineViolation[]
+): ArchitectureEngineViolation[] {
+  const remaining = new Map<string, number>();
+  for (const violation of baseViolations) {
+    if (!isArkRulesPlaneRule(violation.ruleId)) continue;
+    if ((violation as { failsStrict?: boolean }).failsStrict === false) continue;
+    const key = ratchetKey(violation);
+    remaining.set(key, (remaining.get(key) ?? 0) + 1);
+  }
+  return candidateViolations.map((violation) => {
+    if (!isArkRulesPlaneRule(violation.ruleId)) return violation;
+    const key = ratchetKey(violation);
+    const count = remaining.get(key) ?? 0;
+    if (count === 0) return violation;
+    remaining.set(key, count - 1);
+    return { ...violation, preExisting: true, failsStrict: false, severity: 'warning' };
+  });
+}
+
+/**
+ * What the verdict reads from the base analysis: completeness, the edges when a
+ * change map asks for convergence, and only the ArkRules-plane findings the
+ * pre-existing-debt ratchet counts. The rest of the base IR is released early.
+ */
+function baseAnalysisSummary(
+  analysis: ResolvedAnalysisResult,
+  keepEdges: boolean
+): Pick<ResolvedAnalysisResult, 'completeness' | 'completenessReasons'> & {
+  ir: Pick<ResolvedAnalysisResult['ir'], 'edges' | 'violations' | 'warnings'>;
+} {
+  return {
+    completeness: analysis.completeness,
+    completenessReasons: analysis.completenessReasons,
+    ir: {
+      edges: keepEdges ? analysis.ir.edges : [],
+      violations: analysis.ir.violations.filter((violation) =>
+        isArkRulesPlaneRule(violation.ruleId)
+      ),
+      warnings: analysis.ir.warnings.filter((warning) => isArkRulesPlaneRule(warning.ruleId)),
+    },
+  };
+}
+
+/**
  * Validate that the supplied candidate is exactly the declared in-memory
  * overlay, then return its canonical resolved verdict. No project file is read
  * or written here.
@@ -87,10 +160,39 @@ function preparedChange(
 export function preflightResolvedChange(
   input: PreflightResolvedChangeInput
 ): ResolvedChangePreflightResult {
-  const baseFacts = loadResolvedCandidateFacts(input.baseFacts);
-  const candidateFacts = loadResolvedCandidateFacts(input.candidateFacts);
-  const base = analyzeResolvedProject({ contract: input.contract, facts: baseFacts });
-  const candidate = analyzeResolvedProject({ contract: input.contract, facts: candidateFacts });
+  return preflightCanonicalChange(
+    input,
+    loadResolvedCandidateFacts(input.baseFacts),
+    loadResolvedCandidateFacts(input.candidateFacts)
+  );
+}
+
+/**
+ * Preflight over facts that are already canonical (validated once). Loading
+ * canonical facts again is an identity, so this skips the re-validation copies
+ * the analysis would otherwise make of both whole-project fact sets.
+ */
+export function preflightCanonicalChange(
+  input: PreflightResolvedChangeInput,
+  baseFacts: ResolvedCandidateFacts,
+  candidateFacts: ResolvedCandidateFacts
+): ResolvedChangePreflightResult {
+  // Keep only what the verdict reads from the base analysis, so its full IR is
+  // released before the candidate analysis runs (two whole-project IRs were
+  // live at once).
+  const base = baseAnalysisSummary(
+    analyzeCanonicalResolvedProject({
+      ...(input.baseAnalysisInputs ?? {}),
+      contract: input.contract,
+      facts: baseFacts,
+    }),
+    input.changeMap !== undefined
+  );
+  const candidate = analyzeCanonicalResolvedProject({
+    ...(input.candidateAnalysisInputs ?? {}),
+    contract: input.contract,
+    facts: candidateFacts,
+  });
   const baseByPath = new Map(baseFacts.files.map((file) => [file.path, file] as const));
   const candidateByPath = new Map(
     candidateFacts.files.map((file) => [file.path, file] as const)
@@ -197,7 +299,12 @@ export function preflightResolvedChange(
         ),
       })
     : undefined;
-  const violations = [...inputViolations, ...candidate.ir.violations].map((violation) => ({
+  const candidateViolations = ratchetPreExistingArkRules(
+    base.ir.violations,
+    candidate.ir.violations
+  );
+  const candidateWarnings = ratchetPreExistingArkRules(base.ir.warnings, candidate.ir.warnings);
+  const violations = [...inputViolations, ...candidateViolations].map((violation) => ({
     ...violation,
     nextAction: deterministicNextAction(violation),
   }));
@@ -211,7 +318,10 @@ export function preflightResolvedChange(
     mode: 'resolved-candidate-facts',
     valid:
       base.completeness === 'complete' &&
-      candidate.strictValid &&
+      candidate.completeness === 'complete' &&
+      candidateWarnings.every(
+        (warning) => (warning as { failsStrict?: boolean }).failsStrict === false
+      ) &&
       blockingViolations.length === 0 &&
       (convergence?.structurallyConverged ?? true),
     readOnly: true,
@@ -239,6 +349,6 @@ export function preflightResolvedChange(
       left.path < right.path ? -1 : left.path > right.path ? 1 : 0
     ),
     violations,
-    warnings: candidate.ir.warnings,
+    warnings: candidateWarnings,
   };
 }

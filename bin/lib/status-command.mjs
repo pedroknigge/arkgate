@@ -17,6 +17,7 @@ import {
   unavailableStatusImprovementCompass,
 } from './status-manifest.mjs';
 import { createProjectId } from './project-identity.mjs';
+import { parseArkConfigJson } from './config-contract.mjs';
 import { resolveEffectiveProjectRoot } from './project-root.mjs';
 import { detectWritePathCapabilities } from './write-path-detect.mjs';
 import { buildWritePathHonesty } from './enforcement-honesty.mjs';
@@ -158,7 +159,7 @@ export function statusCompassFromSnapshot(latest, opts = {}) {
     return unavailableStatusImprovementCompass({
       reasonCode: 'NO_SESSION_SNAPSHOT',
       reason:
-        'No session report snapshot yet — run ark-check --doctor or --report for residual lenses. Status never invents green.',
+        'No session report snapshot yet — run ark-check --report to write the session snapshot (--doctor shows full lenses but does not write it). Status never invents green.',
       contractHash,
     });
   }
@@ -189,7 +190,7 @@ export function statusCompassFromSnapshot(latest, opts = {}) {
       reasonCode: complete ? undefined : 'FACTS_PARTIAL',
       reason: complete
         ? undefined
-        : 'Session snapshot residual is partial — re-run doctor/report for full compass.',
+        : 'Session snapshot residual is partial — re-run ark-check --report for full compass.',
       factsSource: 'report-snapshot',
       contractHash,
     });
@@ -198,7 +199,7 @@ export function statusCompassFromSnapshot(latest, opts = {}) {
   return unavailableStatusImprovementCompass({
     reasonCode: 'NO_SESSION_SNAPSHOT',
     reason:
-      'Session snapshot has no improvement compass facts — run ark-check --doctor or --report. Status never invents green.',
+      'Session snapshot has no improvement compass facts — run ark-check --report to refresh the session snapshot. Status never invents green.',
     contractHash,
   });
 }
@@ -242,6 +243,24 @@ export function thinStatusCompassFromDoctor(doctorCompass, opts = {}) {
  *   contractHash?: string | null,
  * }} [options]
  */
+/**
+ * Run the shared contract validator (same rules as ark-check / MCP / ESLint).
+ * @param {string} text
+ * @param {string} source
+ * @returns {string[]} `<path>: <message>` lines; empty when valid
+ */
+function validateConfigText(text, source) {
+  try {
+    parseArkConfigJson(text, source);
+    return [];
+  } catch (error) {
+    if (Array.isArray(error?.issues) && error.issues.length > 0) {
+      return error.issues.map((issue) => `${issue.path}: ${issue.message}`);
+    }
+    return [error instanceof Error ? error.message : String(error)];
+  }
+}
+
 export function collectStatusFacts(options = {}) {
   const startRoot = path.resolve(options.root || process.cwd());
   const configName = options.config || 'ark.config.json';
@@ -256,12 +275,17 @@ export function collectStatusFacts(options = {}) {
   const configExists = fs.existsSync(configPath);
 
   let config = null;
+  /** Shared contract validator messages — status must not look authoritative-green on a config every gate refuses. */
+  let configErrors = [];
   if (configExists) {
+    let text = '';
     try {
-      config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+      text = fs.readFileSync(configPath, 'utf8');
+      config = JSON.parse(text);
     } catch {
       config = null;
     }
+    configErrors = validateConfigText(text, path.basename(configPath));
   }
 
   const projectId = configExists
@@ -390,6 +414,7 @@ export function collectStatusFacts(options = {}) {
     arkgateVersion: options.arkgateVersion || packageVersion(),
     resolvedRoot: realpathOrResolve(resolvedRoot),
     resolvedConfigPath: configExists ? realpathOrResolve(configPath) : null,
+    configErrors,
     projectId,
     expectation,
     expectedRootRelation,
@@ -563,6 +588,10 @@ export function runStatusCommand(args = {}) {
               : '') +
             ' · not a score'
         );
+      }
+      if (manifest.contract?.valid === false) {
+        write(`  contract: invalid (${manifest.contract.errors.length} issue(s)) — every enforcing surface refuses this config`);
+        for (const issue of manifest.contract.errors.slice(0, 5)) write(`    - ${issue}`);
       }
       write(`  next: [${manifest.nextAction.id}] ${manifest.nextAction.summary}`);
     }

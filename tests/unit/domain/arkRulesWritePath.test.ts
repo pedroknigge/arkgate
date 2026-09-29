@@ -16,6 +16,7 @@ import {
   RESOLVED_CANDIDATE_FACTS_SCHEMA_VERSION,
   createResolvedCandidateFacts,
   loadContract,
+  loadResolvedCandidateFacts,
   resolvedFactsEvidenceRequirementsHash,
   type ResolvedCandidateFactsInput,
 } from '../../../src/gate';
@@ -508,5 +509,29 @@ export class Order {
         (v) => v.ruleId === 'INVARIANT_COVERAGE_ROOTS_MISSING'
       )
     ).toBe(false);
+  });
+});
+
+describe('class-shape truncation survives the facts path (arkrules cluster)', () => {
+  it('createResolvedCandidateFacts and the loader keep truncatedUntil', () => {
+    const shapes = extractClassShapesFromSource(
+      'src/domain/order.ts',
+      'export class Order { private re = "x"; public m() { if (a) { return 1; }\n'
+    );
+    expect(typeof shapes[0]?.truncatedUntil).toBe('number');
+    const facts = minimalFacts(BASE_CONFIG, { classShapes: shapes });
+    expect(facts.classShapes[0]?.truncatedUntil).toBe(shapes[0]?.truncatedUntil);
+    const reloaded = loadResolvedCandidateFacts(JSON.parse(JSON.stringify(facts)));
+    expect(reloaded.classShapes[0]?.truncatedUntil).toBe(shapes[0]?.truncatedUntil);
+    const violations = evaluateArkRuleSensors({
+      arkRules: structureRules([
+        { id: 'private-state', sensor: 'aggregate-private-state', mode: 'enforced' },
+      ]),
+      classShapes: facts.classShapes,
+      files: ['src/domain/order.ts'],
+    });
+    expect(violations.map((v) => v.message).join('\n')).toMatch(
+      /Order shape analysed until character \d+/
+    );
   });
 });

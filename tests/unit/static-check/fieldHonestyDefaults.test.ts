@@ -199,6 +199,7 @@ describe('ensureTypecheckScript bootstrap', () => {
         version: '0.1.0',
         scripts: { lint: 'eslint .' },
         dependencies: { next: '16.1.6' },
+        devDependencies: { typescript: '^5.9.0' },
       }),
       'tsconfig.json': JSON.stringify({ compilerOptions: { strict: true }, include: ['src'] }),
       'src/app/page.tsx': 'export default function P(){return null}\n',
@@ -215,6 +216,29 @@ describe('ensureTypecheckScript bootstrap', () => {
     const second = ensureTypecheckScript(root, { write: true });
     expect(second.changed).toBe(false);
     expect(second.reason).toBe('already');
+  });
+
+  it('skips typecheck when tsconfig exists but typescript is not a dependency', () => {
+    const root = mkTemp('ark-typecheck-no-typescript-');
+    writeTree(root, {
+      'package.json': JSON.stringify({ name: 'app', version: '1.0.0' }),
+      'tsconfig.json': '{}',
+      'jsconfig.json': '{}',
+    });
+    const before = fs.readFileSync(path.join(root, 'package.json'), 'utf8');
+    const res = ensureTypecheckScript(root, { write: true });
+    expect(res).toEqual({ changed: false, reason: 'no-typescript' });
+    expect(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).toBe(before);
+  });
+
+  it('adds typecheck when typescript resolves from the project root (hoisted install)', () => {
+    const root = mkTemp('ark-typecheck-hoisted-');
+    writeTree(root, {
+      'package.json': JSON.stringify({ name: 'app', version: '1.0.0' }),
+      'tsconfig.json': '{}',
+      'node_modules/typescript/package.json': JSON.stringify({ name: 'typescript', version: '5.9.0' }),
+    });
+    expect(ensureTypecheckScript(root, { write: false })).toMatchObject({ changed: true, reason: 'added' });
   });
 
   it('does not invent typecheck without tsconfig', () => {

@@ -4,8 +4,15 @@ import {
   type ResolvedCandidateFacts,
   type ResolvedCandidateFactsInput,
 } from '../domain/analysis';
-import type { AnalysisContract, ResolvedAnalysisResult } from './analysisTypes';
+import type {
+  AnalysisContract,
+  PreflightResolvedChangeInput,
+  ResolvedAnalysisResult,
+  ResolvedChangePreflightResult,
+} from './analysisTypes';
 import { analyzeCanonicalResolvedProject } from './resolvedAnalysis';
+import { preflightCanonicalChange, preflightResolvedChange } from './resolvedChangePreflight';
+import type { ArkgatePinEvidence } from '../domain/configVersionFloor';
 
 const trustedResolvedFacts = new WeakSet<ResolvedCandidateFacts>();
 
@@ -31,6 +38,8 @@ export function analyzeTrustedResolvedProject(input: {
   adopted?: boolean;
   invariantTestsPathPresent?: boolean;
   coverageRootsPresent?: boolean;
+  arkgatePins?: readonly ArkgatePinEvidence[];
+  runningArkgateVersion?: string;
   coverageInputs?: {
     fileContents: Readonly<Record<string, string>>;
     testFiles?: readonly string[];
@@ -57,4 +66,22 @@ export function analyzeTrustedResolvedProject(input: {
   return analyzeCanonicalResolvedProject(input);
 }
 
+/**
+ * Atomic preflight for facts this bundle instance created (immutable, already
+ * canonical): no second validation copy of either whole-project fact set.
+ * Any other input takes the validating path.
+ */
+export function preflightTrustedResolvedChange(
+  input: PreflightResolvedChangeInput
+): ResolvedChangePreflightResult {
+  const base = input.baseFacts as ResolvedCandidateFacts;
+  const candidate = input.candidateFacts as ResolvedCandidateFacts;
+  if (!trustedResolvedFacts.has(base) || !trustedResolvedFacts.has(candidate)) {
+    return preflightResolvedChange(input);
+  }
+  return preflightCanonicalChange(input, base, candidate);
+}
+
 export * from './analysis';
+// Tooling reads pin files; the pure parser and floor table stay in Domain.
+export { configVersionFloors, parseArkgatePins } from '../domain/configVersionFloor';

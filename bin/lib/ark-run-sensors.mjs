@@ -132,7 +132,7 @@ function evaluateMissingRoot(extra, hits, teethAllowed) {
         if (matched.some((hit) => hit.hasKernelFactory))
             continue;
         const first = matched[0];
-        out.push(finding(extra, 'arkrun-missing-root', first.file, 1, `ArkRun kernel root ${JSON.stringify(pattern)} has no createArkKernel / createStrictArkKernel factory.`, { target: pattern }, teethAllowed));
+        out.push(finding(extra, 'arkrun-missing-root', first.file, 1, `ArkRun kernel root ${JSON.stringify(pattern)} has no kernel factory (createArkKernel / createStrictArkKernel / createLenientArkKernel / *FromConfig, or ArkModule.forRoot / forRootAsync from arkgate/nestjs).`, { target: pattern }, teethAllowed));
     }
     return out;
 }
@@ -194,11 +194,13 @@ function evaluateUndeclared(extra, kernelCalls, declarations, layerForFile, teet
         if (!fromLayer || !managed.has(fromLayer))
             continue;
         if (!call.nameLiteral) {
-            if (extra.mode === 'enforced') {
+            // `publisher(creator)` binds a source; the emitted name is proven at the
+            // chained `.publish` / `.send`, so an unresolved source is not a gap.
+            if (extra.mode === 'enforced' && call.kind !== 'publisher') {
                 completenessReasons.push({
                     code: ARKRUN_INTERACTION_NAME_INCOMPLETE,
                     file: call.file,
-                    message: `ArkRun ${call.kind} call in ${call.file} has no string-literal name; enforced extra cannot prove the declaration.`,
+                    message: `ArkRun ${call.kind} call in ${call.file} has no string-literal name or same-file define/defineIntent binding; enforced extra cannot prove the declaration.`,
                 });
             }
             continue;

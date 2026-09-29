@@ -5,7 +5,7 @@
  * Hash: stableHash.ts. Plan-B god-module pilot cluster (pattern-b:god-module).
  */
 import type { ArkConfig } from './configTypes';
-import { deterministicHash, stableSerialize } from './stableHash';
+import { deterministicHash, stableHash, stableSerialize } from './stableHash';
 import {
   RESOLVED_CANDIDATE_FACTS_SCHEMA_VERSION,
   RESOLVED_CAPABILITY_IDS,
@@ -26,10 +26,17 @@ import {
   type ResolvedSafetyFact,
 } from './resolvedCandidateFactsTypes';
 
-function compareCanonical(left: unknown, right: unknown): number {
-  const leftKey = stableSerialize(left);
-  const rightKey = stableSerialize(right);
-  return leftKey < rightKey ? -1 : leftKey > rightKey ? 1 : 0;
+/**
+ * Stable sort by each element's canonical serialization. Each key is serialized
+ * once, not once per comparison: same order as a comparator that serializes
+ * both sides, without O(n log n) serializations of large fact arrays.
+ */
+function sortCanonical<T>(values: T[]): T[] {
+  const keyed = values.map((value, index) => ({ key: stableSerialize(value), index }));
+  keyed.sort((left, right) =>
+    left.key < right.key ? -1 : left.key > right.key ? 1 : left.index - right.index
+  );
+  return keyed.map(({ index }) => values[index]);
 }
 
 function sortedUnique(values: readonly string[]): string[] {
@@ -44,17 +51,18 @@ export function resolvedFactsEvidenceRequirementsHash(config: ArkConfig): string
     exclude: sortedUnique(config.exclude ?? []),
     excludeGenerated: config.excludeGenerated !== false,
     dynamicImportAllowlist: sortedUnique(config.dynamicImportAllowlist ?? []),
-    layers: config.layers
-      .map((layer) => ({
-        name: layer.name,
-        patterns: sortedUnique(layer.patterns ?? []),
-        exclude: sortedUnique(layer.exclude ?? []),
-        forbiddenGlobals: sortedUnique(layer.forbiddenGlobals ?? []),
-        intentPrefixes: sortedUnique(layer.intentPrefixes ?? []),
-        capabilityDeny: sortedUnique(layer.capabilities?.deny ?? []),
-        pure: layer.pure === true,
-      }))
-      .sort(compareCanonical),
+    layers: sortCanonical(
+      config.layers
+        .map((layer) => ({
+          name: layer.name,
+          patterns: sortedUnique(layer.patterns ?? []),
+          exclude: sortedUnique(layer.exclude ?? []),
+          forbiddenGlobals: sortedUnique(layer.forbiddenGlobals ?? []),
+          intentPrefixes: sortedUnique(layer.intentPrefixes ?? []),
+          capabilityDeny: sortedUnique(layer.capabilities?.deny ?? []),
+          pure: layer.pure === true,
+        }))
+    ),
     safety: {
       maxTsSuppressions: config.safety?.maxTsSuppressions ?? 0,
       maxAnyCasts: config.safety?.maxAnyCasts ?? 0,
@@ -78,13 +86,14 @@ export function resolvedFactsEvidenceRequirementsHash(config: ArkConfig): string
 function canonicalResolvedFactsInput(
   input: ResolvedCandidateFactsInput
 ): Omit<ResolvedCandidateFacts, 'factsHash'> {
-  const completenessReasons = input.completenessReasons
-    .map((reason) => ({
-      code: reason.code,
-      message: reason.message,
-      ...(reason.file ? { file: reason.file } : {}),
-    }))
-    .sort(compareCanonical);
+  const completenessReasons = sortCanonical(
+    input.completenessReasons
+      .map((reason) => ({
+        code: reason.code,
+        message: reason.message,
+        ...(reason.file ? { file: reason.file } : {}),
+      }))
+  );
   const files = input.files
     .map((file) => ({
       ...file,
@@ -93,79 +102,102 @@ function canonicalResolvedFactsInput(
     .sort((left, right) =>
       left.path < right.path ? -1 : left.path > right.path ? 1 : 0
     );
-  const dependencies = input.dependencies
-    .map((dependency) => ({
-      ...dependency,
-      ...(dependency.namedBindings
-        ? { namedBindings: sortedUnique(dependency.namedBindings) }
-        : {}),
-    }))
-    .sort(compareCanonical);
-  const capabilityUses = input.capabilityUses
-    .map((fact) => ({ ...fact }))
-    .sort(compareCanonical);
-  const ambientUses = input.ambientUses
-    .map((fact) => ({ ...fact }))
-    .sort(compareCanonical);
-  const publishCalls = input.publishCalls
-    .map((fact) => ({ ...fact }))
-    .sort(compareCanonical);
-  const intentReferences = input.intentReferences
-    .map((fact) => ({ ...fact }))
-    .sort(compareCanonical);
-  const safetyUses = input.safetyUses
-    .map((fact) => ({ ...fact }))
-    .sort(compareCanonical);
-  const classShapes = (input.classShapes ?? [])
-    .map((fact) => ({
-      ...fact,
-      mutatingMethods: [...(fact.mutatingMethods ?? [])].map((method) => ({ ...method })),
-    }))
-    .sort(compareCanonical);
-  const arkRunKernelCalls = (input.arkRunKernelCalls ?? [])
-    .map((fact) => ({ ...fact }))
-    .sort(compareCanonical);
-  const arkRunManagedNews = (input.arkRunManagedNews ?? [])
-    .map((fact) => ({ ...fact }))
-    .sort(compareCanonical);
-  const arkRunCompositionRootHits = (input.arkRunCompositionRootHits ?? [])
-    .map((fact) => ({ ...fact }))
-    .sort(compareCanonical);
-  const arkRunDeclarations = (input.arkRunDeclarations ?? [])
-    .map((fact) => ({
-      ...fact,
-      uses: sortedUnique(fact.uses),
-      reactsTo: sortedUnique(fact.reactsTo),
-      raises: sortedUnique(fact.raises),
-      sends: sortedUnique(fact.sends),
-    }))
-    .sort(compareCanonical);
-  const arkOrderPlaneCalls = (input.arkOrderPlaneCalls ?? [])
-    .map((fact) => ({ ...fact }))
-    .sort(compareCanonical);
-  const arkOrderGenericUpdates = (input.arkOrderGenericUpdates ?? [])
-    .map((fact) => ({ ...fact }))
-    .sort(compareCanonical);
-  const arkOrderRootHits = (input.arkOrderRootHits ?? [])
-    .map((fact) => ({ ...fact }))
-    .sort(compareCanonical);
-  const arkOrderXiFieldWrites = (input.arkOrderXiFieldWrites ?? [])
-    .map((fact) => ({ ...fact }))
-    .sort(compareCanonical);
-  const arkOrderIngestWritesXi = (input.arkOrderIngestWritesXi ?? [])
-    .map((fact) => ({ ...fact }))
-    .sort(compareCanonical);
-  const arkOrderReleaseKeyCounts = (input.arkOrderReleaseKeyCounts ?? [])
-    .map((fact) => ({ ...fact }))
-    .sort(compareCanonical);
+  const dependencies = sortCanonical(
+    input.dependencies
+      .map((dependency) => ({
+        ...dependency,
+        ...(dependency.namedBindings
+          ? { namedBindings: sortedUnique(dependency.namedBindings) }
+          : {}),
+      }))
+  );
+  const capabilityUses = sortCanonical(
+    input.capabilityUses
+      .map((fact) => ({ ...fact }))
+  );
+  const ambientUses = sortCanonical(
+    input.ambientUses
+      .map((fact) => ({ ...fact }))
+  );
+  const publishCalls = sortCanonical(
+    input.publishCalls
+      .map((fact) => ({ ...fact }))
+  );
+  const intentReferences = sortCanonical(
+    input.intentReferences
+      .map((fact) => ({ ...fact }))
+  );
+  const safetyUses = sortCanonical(
+    input.safetyUses
+      .map((fact) => ({ ...fact }))
+  );
+  const classShapes = sortCanonical(
+    (input.classShapes ?? [])
+      .map((fact) => ({
+        ...fact,
+        mutatingMethods: [...(fact.mutatingMethods ?? [])].map((method) => ({ ...method })),
+      }))
+  );
+  const arkRunKernelCalls = sortCanonical(
+    (input.arkRunKernelCalls ?? [])
+      .map((fact) => ({ ...fact }))
+  );
+  const arkRunManagedNews = sortCanonical(
+    (input.arkRunManagedNews ?? [])
+      .map((fact) => ({ ...fact }))
+  );
+  const arkRunCompositionRootHits = sortCanonical(
+    (input.arkRunCompositionRootHits ?? [])
+      .map((fact) => ({ ...fact }))
+  );
+  const arkRunDeclarations = sortCanonical(
+    (input.arkRunDeclarations ?? [])
+      .map((fact) => ({
+        ...fact,
+        uses: sortedUnique(fact.uses),
+        reactsTo: sortedUnique(fact.reactsTo),
+        raises: sortedUnique(fact.raises),
+        sends: sortedUnique(fact.sends),
+      }))
+  );
+  const arkOrderPlaneCalls = sortCanonical(
+    (input.arkOrderPlaneCalls ?? [])
+      .map((fact) => ({ ...fact }))
+  );
+  const arkOrderGenericUpdates = sortCanonical(
+    (input.arkOrderGenericUpdates ?? [])
+      .map((fact) => ({ ...fact }))
+  );
+  const arkOrderRootHits = sortCanonical(
+    (input.arkOrderRootHits ?? [])
+      .map((fact) => ({ ...fact }))
+  );
+  const arkOrderXiFieldWrites = sortCanonical(
+    (input.arkOrderXiFieldWrites ?? [])
+      .map((fact) => ({ ...fact }))
+  );
+  const arkOrderIngestWritesXi = sortCanonical(
+    (input.arkOrderIngestWritesXi ?? [])
+      .map((fact) => ({ ...fact }))
+  );
+  const arkOrderReleaseKeyCounts = sortCanonical(
+    (input.arkOrderReleaseKeyCounts ?? [])
+      .map((fact) => ({ ...fact }))
+  );
+  const arkOrderXiTtlKeys = sortCanonical(
+    (input.arkOrderXiTtlKeys ?? [])
+      .map((fact) => ({ ...fact }))
+  );
+  const arkOrderBudgetLeaks = sortCanonical(
+    (input.arkOrderBudgetLeaks ?? [])
+      .map((fact) => ({ ...fact }))
+  );
   const candidateTree = input.files
     .map(({ path, contentHash }) => ({ path, contentHash }))
     .sort((left, right) =>
       left.path < right.path ? -1 : left.path > right.path ? 1 : 0
     );
-  const candidateTreeHash = deterministicHash(
-    stableSerialize(candidateTree)
-  );
+  const candidateTreeHash = stableHash(candidateTree);
   return {
     schemaVersion: RESOLVED_CANDIDATE_FACTS_SCHEMA_VERSION,
     completeness: input.completeness,
@@ -195,6 +227,8 @@ function canonicalResolvedFactsInput(
     arkOrderXiFieldWrites,
     arkOrderIngestWritesXi,
     arkOrderReleaseKeyCounts,
+    arkOrderXiTtlKeys,
+    arkOrderBudgetLeaks,
   };
 }
 
@@ -204,7 +238,7 @@ function createCanonicalResolvedCandidateFacts(
   const canonical = canonicalResolvedFactsInput(input);
   return {
     ...canonical,
-    factsHash: deterministicHash(stableSerialize(canonical)),
+    factsHash: stableHash(canonical),
   };
 }
 
@@ -222,8 +256,9 @@ function asRecord(value: unknown, at: string): Record<string, unknown> {
 }
 
 function assertOnlyKeys(record: Record<string, unknown>, allowed: readonly string[], at: string): void {
-  const known = new Set(allowed);
-  const unexpected = Object.keys(record).find((key) => !known.has(key));
+  // Runs once per fact record; the allowed lists are a handful of names, so a
+  // linear scan beats allocating a Set for every record of a large project.
+  const unexpected = Object.keys(record).find((key) => !allowed.includes(key));
   if (unexpected) {
     throw new Error(
       `${at}.${unexpected} is not part of schema ${RESOLVED_CANDIDATE_FACTS_SCHEMA_VERSION}.`
@@ -362,6 +397,8 @@ function parseResolvedFactsInput(
       'arkOrderXiFieldWrites',
       'arkOrderIngestWritesXi',
       'arkOrderReleaseKeyCounts',
+      'arkOrderXiTtlKeys',
+      'arkOrderBudgetLeaks',
       ...(withDerivedIdentities ? ['candidateTreeHash', 'factsHash'] : []),
     ],
     '$'
@@ -784,6 +821,32 @@ function parseResolvedFactsInput(
       keyCount: requiredPositiveInteger(entry, 'keyCount', at),
     };
   });
+  const arkOrderXiTtlKeysRaw =
+    record.arkOrderXiTtlKeys === undefined ? [] : requiredArray(record, 'arkOrderXiTtlKeys', '$');
+  const arkOrderXiTtlKeys = arkOrderXiTtlKeysRaw.map((value, index) => {
+    const at = `$.arkOrderXiTtlKeys[${index}]`;
+    const entry = asRecord(value, at);
+    assertOnlyKeys(entry, ['file', 'line', 'key'], at);
+    return {
+      file: requiredProjectPath(entry, 'file', at),
+      line: requiredPositiveInteger(entry, 'line', at),
+      key: requiredText(entry, 'key', at),
+    };
+  });
+  const arkOrderBudgetLeaksRaw =
+    record.arkOrderBudgetLeaks === undefined
+      ? []
+      : requiredArray(record, 'arkOrderBudgetLeaks', '$');
+  const arkOrderBudgetLeaks = arkOrderBudgetLeaksRaw.map((value, index) => {
+    const at = `$.arkOrderBudgetLeaks[${index}]`;
+    const entry = asRecord(value, at);
+    assertOnlyKeys(entry, ['file', 'line', 'kind'], at);
+    return {
+      file: requiredProjectPath(entry, 'file', at),
+      line: requiredPositiveInteger(entry, 'line', at),
+      kind: requiredText(entry, 'kind', at),
+    };
+  });
   const arkRunDeclarations: ResolvedArkRunDeclarationFact[] = arkRunDeclarationsRaw.map(
     (value, index) => {
       const at = `$.arkRunDeclarations[${index}]`;
@@ -815,6 +878,8 @@ function parseResolvedFactsInput(
     ['$.arkOrderXiFieldWrites', arkOrderXiFieldWrites],
     ['$.arkOrderIngestWritesXi', arkOrderIngestWritesXi],
     ['$.arkOrderReleaseKeyCounts', arkOrderReleaseKeyCounts],
+    ['$.arkOrderXiTtlKeys', arkOrderXiTtlKeys],
+    ['$.arkOrderBudgetLeaks', arkOrderBudgetLeaks],
   ] as const) {
     for (const fact of facts) {
       if (!filePaths.has(fact.file)) {
@@ -839,6 +904,7 @@ function parseResolvedFactsInput(
         'hasStaticFactory',
         'mutatingMethods',
         'dataOnly',
+        'truncatedUntil',
       ],
       at
     );
@@ -861,6 +927,9 @@ function parseResolvedFactsInput(
       hasStaticFactory: requiredBoolean(entry, 'hasStaticFactory', at),
       mutatingMethods,
       ...(entry.dataOnly === undefined ? {} : { dataOnly: requiredBoolean(entry, 'dataOnly', at) }),
+      ...(entry.truncatedUntil === undefined
+        ? {}
+        : { truncatedUntil: requiredInteger(entry, 'truncatedUntil', at) }),
     };
   });
   return {
@@ -891,6 +960,8 @@ function parseResolvedFactsInput(
     arkOrderXiFieldWrites,
     arkOrderIngestWritesXi,
     arkOrderReleaseKeyCounts,
+    arkOrderXiTtlKeys,
+    arkOrderBudgetLeaks,
   };
 }
 

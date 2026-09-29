@@ -156,6 +156,8 @@ or `dist/` except `ark-mcp` loading the built library. Shared CLI logic lives in
 | `src/domain/adapterFindingRefs.ts` | `bin/lib/adapter-finding-refs.mjs` | (same `cli-pure` scripts); Shape split child |
 | `src/domain/adapterContract.ts` | `bin/lib/adapter-contract.mjs` | (same `cli-pure` scripts); facade factories + re-exports |
 | `src/domain/configContract.ts` | `bin/lib/config-contract.mjs` + `schemas/ark.config.schema.json` | (same `cli-pure` scripts) |
+| `src/domain/configContractSlices.ts` | `bin/lib/config-contract-slices.mjs` | (same `cli-pure` scripts); slice schema + validators split out of configContract |
+| `src/domain/configVersionFloor.ts` | bundled in `bin/lib/analysis-engine.mjs` | `generate:analysis-engine` / `check:analysis-engine`; minimum-version floor per new config key (#338) |
 | `src/domain/configExtras.ts` | `bin/lib/config-extras.mjs` | (same `cli-pure` scripts); arkRun / arkOrder extra defaults |
 | `src/domain/projectIdentity.ts` | `bin/lib/project-identity.mjs` + `schemas/ark.project-identity.schema.json` | (same `cli-pure` scripts) |
 | `src/domain/statusManifest.ts` | `bin/lib/status-manifest.mjs` + `schemas/ark.status-manifest.schema.json` | (same `cli-pure` scripts) |
@@ -174,12 +176,18 @@ or `dist/` except `ark-mcp` loading the built library. Shared CLI logic lives in
 | `src/domain/extraMergeTeeth.ts` | `bin/lib/extra-merge-teeth.mjs` | (same `cli-pure` scripts); RN07 extra-plane teeth floor |
 | `src/domain/arkRunSensors.ts` | `bin/lib/ark-run-sensors.mjs` | (same `cli-pure` scripts); RN04 tier-1 ArkRun sensors |
 | `src/domain/arkRunDoctor.ts` | `bin/lib/ark-run-doctor.mjs` | (same `cli-pure` scripts); RN08 doctor/status/report arkRun (notAScore) |
+| `src/domain/sourcePolicy.ts` | `bin/lib/source-policy.mjs` | (same `cli-pure` scripts); intent prefixes + runtime layer-flow resolvability |
 | `src/domain/arkOrderDoctor.ts` | `bin/lib/ark-order-doctor.mjs` | (same `cli-pure` scripts); doctor/status/report arkOrder (notAScore) |
 | `src/domain/arkOrderTypes.ts` | `bin/lib/ark-order-types.mjs` | (same `cli-pure` scripts); ArkOrder vocabulary |
+| `src/domain/stableHash.ts` | `bin/lib/stable-hash.mjs` | (same `cli-pure` scripts); FNV-1a + stable serialize (imported by ArkOrder invariants) |
+| `src/domain/persistenceWriteHint.ts` | `bin/lib/persistence-write-hint.mjs` | (same `cli-pure` scripts); receiver-bound persistence write evidence shared by ArkRules + ArkOrder |
 | `src/domain/arkOrderError.ts` | `bin/lib/ark-order-error.mjs` | (same `cli-pure` scripts) |
 | `src/domain/arkOrderInvariants.ts` | `bin/lib/ark-order-invariants.mjs` | (same `cli-pure` scripts); Haken freeze/ingest/blast |
 | `src/domain/arkOrderFacts.ts` | `bin/lib/ark-order-facts.mjs` | (same `cli-pure` scripts); ADR 0029 |
 | `src/domain/arkOrderSensors.ts` | `bin/lib/ark-order-sensors.mjs` | (same `cli-pure` scripts); ADR 0029 |
+| `src/domain/stableHash.ts` | `bin/lib/stable-hash.mjs` | (same `cli-pure` scripts); shared by ArkOrder invariants + streaming facts hash |
+| `src/domain/persistenceWriteHint.ts` | `bin/lib/persistence-write-hint.mjs` | (same `cli-pure` scripts); ORM client write detection (ArkOrder + ArkRules) |
+| `src/domain/classSourceScan.ts` | `bin/lib/class-source-scan.mjs` | (same `cli-pure` scripts); ArkRules class-shape scanner |
 | `src/domain/arkRunInformationPackage.ts` | kernel-consumed (no `bin/lib` generate) | RN10 snapshot sanitizer; strips factories, live instances, input DTOs |
 | `src/domain/arkRunTransport.ts` | kernel-consumed (no `bin/lib` generate) | RN11 closed send kinds + ephemeral default + broker→local plan |
 | `src/domain/arkRunInspector.ts` | kernel-consumed (no `bin/lib` generate) | RN12 inspector bind policy + snapshot/SSE text; HTTP listen stays Kernel |

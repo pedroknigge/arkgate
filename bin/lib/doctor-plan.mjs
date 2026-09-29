@@ -12,6 +12,7 @@ import {
 import * as arkShared from '../ark-shared.mjs';
 import { summarizeRulesUnderContract } from './rules-under-contract.mjs';
 import { describePackageVersionDualTruth } from './field-install.mjs';
+import { withPinDependentGateFiles } from './pin-dependent-gates.mjs';
 import { detectAgentHomeGaps } from './agent-homes.mjs';
 import { collectDoctorNextActions, preferredDoctorPrimaryNextAction } from './doctor-next-actions.mjs';
 import { printDoctorCompactHuman, printDoctorDetailsHuman } from './doctor-human.mjs';
@@ -21,7 +22,7 @@ import { collectStatesTransitionsResidual } from './states-transitions-presence.
 import { collectStatusTransitionCatalogResidual } from './status-transition-catalog.mjs';
 import { collectNoDomainFrontendResidual } from './no-domain-frontend.mjs';
 import { collectInvariantCoverageResiduals } from './invariant-tests-path.mjs';
-import { anyChildWallAdvisory, anySliceAlias } from '../ark-layer-match.mjs';
+import { anyChildWallAdvisory, anySliceAlias, applyAdvisorySiblingRatchet } from '../ark-layer-match.mjs';
 export { printAdrPresenceHint };
 export { printDoctorCompactHuman, printDoctorDetailsHuman };
 export { summarizeRulesUnderContract };
@@ -533,7 +534,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   const skillGaps = detectSkillGaps(root);
   const agentHomeGaps = detectAgentHomeGaps(root);
   // Dual-truth: CLI version vs package.json pin (field residual after upgrade --no-install).
-  const packageVersionTruth = describePackageVersionDualTruth(root);
+  const packageVersionTruth = withPinDependentGateFiles(root, describePackageVersionDualTruth(root));
   const staleRunners = staleRunnerGateFiles(root);
   const adoption = collectAdoptionGaps(root, config, cov);
   // Prefer writePath from adoption (same detector); recompute only if missing (tests/stubs).
@@ -557,12 +558,9 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     ? [...baseline.keys].filter((key) => !currentKeys.has(key)).length
     : 0;
   const activeCount = violations.length - suppressed;
-  // productHonesty: blocking = failsStrict !== false only (type-only placement debt excluded).
-  const blockingActive = violations.filter((v, index) => {
-    if (v.failsStrict === false) return false;
-    if (!baseline.exists) return true;
-    return !baseline.keys.has(occurrenceKeys[index]);
-  }).length;
+  // productHonesty: blocking = failsStrict !== false only, after the same sibling ratchet as --baseline.
+  const judged = baseline.exists ? applyAdvisorySiblingRatchet(violations, occurrenceKeys, baseline.keys, { rules, layers: config?.layers }) : violations;
+  const blockingActive = judged.filter((v, i) => v.failsStrict !== false && !(baseline.exists && baseline.keys.has(occurrenceKeys[i]))).length;
   const emptyScopeEarly = cov.emptyScope === true || cov.governed.totalFiles === 0;
   const presentationRowEarly = cov.layers.find((r) => r.name === 'PresentationAdapters');
   const totalFilesEarly = cov.governed.totalFiles || 0;

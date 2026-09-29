@@ -804,7 +804,7 @@
             "path",
             "stars"
           ],
-          "description": "How a starred sliceFolders prefix is named. Absent and path keep today's ids (every literal and star binding). stars keeps the last literal plus the star bindings, so parallel trees share one feature id. Bare names are unchanged."
+          "description": "How a starred sliceFolders prefix is named. Absent and path keep today's ids (every literal and star binding). stars keeps the last literal plus every star binding (a star before the last literal is kept too), so parallel trees share one feature id. Bare names are unchanged."
         },
         "sharedRoots": {
           "type": "array",
@@ -838,12 +838,41 @@
           }
         },
         "sharedImportsSlice": {
-          "type": "string",
-          "enum": [
-            "deny",
-            "deny-cross-parent"
-          ],
-          "description": "deny blocks every shared-root import of a slice. deny-cross-parent leaves that hop as a warning and, in ark-check and CI only, reports a slice that reaches another universe through a shared root. The write hook and ESLint see one edge and do not block it. arkgate 4.8.22 and older reject deny-cross-parent."
+          "description": "deny blocks every shared-root import of a slice. deny-cross-parent leaves that hop as a warning and, in ark-check and CI only, reports a slice that reaches another universe through a shared root. The write hook and ESLint see one edge and do not block it. The object form { mode: \"deny-cross-parent\", stopAt } names composition roots (bootstrap, DI registrations) the whole-graph walk never starts at or passes through; a stop file must still sit under sharedRoots, and stopAt does not silence the direct SHARED_IMPORTS_SLICE warning. arkgate 4.8.22 and older reject deny-cross-parent. arkgate 4.8.23 and older reject the object form (must be one of deny, deny-cross-parent).",
+          "oneOf": [
+            {
+              "type": "string",
+              "enum": [
+                "deny",
+                "deny-cross-parent"
+              ]
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "mode",
+                "stopAt"
+              ],
+              "properties": {
+                "mode": {
+                  "type": "string",
+                  "enum": [
+                    "deny-cross-parent"
+                  ]
+                },
+                "stopAt": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "uniqueItems": true,
+                  "minItems": 1
+                }
+              }
+            }
+          ]
         },
         "childSlices": {
           "type": "object",
@@ -851,7 +880,7 @@
           "required": [
             "sliceFolders"
           ],
-          "description": "Optional inner wall under this rule. Absent keeps today's universe wall. sliceFolders names children. commonFolders and flat files are universe common. siblings is \"deny\" (default), \"advisory\", or { default, enforce }. parentMayImportChild defaults to false. allowedCrossSlice may use a whole-segment *. It clears only a sibling crossing. Cross-parent has no advisory knob. arkgate 4.8.22 and older reject this key. A build that still rejects unknown childSlices fields rejects allowedCrossSlice at config load. A build that still types siblings as a string enum rejects the object at config load.",
+          "description": "Optional inner wall under this rule. Runs only on a rule with peerIsolation: true and allowed: false; elsewhere it is inert and ark-check warns CONFIG_CHILD_SLICES_INERT (config load still accepts it, as 4.8.23 did). Absent keeps today's universe wall. sliceFolders names children. Flat files are universe common, and so is a commonFolders directory directly under the universe (a folder of that name inside a child belongs to that child). siblings is \"deny\" (default), \"advisory\", or { default, enforce, ratchet }. parentMayImportChild defaults to false. message is the text for inner-wall findings. allowedCrossSlice may use a whole-segment *. It clears only a sibling crossing. Cross-parent has no advisory knob. arkgate 4.8.22 and older reject this key. A build that still rejects unknown childSlices fields rejects allowedCrossSlice at config load. A build that still types siblings as a string enum rejects the object at config load.",
           "properties": {
             "sliceFolders": {
               "type": "array",
@@ -879,7 +908,7 @@
               "minItems": 1
             },
             "siblings": {
-              "description": "\"deny\" or \"advisory\", or { default, enforce } so listed subtrees are errors while the default stays advisory. A string-enum build rejects the object at config load (must be one of deny, advisory).",
+              "description": "\"deny\" or \"advisory\", or { default, enforce, ratchet } so listed subtrees are errors while the default stays advisory. ratchet absent: a new advisory crossing fails only when the baseline in use already records an advisory crossing of this rule. ratchet true: any unrecorded advisory crossing fails when a baseline is in use. ratchet false: measure only, never fails. A string-enum build rejects the object at config load (must be one of deny, advisory). arkgate 4.8.23 and older reject ratchet (unknown field).",
               "oneOf": [
                 {
                   "type": "string",
@@ -909,6 +938,9 @@
                         "minLength": 1
                       },
                       "uniqueItems": true
+                    },
+                    "ratchet": {
+                      "type": "boolean"
                     }
                   }
                 }
@@ -917,10 +949,15 @@
             "parentMayImportChild": {
               "type": "boolean"
             },
+            "message": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Text for inner-wall findings (CROSS_SIBLING_SLICE and universe common importing a child). The rule message stays the universe-wall text (CROSS_PARENT_SLICE and fail-closed denies). Absent: ArkGate default text, never the rule message. arkgate 4.8.23 and older reject this field (unknown field)."
+            },
             "sliceAliases": {
               "type": "array",
               "minItems": 1,
-              "description": "Maps a source path glob onto a child slice id (universe id plus one child segment) so files outside the slice trees take that universe and child for both walls. A bare name, a universe id alone, an unknown universe, and a wildcard in to are rejected. The glob may not overlap a slice folder, and two aliases may not match the same file. Doctor lists each alias as an owed move. A build that rejects unknown childSlices fields fails at config load (unknown field). arkgate 4.8.22 and older reject childSlices.",
+              "description": "Maps a source path glob onto a child slice id (universe id plus one child segment) so files outside the slice trees take that universe and child for both walls. A path without a wildcard also covers everything under it, as sharedRoots does. A bare name, a universe id alone, a target outside every universe shape, and a wildcard in to are rejected. Under stars identity a target written against the 4.8.23 stars id (star bindings before the last literal dropped, e.g. api/v1/x for modules/*/api/*) still loads when it maps to one universe shape, and ark-check warns CONFIG_SLICE_LEGACY_STARS_ID with the new id; it is rejected only when it maps to more than one shape. Config load checks only the shape; doctor reports a target universe no file belongs to. The glob may not overlap a slice folder, and two aliases may not match the same file. Doctor lists each alias as an owed move. A build that rejects unknown childSlices fields fails at config load (unknown field). arkgate 4.8.22 and older reject childSlices.",
               "items": {
                 "type": "object",
                 "additionalProperties": false,

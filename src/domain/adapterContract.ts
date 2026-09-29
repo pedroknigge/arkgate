@@ -65,7 +65,23 @@ function nextActionForDiagnostic(
     capability: text(evidence.capability) ?? text(violation.capability) ?? undefined,
     arkruleId: text(evidence.arkruleId) ?? undefined,
     arkruleSource: text(evidence.arkruleSource) ?? undefined,
+    reasonId: text(evidence.reasonId) ?? undefined,
   });
+}
+
+const SLICE_REASON_IDS = new Set(['CROSS_PARENT_SLICE', 'CROSS_SIBLING_SLICE', 'CROSS_PARENT_VIA_SHARED']);
+
+/** Nested-wall reason from the top level or from gate `details`. */
+function sliceReasonOf(
+  violation: AdapterViolationInput
+): AdapterDiagnostic['evidence']['reasonId'] | undefined {
+  const details = (violation as { details?: unknown }).details;
+  const nested =
+    details !== null && typeof details === 'object' ? (details as { reasonId?: unknown }).reasonId : undefined;
+  const raw = text(violation.reasonId) ?? text(nested);
+  return raw && SLICE_REASON_IDS.has(raw)
+    ? (raw as AdapterDiagnostic['evidence']['reasonId'])
+    : undefined;
 }
 
 export function toAdapterDiagnostic(
@@ -85,6 +101,7 @@ export function toAdapterDiagnostic(
     (violation.typeOnly === true && violation.peerIsolation !== true)
       ? 'warning'
       : fallbackSeverity;
+  const reasonId = sliceReasonOf(violation);
   const evidence = {
     ...(text(violation.target) ? { target: text(violation.target) } : {}),
     ...(text(violation.fromLayer) ? { fromLayer: text(violation.fromLayer) } : {}),
@@ -109,6 +126,9 @@ export function toAdapterDiagnostic(
     ...(text(violation.edgeKind) ? { edgeKind: text(violation.edgeKind) } : {}),
     ...(text(violation.arkruleId) ? { arkruleId: text(violation.arkruleId) } : {}),
     ...(text(violation.arkruleSource) ? { arkruleSource: text(violation.arkruleSource) } : {}),
+    ...(reasonId ? { reasonId } : {}),
+    ...(reasonId && text(violation.universeFrom) ? { universeFrom: text(violation.universeFrom) } : {}),
+    ...(reasonId && text(violation.universeTo) ? { universeTo: text(violation.universeTo) } : {}),
   };
   const targetKey = targetKeyOverride ?? adapterFindingTargetKey(violation);
   const findingRef = adapterFindingRefFromTargetKey(targetKey);

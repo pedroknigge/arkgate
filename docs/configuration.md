@@ -74,7 +74,9 @@ Invalid ArkGate config (/repo/ark.config.json):
 - $.layers[0].forbiddenGlobal: unknown field
 ```
 
-The same input cannot pass CI while being silently ignored by MCP or ESLint. Invalid JSON, wrong
+The same input cannot pass CI while being silently ignored by MCP or ESLint. In ESLint an
+invalid contract (root config or a referenced ArkRules file) is one `configInvalid` error per
+linted file with the same validator text; it does not crash the lint run. Invalid JSON, wrong
 types, empty required strings, duplicate string-array entries, negative safety thresholds, and
 unsupported schema versions also fail before scanning begins.
 
@@ -132,7 +134,10 @@ Top-level fields:
   certify a test the project never declared a runner root for.
 - **`arkRules`** (optional, schema `1.1+`) — map of layer name → project-relative path to an
   ArkRules file (e.g. `"DomainModel": "arkrules/DomainModel.json"`). Keys must match a declared
-  layer. Missing/invalid referenced files **fail closed**.
+  layer. Missing/invalid referenced files **fail closed**. A `arkrules/*.json` file the map
+  does not reference (or any such file when the map is absent) is advisory drift:
+  `ARKRULE_FILE_UNREFERENCED` in check `warnings`, `rulesUnderContract.unreferencedFiles` in
+  doctor, and `arkRulesCatalog.unreferencedFiles` in MCP `ark_manifest`. It never fails the check.
 - **`arkRun`** (optional, schema `1.2+`) — inline ArkRun extra (`mode`, `kernelRoots`
   (`compositionRoots` alias), `managedLayers`, `requireDeclarations`). Absence is silent. Unknown keys fail closed.
   `managedLayers` must name existing `layers[].name` values. Empty `compositionRoots` in
@@ -142,6 +147,19 @@ Top-level fields:
   is a policy-delta **weakening**. Enforced extra teeth share the CLI / MCP / hook /
   preflight / CI verdict and arm only when the layer plane is classified (same ≥50%
   governed and ≥1 populated-layer floor as ArkRules).
+  Kernel factories in a root: `createArkKernel` / `createStrictArkKernel` /
+  `createLenientArkKernel`, their `*FromConfig` variants, or `ArkModule.forRoot()` /
+  `forRootAsync()` imported from `arkgate/nestjs`. Undeclared-* sensors count only calls
+  whose receiver is traced to the kernel (factory-bound local, import from a root module —
+  resolved through tsconfig `paths` and barrels that re-export it — a plain alias
+  `const kernel = ark`, a `typeof ark` binding, a binding typed `ArkKernel` / `EventBus` /
+  publisher from `arkgate/runtime` or `arkgate/nestjs`, its `.eventBus`, a `publisher(..)`
+  result), or whose receiver cannot be traced but whose literal name is a kernel-valid
+  intent (`Domain.…`, `Application.…`) — `res.send('ok')` or `require.resolve('pkg')` never
+  count. Call names are a string literal or a same-file
+  `define(..)` / `defineIntent(..)` creator (or string constant); anything else in
+  `enforced` mode reports `ARKRUN_INTERACTION_NAME_INCOMPLETE` (partial). See
+  [diagnostics](diagnostics.md#ARKRUN_MISSING_ROOT).
 - **`arkOrder`** (optional, schema `1.3+`) — inline ArkOrder extra (`mode`, `planeRoots`,
   `managedLayers`, `maxXiKeys`, **`xiKeys`**, optional **`appliesTo`**). Absence is silent.
   Unknown keys fail closed. Import `createOrderPlane` from `arkgate/order` (same package).
@@ -157,7 +175,11 @@ Top-level fields:
   at least one glob. Membership ids and recomputable statuses such as `paid` /
   `overdue` are not keys. Factory options `informationBudget`, `sigmaMaxAgeMs`,
   `store` (`ReleaseStore`), and capacity packs belong on `createOrderPlane`, not this
-  extra object. Later ξ is `proposeRelease` then `apply`; `refreshSigma`; ingest
+  extra object. Literal evidence of either still reports statically: a ttl/freshUntil/maxAge
+  key in a plane `release` / `proposeRelease` ξ literal (`ARKORDER_XI_TTL`), and a literal
+  `allowedKinds` entry denied by a literal `cannotObserve` (`ARKORDER_INFORMATION_BUDGET`).
+  Later ξ is `proposeRelease` then `apply` (a stale proposal fails
+  `ARKORDER_STALE_PROPOSAL`); `refreshSigma`; ingest
   residual `absorb | escalate_up | hold`. Demotion or deletion is a policy-delta
   **weakening**. Field ingest never mints a pattern.
 
@@ -230,6 +252,18 @@ That sentence is product copy. Not “Rich domain model, business rules, and dom
 ```
 
 - `intentPrefixes`, `forbiddenGlobals`, `mayImportInfrastructure`, `optional`
+  — `intentPrefixes` is how the ArkRun kernel maps an intent name to a layer at runtime.
+  A layer with a canonical 11-layer name (`DomainModel`, `ApplicationOrchestration`,
+  `PersistenceAdapters`, … — what `ark init` writes) and no `intentPrefixes` gets the
+  built-in prefixes (`Domain.`, `Application.`, `Adapter.Persistence.`, …), so default configs
+  enforce hard observed-layer-flow as-is. A custom-named layer in an `allowed: false` rule
+  with no `intentPrefixes` cannot map any intent: `createStrictArkKernelFromConfig` /
+  `createArkKernelFromConfig` still build (strict default) and record one
+  `layer.observedFlowUnresolvable` audit record (`ARKRUN_LAYER_FLOW_UNRESOLVABLE`), and
+  `ark doctor` lists those layers when the `arkRun` extra is on. Passing
+  `enforceObservedLayerFlow: 'hard'` explicitly throws `ArkKernelConfigError` instead.
+  `peerIsolation` rules are file-path slice walls; runtime flow (producer/intent names only)
+  does not evaluate them.
 - `reserved` / `allowEmpty` — future houses whose globs match nothing yet. `--strict-config` does not fail; `CONFIG_LAYER_PATTERN_NO_MATCHES` (typo warning) is skipped. A typo warning fires only when the glob is not reserved.
 - `capabilities: { deny: [...] }` — opt-in effect walls over the seven capability ids
   (`network`, `filesystem`, `clock`, `randomness`, `environment`, `process`, `persistence`);
@@ -269,19 +303,43 @@ Rule fields:
   off that prefix (`src/app/api/projects/...`) is not that slice.
 - `sliceIdentity` is `path` or `stars`. Absent and `path` are the same: today's ids,
   byte for byte, so baselines and `allowedCrossSlice` keep working with no migration.
-  `stars` names a starred prefix as the last literal plus the star bindings.
+  `stars` names a starred prefix as the last literal plus every star binding. It
+  drops only the literals before the last literal; a star before it is kept, so
+  `modules/*/api/*` binds `orders/api/v1` and `users/api/v1`, never one shared `api/v1`.
+  arkgate 4.8.23 dropped that star too (`api/v1`). For one release a `sliceAliases`
+  `to`, an `allowedCrossSlice` entry, or a `childSlices.allowedCrossSlice` entry written
+  against the 4.8.23 id still loads and keeps its 4.8.23 verdict: a legacy alias target
+  (`api/v1/x`) joins the universe whose 4.8.23 id it names on each edge, and a legacy
+  allowance still clears the edges it cleared. ark-check warns `CONFIG_SLICE_LEGACY_STARS_ID`
+  (`failsStrict: false`) and names the new id to write (`orders/api/v1/x`, or one entry
+  per module when several modules share that old id). A legacy alias target is rejected at
+  config load only when it maps to more than one universe shape of the rule
+  (`maps to more than one universe shape`). Rewrite these entries before the next minor
+  release, which drops the legacy form.
   `lib/features/*/*` and `lib/repositories/features/*/*` both yield
   `features/projects/rfi`, so one feature has one id across parallel trees. Bare names
   (`features`) are unchanged. Doctor warns when two different prefixes bind as the
   same id, and the warning names both paths (`admin/features/*` and `public/features/*`
   both bind as `features/*`). That warning is advisory. Unrelated trees that share a
   last folder name should stay on `path`.
-- `childSlices` is an optional inner wall on a `peerIsolation` rule. Absent means today's
+- `childSlices` is an optional inner wall on a `peerIsolation` rule. It runs only with
+  `peerIsolation: true` and `allowed: false` on the same rule. Elsewhere it is inert: config
+  load still accepts it (4.8.23 did), and ark-check warns `CONFIG_CHILD_SLICES_INERT`
+  (`failsStrict: false`) with the fix — add both flags to the rule, or remove `childSlices`.
+  Absent means today's
   universe wall, byte for byte: no `reasonId`, same messages, same doctor output.
-  `sliceFolders` names the children (`lib/features/*/*` under a universe id `features/projects`).
-  `sliceIdentity` is the same `path` | `stars` choice. `commonFolders` (directory names such as
-  `domain`) and a flat file whose child id does not grow past the universe id are universe
-  common. A child may import that common code. Common code may import a child only when
+  `sliceFolders` names the children. `sliceIdentity` is the same `path` | `stars` choice, and
+  the child id must extend the universe id. With `"sliceIdentity": "stars"`, `lib/features/*/*`
+  yields child ids like `features/projects/rfi` under the universe id `features/projects`. Under
+  the default `path` identity the child id keeps the full prefix (`lib/features/projects/rfi`),
+  which does not extend a bare-name universe id such as `features/projects`: the check warns
+  `CONFIG_CHILD_SLICE_EXTENDS` and the child wall stays off. Pair a bare-name universe with
+  `"sliceIdentity": "stars"` on `childSlices`. A flat file whose child id does not grow
+  past the universe id is universe common. So is a `commonFolders` directory (a name such as
+  `domain`) **directly under the universe**: `lib/features/projects/domain/**`. A folder of
+  that name inside a child (`lib/features/projects/rfi/domain/**`) belongs to that child, so a
+  sibling that imports it is `CROSS_SIBLING_SLICE` and the child's own `domain/` may import
+  its own feature. A child may import universe common code. Common code may import a child only when
   `parentMayImportChild` is true (default false). `siblings` is `deny` (default, also when the
   key is omitted), `advisory`, or `{ "default": "deny" | "advisory", "enforce": [...] }`.
   The universe wall runs first. A denied cross-universe edge is
@@ -293,15 +351,43 @@ Rule fields:
   (`lib/features/projects/rfi` or `src/lib/features/projects/rfi`). A child id matches that
   importer's child id. A path matches when the importer file sits in that directory.
   Bare names do not match. `*` is not a wildcard on this list. `default: "deny"` denies every
-  sibling crossing; the list cannot loosen it. A new advisory crossing past the recorded
-  baseline still fails, the same ratchet as a string `advisory`. An enforce list does not
-  change that function. The baseline key stays `ruleId|file|fromLayer|toLayer|target` and does
+  sibling crossing; the list cannot loosen it. Advisory is advisory on day 1: with
+  `--baseline` (or an `--against` base), the anti-growth ratchet is judged **per rule** and
+  only over advisory crossings. `siblings.ratchet` on the object form picks it:
+  absent — on only when the baseline in use already records at least one advisory
+  crossing of that rule, and then only a crossing past that recorded count fails (an empty
+  baseline, or one frozen before the child wall, promotes nothing). The recorded count is
+  what the baseline holds for that rule: a key whose crossing was removed still counts when
+  the rule still classifies that edge as an advisory sibling crossing, so swapping one
+  recorded crossing for a new one keeps the count and stays a warning; `true` — any unrecorded
+  advisory crossing fails whenever a baseline is in use (the durable lock); `false` — measure
+  only, never fails (doctor `slices.crossSibling` still counts). A recorded enforced crossing
+  never switches the advisory ratchet on. A promoted finding says why and names
+  `ratchet: false`. `enforce` importers and `default: "deny"` stay errors either way. Doctor
+  `productHonesty` applies the same ratchet as `ark-check --baseline`. `ratchet: false` is a
+  weakening policy delta and `ratchet: true` a strengthening one. arkgate 4.8.23 and older
+  reject `ratchet` (`unknown field` at `$.rules[n].childSlices.siblings.ratchet`).
+  `childSlices.message` is the text for inner-wall findings (`CROSS_SIBLING_SLICE` and
+  universe common importing a child). The rule `message` stays the universe-wall text
+  (`CROSS_PARENT_SLICE` and the fail-closed denies). Without `childSlices.message`, an
+  inner-wall finding gets ArkGate's own default text; it never reuses the rule message.
+  Every surface uses the same choice: ark-check / CI, the write hook, MCP `validate_code`,
+  ESLint, and `analyzeProject` / prepare-change. Editing it is not a policy delta. arkgate
+  4.8.23 and older reject it (`unknown field` at `$.rules[n].childSlices.message`). The baseline key stays `ruleId|file|fromLayer|toLayer|target` and does
   not include `reasonId`. `productHonesty.finished` stays false while any child wall is
   advisory, including `{ "default": "advisory", "enforce": [...] }`. The list does not finish
   the house. Doctor `slices` is `{ crossParent, crossSibling, pairs }` for the directed universe
   pairs that occur. A child id that does not extend its universe id warns
   `CONFIG_CHILD_SLICE_EXTENDS` and is treated as universe common. arkgate 4.8.22 and older
-  reject `childSlices` (`CONFIG_CHILD_SLICES_VERSION`). A build that still types `siblings` as
+  reject `childSlices`. Ark warns `CONFIG_CHILD_SLICES_VERSION` only when the repo pins such
+  an older arkgate: an exact `package.json` dependency, the installed `node_modules/arkgate`,
+  `package-lock.json`, a `scripts/*hook*` / `.husky` / host hook command, or a CI workflow
+  (`pedroknigge/arkgate@vX.Y.Z` or its `version:` input). The finding points at that file and
+  line and says which version to bump to. Without such evidence it is silent. Ranges
+  (`^4.8.0`) are not evidence; pnpm/yarn lockfiles are read through the installed copy. The
+  same check covers `sliceIdentity` (4.8.21), `sharedImportsSlice` (4.8.20),
+  `"deny-cross-parent"` (4.8.23), and the keys added after 4.8.23 (`stopAt`,
+  `childSlices.message`, `siblings.ratchet`). A build that still types `siblings` as
   the string enum `deny | advisory` rejects the object at config load
   (`must be one of deny, advisory` at `$.rules[n].childSlices.siblings`). It does not ignore
   the object. No published release through 4.8.22 accepts `{ default, enforce }`. Ship that
@@ -326,10 +412,16 @@ Rule fields:
   Ship it only on a release that includes this field.
   `childSlices.sliceAliases` maps files that sit outside every slice folder onto
   a child that already exists: `{ "from": "lib/compliance/**", "to": "features/projects/compliance" }`.
-  `to` is the universe id the universe wall already knows, plus one child segment.
-  A bare name, that universe id alone, an unknown universe, and a wildcard in `to`
-  are rejected at config load (`child of an existing universe`). The source glob
-  may cover only files the slice folders do not already classify. Overlap with a
+  A `from` without a wildcard in its last segment is a folder form and also covers
+  everything under it, as `sharedRoots` does (`lib/compliance` equals `lib/compliance/**`).
+  `to` must match a universe `sliceFolders` shape of the rule, plus one child segment.
+  A bare name, a universe id alone, a target outside every universe shape, and a
+  wildcard in `to` are rejected at config load (`child of a universe shape`); under
+  `"sliceIdentity": "stars"` a target written against the 4.8.23 id loads with a
+  `CONFIG_SLICE_LEGACY_STARS_ID` warning (see `sliceIdentity` above). Config
+  load cannot see the tree, so it checks only the shape: doctor marks an alias move
+  whose target universe no scanned file belongs to (`unknownUniverse`, "check for a
+  typo"). The source glob may cover only files the slice folders do not already classify. Overlap with a
   universe `sliceFolders` entry or a child `sliceFolders` entry is rejected
   (`overlaps a slice folder`). Two aliases that can match one file are rejected
   (`two slice aliases match the same file`). An aliased file takes the target
@@ -353,13 +445,20 @@ Rule fields:
   It does not ignore the key. No published release through 4.8.22 accepts
   `sliceAliases`. Ship a config that sets it only on a release that includes
   this field. The write hook, ESLint, snippet analysis, ark-check, and CI all
-  see the per-edge decision.
+  see the per-edge decision. In ESLint an error-level crossing reports on
+  `ark/no-domain-infra-imports` and an advisory (warning) crossing reports on the
+  warn-level `ark/architecture-advisory`, because ESLint severity is per rule id
+  ([ai-gates — ESLint](ai-gates.md#eslint-editor-feedback--bounded-parity-envelope)).
 
   Doctor may suggest moving a flat file that sits at universe level when
   exactly one child slice imports it. The card names the file, that child, and
   a destination folder inside the child that keeps the file's layer. It is a
   suggestion. It is not a config field, not a finding, and not an ark-check
-  result. A file two children import stays where it is.
+  result. The importers come from the same resolved graph ark-check uses (tsconfig
+  path aliases included). A file two children import stays where it is, and so
+  does a file that anything outside that one child imports (universe common, a
+  shared root, another universe, another layer). A move that the walls would deny
+  for any recorded importer is never suggested.
 
 ```jsonc
 {
@@ -437,6 +536,30 @@ is evidence:
   That pass runs in `ark-check` and CI. The write hook and ESLint see one edge at a time
   and do not block it. arkgate 4.8.22 and older reject the value at config load (`must be
   one of deny`). They do not ignore it and they do not treat it as `"deny"`.
+  A universe edge the importer's rule declares in `allowedCrossSlice` (directed) is not
+  reported through a shared root either: it is the same dependency the direct wall
+  already allows. `childSlices.allowedCrossSlice` still never clears it.
+  In a DI app the composition root (bootstrap, registrations) has to sit under
+  `sharedRoots`, and every slice that asks the root for a service then "reaches" every
+  universe the root registers. Name those files in the object form:
+  `"sharedImportsSlice": { "mode": "deny-cross-parent", "stopAt": ["kernel/bootstrap.ts",
+  "kernel/registrations/**", "lib/feature-registrations.ts"] }`. The walk never starts at
+  or passes through a stop file, so a path through it is not a crossing. A `stopAt` entry
+  matches like a shared root (anchored, optional leading `src/` or `app/`, a plain folder
+  covers its subtree) or like an alias glob (`kernel/registrations/**` against
+  `src/kernel/registrations/x.ts`). Config load rejects an entry that covers the whole
+  tree (`*`, `**`, `src`, `src/**`, `app/**`, `*/**`) or a whole layer root of that rule
+  (layer `src/lib/**` with `lib/**`), since it would stop every shared node and silence
+  the walk: `must not cover the whole tree` / `must not cover a whole layer root of this
+  rule`. A stop file must still
+  sit under `sharedRoots`; `stopAt` does not classify files and does not silence the direct
+  `SHARED_IMPORTS_SLICE` warning. A slice destination that matches a stop is still reported.
+  Each finding carries `via` (the shared hops). Doctor `sharedWalkHubs` names a shared file
+  that sits on at least half of ten or more such findings — a likely composition root. That
+  is advisory, not a finding. Adding stops is a weakening policy delta
+  (`shared-walk-stop-added`), removing them strengthens, both together need a judgment. The
+  string forms are unchanged. arkgate 4.8.23 and older reject the object at config load
+  (`must be one of deny, deny-cross-parent`).
 - `allowedCrossSlice` entries match a full slice id (`features/catalog`) or a bare slice name
   (`catalog`), and only in the direction written. The reverse edge still denies. A bare name
   matches that name under **any** slice folder, so in a repo with several slice parents
@@ -448,7 +571,10 @@ is evidence:
   about your code) versus `unclassifiable path (src/widgets/x.tsx)` (a fact about our evidence).
   `no slice folders` and `no path evidence` are the two remaining evidence reasons. A rule-level
   `message` override no longer hides it: the reason is appended to your text, not replaced by it.
-- Both declarations are **weakening** changes in `ark policy-delta`
+  The write hook and MCP `validate_code` say the same, and for an evidence reason their fix
+  asks you to move the file into a slice or declare its root in `sharedRoots`.
+- Both declarations are **weakening** changes in the policy delta (`arkgate-check --strict-merge`
+  with `--policy-base <file>` / `--policy-base-ref <ref>`, or MCP `ark_policy_delta`)
   (`shared-roots-added`, `cross-slice-allowance-added`), so a policy review sees them. Both are
   inert on a rule without `peerIsolation: true`, and policy-delta stays silent about them until
   the wall exists.
@@ -464,7 +590,8 @@ other choice deliberately, not so slices can drift into a mesh.
 runtime coupling. They still appear on the **violations** list with `typeOnly: true`,
 `failsStrict: false`, and adapter diagnostic **severity: warning** so doctor/HTML keep
 `violations.typeOnly` / `typeEdgePolicy` honest — but they **do not** fail merge/exit, library
-`valid`, or preflight the way **value** edges do. **Exception:** `peerIsolation` slice
+`valid`, or preflight the way **value** edges do. ESLint reports them as warnings on
+`ark/architecture-advisory`, not as errors. **Exception:** `peerIsolation` slice
 boundaries stay hard even for type-only. A value import of a pure-type barrel is still a value
 edge (not soft-skipped). Prefer placing shared types in a **SharedTypes** (or owning) layer
 both sides may import. Optional starter: [`templates/layers/shared-types.starter.json`](../templates/layers/shared-types.starter.json)
@@ -526,8 +653,8 @@ Each `arkrules/<Layer>.json` may declare:
 
 | Section | Purpose | Modes | What it really enforces |
 |---------|---------|--------|-------------------------|
-| `structure[]` | Closed sensor ids (e.g. `orchestration-only`, `thin-adapter`, `writes-via-aggregate`, `aggregate-private-state`, `always-valid-factory`, `domain-event-on-mutation`, `no-anemic-model`) | `advisory` (default) or `enforced` | **Heuristics of module shape** — not proof that logic was extracted to Domain. `writes-via-aggregate` is driver-import + write-token in the declaring layer (ADR 0032). Tier-2 sensors (`no-anemic-model`) stay advisory-only (cannot promote to enforced). |
-| `invariants[]` | Stable ids + description + `coverage` (`test` / `symbol`) + optional `appliesTo` globs | `advisory` or `enforced` | **Named policy + evidence.** `coverage.symbol` means a declaration of that identifier in a non-test file (witness path `symbolEvidenceFile`; additive `shape`: `function`, `class`, `const`, `method`, `type`, `interface`, or `enum`). Imports and test calls do not count. A `describe` / `it` / `test` / `context` title may also name the invariant id. A comment, string, or other bare mention does not. Does **not** execute tests or business logic and does **not** replace behavior/property tests. Doctor and `--rules-inventory` print the witness path and discard counts on green runs too. A declaration match is not “the tests pass.” |
+| `structure[]` | Closed sensor ids (e.g. `orchestration-only`, `thin-adapter`, `writes-via-aggregate`, `aggregate-private-state`, `always-valid-factory`, `domain-event-on-mutation`, `no-anemic-model`) | `advisory` (default) or `enforced` | **Heuristics of module shape** — not proof that logic was extracted to Domain. `writes-via-aggregate` is driver-import + write-token in the declaring layer (ADR 0032). Tier-2 sensors (`no-anemic-model`) stay advisory-only (cannot promote to enforced). Class shapes come from a tokenizer that skips strings, comments, template literals and regex literals; a class it cannot walk to its end is reported as `shape analysed until character N` (an error under an enforced sensor), never passed in silence. |
+| `invariants[]` | Stable ids + description + `coverage` (`test` / `symbol`) + optional `appliesTo` globs | `advisory` or `enforced` | **Named policy + evidence.** `coverage.symbol` means a declaration of that identifier in a non-test file (witness path `symbolEvidenceFile`, project-relative; additive `shape`: `function`, `class`, `const`, `method`, `type`, `interface`, or `enum`). A `Class.member` symbol (e.g. `Order.ensureInvariants`) requires a member with that name inside the body of `class Class`, a `const Class = class { … }` expression, a `namespace Class { … }` (function or const), or a top-level key of a `const Class = { … }` object literal; a member of another container, a nested object key, a free function, or a file that only mentions the class name does not count. The search is not restricted to the invariant's layer. `coverage.test: false` without a `coverage.symbol` declares no evidence: it is advisory-only (an enforced invariant with that shape reports `INVARIANT_UNCOVERED` and fails strict; the rest of the catalog still evaluates) and cannot be promoted. Imports and test calls do not count. A `describe` / `it` / `test` / `context` title may also name the invariant id. A comment, string, or other bare mention does not. Does **not** execute tests or business logic and does **not** replace behavior/property tests. Doctor and `--rules-inventory` print the witness path and discard counts on green runs too. A declaration match is not “the tests pass.” |
 
 **Reporting:** diagnostics carry `evidence.arkruleId` + `evidence.arkruleSource`. Label residual
 **`[Layer]`** vs **`[ArkRules]`** in agent output. Doctor / HTML: `rulesUnderContract` (catalog +
@@ -570,6 +697,14 @@ For local or non-Git automation, supply a committed config file or Git ref:
 npx ark-check --strict-config --policy-base ./before.ark.config.json --json
 npx ark-check --strict-merge --policy-base-ref origin/main
 ```
+
+ArkRules are part of the policy. With a Git ref, the base `arkrules/*.json` files are read from
+that same ref (a file the base config references but the ref does not contain yet counts as an
+empty layer). With `--policy-base <file>`, the base ArkRules paths resolve next to that file (keep
+a copy of the base `arkrules/` beside it; the error names that directory and the
+`--policy-base-ref` alternative). A base ArkRules file that cannot be read or parsed fails
+closed, because comparing the candidate catalog with itself would read every demotion or
+deletion as neutral.
 
 The additive JSON result includes `policyDelta`: both policy hashes, the overall classification,
 stable findings, and `blockingFindingIds`. Supported comparisons cover governed include/exclude
@@ -627,13 +762,39 @@ type than product source:
 
 | Check | What it does |
 |-------|----------------|
-| `ark-check --local --base origin/dev` | Opt-in local / multi-worktree cheap check. Same engine as `--changed`. Refused with `--strict-merge`. `ARK_CHECK_LOCAL=1` is the same unless CI or a full-tree report mode is on. |
+| `ark-check --local --base origin/dev` | Opt-in local / multi-worktree cheap check. Same engine as `--changed`. Refused with `--strict-merge` and with `--update-baseline`. `ARK_CHECK_LOCAL=1` is the same unless CI, a full-tree report mode, or `--update-baseline` is on. |
 | `ark-check --changed --base origin/dev` | Layer check on touched sources only. A CSS/i18n PR pays almost nothing. |
 | `ark-check --against origin/dev` | New violation keys vs **that ref's** baseline (not only HEAD). |
 | `ark-check --contract-diff --base origin/dev` | Classifies tighten / loosen / reclassify / baseline-grow. |
-| `--contract-session --author <id>` | Law-only PR. Mixed law+product still fails. Loosen/grow need a session even with an empty `stewards[]`; a non-empty list also needs a matching listed author. |
+| `--contract-session --author <id>` | Law-only PR. Mixed law+product still fails. Loosen/grow need a session even with an empty `stewards[]`; a non-empty list also needs a matching listed author. A session always classifies the law change against the team base (`--base`, or the discovered `main`/`dev`), including under `--strict-merge`. If that base has no contract yet (the adoption PR that adds `ark.config.json`), there is nothing to loosen and the session proceeds; an explicit `--policy-base-ref` without a contract at that ref still exits 2. |
 | `--persona touch\|contributor\|agent\|steward` | Budget presets for the same teeth. |
 | `ark status --vs origin/dev` | One line: pin / contract / baseline drift vs that ref. |
+
+How the changed-file set is computed (`--changed`, `--local`, `--against`, `--persona`):
+
+- Paths are relative to `--root`, even when that root is a package inside a monorepo
+  (`git diff --relative`; base-ref files are read as `<ref>:./<path>`). Changes outside the
+  root are not part of that package's diff.
+- Committed changes since the merge base, staged, unstaged, and untracked files all count.
+  File names with spaces, quotes, or non-ASCII characters are kept exactly.
+- Without `--base` / `--against`, the base is the first of `origin/dev`, `origin/main`,
+  `origin/master`, `dev`, `main`, `master` that exists. When none exists (or the root is
+  not a git repository), `--changed` and a non-steward `--persona` stop with **exit 2**
+  (`reasonId: changed-needs-base`; `--local` uses `local-needs-base`). `--contract-diff`
+  and `--persona steward` (which implies it) also stop with **exit 2**
+  (`reasonId: contract-diff-needs-base`): the contract and baseline diff has nothing to
+  compare against. Pass `--base <ref>` or run a plain full check. A diff that could not be
+  computed never counts as "no changes".
+- Any failed git listing (bad ref, timeout, output too large) is exit 2
+  (`reasonId: changed-paths-unavailable`), never a pass.
+- `--report` applies the committed `.ark-baseline.json` implicitly, except under
+  `--strict` / `--strict-merge` / `--contract-diff` / `--against`: a merge verdict uses a
+  baseline only when `--baseline` is passed.
+- `--update-baseline` always freezes the whole tree: it refuses `--changed` / `--local`
+  (exit 2) and ignores `ARK_CHECK_LOCAL=1`, so a partial scan can never truncate
+  `.ark-baseline.json`.
+- Layer-pattern typo warnings (`CONFIG_LAYER_PATTERN_NO_MATCHES`) under `--changed` are
+  judged against the full governed tree, so an untouched layer is not reported as a typo.
 
 Write-gate ApplyPatch denies a batch that mixes law files with product source. Humans who
 never hit PreToolUse are unchanged. Local `pnpm` gates should call `--local --base` or
@@ -645,11 +806,20 @@ worktree has its own root); there is no machine-wide analysis lock.
 include tree. File-local ArkRules sensors (class shape, orchestration-only, thin-adapter,
 writes-via-aggregate) and hint preload stay on the touched set. Layer and cycle sensors
 see that closure, so a new illegal import or a cycle the change can complete still
-fails. Untouched files outside the closure are left to the full-tree CI check. Same
+fails. When a touched file sits under the `sharedRoots` of a `"deny-cross-parent"` rule,
+the graph runs full-tree: the finding belongs to the slice that imports the shared root,
+which may be outside the closure. A `CROSS_PARENT_VIA_SHARED` path counts as part of the
+change when any file on it changed. Untouched files outside the closure are left to the full-tree CI check. Same
 engine; not a second analysis path. A `--changed` pass is not a full-tree structural
 verdict.
 
 MCP clients can call `ark_policy_delta` with the previous `baseConfig`, an optional candidate
 contract (the current project contract is the default), and the same optional acknowledgement.
+When `baseConfig` maps `arkRules`, pass the base catalog as data in `baseArkRuleFiles`
+(`{ "<path from baseConfig.arkRules>": <ArkRules file JSON> }`); without it the call is refused
+instead of returning a config-only verdict. The candidate catalog is read from disk when the
+candidate is omitted or maps the same `arkRules` files as the project contract (after the loader's
+normalisation, so the project `ark.config.json` passed verbatim counts); otherwise pass
+`candidateArkRuleFiles` in the same shape.
 It invokes the public classifier directly, is read-only, and marks a blocking result as an MCP
 error without maintaining separate adapter policy.

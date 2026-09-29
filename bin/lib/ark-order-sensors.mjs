@@ -8,105 +8,9 @@
  * Pure CLI helper (bin/lib/ark-order-sensors.mjs). Zero Node I/O.
  */
 
-import { extractArkOrderGenericUpdatesFromSource, extractArkOrderIngestWritesXiFromSource, extractArkOrderPlaneCallsFromSource, extractArkOrderReleaseKeyCountsFromSource, extractArkOrderXiFieldWritesFromSource, isArkOrderModuleSpecifier, } from './ark-order-facts.mjs';
+import { extractArkOrderBudgetLeaksFromSource, extractArkOrderGenericUpdatesFromSource, extractArkOrderIngestWritesXiFromSource, extractArkOrderModuleImportsFromSource, extractArkOrderPlaneCallsFromSource, extractArkOrderReleaseKeyCountsFromSource, extractArkOrderXiFieldWritesFromSource, extractArkOrderXiTtlKeysFromSource, arkOrderGlobToRegExp as globToRegExp, isArkOrderModuleSpecifier, } from './ark-order-facts.mjs';
 import { extraMergeTeethAllowed, } from './extra-merge-teeth.mjs';
 import { deterministicNextAction } from './remediation.mjs';
-/**
- * XIWRITE-001: same engine as `globToRegExp` in src/domain/layerMatch.ts.
- * Inlined so generate:cli-pure emits a self-contained bin/lib/ark-order-sensors.mjs
- * (layerMatch is derived to bin/ark-layer-match.mjs, not a bin/lib sibling).
- */
-const appliesToRegexpCache = new Map();
-function escapeAppliesToLiteral(ch) {
-    return /[.*+?^${}()|[\]\\]/.test(ch) ? `\\${ch}` : ch;
-}
-function normalizeAppliesToGlob(pattern) {
-    let out = '';
-    for (let i = 0; i < pattern.length; i += 1) {
-        const c = pattern[i];
-        if (c === '\\' && i + 1 < pattern.length) {
-            const next = pattern[i + 1];
-            if ('*?{}[],'.includes(next) || next === '\\') {
-                out += '\\' + next;
-                i += 1;
-                continue;
-            }
-            out += '/';
-            continue;
-        }
-        out += c;
-    }
-    return out;
-}
-function appliesToBracesBalanced(glob) {
-    let depth = 0;
-    for (let i = 0; i < glob.length; i += 1) {
-        const c = glob[i];
-        if (c === '\\') {
-            i += 1;
-            continue;
-        }
-        if (c === '{')
-            depth += 1;
-        else if (c === '}') {
-            depth -= 1;
-            if (depth < 0)
-                return false;
-        }
-    }
-    return depth === 0;
-}
-function globToRegExp(pattern) {
-    const cached = appliesToRegexpCache.get(pattern);
-    if (cached)
-        return cached;
-    const glob = normalizeAppliesToGlob(pattern);
-    const useBraces = appliesToBracesBalanced(glob);
-    let out = '';
-    let braceDepth = 0;
-    for (let i = 0; i < glob.length; i += 1) {
-        const c = glob[i];
-        if (c === '\\' && i + 1 < glob.length) {
-            out += escapeAppliesToLiteral(glob[i + 1]);
-            i += 1;
-        }
-        else if (c === '*') {
-            if (glob[i + 1] === '*') {
-                if (glob[i + 2] === '/') {
-                    out += '(?:.*/)?';
-                    i += 2;
-                }
-                else {
-                    out += '.*';
-                    i += 1;
-                }
-            }
-            else {
-                out += '[^/]*';
-            }
-        }
-        else if (c === '?') {
-            out += '[^/]';
-        }
-        else if (c === '{' && useBraces) {
-            out += '(?:';
-            braceDepth += 1;
-        }
-        else if (c === '}' && useBraces && braceDepth > 0) {
-            out += ')';
-            braceDepth -= 1;
-        }
-        else if (c === ',' && useBraces && braceDepth > 0) {
-            out += '|';
-        }
-        else {
-            out += escapeAppliesToLiteral(c);
-        }
-    }
-    const re = new RegExp(`^${out}$`);
-    appliesToRegexpCache.set(pattern, re);
-    return re;
-}
 export const ARKORDER_TIER1_SENSOR_IDS = [
     'arkorder-missing-plane',
     'arkorder-kernel-in-domain',
@@ -212,6 +116,12 @@ export function evaluateArkOrderSensors(input) {
     for (const ingest of input.ingestWritesXi ?? []) {
         findings.push(finding(extra, 'arkorder-ingest-writes-xi', ingest.file, ingest.line, 'ingest() result is assigned into a Release or ξ store; ingest may absorb or escalate, never mint a pattern.', undefined, teethAllowed));
     }
+    for (const ttl of input.xiTtlKeys ?? []) {
+        findings.push(finding(extra, 'arkorder-xi-ttl', ttl.file, ttl.line, `ξ key ${JSON.stringify(ttl.key)} is a freshness field; freshness belongs on σ (freshUntil), never on ξ.`, { target: ttl.key }, teethAllowed));
+    }
+    for (const leak of input.budgetLeaks ?? []) {
+        findings.push(finding(extra, 'arkorder-information-budget', leak.file, leak.line, `Projection allowedKinds lists ${JSON.stringify(leak.kind)}, which informationBudget.cannotObserve denies.`, { target: leak.kind }, teethAllowed));
+    }
     const managed = new Set(extra.managedLayers);
     for (const write of xiKeys.length === 0 ? [] : input.xiFieldWrites ?? []) {
         const fromLayer = input.layerForFile(write.file);
@@ -230,22 +140,39 @@ export function evaluateArkOrderEditorSensors(input) {
     if (!input.arkOrder)
         return [];
     const planeCalls = extractArkOrderPlaneCallsFromSource(input.file, input.source);
-    const genericUpdates = extractArkOrderGenericUpdatesFromSource(input.file, input.source);
+    const receivers = { planeRoots: input.arkOrder.planeRoots ?? [] };
+    const genericUpdates = extractArkOrderGenericUpdatesFromSource(input.file, input.source, receivers);
     const xiKeys = input.arkOrder.xiKeys ?? [];
+    // kernel-in-domain needs the file's own layer (name + intent prefixes) and the
+    // arkgate/order specifiers of this one source — the write-path twin of CI facts.
+    const layers = input.fromLayer
+        ? [
+            {
+                name: input.fromLayer,
+                patterns: [],
+                intentPrefixes: [...(input.intentPrefixes ?? [])],
+            },
+        ]
+        : [];
     return evaluateArkOrderSensors({
         arkOrder: input.arkOrder,
-        layers: [],
+        layers,
         planeCalls,
         genericUpdates,
         planeRootHits: [],
         xiFieldWrites: extractArkOrderXiFieldWritesFromSource(input.file, input.source, xiKeys),
         ingestWritesXi: extractArkOrderIngestWritesXiFromSource(input.file, input.source),
         releaseKeyCounts: extractArkOrderReleaseKeyCountsFromSource(input.file, input.source),
-        dependencies: [],
+        xiTtlKeys: extractArkOrderXiTtlKeysFromSource(input.file, input.source, receivers),
+        budgetLeaks: extractArkOrderBudgetLeaksFromSource(input.file, input.source),
+        dependencies: extractArkOrderModuleImportsFromSource(input.file, input.source),
         layerForFile: () => input.fromLayer,
+        ...(input.classification ? { classification: input.classification } : {}),
     }).findings.filter((item) => item.sensor === 'arkorder-generic-update' ||
         item.sensor === 'arkorder-kernel-in-domain' ||
         item.sensor === 'arkorder-xi-field-write' ||
         item.sensor === 'arkorder-ingest-writes-xi' ||
-        item.sensor === 'arkorder-too-many-params');
+        item.sensor === 'arkorder-too-many-params' ||
+        item.sensor === 'arkorder-xi-ttl' ||
+        item.sensor === 'arkorder-information-budget');
 }

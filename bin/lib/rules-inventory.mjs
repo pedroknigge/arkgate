@@ -9,6 +9,11 @@
  */
 
 import { DOMAIN_EVENTS_PUSH_RE, DOMAIN_INVARIANT_WORD_RE, expectedDomainInvariantWordsPhrase, isIdiomaticEventsReset, } from './arkrules-sensors.mjs';
+/** Baseline key belongs to the ArkRules plane (structure sensors or invariants). */
+export function isArkRulesFrozenKey(key) {
+    const ruleId = key.split('|', 1)[0] ?? '';
+    return ruleId.startsWith('ARKRULE_') || ruleId.startsWith('INVARIANT_');
+}
 function lineOf(content, index) {
     return content.slice(0, index).split('\n').length;
 }
@@ -274,13 +279,27 @@ export function buildRulesInventory(input) {
         a.line - b.line ||
         a.kind.localeCompare(b.kind) ||
         a.id.localeCompare(b.id));
-    const underContract = candidates.filter((c) => (c.suggestedArkRule?.invariantId && contracted.has(c.suggestedArkRule.invariantId)) ||
-        (c.suggestedArkRule?.structureId && contracted.has(c.suggestedArkRule.structureId))).length;
+    const contractedSensors = new Set((input.contractedStructure ?? []).map((rule) => `${rule.layer}\u0000${rule.sensor}`));
+    const underContract = candidates.filter((c) => {
+        const suggestion = c.suggestedArkRule;
+        if (!suggestion)
+            return false;
+        if (suggestion.invariantId && contracted.has(suggestion.invariantId))
+            return true;
+        if (!suggestion.structureId)
+            return false;
+        // Structure suggestions: the sensor on that layer is what enforces, not the id string.
+        if (suggestion.sensor &&
+            contractedSensors.has(`${suggestion.layer}\u0000${suggestion.sensor}`)) {
+            return true;
+        }
+        return contracted.has(suggestion.structureId);
+    }).length;
     return {
         candidates,
         inventoried: candidates.length,
         underContract,
-        frozen: (input.frozenKeys ?? []).length,
+        frozen: (input.frozenKeys ?? []).filter(isArkRulesFrozenKey).length,
         notAScore: true,
     };
 }

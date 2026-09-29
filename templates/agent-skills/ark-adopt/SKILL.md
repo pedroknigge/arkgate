@@ -362,7 +362,10 @@ Ark protects the **boundary around** a framework, not its internals. Nest/DI pub
    import them, and they may import a slice. Doctor lists that shared-root → slice hop even
    when the check stays green, so the wall is direct-only. `sharedImportsSlice: "deny"` closes
    that one hop; it does not finish the wall. Promoting the shared slice to its own
-   layer is still the preferred fix.
+   layer is still the preferred fix. With `"deny-cross-parent"` in a DI app, list the
+   composition root (bootstrap, registrations) in the object form's `stopAt` instead of
+   freezing dozens of `CROSS_PARENT_VIA_SHARED` findings through it; doctor
+   `sharedWalkHubs` names that file.
    `sliceFolders`: a bare name stays an unanchored one-segment match (`features` on
    `src/lib/features/projects/rfi/x.ts` is `features/projects`); a filename is never the
    child segment. A starred prefix (`lib/features/*/*`) is anchored like `sharedRoots`

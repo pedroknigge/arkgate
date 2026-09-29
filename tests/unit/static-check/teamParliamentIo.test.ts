@@ -228,6 +228,93 @@ describe('team parliament I/O', () => {
     expect(changed.args.policyBaseRef).toBe('main');
   });
 
+  it('binds the policy base for a contract session so loosening is classified', () => {
+    const root = mkRepo();
+    const session = bindTeamBaseRefs({ strictMerge: true, contractSession: true }, root);
+    expect(session.args.policyBaseRef).toBe('main');
+  });
+
+  it('steward lock holds for --strict-merge --contract-session with --base, auto base, or --base-ref', () => {
+    const root = mkRepo();
+    fs.mkdirSync(path.join(root, 'src/domain'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'src/application'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src/domain/a.ts'), 'export const a = 1;\n');
+    fs.writeFileSync(path.join(root, 'src/application/b.ts'), 'export const b = 1;\n');
+    const law = {
+      include: ['src'],
+      stewards: ['alice'],
+      layers: [
+        { name: 'DomainModel', patterns: ['src/domain/**'] },
+        { name: 'ApplicationOrchestration', patterns: ['src/application/**'] },
+      ],
+      rules: [{ from: 'DomainModel', to: 'ApplicationOrchestration', allowed: false }],
+    };
+    fs.writeFileSync(path.join(root, 'ark.config.json'), `${JSON.stringify(law, null, 2)}\n`);
+    writeSemanticGateArtifacts(root);
+    git(root, ['add', '.']);
+    git(root, ['commit', '-m', 'law']);
+    git(root, ['checkout', '-b', 'loosen']);
+    const loosened = { ...law, rules: [{ ...law.rules[0], allowed: true }] };
+    fs.writeFileSync(path.join(root, 'ark.config.json'), `${JSON.stringify(loosened, null, 2)}\n`);
+    git(root, ['commit', '-am', 'loosen']);
+    const bypassForms = [
+      ['--strict-merge', '--base', 'main', '--contract-session', '--author', 'bob'],
+      ['--strict-merge', '--contract-session', '--author', 'bob'],
+      ['--strict-merge', '--base-ref', 'main', '--contract-session', '--author', 'bob'],
+    ];
+    for (const form of bypassForms) {
+      const run = spawnSync(
+        process.execPath,
+        [path.resolve('bin/ark-check.mjs'), '--root', root, '--config', 'ark.config.json', '--no-cache', '--json', ...form],
+        { cwd: root, encoding: 'utf8', env: { ...process.env, ARK_POLICY_BASE_REF: '' } }
+      );
+      expect(run.status, `${form.join(' ')}\n${run.stdout}${run.stderr}`).toBe(1);
+      expect(JSON.parse(run.stdout).teamParliament).toMatchObject({
+        deny: true,
+        reasonId: 'steward-only-loosen',
+      });
+    }
+  });
+
+  it('a contract session on an adoption PR (base has no contract yet) passes instead of crashing', () => {
+    const root = mkRepo();
+    fs.mkdirSync(path.join(root, 'src/domain'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'package.json'), '{"name":"adopt","type":"module"}\n');
+    fs.writeFileSync(path.join(root, 'src/domain/a.ts'), 'export const a = 1;\n');
+    git(root, ['add', '.']);
+    git(root, ['commit', '-m', 'product']);
+    git(root, ['checkout', '-b', 'law']);
+    const law = {
+      include: ['src'],
+      stewards: ['alice'],
+      layers: [{ name: 'DomainModel', patterns: ['src/domain/**'] }],
+      rules: [],
+    };
+    fs.writeFileSync(path.join(root, 'ark.config.json'), `${JSON.stringify(law, null, 2)}\n`);
+    git(root, ['add', '.']);
+    git(root, ['commit', '-m', 'adopt contract']);
+    const bound = bindTeamBaseRefs({ contractSession: true }, root);
+    expect(bound.args).toMatchObject({ policyBaseRef: 'main', policyBaseFromTeam: true });
+    const run = (extra: string[]) =>
+      spawnSync(
+        process.execPath,
+        [path.resolve('bin/ark-check.mjs'), '--root', root, '--no-cache', ...extra],
+        { cwd: root, encoding: 'utf8', env: { ...process.env, ARK_POLICY_BASE_REF: '' } }
+      );
+    for (const form of [
+      ['--contract-session', '--author', 'alice'],
+      ['--base', 'main', '--contract-session', '--author', 'alice'],
+    ]) {
+      const result = run(form);
+      expect(result.status, `${form.join(' ')}\n${result.stdout}${result.stderr}`).toBe(0);
+      expect(result.stderr).not.toMatch(/Cannot read policy base/);
+    }
+    // An explicit --policy-base-ref asks to compare that exact input: still fail-closed.
+    const explicit = run(['--policy-base-ref', 'main', '--contract-session', '--author', 'alice']);
+    expect(explicit.status).toBe(2);
+    expect(`${explicit.stdout}${explicit.stderr}`).toMatch(/Cannot read policy base main:ark\.config\.json/);
+  });
+
   it('filters changed files, dumps ungoverned names, and nudges stewards', () => {
     const root = mkRepo();
     fs.writeFileSync(path.join(root, 'CODEOWNERS'), '* @alice\n');

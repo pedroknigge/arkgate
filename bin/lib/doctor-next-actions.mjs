@@ -24,6 +24,19 @@ export function packageUnresolvedNextAction(ctx) {
   return null;
 }
 
+/**
+ * PACKAGE_PIN_ABSENT leads when a generated gate file (hook, MCP entry, CI workflow, script)
+ * runs Ark through the local runner: without the pin that command 404s or runs a stale global.
+ */
+export function packagePinAbsentPrimaryAction(ctx) {
+  if (ctx?.selfHost === true) return null;
+  const truth = ctx?.packageVersionTruth;
+  if (truth?.code !== 'PACKAGE_PIN_ABSENT') return null;
+  const files = Array.isArray(truth.dependentGateFiles) ? truth.dependentGateFiles : [];
+  if (files.length === 0) return null;
+  return `Add arkgate to package.json devDependencies and install — ${files.join(', ')} run Ark through the local runner, which does not resolve without the pin (PACKAGE_PIN_ABSENT)`;
+}
+
 /** Compact doctor JSON #1 — same rank as collectDoctorNextActions when package is missing. */
 export function preferredDoctorPrimaryNextAction({
   adopted,
@@ -35,6 +48,7 @@ export function preferredDoctorPrimaryNextAction({
 } = {}) {
   return (
     packageUnresolvedNextAction({ packageInstalled, selfHost, packageVersionTruth }) ||
+    packagePinAbsentPrimaryAction({ selfHost, packageVersionTruth }) ||
     (adopted === 'not-adopted' ? NOT_ADOPTED_NEXT_ACTION : postGreenPath?.action ?? dualTruthNext ?? null)
   );
 }
@@ -149,7 +163,8 @@ export function collectDoctorNextActions(ctx) {
   if (notAdopted || ctx.adopted === ADOPTED_NOT || ctx.adopted == null) {
     actions.push(ctx.notAdoptedNextAction || NOT_ADOPTED_NEXT_ACTION);
   }
-  const resolvePkg = packageUnresolvedNextAction(ctx);
+  const pinAbsentPrimary = packagePinAbsentPrimaryAction(ctx);
+  const resolvePkg = packageUnresolvedNextAction(ctx) || pinAbsentPrimary;
   if (resolvePkg) actions.push(resolvePkg);
   const nudge = ctx.stewardNudge;
   if (
@@ -220,7 +235,7 @@ export function collectDoctorNextActions(ctx) {
       ctx.dualTruthNext ||
         'bump package.json arkgate pin to match this CLI (or install without --no-install)'
     );
-  } else if (ctx.packageVersionTruth?.code === 'PACKAGE_PIN_ABSENT') {
+  } else if (ctx.packageVersionTruth?.code === 'PACKAGE_PIN_ABSENT' && !pinAbsentPrimary) {
     actions.push(
       ctx.dualTruthNext ||
         'Add arkgate to package.json and install so CI/npx resolve this CLI (PACKAGE_PIN_ABSENT)'

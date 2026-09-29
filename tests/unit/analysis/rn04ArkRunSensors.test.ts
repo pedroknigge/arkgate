@@ -61,6 +61,10 @@ describe('RN04 ArkRun tier-1 sensors through resolved analysis', () => {
     ['undeclared-handle', 'ARKRUN_UNDECLARED_HANDLE'],
     ['undeclared-depend', 'ARKRUN_UNDECLARED_DEPEND'],
     ['transport-bypass', 'ARKRUN_TRANSPORT_BYPASS'],
+    // arkgate/nestjs re-exports the kernel: a Domain import is kernel-in-domain.
+    ['kernel-in-domain-nestjs', 'ARKRUN_KERNEL_IN_DOMAIN'],
+    // A define()'d creator resolves to its literal (ADR 0023 D2) and is checked.
+    ['typed-send-red', 'ARKRUN_UNDECLARED_EMIT'],
   ] as const)('%s fixture emits %s; advisory does not flip valid; enforced blocks', async (name, ruleId) => {
     const enforcedRoot = copyCase(name);
     const enforcedConfig = JSON.parse(
@@ -86,6 +90,44 @@ describe('RN04 ArkRun tier-1 sensors through resolved analysis', () => {
     expect(arkRunIds(result.ir.violations)).toEqual([]);
     expect(arkRunIds(result.ir.warnings)).toEqual([]);
     expect(result.valid).toBe(true);
+  });
+
+  it.each([
+    // res.send / require.resolve / subject.subscribe are not kernel calls.
+    'http-noise',
+    // Typed API: ark.send(define()'d creator), this.kernel.send, eventBus.subscribe.
+    'typed-send-green',
+    // ArkModule.forRoot / forRootAsync (arkgate/nestjs) and createLenientArkKernel roots.
+    'nest-root-green',
+  ])('%s enforced fixture stays valid and complete', async (name) => {
+    const root = copyCase(name);
+    const config = JSON.parse(fs.readFileSync(path.join(root, 'ark.config.json'), 'utf8'));
+    const { result } = await analyzeCase(root, config);
+    expect(arkRunIds(result.ir.violations)).toEqual([]);
+    expect(arkRunIds(result.ir.warnings)).toEqual([]);
+    expect(
+      (result.completenessReasons ?? []).filter((reason) => reason.code.startsWith('ARKRUN_'))
+    ).toEqual([]);
+    expect(result.completeness).toBe('complete');
+    expect(result.valid).toBe(true);
+  });
+
+  it('traces kernel receivers through tsconfig paths, barrels, aliasing, typeof, and kernel-valid names', async () => {
+    const root = copyCase('receiver-trace-red');
+    const config = JSON.parse(fs.readFileSync(path.join(root, 'ark.config.json'), 'utf8'));
+    const { result } = await analyzeCase(root, config);
+    const flagged = result.ir.violations
+      .filter((violation) => violation.ruleId === 'ARKRUN_UNDECLARED_EMIT')
+      .map((violation) => (violation as { fromPath?: string; file?: string }).fromPath ?? (violation as { file?: string }).file)
+      .sort();
+    expect(flagged).toEqual([
+      'src/application/b_alias.ts',
+      'src/application/c_barrel.ts',
+      'src/application/d_param.ts',
+      'src/application/e_reassign.ts',
+      'src/application/f_typeof.ts',
+    ]);
+    expect(result.valid).toBe(false);
   });
 
   it('glob compositionRoots with one factory among many files stays green', async () => {

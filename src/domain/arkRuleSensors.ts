@@ -6,6 +6,8 @@
  */
 
 import type { EffectiveArkRules, EffectiveStructureRule, ArkRuleSensorId } from './arkRulesTypes';
+import { findClassDeclarations, scanClassMembers } from './classSourceScan';
+import { sourceHasPersistenceWrite, sourceImportsPersistenceDriverText } from './persistenceWriteHint';
 
 /** Keep in lockstep with arkRulesTypes.ARK_RULE_TIER2_SENSOR_IDS (self-contained for CLI gen). */
 const ARK_RULE_TIER2_SENSOR_IDS = ['no-anemic-model'] as const;
@@ -45,8 +47,6 @@ const ANY_THIS_EMPTY_ARRAY_RE = /^this\.[A-Za-z_][A-Za-z0-9_]*\s*=\s*\[\s*\]/;
 
 const THIS_FIELD_ASSIGNMENT_RE = /\bthis\.[A-Za-z_][A-Za-z0-9_]*\s*=(?!=)/g;
 
-const SHAPE_TRUNCATED_UNTIL = 'truncatedUntil';
-
 export function expectedDomainInvariantWordsPhrase(): string {
   return `${DOMAIN_INVARIANT_WORDS.join(', ')}, or events-array .push(`;
 }
@@ -82,18 +82,11 @@ function attachShapeTruncation(
   shape: ClassShapeFact,
   truncatedUntil: number | undefined
 ): ClassShapeFact {
-  if (truncatedUntil == null) return shape;
-  Object.defineProperty(shape, SHAPE_TRUNCATED_UNTIL, {
-    value: truncatedUntil,
-    enumerable: false,
-    configurable: true,
-  });
-  return shape;
+  return truncatedUntil == null ? shape : { ...shape, truncatedUntil };
 }
 
 function shapeTruncatedUntil(shape: ClassShapeFact): number | undefined {
-  const value = Object.getOwnPropertyDescriptor(shape, SHAPE_TRUNCATED_UNTIL)?.value;
-  return typeof value === 'number' ? value : undefined;
+  return typeof shape.truncatedUntil === 'number' ? shape.truncatedUntil : undefined;
 }
 
 function shapeTruncationSuffix(shape: ClassShapeFact): string {
@@ -115,6 +108,13 @@ export type ClassShapeFact = {
   }[];
   /** Heuristic: data-only class (fields, no methods beyond accessors). */
   dataOnly?: boolean;
+  /**
+   * Set when the scanner could not walk the class to its end: the character
+   * offset (in the source file) where analysis stopped. Enumerable on purpose so
+   * it survives fact canonicalisation and serialisation; enforced structure
+   * sensors report it instead of passing in silence.
+   */
+  truncatedUntil?: number;
 };
 
 export type ArkRuleSensorViolation = {
@@ -283,6 +283,24 @@ function shapesForRule(
   });
 }
 
+/**
+ * A shape the scanner could not walk to its end (unbalanced header/body) is
+ * reported, never passed in silence: later members may be invisible.
+ */
+function truncatedShapeViolation(
+  rule: EffectiveStructureRule,
+  shape: ClassShapeFact,
+  what: string
+): ArkRuleSensorViolation | undefined {
+  const until = shapeTruncatedUntil(shape);
+  if (until == null) return undefined;
+  return baseViolation(
+    rule,
+    shape.file,
+    `Exported class ${shape.className} shape analysed until character ${until}; later ${what} may be invisible (sensor ${rule.sensor}).`
+  );
+}
+
 function evaluateAggregatePrivateState(
   rule: EffectiveStructureRule,
   shapes: readonly ClassShapeFact[],
@@ -290,6 +308,8 @@ function evaluateAggregatePrivateState(
 ): ArkRuleSensorViolation[] {
   const out: ArkRuleSensorViolation[] = [];
   for (const shape of shapesForRule(rule, shapes, layerForFile)) {
+    const truncated = truncatedShapeViolation(rule, shape, 'members');
+    if (truncated) out.push(truncated);
     // P1-L — require real mutability (setters or non-readonly public fields).
     // Readonly public props on intentional value/entity shapes are false-positive-prone.
     if (shape.hasPublicSetters || shape.hasPublicMutableFields) {
@@ -312,6 +332,8 @@ function evaluateAlwaysValidFactory(
 ): ArkRuleSensorViolation[] {
   const out: ArkRuleSensorViolation[] = [];
   for (const shape of shapesForRule(rule, shapes, layerForFile)) {
+    const truncated = truncatedShapeViolation(rule, shape, 'constructors and factories');
+    if (truncated) out.push(truncated);
     if (shape.hasPublicConstructor && !shape.hasStaticFactory) {
       // P1-L — prefer false negatives on intentional DDD / DI aggregates: a public
       // constructor alone is weak evidence. Only fire when mutable public surface
@@ -342,15 +364,8 @@ function evaluateDomainEventOnMutation(
   const expected = expectedDomainInvariantWordsPhrase();
   for (const shape of shapesForRule(rule, shapes, layerForFile)) {
     const truncation = shapeTruncationSuffix(shape);
-    if (shapeTruncatedUntil(shape) != null) {
-      out.push(
-        baseViolation(
-          rule,
-          shape.file,
-          `Exported class ${shape.className} shape analysed until character ${shapeTruncatedUntil(shape)}; later methods may be invisible (sensor domain-event-on-mutation).`
-        )
-      );
-    }
+    const truncated = truncatedShapeViolation(rule, shape, 'methods');
+    if (truncated) out.push(truncated);
     for (const method of shape.mutatingMethods) {
       if (!method.referencesGuardOrPublish) {
         out.push(
@@ -676,25 +691,12 @@ export function collectEmptyInvariantCatalogFindings(
   ];
 }
 
-/** IO / ORM import evidence. postgres and drizzle-orm include package subpaths. Keep in lockstep with arkOrderFacts. */
-const IO_IMPORT_HINT_RE =
-  /\bfrom\s+['"](?:@?prisma\/client|@supabase\/|drizzle-orm(?:\/[^'"]+)?|postgres(?:\/[^'"]+)?|typeorm|knex|mongodb|pg|mysql2|mongoose|better-sqlite3|ioredis|redis|kysely|sequelize)['"]|require\(\s*['"](?:@?prisma\/client|pg|postgres(?:\/[^'"]+)?|drizzle-orm(?:\/[^'"]+)?|knex|typeorm|mongoose)/;
-
 /**
- * Path-alias / local db module (`@/lib/db`) without resolving tsconfig.
- * Keep in lockstep with arkOrderFacts.
+ * IO / ORM import evidence and receiver-bound write tokens live in
+ * persistenceWriteHint (shared with ArkOrder — one definition, not lockstep copies).
+ * Callee must be a persistence client (db|tx|client|prisma|drizzle, `new PrismaClient()`,
+ * or a name bound to a driver constructor); not repo.update(.
  */
-const IO_ALIAS_IMPORT_RE =
-  /\bfrom\s+['"](?:@\/|~\/)?(?:[\w.-]+\/)*(?:db|database|prisma|drizzle)(?:\.[cm]?[jt]sx?)?['"]|require\(\s*['"](?:@\/|~\/)?(?:[\w.-]+\/)*(?:db|database|prisma|drizzle)/;
-
-/**
- * Write tokens that skip the aggregate when paired with a persistence driver import.
- * Callee must be db|tx|client|prisma|drizzle (PrismaClient included); not repo.update(.
- * Keep in lockstep with arkOrderFacts.
- */
-const PERSISTENCE_WRITE_HINT_RE =
-  /\b(?:db|tx|client|prisma(?:Client)?|drizzle)\b(?:\s*\.\s*[A-Za-z_]\w*)*\s*\.\s*(?:insert(?:One|Many)?|update(?:One|Many)?|upsert|delete(?:One|Many)?|createMany|create|replaceOne|findOneAnd(?:Update|Delete|Replace))\s*\(|\bINSERT\s+INTO\b|\bUPDATE\s+[A-Za-z_][\w.]*\s+SET\b|\bDELETE\s+FROM\b/i;
-
 /** Optional resolved-import facts when the collector already classified the specifier. */
 export type ResolvedPersistenceImportFact = {
   specifier?: string;
@@ -710,14 +712,14 @@ export function sourceImportsPersistenceDriver(
   content: string,
   resolvedImports?: readonly ResolvedPersistenceImportFact[]
 ): boolean {
-  if (IO_IMPORT_HINT_RE.test(content) || IO_ALIAS_IMPORT_RE.test(content)) return true;
+  if (sourceImportsPersistenceDriverText(content)) return true;
   if (!resolvedImports) return false;
   for (const imp of resolvedImports) {
     if (isPersistenceDriverLayer(imp.layer)) return true;
     const specifier = imp.specifier;
     if (!specifier) continue;
     const synthetic = `from '${specifier}'`;
-    if (IO_IMPORT_HINT_RE.test(synthetic) || IO_ALIAS_IMPORT_RE.test(synthetic)) return true;
+    if (sourceImportsPersistenceDriverText(synthetic)) return true;
   }
   return false;
 }
@@ -752,7 +754,7 @@ export function deriveArkRuleFileHints(
   if (!content) return null;
 
   const hasIo = sourceImportsPersistenceDriver(content, resolvedImports);
-  const persistenceWrite = hasIo && PERSISTENCE_WRITE_HINT_RE.test(content);
+  const persistenceWrite = hasIo && sourceHasPersistenceWrite(content);
   // Orchestration/adapter heuristics need a longer window; writes still fire on short probes.
   if (content.length < 40) {
     return persistenceWrite ? { persistenceWrite: true } : null;
@@ -815,216 +817,18 @@ export function buildArkRuleFileHints(
   return out;
 }
 
-const MEMBER_MODIFIERS = new Set([
-  'public',
-  'private',
-  'protected',
-  'static',
-  'async',
-  'readonly',
-  'abstract',
-  'override',
-  'declare',
-  'get',
-  'set',
-]);
-
 const CONTROL_FLOW_METHOD_NAMES = new Set(['if', 'match', 'when']);
-
-function skipStringOrComment(src: string, index: number): number {
-  const ch = src[index];
-  if (ch === '/' && src[index + 1] === '/') {
-    const nl = src.indexOf('\n', index);
-    return nl === -1 ? src.length : nl;
-  }
-  if (ch === '/' && src[index + 1] === '*') {
-    const end = src.indexOf('*/', index + 2);
-    return end === -1 ? src.length : end + 2;
-  }
-  if (ch === "'" || ch === '"' || ch === '`') {
-    let j = index + 1;
-    while (j < src.length) {
-      if (src[j] === '\\') {
-        j += 2;
-        continue;
-      }
-      if (src[j] === ch) return j + 1;
-      j += 1;
-    }
-    return src.length;
-  }
-  return index;
-}
-
-function skipWsAndComments(src: string, index: number): number {
-  let i = index;
-  while (i < src.length) {
-    if (/\s/.test(src[i]!)) {
-      i += 1;
-      continue;
-    }
-    if (src[i] === '/' && (src[i + 1] === '/' || src[i + 1] === '*')) {
-      i = skipStringOrComment(src, i);
-      continue;
-    }
-    break;
-  }
-  return i;
-}
-
-function readIdent(src: string, index: number): { ident: string; end: number } | null {
-  const ch = src[index];
-  if (!ch || !/[A-Za-z_]/.test(ch)) return null;
-  let j = index + 1;
-  while (j < src.length && /[A-Za-z0-9_]/.test(src[j]!)) j += 1;
-  return { ident: src.slice(index, j), end: j };
-}
-
-function skipBalanced(src: string, openIndex: number, openCh: string, closeCh: string): number | null {
-  if (src[openIndex] !== openCh) return null;
-  let depth = 1;
-  let i = openIndex + 1;
-  while (i < src.length && depth > 0) {
-    const skipped = skipStringOrComment(src, i);
-    if (skipped !== i) {
-      i = skipped;
-      continue;
-    }
-    const ch = src[i];
-    if (ch === openCh) depth += 1;
-    else if (ch === closeCh) depth -= 1;
-    i += 1;
-  }
-  return depth === 0 ? i : null;
-}
-
-type ScannedClassMember = {
-  name: string;
-  modifiers: string[];
-  kind: 'method' | 'field';
-  body: string;
-};
-
-function scanClassMembers(body: string): {
-  members: ScannedClassMember[];
-  truncatedAt: number | undefined;
-} {
-  const members: ScannedClassMember[] = [];
-  let i = 0;
-  let truncatedAt: number | undefined;
-  while (i < body.length) {
-    i = skipWsAndComments(body, i);
-    if (i >= body.length) break;
-    if (body[i] === ';') {
-      i += 1;
-      continue;
-    }
-    const modifiers: string[] = [];
-    let cursor = i;
-    while (true) {
-      const tok = readIdent(body, cursor);
-      if (!tok || !MEMBER_MODIFIERS.has(tok.ident)) break;
-      modifiers.push(tok.ident);
-      cursor = skipWsAndComments(body, tok.end);
-    }
-    const nameTok = readIdent(body, cursor);
-    if (!nameTok) {
-      i += 1;
-      continue;
-    }
-    cursor = skipWsAndComments(body, nameTok.end);
-    if (body[cursor] === '<') {
-      const afterGeneric = skipBalanced(body, cursor, '<', '>');
-      if (afterGeneric == null) {
-        truncatedAt = body.length;
-        break;
-      }
-      cursor = skipWsAndComments(body, afterGeneric);
-    }
-    if (body[cursor] === '(') {
-      const afterParen = skipBalanced(body, cursor, '(', ')');
-      if (afterParen == null) {
-        truncatedAt = body.length;
-        break;
-      }
-      cursor = skipWsAndComments(body, afterParen);
-      if (body[cursor] === ':') {
-        cursor += 1;
-        while (cursor < body.length && body[cursor] !== '{' && body[cursor] !== ';') {
-          const skipped = skipStringOrComment(body, cursor);
-          if (skipped !== cursor) {
-            cursor = skipped;
-            continue;
-          }
-          cursor += 1;
-        }
-      }
-      if (body[cursor] === '{') {
-        const afterBrace = skipBalanced(body, cursor, '{', '}');
-        if (afterBrace == null) {
-          truncatedAt = body.length;
-          break;
-        }
-        members.push({
-          name: nameTok.ident,
-          modifiers,
-          kind: 'method',
-          body: body.slice(cursor + 1, afterBrace - 1),
-        });
-        i = afterBrace;
-        continue;
-      }
-      if (body[cursor] === ';') {
-        i = cursor + 1;
-        continue;
-      }
-      i = cursor + 1;
-      continue;
-    }
-    let depthBrace = 0;
-    let depthParen = 0;
-    let depthBracket = 0;
-    while (cursor < body.length) {
-      const skipped = skipStringOrComment(body, cursor);
-      if (skipped !== cursor) {
-        cursor = skipped;
-        continue;
-      }
-      const ch = body[cursor];
-      if (ch === '{') depthBrace += 1;
-      else if (ch === '}') {
-        if (depthBrace === 0) break;
-        depthBrace -= 1;
-      } else if (ch === '(') depthParen += 1;
-      else if (ch === ')') depthParen -= 1;
-      else if (ch === '[') depthBracket += 1;
-      else if (ch === ']') depthBracket -= 1;
-      else if (
-        ch === ';' &&
-        depthBrace === 0 &&
-        depthParen === 0 &&
-        depthBracket === 0
-      ) {
-        cursor += 1;
-        break;
-      }
-      cursor += 1;
-    }
-    members.push({
-      name: nameTok.ident,
-      modifiers,
-      kind: 'field',
-      body: '',
-    });
-    i = cursor;
-  }
-  return { members, truncatedAt };
-}
 
 /**
  * Lightweight class-shape extraction from TypeScript source text (no compiler).
  * Conservative: prefers false negatives over false positives for mutability.
  * Tooling may replace with TypeScript-API facts; sensors consume the same shape.
+ *
+ * The header and body are walked by the shared tokenizer (classSourceScan):
+ * type parameters (`class Box<T>`), generic `extends` / `implements` clauses, and
+ * braces inside strings, comments, or template literals are handled. A class whose
+ * header or body cannot be walked is still reported, with a truncation mark, so
+ * enforced sensors say so instead of passing in silence.
  *
  * Limitation (AR05/AR06): only `export class` / `export abstract class` forms.
  * `export default class`, re-exported classes, and non-exported aggregates are
@@ -1036,24 +840,30 @@ export function extractClassShapesFromSource(
   content: string
 ): ClassShapeFact[] {
   const shapes: ClassShapeFact[] = [];
-  // Match exported class declarations (simple cases; see limitation above).
-  const classRe =
-    /export\s+(?:abstract\s+)?class\s+([A-Za-z_][A-Za-z0-9_]*)\s*(?:extends\s+[^{]+)?(?:implements\s+[^{]+)?\{/g;
-  let match: RegExpExecArray | null;
-  while ((match = classRe.exec(content)) !== null) {
-    const className = match[1]!;
-    const start = match.index + match[0].length;
-    // Brace match body
-    let depth = 1;
-    let i = start;
-    while (i < content.length && depth > 0) {
-      const ch = content[i];
-      if (ch === '{') depth += 1;
-      else if (ch === '}') depth -= 1;
-      i += 1;
+  for (const decl of findClassDeclarations(content, { exportedOnly: true })) {
+    const className = decl.name;
+    if (decl.bodyStart == null) {
+      // Header seen, body not derivable: an unshaped class, never a silent pass.
+      shapes.push(
+        attachShapeTruncation(
+          {
+            file,
+            className,
+            exported: true,
+            hasPublicMutableFields: false,
+            hasPublicSetters: false,
+            hasPublicConstructor: false,
+            hasStaticFactory: false,
+            mutatingMethods: [],
+          },
+          decl.start
+        )
+      );
+      continue;
     }
-    const body = content.slice(start, i - 1);
-    const classUnclosed = depth > 0;
+    const start = decl.bodyStart;
+    const classUnclosed = decl.bodyEnd == null;
+    const body = content.slice(start, decl.bodyEnd ?? content.length);
 
     const scanned = scanClassMembers(body);
     const truncatedUntil = classUnclosed

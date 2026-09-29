@@ -50,7 +50,8 @@ fail-open. OpenCode is MCP-only. Required CI is always the merge line.
 
 Everything below uses the same `ark.config.json` as `arkgate-check` / `ark-check` (CI) — one
 rules file shared by every surface. From **4.0**, optional **ArkRules** (`arkRules` map +
-`arkrules/*.json`) ride the **same** write path, doctor, and CI adapter; absence of ArkRules
+`arkrules/*.json`) ride the **same** write path, doctor, and CI adapter (ESLint runs the
+file-local structure sensors only — see [ESLint](#eslint-editor-feedback--bounded-parity-envelope)); absence of ArkRules
 does not change inter-layer verdicts. Optional ArkRun / ArkOrder extras ride that envelope
 when on (`proposeRelease` then `apply`). Absence is silent. Label residual **`[Layer]`** vs
 **`[ArkRules]`** vs **`[ArkRun]`** vs **`[ArkOrder]`**. See
@@ -128,7 +129,11 @@ project id before using project evidence.
 Like `ark-check --baseline`, the hook ratchets: an edit is blocked only when it **adds**
 violations relative to the file's current on-disk state, so files with pre-existing
 (baselined) violations stay editable — they just can't get worse. New files block on
-every violation.
+every violation. A contract failure (`WRITE_GATE_UNAVAILABLE`, e.g. a referenced ArkRules
+file missing) is never ratcheted: it blocks edits to existing files as well as new ones.
+The Codex `apply_patch` atomic preflight ratchets ArkRules-plane findings (`ARKRULE_*`,
+`INVARIANT_*`) the same way against the base tree: debt the repository already has is
+reported as a warning (`preExisting: true`), and only findings the patch adds block.
 
 The hook classifies import targets with the same `layerForRelativePath` specificity as
 `ark-check` (an explicit file pattern beats a broader glob such as `src/lib/**`).
@@ -250,7 +255,11 @@ After edits run: npx ark-check --root . --config ark.config.json --strict
 ```
 
 The hook belongs in the **project's** `.claude/settings.json` (that's what
-`--install-agent-gates` generates). It is also safe by construction if you prefer it in
+`--install-agent-gates` generates). An existing `.claude/settings.json` (or `.codex/hooks.json`)
+is **merged**, not skipped or replaced: Ark upserts only its own `SessionStart` / `PreToolUse`
+`arkgate-mcp` entries and keeps `permissions`, `env`, other hook events, and your own hook
+entries; re-running is a no-op. Only a file that is not a JSON object is left untouched (and
+`--require-write-hook` then refuses until you fix it or pass `--force`). It is also safe by construction if you prefer it in
 your global settings: without an `ark.config.json` in the project, `--session-context`
 prints nothing and exits 0, so non-Ark projects are untouched.
 
@@ -721,8 +730,25 @@ If your runtime can run a shell command before file writes and pass the tool pay
 - Grok: `{ "decision": "deny", "reason": "…" }` on stdout when blocked
 - Antigravity: **stdout `decision` is required** — allow → `{ "decision": "allow" }`; deny →
   `{ "decision": "deny", "reason": "…" }` (exit 2 still set on deny)
-- plumbing problems (no stdin, non-source files, files outside `--root`) never block; Antigravity
-  still emits `{ "decision": "allow" }` on those fail-open paths
+- plumbing problems (no stdin, malformed payload, non-file tools, non-source files, files outside
+  `--root`) never block; Antigravity still emits `{ "decision": "allow" }` on those fail-open paths.
+  "Outside `--root`" is judged after realpath: `/tmp` vs `/private/tmp` or a symlinked checkout is
+  the same workspace and is gated
+- a gate that **cannot run** blocks every governed source write (exit `2`, `WRITE_GATE_UNAVAILABLE`,
+  plus the host deny JSON): `ark.config.json` missing / unparsable / invalid, a referenced ArkRules
+  file missing or invalid, or `dist/` missing or broken. No checker, no write. This applies to
+  existing files too: the same-file ratchet never cancels a contract failure. Writes to the law
+  files (`ark.config.json` and every ArkRules file it references under `arkRules`) are still
+  allowed so the contract can be repaired, but a write or `apply_patch` delete that would leave
+  one unloadable is denied (`WRITE_GATE_UNAVAILABLE`)
+- Codex `apply_patch`: the full grammar is reconstructed (`*** End of File`, a first hunk without
+  `@@`, `*** Move to:` judged at the destination). A patch that truly cannot be reconstructed is
+  allowed with a stderr notice and stays CI-backed
+- the hook runs the same file-local extra planes CI runs on that file: enforced ArkRun editor
+  sensors, enforced ArkRules structure sensors (`ARKRULE_STRUCTURE`), and enforced ArkOrder editor
+  sensors (`ARKORDER_KERNEL_IN_DOMAIN`, `ARKORDER_GENERIC_UPDATE`, …), under the same
+  classification floor. Cross-file evidence (invariant coverage, missing plane roots) stays
+  CI-authoritative
 
 ## ESLint (editor feedback) — bounded parity envelope
 
@@ -731,31 +757,108 @@ Layer imports and purity globals are driven by **`ark.config.json`** (walk-up fr
 linted file).
 
 ```js
-// eslint.config.js  (flat config)
+// eslint.config.js  (flat config, ESM)
 import ark from 'arkgate/eslint';
 
 export default [
   ark.configs.recommended,
-  // no-domain-infra-imports  → config-driven layer edges (type-only + value)
-  // no-forbidden-globals     → layer.forbiddenGlobals from ark.config.json
-  // ark/no-denied-capabilities → layer.capabilities.deny / layer.pure
-  // ark/no-arkrun-kernel-in-domain + no-arkrun-direct-new + no-arkrun-transport-bypass
-  //   → arkRun extra (silent when absent; import / `new` envelope only)
-  // no-raw-event-publish + require-publish-source → runtime event hygiene
+  // error: no-domain-infra-imports   → config-driven layer edges that fail ark-check
+  // error: no-forbidden-globals      → layer.forbiddenGlobals from ark.config.json
+  // error: no-denied-capabilities    → layer.capabilities.deny / layer.pure
+  // error: no-arkrun-kernel-in-domain + no-arkrun-direct-new + no-arkrun-transport-bypass
+  //          → arkRun extra (silent when absent; import / `new` envelope only)
+  // error: no-arkorder-kernel-in-domain + no-arkorder-generic-update → arkOrder extra
+  // error: arkrules-structure        → ArkRules structure sensors (file-local)
+  // error: no-raw-event-publish + require-publish-source → runtime event hygiene
+  // warn:  architecture-advisory     → the findings ark-check reports as warnings
 ];
 ```
 
-**Exact layer-edge parity envelope:** the linted production source is on disk, inside
-`include`, outside configured/generated exclusions, parse-clean, and uses a static
-`import`/`export` with a **relative** or **tsconfig `paths` / `baseUrl` alias** (e.g. `@/*`)
-literal whose target is also on disk. Inside that envelope, ESLint uses the same layer glob
-specificity, rule decision, rule id, and evidence as the resolved CLI. It reloads
-`ark.config.json` when its content changes and never invents a not-yet-created target.
+```js
+// eslint.config.cjs  (CommonJS works the same way)
+const ark = require('arkgate/eslint');
+module.exports = [ark.configs.recommended];
+```
 
-**Path-alias residual (honest):** simple `paths` + `baseUrl` (including one level of relative
-`extends`) are resolved. Not claimed: TypeScript project references, multi-target path arrays
-beyond the first entry, catch-all `*` mappings, package/workspace bare imports, or symlink
-hops. Those stay CI / preflight / write-gate truth.
+`require('arkgate/eslint')` returns the plugin itself (`configs`, `rules`, `meta`), the same
+object as the ESM default export.
+
+**Severity follows ark-check, per finding.** ESLint takes severity from the rule's configured
+level; one rule cannot report some findings as errors and others as warnings. So the plugin
+splits them by rule id. The blocking rules above report only findings that fail ark-check
+(`severity: "error"`). Every finding ark-check reports as a warning (`failsStrict: false`)
+reports on **`ark/architecture-advisory`** instead, which `recommended` sets to `warn`:
+
+- type-only placement debt (a non-peer `import type` across a denied edge);
+- a `CROSS_SIBLING_SLICE` crossing under `childSlices.siblings: "advisory"` (or not listed in
+  `enforce`);
+- `arkRun.mode`, `arkOrder.mode`, or an ArkRules rule set to `advisory`.
+
+So `eslint` exits `0` wherever `arkgate-check` exits `0` for these findings, and a Next.js
+build that runs ESLint does not fail on them. The warning text names the ark-check rule id.
+The blocking rule and `architecture-advisory` share one evaluation per file, so enabling both
+does not resolve a file's imports twice.
+
+A hand-written config that turns on single rules without `architecture-advisory` does not
+lose these findings. They fall back to the blocking rule id, at that rule's level, with the
+text `[<ark-check rule id>; advisory — does not fail ark-check. Enable
+ark/architecture-advisory …]`. Add `'ark/architecture-advisory': 'warn'` to see them as
+warnings instead.
+There is no baseline in the editor: a new advisory crossing past the recorded baseline, which
+fails in CI, is still only a warning here.
+
+**Messages are the ark-check text.** A layer denial reads
+`Architecture: <ark-check message> Specifier: <import>`. That message carries the rule-level
+`message` and the slice reason (cross-slice, cross-sibling, cross-parent, unclassifiable) plus
+the type-only suffix. ArkOrder and ArkRules findings print the sensor's own message.
+
+**Invalid contract.** When `ark.config.json` does not parse or validate, or a referenced
+ArkRules file is missing or invalid, ESLint does not crash. The file gets one
+`configInvalid` error carrying the validator text (fail closed, same as `ark-check`, which
+exits `2`), and other rules and files keep linting.
+
+**`eslint --cache`.** The plugin has `meta` (`arkgate@<version>`), so an upgrade invalidates
+cached results. `configs.recommended` also carries `settings.ark.contractHash`, a fingerprint of
+the `ark.config.json` (and referenced ArkRules files) found by walking up from the **current
+working directory** of the process that reads `configs.recommended` — not from the config
+file's directory. Editing that contract therefore invalidates the cache too. When ESLint runs
+from another directory (`eslint -c some/dir/eslint.config.js` from elsewhere, or an editor
+whose cwd is a workspace root above the project), the fingerprint covers a different contract
+or none. Pin it to the config file's directory yourself:
+
+```js
+// eslint.config.js
+import ark, { contractFingerprint } from 'arkgate/eslint';
+const contractHash = contractFingerprint(import.meta.dirname);
+export default [
+  ark.configs.recommended,
+  ...(contractHash ? [{ settings: { ark: { contractHash } } }] : []),
+];
+```
+
+Not covered by the fingerprint: a second `ark.config.json` deeper in a monorepo,
+`tsconfig.json` edits, and a cross-file target that appears or disappears. Use
+`--cache-strategy content`, clear the cache, or rely on `ark-check` / CI, which stay the
+source of truth.
+
+**Exact layer-edge parity envelope:** the linted production source is inside `include`,
+outside configured/generated exclusions, parse-clean, and uses a static `import`/`export` with
+a **relative** or **tsconfig `paths` / `baseUrl` alias** (e.g. `@/*`) literal whose target is
+on disk. Inside that envelope, ESLint uses the same layer glob specificity, rule decision,
+severity, rule id, message, and evidence as the resolved CLI. It reloads `ark.config.json`
+when its content changes and never invents a not-yet-created target. File-local facts
+(`new`, ArkOrder, ArkRules structure) come from the editor buffer, so unsaved edits and
+`--stdin --stdin-filename` are linted as written.
+
+**Path-alias resolution:** like the CLI (`ts.findConfigFile`), the tsconfig is the one nearest
+to the linted file, so a nested `apps/web/tsconfig.json` is used under a single root
+`ark.config.json`. It is read as JSONC (comments, trailing commas, and `"@/*"` / `"**/*.ts"`
+strings are safe). `extends` may be relative, absolute, a package (`@tsconfig/next/...`), or an
+array. Inheritance follows TypeScript: a child's `paths` replaces the parent's, and `paths`
+resolve against `baseUrl`, else against the tsconfig that declares them. Each target in a path
+array is tried in order, and a `*` may sit mid-pattern. Parsed tsconfigs are cached and re-read
+when the file changes. Not claimed: TypeScript project references, catch-all `*` mappings,
+package/workspace bare imports, or symlink hops. Those stay CI / preflight / write-gate truth.
 
 Outside that envelope—packages/workspaces, symlinks, CommonJS, `import = require`, dynamic
 imports, virtual creates/deletes, unresolved targets, or complete cross-file candidates—ESLint
@@ -765,8 +868,9 @@ ApplyPatch hook, or final strict CI; those paths consume the canonical resolved 
 Additional rule notes:
 
 - Relative and tsconfig-aliased imports resolve only to existing on-disk TS/JS targets; package bare imports are left to CI/TS.
-- Value forbidden edges error (same pass/fail as `arkgate-check`). Type-only forbidden edges are **placement debt** (reported with `typeOnly`); merge blocking prefers value edges — align with doctor `typeEdgePolicy`.
-- `no-forbidden-globals` applies from the file layer’s `forbiddenGlobals`; the `globals` option is only a standalone fallback when no project config applies, never an override that weakens the project contract. Layers without either surface are not inventively restricted. `process` also owns exact value imports of `process` / `node:process`; type-only forms, subpaths, and `child_process` stay excluded. If the same layer also denies the `process` capability, this rule is the single `FORBIDDEN_GLOBAL` voice.
+- Value forbidden edges error (same pass/fail as `arkgate-check`). Type-only forbidden edges that are not `peerIsolation` walls are **placement debt**: a warning on `ark/architecture-advisory`, never an error — align with doctor `typeEdgePolicy`.
+- `no-forbidden-globals` applies from the file layer’s `forbiddenGlobals`; the `globals` option is only a standalone fallback when no project config applies, never an override that weakens the project contract. Layers without either surface are not inventively restricted. It sees dotted access (`Date.now`), static bracket access (`Date['now']`, ``Date[`now`]``, `globalThis['fetch']`), and destructuring from a global (`const { now } = Date`, `const { now: n } = globalThis.Date`); a dynamic key (`Date[k]`) is not a verdict. `process` also owns exact value imports of `process` / `node:process`; type-only forms, subpaths, and `child_process` stay excluded. If the same layer also denies the `process` capability, this rule is the single `FORBIDDEN_GLOBAL` voice.
+- `require-publish-source` uses the ark-check candidate test: the first argument is an Ark intent string (`'Domain.Order.Placed'`), an `{ intent }` object, or an intent-creator reference (`OrderPlaced`, `Events.OrderPlaced`). `source` counts in the first argument's `metadata`, or in the second or third argument. A generic `pubsub.publish('USER_CREATED', …)` or `client.publish({ topic })` is not flagged. The rule is silent without an `ark.config.json` and outside `include`, like ark-check.
 - Without `ark.config.json`, `no-domain-infra-imports` emits no contract verdict.
 - **ArkRun (RN06):** when `arkRun` is present, `no-arkrun-kernel-in-domain`,
   `no-arkrun-direct-new`, and `no-arkrun-transport-bypass` reuse the same
@@ -779,6 +883,21 @@ Additional rule notes:
   kernel imports (including type-only). Type-only broker imports do not flag
   transport-bypass. Missing-root and undeclared emit/handle/depend are **not**
   in this adapter — use CLI / preflight / CI.
+- **ArkOrder:** when `arkOrder` is present, `no-arkorder-kernel-in-domain` flags an
+  `arkgate/order` import, export-from, `require`, or dynamic import in a Domain-role layer — a
+  layer named `Domain` / `DomainModel` / `Domain…`, or one whose `intentPrefixes` include
+  `Domain.` — with the same sensor as ark-check. `no-arkorder-generic-update` runs the
+  file-local ξ sensors: generic `update()`, ξ field writes, `ingest()` into a Release, and
+  oversized `release()`. Missing-plane stays CLI / preflight / CI.
+- **ArkRules:** `arkrules-structure` resolves the same Effective Contract as ark-check (a
+  missing or invalid referenced file is the `configInvalid` error above) and runs the
+  **structure** sensors on the linted file: `aggregate-private-state`,
+  `always-valid-factory`, `domain-event-on-mutation`, `no-anemic-model` (always advisory),
+  and the text heuristics for `orchestration-only`, `thin-adapter`, and
+  `writes-via-aggregate`. Not in the ESLint adapter — use preflight, `ark_prepare_change`, or
+  CI: invariant coverage and `INVARIANT_*` findings (they need test globs across files),
+  empty `appliesTo` and empty invariant catalogs, the structural-hint budget, and persistence
+  hints that need resolved import layers.
 
 Rule ids are `ark/<kebab-name>`. Individual rules are also on `ark.rules` if you wire them by hand.
 Prefer keeping editor + CI on the same `ark.config.json`. Use the rule-local `globals` list only
@@ -822,10 +941,13 @@ but stays advisory.
 **command**. The hard merge boundary is making that job a **required GitHub status context** —
 not “workflow file present.”
 
-Or use the repository's composite Action at a pinned release or commit:
+Or use the repository's composite Action at a pinned release or commit. Pin the tag (or commit
+SHA) that matches the `arkgate` version in your `package.json` and write hook. The Action runs the
+checker from the ref you pin, so an older ref runs an older checker, and that checker rejects newer
+config keys (for example `schemaVersion` 1.3, `childSlices`, `sliceIdentity`) with exit 2:
 
 ```yaml
-- uses: pedroknigge/arkgate@v3.7.0
+- uses: pedroknigge/arkgate@v4.8.23 # same version as the arkgate devDependency
   with:
     root: .
     config: ark.config.json
@@ -911,6 +1033,18 @@ Adopting Ark on an existing codebase with violations? Freeze them once and ratch
 npx ark-check --update-baseline   # writes .ark-baseline.json — commit it
 npx ark-check --baseline          # only NEW violations fail
 ```
+
+`--update-baseline` always measures the whole governed tree. It refuses `--changed` /
+`--local` and ignores `ARK_CHECK_LOCAL=1`, because a changed-files scan would overwrite the
+freeze with only that subset.
+
+`ark-check --report` applies the committed `.ark-baseline.json` by default (the same file
+`--doctor` reads), so the report, `.ark/reports/latest.json`, and `ark status` agree with
+doctor on what is active versus frozen. A plain `ark-check` without `--baseline` is
+unchanged, and so is a merge verdict: with `--strict` / `--strict-merge` / `--contract-diff`,
+`--report` does **not** apply the implicit freeze (pass `--baseline` explicitly), so adding a
+reporting flag can never turn a failing merge run green. Only `--report` refreshes the `ark status` last-check snapshot; a plain check or
+`--doctor` does not write it.
 
 `--update-baseline` also patches existing check **invocations** so CI keeps using the
 new freeze file: `package.json` scripts and GitHub workflow `run:` lines that already

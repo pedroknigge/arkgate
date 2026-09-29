@@ -21,6 +21,7 @@ import { renderHostSupportMatrixMarkdown } from './host-support-matrix.mjs';
 import { PREFERRED_MCP_BIN } from './hook-templates.mjs';
 import { hasCheckArchitectureScript, readPackageJson } from './gate-files.mjs';
 import { arkPackageVersion } from './skill-install.mjs';
+import { arkgateIsProjectDependency, pinnedArkgateRunner } from './package-manager.mjs';
 
 // Field-install helpers re-exported for callers that import from this module.
 export {
@@ -43,6 +44,17 @@ export function checkArgsForRoot(root, { requireGates = false } = {}) {
 
 
 export function packageManager(root) {
+  const pm = localPackageManager(root);
+  if (arkgateIsProjectDependency(root)) return pm;
+  // arkgate is not pinned: the local runner would ask npm for a package named `ark-check`
+  // (404) or run a stale global, so name the exact arkgate that generated this workflow.
+  const run = `${pinnedArkgateRunner()} ark-check ${checkArgsForRoot(root, { requireGates: true })}`;
+  // No package.json: nothing to install, and setup-node's cache needs a lockfile.
+  if (!readPackageJson(root)) return { cache: null, setup: [], install: null, run };
+  return { ...pm, run };
+}
+
+function localPackageManager(root) {
   // CI always require-gates; baseline follows checkArgsForRoot.
   const checkArgs = checkArgsForRoot(root, { requireGates: true });
   // Same detection as every emitted command (execRunner): honors the packageManager field and
@@ -243,10 +255,11 @@ ${rows}`;
  * Load project layers for AGENTS generation. Returns null when config is absent/invalid
  * so callers fall back to the stock 11-layer table.
  * @param {string} root
+ * @param {string} [configPath] contract file (defaults to `<root>/ark.config.json`)
  */
-export function loadConfigLayersForAgents(root) {
+export function loadConfigLayersForAgents(root, configPath = path.join(root, 'ark.config.json')) {
   try {
-    const cfgPath = path.join(root, 'ark.config.json');
+    const cfgPath = configPath;
     if (!fs.existsSync(cfgPath)) return null;
     const cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
     if (!Array.isArray(cfg?.layers) || cfg.layers.length === 0) return null;
@@ -638,10 +651,7 @@ ${setupSteps ? `${setupSteps}\n` : ''}      - name: Setup Node
         uses: actions/setup-node@v4
         with:
 ${nodeSetup}
-          cache: ${pm.cache}
-      - name: Install dependencies
-        run: ${pm.install}
-${qualityBlock ? `${qualityBlock}\n` : ''}      - name: Ark architecture check
+${pm.cache ? `          cache: ${pm.cache}\n` : ''}${pm.install ? `      - name: Install dependencies\n        run: ${pm.install}\n` : ''}${qualityBlock ? `${qualityBlock}\n` : ''}      - name: Ark architecture check
         env:
           ARK_POLICY_BASE_REF: \${{ github.event.pull_request.base.sha || github.event.before }}
         run: |

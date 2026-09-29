@@ -19,19 +19,13 @@
       "packageArguments": [
         {
           "type": "positional",
-          "value": "arkgate-mcp"
+          "value": "mcp"
         },
         {
           "type": "named",
           "name": "--root",
           "value": ".",
           "description": "Project root"
-        },
-        {
-          "type": "named",
-          "name": "--config",
-          "value": "ark.config.json",
-          "description": "Path to the rules file (ark.config.json)"
         }
       ]
     }

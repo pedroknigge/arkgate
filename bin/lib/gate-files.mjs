@@ -3,9 +3,11 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { codexProjectMcpIsValid } from './codex-home.mjs';
 import { enforcingArkRunText, runsArkCheck } from './github-enforcement.mjs';
+import { npxArkgatePrefixLength } from './package-manager.mjs';
 
 export const __packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 export const __arkCheckCli = path.join(__packageRoot, 'bin', 'ark-check.mjs');
@@ -86,10 +88,27 @@ export function treeHasTypecheckScript(root) {
  * @param {{ write?: boolean }} [opts]
  * @returns {{
  *   changed: boolean,
- *   reason: 'added' | 'already' | 'no-tsconfig' | 'no-package-json',
+ *   reason: 'added' | 'already' | 'no-tsconfig' | 'no-package-json' | 'no-typescript',
  *   script?: string,
  * }}
  */
+/**
+ * True when `typescript` is declared by the project (deps/devDeps/peerDeps) or resolves
+ * from its root (e.g. hoisted in a workspace), so a generated `tsc --noEmit` can run.
+ */
+export function projectHasTypeScript(root, pkg = readPackageJson(root) || {}) {
+  for (const field of ['dependencies', 'devDependencies', 'peerDependencies']) {
+    const deps = pkg?.[field];
+    if (deps && typeof deps === 'object' && Object.hasOwn(deps, 'typescript')) return true;
+  }
+  try {
+    createRequire(path.join(root, 'package.json')).resolve('typescript/package.json');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function ensureTypecheckScript(root, opts = {}) {
   const write = opts.write !== false;
   const hasTsconfig =
@@ -105,6 +124,8 @@ export function ensureTypecheckScript(root, opts = {}) {
   }
 
   const pkg = readPackageJson(root) || {};
+  // `tsc` only exists when typescript resolves — otherwise CI fails with `tsc: not found`.
+  if (!projectHasTypeScript(root, pkg)) return { changed: false, reason: 'no-typescript' };
   const scripts =
     pkg.scripts && typeof pkg.scripts === 'object' ? { ...pkg.scripts } : {};
   const script = 'tsc --noEmit';
@@ -194,7 +215,10 @@ function arkMcpArgs(server) {
   const isArkBin = (value) => /^(?:arkgate-mcp|ark-mcp)(?:\.mjs)?$/.test(executableName(value));
   if ([server.command, ...args].filter(isArkBin).length !== 1) return null;
   if (isArkBin(server.command)) return args;
-  if ((command === 'npx' || command === 'yarn') && isArkBin(args[0])) return args.slice(1);
+  const npxPrefix = command === 'npx' ? npxArkgatePrefixLength(args) : 0;
+  if ((command === 'npx' || command === 'yarn') && isArkBin(args[npxPrefix])) {
+    return args.slice(npxPrefix + 1);
+  }
   if (command === 'pnpm') {
     const binIndex =
       args[0] === 'exec'
@@ -284,6 +308,9 @@ export function hasArkMcpRegistration(root, relativePath = '.mcp.json') {
  * mergeOpencodeArkMcp / mergeCursorArkHook.
  */
 export const MCP_JSON_GATE_FILES = ['.mcp.json', '.cursor/mcp.json', '.agents/mcp_config.json'];
+
+/** Claude-style hook files: Ark SessionStart/PreToolUse groups are merged, never whole-file replaced. */
+export const CLAUDE_STYLE_HOOK_FILES = ['.claude/settings.json', '.codex/hooks.json'];
 
 /**
  * Upsert mcpServers.ark into an existing MCP JSON document.

@@ -23,6 +23,8 @@ function launcherArgs(argv) {
     failOnNewSmells: /^(?:1|true|yes|on)$/i.test(
       String(process.env.ARK_FAIL_ON_NEW_SMELLS ?? '').trim()
     ),
+    help: false,
+    version: false,
   };
   for (let index = 2; index < argv.length; index += 1) {
     const value = argv[index];
@@ -35,6 +37,8 @@ function launcherArgs(argv) {
     else if (value === '--config' && argv[index + 1]) args.config = argv[++index];
     else if (value === '--manifest' && argv[index + 1]) args.manifest = argv[++index];
     else if (value === '--tsconfig' && argv[index + 1]) args.tsconfig = argv[++index];
+    else if (value === '--help' || value === '-h') args.help = true;
+    else if (value === '--version' || value === '-V' || value === '-v') args.version = true;
   }
   return args;
 }
@@ -92,13 +96,56 @@ async function tryResidentHook(args, hookInput) {
   return response;
 }
 
+const USAGE = `Usage: arkgate-mcp [--root <dir>] [--config <file>] [--manifest <file>] [--tsconfig <file>]
+                   [--hook | --hook-repair] [--fail-on-new-smells] [--root-env <VAR[,VAR]>]
+                   [--session-context]
+
+Starts the ArkGate MCP stdio server (JSON-RPC on stdin/stdout). With --hook, runs one
+PreToolUse write-gate evaluation from the host payload on stdin: exit 0 allows, exit 2
+blocks (a gate that cannot run blocks governed source writes too).
+
+  -h, --help     Show this help
+  -V, --version  Print the arkgate version
+`;
+
 const args = launcherArgs(process.argv);
+if (args.version) {
+  const pkg = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+  process.stdout.write(`${pkg.version}\n`);
+  process.exit(0);
+}
+if (args.help) {
+  process.stdout.write(USAGE);
+  process.exit(0);
+}
 let hookInput;
+let hookRoot;
 let residentHandled = false;
 try {
   if (args.hook) {
     hookInput = fs.readFileSync(0, 'utf8');
-    const resident = await tryResidentHook(args, hookInput);
+    // Root: a set --root-env var or a root holding the config, else walk up from the
+    // payload (file, cwd, workspace roots) to the nearest config, like ark-check.
+    const { discoverHookRoot, hookOutsideArkProjectResponse } = await import(
+      './lib/mcp-hook-payload.mjs'
+    );
+    const discovered = discoverHookRoot({ argv: process.argv, hookInput });
+    if (!discovered.configFound && discovered.configExplicit) {
+      // No Ark project owns this write (4.8.23 never blocked it either).
+      const response = hookOutsideArkProjectResponse({
+        hookInput,
+        config: args.config,
+        grokHookEvent: Boolean(process.env.GROK_HOOK_EVENT),
+      });
+      if (response.stdout) process.stdout.write(response.stdout);
+      if (response.stderr) process.stderr.write(response.stderr);
+      process.exitCode = response.status;
+      residentHandled = true;
+    } else {
+      hookRoot = discovered.root;
+      args.root = hookRoot;
+    }
+    const resident = residentHandled ? null : await tryResidentHook(args, hookInput);
     if (resident) {
       if (resident.stdout) process.stdout.write(resident.stdout);
       if (resident.stderr) process.stderr.write(resident.stderr);
@@ -108,9 +155,26 @@ try {
   }
   if (!residentHandled) {
     const runtime = await import('./ark-mcp-runtime.mjs');
-    await runtime.runArkMcp({ hookInput });
+    await runtime.runArkMcp({ hookInput, hookRoot });
   }
 } catch (error) {
-  process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
-  process.exitCode = 1;
+  if (args.hook) {
+    // Hosts treat exit 1 as non-blocking: a gate that cannot run must not fail open
+    // for governed source writes. Plumbing cases (bad payload, non-source) still allow.
+    const { hookFailClosedResponse, hookRootFromArgv } = await import('./lib/mcp-hook-payload.mjs');
+    const response = hookFailClosedResponse({
+      hookInput,
+      error,
+      root: hookRoot ?? hookRootFromArgv(process.argv),
+      grokHookEvent: Boolean(process.env.GROK_HOOK_EVENT),
+    });
+    if (response.stdout) process.stdout.write(response.stdout);
+    process.stderr.write(
+      response.stderr || `${error instanceof Error ? error.message : String(error)}\n`
+    );
+    process.exitCode = response.status;
+  } else {
+    process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+    process.exitCode = 1;
+  }
 }

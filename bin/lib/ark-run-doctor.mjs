@@ -9,6 +9,7 @@
  */
 
 import { composeMergePlanesHonesty, extraMergeTeethAllowed, isArkRunRuleId, } from './extra-merge-teeth.mjs';
+import { unresolvableLayerFlowLayers } from './source-policy.mjs';
 export const ARK_RUN_DOCTOR_SCHEMA_VERSION = '1.0';
 const RESIDUAL_RULE_CAP = 12;
 /** Compact / details — only when `arkRun` is on. Absence stays silent. */
@@ -47,6 +48,12 @@ function extraFromConfig(arkRun) {
  */
 export function summarizeArkRunSection(input = {}) {
     const extra = extraFromConfig(input.arkRun);
+    const layerFlowUnresolvable = extra.present && Array.isArray(input.layerFlow?.layers)
+        ? unresolvableLayerFlowLayers({
+            layers: input.layerFlow.layers,
+            rules: Array.isArray(input.layerFlow.rules) ? input.layerFlow.rules : [],
+        })
+        : [];
     const uniqueIds = extra.present ? uniqueArkRunRuleIds(input.findings) : [];
     const ruleIds = uniqueIds.slice(0, RESIDUAL_RULE_CAP);
     const residualCount = uniqueIds.length;
@@ -100,6 +107,7 @@ export function summarizeArkRunSection(input = {}) {
         failMergeWhen: mergePlanes.failMergeWhen,
         note,
         mergePlanes,
+        layerFlowUnresolvable,
     };
 }
 /** Thin status slice — counts only; residual null means unknown, not green. */
@@ -143,6 +151,12 @@ export function formatArkRunDoctorLines(section) {
     }
     else {
         lines.push('Residual: none on this scan (not a score — green extras ≠ finished kernel wiring).');
+    }
+    const unresolvable = Array.isArray(section.layerFlowUnresolvable)
+        ? section.layerFlowUnresolvable
+        : [];
+    if (unresolvable.length > 0) {
+        lines.push(`Runtime layer flow: ${unresolvable.join(', ')} name(s) in a deny rule but map to no intent (no intentPrefixes, not a canonical layer). A kernel from this config cannot enforce those rules — add intentPrefixes (ARKRUN_LAYER_FLOW_UNRESOLVABLE).`);
     }
     if (section.failMergeWhen)
         lines.push(section.failMergeWhen);

@@ -101,7 +101,11 @@ ark-check --rules-inventory --json
 # MCP: ark_rules_inventory
 ```
 
-Output is **honest counts** (inventoried / under-contract / frozen) — never a score. Route
+Output is **honest counts** (inventoried / under-contract / frozen) — never a score. A
+structure candidate is under contract when its layer declares a rule on the suggested
+**sensor** (the rule id is yours to name); an invariant candidate by its id. Frozen counts the
+ArkRules-plane keys (`ARKRULE_*` / `INVARIANT_*`) in `.ark-baseline.json`. `--doctor` shows the
+same counts as `rulesMigration` (JSON and human line), and the MCP payload matches the CLI. Route
 extraction through `/ark-fix` or `/ark-loop` (one pilot card at a time) and declaration
 through `/ark-contract` editing `arkrules/<Layer>.json` (ADR 0015 — no new skill names).
 Report residual as **`[Layer]`** (import edges / baseline) vs **`[ArkRules]`** (inventory /

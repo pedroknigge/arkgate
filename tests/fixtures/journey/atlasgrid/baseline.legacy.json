@@ -1,0 +1,36 @@
+{
+  "version": 2,
+  "note": "Frozen before the child wall: every non-sibling finding of ark.config.subtree.json. No advisory sibling key (#336).",
+  "violations": [
+    "LAYER_IMPORT_VIOLATION|src/components/features/management/eos/eos-screen.tsx|Presentation|Application|src/lib/features/external/portal/portal-client.ts",
+    "LAYER_IMPORT_VIOLATION|src/lib/features/external/vendors/vendor-sync.ts|Application|Persistence|src/lib/repositories/features/operations/fleet/fleet-repository.ts",
+    "LAYER_IMPORT_VIOLATION|src/lib/features/management/budget/budget-lines.ts|Application|Application|src/lib/features/projects/d2d-item/d2d-item.ts",
+    "LAYER_IMPORT_VIOLATION|src/lib/features/projects/domain/project-codes.ts|Application|Application|src/lib/features/projects/rfi/rfi-intake.ts",
+    "LAYER_IMPORT_VIOLATION|src/lib/features/projects/rfi/load-rfi.ts|Application|Application|src/lib/features/management/eos/eos-summary.ts",
+    "LAYER_IMPORT_VIOLATION|src/lib/features/projects/rfi/load-rfi.ts|Application|Application|src/lib/features/projects/scm/scm-board.ts",
+    "LAYER_IMPORT_VIOLATION|src/lib/repositories/features/operations/dispatch/dispatch-repository.ts|Persistence|Application|src/lib/features/projects/scm/scm-board.ts"
+  ],
+  "records": {
+    "LAYER_IMPORT_VIOLATION|src/components/features/management/eos/eos-screen.tsx|Presentation|Application|src/lib/features/external/portal/portal-client.ts": {
+      "id": "LAYER_IMPORT_VIOLATION|src/components/features/management/eos/eos-screen.tsx|Presentation|Application|src/lib/features/external/portal/portal-client.ts"
+    },
+    "LAYER_IMPORT_VIOLATION|src/lib/features/external/vendors/vendor-sync.ts|Application|Persistence|src/lib/repositories/features/operations/fleet/fleet-repository.ts": {
+      "id": "LAYER_IMPORT_VIOLATION|src/lib/features/external/vendors/vendor-sync.ts|Application|Persistence|src/lib/repositories/features/operations/fleet/fleet-repository.ts"
+    },
+    "LAYER_IMPORT_VIOLATION|src/lib/features/management/budget/budget-lines.ts|Application|Application|src/lib/features/projects/d2d-item/d2d-item.ts": {
+      "id": "LAYER_IMPORT_VIOLATION|src/lib/features/management/budget/budget-lines.ts|Application|Application|src/lib/features/projects/d2d-item/d2d-item.ts"
+    },
+    "LAYER_IMPORT_VIOLATION|src/lib/features/projects/domain/project-codes.ts|Application|Application|src/lib/features/projects/rfi/rfi-intake.ts": {
+      "id": "LAYER_IMPORT_VIOLATION|src/lib/features/projects/domain/project-codes.ts|Application|Application|src/lib/features/projects/rfi/rfi-intake.ts"
+    },
+    "LAYER_IMPORT_VIOLATION|src/lib/features/projects/rfi/load-rfi.ts|Application|Application|src/lib/features/management/eos/eos-summary.ts": {
+      "id": "LAYER_IMPORT_VIOLATION|src/lib/features/projects/rfi/load-rfi.ts|Application|Application|src/lib/features/management/eos/eos-summary.ts"
+    },
+    "LAYER_IMPORT_VIOLATION|src/lib/features/projects/rfi/load-rfi.ts|Application|Application|src/lib/features/projects/scm/scm-board.ts": {
+      "id": "LAYER_IMPORT_VIOLATION|src/lib/features/projects/rfi/load-rfi.ts|Application|Application|src/lib/features/projects/scm/scm-board.ts"
+    },
+    "LAYER_IMPORT_VIOLATION|src/lib/repositories/features/operations/dispatch/dispatch-repository.ts|Persistence|Application|src/lib/features/projects/scm/scm-board.ts": {
+      "id": "LAYER_IMPORT_VIOLATION|src/lib/repositories/features/operations/dispatch/dispatch-repository.ts|Persistence|Application|src/lib/features/projects/scm/scm-board.ts"
+    }
+  }
+}

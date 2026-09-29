@@ -8,29 +8,54 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
     },
     "./eslint": {
-      "types": "./dist/eslint/index.d.ts",
-      "import": "./dist/eslint/index.js",
-      "require": "./dist/eslint/index.cjs"
+      "import": {
+        "types": "./dist/eslint/index.d.ts",
+        "default": "./dist/eslint/index.js"
+      },
+      "require": {
+        "types": "./dist/eslint/index.d.cts",
+        "default": "./dist/eslint/index.cjs"
+      }
     },
     "./order": {
-      "types": "./dist/order/index.d.ts",
-      "import": "./dist/order/index.js",
-      "require": "./dist/order/index.cjs"
+      "import": {
+        "types": "./dist/order/index.d.ts",
+        "default": "./dist/order/index.js"
+      },
+      "require": {
+        "types": "./dist/order/index.d.cts",
+        "default": "./dist/order/index.cjs"
+      }
     },
     "./runtime": {
-      "types": "./dist/runtime/index.d.ts",
-      "import": "./dist/runtime/index.js",
-      "require": "./dist/runtime/index.cjs"
+      "import": {
+        "types": "./dist/runtime/index.d.ts",
+        "default": "./dist/runtime/index.js"
+      },
+      "require": {
+        "types": "./dist/runtime/index.d.cts",
+        "default": "./dist/runtime/index.cjs"
+      }
     },
     "./nestjs": {
-      "types": "./dist/nestjs/index.d.ts",
-      "import": "./dist/nestjs/index.js",
-      "require": "./dist/nestjs/index.cjs"
+      "import": {
+        "types": "./dist/nestjs/index.d.ts",
+        "default": "./dist/nestjs/index.js"
+      },
+      "require": {
+        "types": "./dist/nestjs/index.d.cts",
+        "default": "./dist/nestjs/index.cjs"
+      }
     },
     "./schema": "./schemas/ark.config.schema.json",
     "./schema/ark.config.schema.json": "./schemas/ark.config.schema.json",
@@ -51,6 +76,22 @@
     "./schema/status-manifest": "./schemas/ark.status-manifest.schema.json",
     "./schema/ark.status-manifest.schema.json": "./schemas/ark.status-manifest.schema.json",
     "./package.json": "./package.json"
+  },
+  "typesVersions": {
+    "*": {
+      "eslint": [
+        "./dist/eslint/index.d.ts"
+      ],
+      "order": [
+        "./dist/order/index.d.ts"
+      ],
+      "runtime": [
+        "./dist/runtime/index.d.ts"
+      ],
+      "nestjs": [
+        "./dist/nestjs/index.d.ts"
+      ]
+    }
   },
   "bin": {
     "arkgate": "bin/ark.mjs",
@@ -74,7 +115,6 @@
     "!bin/lib/safety-diagnostics.mjs",
     "!bin/lib/ts-resolve.mjs",
     "dist",
-    "!dist/**/*.d.cts",
     "schemas",
     "!schemas/*.source.json",
     "docs/README.md",
@@ -168,7 +208,8 @@
     "clean": "rm -rf dist",
     "release:npm": "node scripts/release-npm.mjs",
     "prepublishOnly": "npm run build",
-    "bench:hook-path": "node scripts/hook-path-bench.mjs"
+    "bench:hook-path": "node scripts/hook-path-bench.mjs",
+    "bench:memory": "node scripts/memory-bench.mjs"
   },
   "dependencies": {
     "typescript-ark-host": "npm:typescript@6.0.3"

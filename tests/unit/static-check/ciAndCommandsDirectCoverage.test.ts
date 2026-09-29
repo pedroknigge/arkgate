@@ -43,7 +43,7 @@ afterEach(() => {
 describe('ci-and-commands direct coverage', () => {
   it('emits package-manager-aware commands for npm, pnpm, and yarn projects', () => {
     const npmRoot = tempRoot('ark-ci-npm-');
-    write(npmRoot, 'package.json', '{"name":"npm-app"}\n');
+    write(npmRoot, 'package.json', '{"name":"npm-app","devDependencies":{"arkgate":"^4.8.0"}}\n');
     write(npmRoot, 'package-lock.json', '{}\n');
     write(npmRoot, 'frontend/package.json', '{"name":"frontend"}\n');
     write(npmRoot, '.ark-baseline.json', '{}\n');
@@ -60,7 +60,7 @@ describe('ci-and-commands direct coverage', () => {
     expect(checkArchitectureScriptSnippet(npmRoot)).toContain('"check:architecture"');
 
     const pnpmRoot = tempRoot('ark-ci-pnpm-');
-    write(pnpmRoot, 'package.json', '{"name":"pnpm-app","packageManager":"pnpm@10.0.0"}\n');
+    write(pnpmRoot, 'package.json', '{"name":"pnpm-app","packageManager":"pnpm@10.0.0","devDependencies":{"arkgate":"^4.8.0"}}\n');
     expect(packageManager(pnpmRoot)).toMatchObject({
       cache: 'pnpm',
       setup: ['corepack enable'],
@@ -69,7 +69,7 @@ describe('ci-and-commands direct coverage', () => {
     expect(mcpJson(pnpmRoot)).toContain('"command": "pnpm"');
 
     const yarnRoot = tempRoot('ark-ci-yarn-');
-    write(yarnRoot, 'package.json', '{"name":"yarn-app","packageManager":"yarn@1.22.22"}\n');
+    write(yarnRoot, 'package.json', '{"name":"yarn-app","packageManager":"yarn@1.22.22","devDependencies":{"arkgate":"^4.8.0"}}\n');
     expect(packageManager(yarnRoot)).toMatchObject({
       cache: 'yarn',
       setup: ['corepack enable'],

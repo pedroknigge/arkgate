@@ -26,18 +26,18 @@ describe('isolated runtime distribution', () => {
   it('keeps extra factories off the gate root and ships them as real subpaths (ADR 0031)', async () => {
     const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
     expect(pkg.exports['./runtime']).toEqual({
-      types: './dist/runtime/index.d.ts',
-      import: './dist/runtime/index.js',
-      require: './dist/runtime/index.cjs',
+      import: { types: './dist/runtime/index.d.ts', default: './dist/runtime/index.js' },
+      require: { types: './dist/runtime/index.d.cts', default: './dist/runtime/index.cjs' },
     });
     expect(pkg.exports['./nestjs']).toEqual({
-      types: './dist/nestjs/index.d.ts',
-      import: './dist/nestjs/index.js',
-      require: './dist/nestjs/index.cjs',
+      import: { types: './dist/nestjs/index.d.ts', default: './dist/nestjs/index.js' },
+      require: { types: './dist/nestjs/index.d.cts', default: './dist/nestjs/index.cjs' },
     });
     expect(fs.existsSync(path.join(root, 'compat'))).toBe(false);
     expect(fs.existsSync(path.join(root, 'dist/runtime/index.js'))).toBe(true);
     expect(fs.existsSync(path.join(root, 'dist/nestjs/index.js'))).toBe(true);
+    expect(fs.existsSync(path.join(root, 'dist/runtime/index.d.cts'))).toBe(true);
+    expect(fs.existsSync(path.join(root, 'dist/nestjs/index.d.cts'))).toBe(true);
     const gate = await import(pathToFileURL(path.join(root, 'dist/index.js')).href);
     expect(typeof gate.createAICodeGate).toBe('function');
     expect(gate.createStrictArkKernel).toBeUndefined();
@@ -66,6 +66,15 @@ describe('isolated runtime distribution', () => {
     expect(pkg.name).toBe('@arkgate/runtime');
     expect(pkg.version).toMatch(/^0\./);
     expect(pkg.publishConfig.tag).toBe('experimental');
-    expect(pkg.files).toEqual(['dist', '!dist/**/*.d.cts', 'README.md']);
+    expect(pkg.files).toEqual(['dist', 'README.md']);
+    // CJS consumers get CJS declarations, mapped per condition like the root package.
+    expect(pkg.exports['.']).toEqual({
+      import: { types: './dist/index.d.ts', default: './dist/index.js' },
+      require: { types: './dist/index.d.cts', default: './dist/index.cjs' },
+    });
+    expect(pkg.exports['./nestjs']).toEqual({
+      import: { types: './dist/nestjs/index.d.ts', default: './dist/nestjs/index.js' },
+      require: { types: './dist/nestjs/index.d.cts', default: './dist/nestjs/index.cjs' },
+    });
   });
 });

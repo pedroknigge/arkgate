@@ -138,50 +138,151 @@ export function normalizeHookPayload(payload, grokHookEvent = Boolean(process.en
   };
 }
 
-export function applyCodexUpdatePatch(current, lines) {
-  let source = current.split('\n');
-  let cursor = 0;
-  const hunks = [];
-  let hunk = null;
-  for (const line of lines) {
-    if (line.startsWith('@@')) {
-      if (hunk) hunks.push(hunk);
-      hunk = { anchor: line.slice(2).trim(), entries: [] };
-    } else if (/^[ +\-]/.test(line)) {
-      if (!hunk) return null;
-      hunk.entries.push(line);
+/** Realpath of the nearest existing ancestor plus the missing tail (never throws). */
+export function canonicalPathLoose(candidate) {
+  const absolute = path.resolve(candidate);
+  let existing = absolute;
+  const missing = [];
+  while (!fs.existsSync(existing)) {
+    const parent = path.dirname(existing);
+    if (parent === existing) return absolute;
+    missing.unshift(path.basename(existing));
+    existing = parent;
+  }
+  try {
+    return path.join(fs.realpathSync(existing), ...missing);
+  } catch {
+    return absolute;
+  }
+}
+
+function relativeInside(root, candidate) {
+  const relative = path.relative(root, candidate);
+  if (relative === '' || relative === '..' || relative.startsWith(`..${path.sep}`)) return null;
+  if (path.isAbsolute(relative)) return null;
+  return relative;
+}
+
+/**
+ * Project-relative path when `filePath` is inside `root` under the caller's spelling
+ * or, failing that, the canonical (realpath) spelling — /tmp vs /private/tmp, a
+ * symlinked checkout. Null only when the path is truly outside the root.
+ */
+export function relativeToHookRoot(root, filePath) {
+  const absolute = path.resolve(root, filePath);
+  const direct = relativeInside(path.resolve(root), absolute);
+  if (direct !== null) return direct;
+  return relativeInside(canonicalPathLoose(root), canonicalPathLoose(absolute));
+}
+
+const CODEX_FILE_DIRECTIVE = /^\*\*\* (Add|Update|Delete) File: (.+)$/;
+const CODEX_MOVE_DIRECTIVE = /^\*\*\* Move to: (.+)$/;
+const CODEX_END_OF_FILE = '*** End of File';
+
+/** Codex-style sequence seek: exact, then trailing-whitespace, then trimmed match. */
+function seekSequence(source, pattern, start, eof) {
+  if (pattern.length === 0) return start;
+  if (pattern.length > source.length) return -1;
+  const normalizers = [(line) => line, (line) => line.trimEnd(), (line) => line.trim()];
+  const lastStart = source.length - pattern.length;
+  for (const normalize of normalizers) {
+    const matchesAt = (at) =>
+      pattern.every((line, index) => normalize(source[at + index]) === normalize(line));
+    if (eof && lastStart >= start && matchesAt(lastStart)) return lastStart;
+    for (let at = start; at <= lastStart; at += 1) {
+      if (matchesAt(at)) return at;
     }
   }
-  if (hunk) hunks.push(hunk);
-  for (const { anchor, entries } of hunks) {
+  return -1;
+}
+
+/**
+ * Parse one Update File body into chunks. The first chunk may omit its `@@` header;
+ * `*** End of File` may close a chunk; a bare empty line is an empty context line.
+ * Returns null for any line outside the Codex apply_patch grammar.
+ */
+export function parseCodexUpdateChunks(lines) {
+  const body = [...lines];
+  while (body.length > 0 && body[body.length - 1] === '') body.pop();
+  const chunks = [];
+  let chunk = null;
+  for (let index = 0; index < body.length; index += 1) {
+    const line = body[index];
+    if (line.startsWith('@@')) {
+      if (chunk) chunks.push(chunk);
+      chunk = { anchor: line.slice(2).trim(), entries: [], eof: false };
+      continue;
+    }
+    if (line === CODEX_END_OF_FILE) {
+      const next = body[index + 1];
+      if (!chunk || chunk.entries.length === 0 || (next !== undefined && !next.startsWith('@@'))) {
+        return null;
+      }
+      chunk.eof = true;
+      continue;
+    }
+    if (line === '' || /^[ +\-]/.test(line)) {
+      if (!chunk) {
+        // Only the FIRST chunk may omit `@@` (implicit, anchorless).
+        if (chunks.length > 0) return null;
+        chunk = { anchor: '', entries: [], eof: false };
+      }
+      if (chunk.eof) return null;
+      chunk.entries.push(line === '' ? ' ' : line);
+      continue;
+    }
+    return null;
+  }
+  if (chunk) chunks.push(chunk);
+  if (chunks.length === 0 || chunks.some((entry) => entry.entries.length === 0)) return null;
+  return chunks;
+}
+
+export function applyCodexUpdatePatch(current, lines) {
+  const chunks = parseCodexUpdateChunks(lines);
+  if (!chunks) return null;
+  const source = current.split('\n');
+  // Codex matches against the file's lines without the final newline's empty tail.
+  if (source.length > 0 && source[source.length - 1] === '') source.pop();
+  let cursor = 0;
+  for (const { anchor, entries, eof } of chunks) {
     if (anchor) {
-      const anchorAt = source.findIndex((line, index) => index >= cursor && line === anchor);
+      const anchorAt = seekSequence(source, [anchor], cursor, false);
       if (anchorAt < 0) return null;
       cursor = anchorAt + 1;
     }
     const oldLines = entries.filter((line) => !line.startsWith('+')).map((line) => line.slice(1));
     const newLines = entries.filter((line) => !line.startsWith('-')).map((line) => line.slice(1));
-    let found = -1;
-    for (let at = cursor; at <= source.length - oldLines.length; at += 1) {
-      if (oldLines.every((line, index) => source[at + index] === line)) {
-        found = at;
-        break;
-      }
+    let found;
+    if (oldLines.length === 0) {
+      // Pure insertion lands at the end of the file (Codex semantics).
+      found = source.length;
+    } else {
+      found = seekSequence(source, oldLines, cursor, eof);
+      if (found < 0) return null;
     }
-    if (found < 0) return null;
     source.splice(found, oldLines.length, ...newLines);
     cursor = found + newLines.length;
   }
-  return source.join('\n');
+  return `${source.join('\n')}\n`;
+}
+
+function codexPatchTarget(root, rawPath) {
+  const relative = relativeToHookRoot(root, rawPath.trim());
+  if (relative === null) return null;
+  return {
+    filePath: path.resolve(root, relative),
+    path: relative.split(path.sep).join('/'),
+  };
 }
 
 export function codexPatchWrites(patch, root) {
   if (typeof patch !== 'string') {
     return { writes: [], complete: false };
   }
-  const lines = patch.split('\n');
-  const begin = lines.indexOf('*** Begin Patch');
-  const end = lines.indexOf('*** End Patch', begin + 1);
+  const lines = patch.replace(/\r\n/g, '\n').split('\n');
+  const begin = lines.findIndex((line) => line.trim() === '*** Begin Patch');
+  const end = lines.findIndex((line, index) => index > begin && line.trim() === '*** End Patch');
   if (begin < 0 || end <= begin) return { writes: [], complete: false };
   const writes = [];
   const seenPaths = new Set();
@@ -191,31 +292,35 @@ export function codexPatchWrites(patch, root) {
   ].every((line) => line.trim() === '');
   let sawFileDirective = false;
   for (let index = begin + 1; index < end; index += 1) {
-    const match = lines[index].match(/^\*\*\* (Add|Update|Delete) File: (.+)$/);
+    const match = lines[index].match(CODEX_FILE_DIRECTIVE);
     if (!match) {
       if (lines[index].trim() !== '') complete = false;
       continue;
     }
     sawFileDirective = true;
     const [, action, relativePath] = match;
+    let moveTo = null;
+    if (action === 'Update') {
+      const move = (lines[index + 1] ?? '').match(CODEX_MOVE_DIRECTIVE);
+      if (move) {
+        moveTo = move[1];
+        index += 1;
+      }
+    }
     const body = [];
-    for (index += 1; index < end && !lines[index].startsWith('*** '); index += 1) {
+    // Hunk bodies end only at the next file directive or End Patch — never at
+    // `*** End of File`, which belongs to the hunk grammar.
+    for (index += 1; index < end && !CODEX_FILE_DIRECTIVE.test(lines[index]); index += 1) {
       body.push(lines[index]);
     }
     index -= 1;
-    const filePath = path.resolve(root, relativePath);
-    const rel = path.relative(root, filePath);
-    if (
-      seenPaths.has(filePath) ||
-      rel.startsWith(`..${path.sep}`) ||
-      rel === '..' ||
-      path.isAbsolute(rel)
-    ) {
+    const target = codexPatchTarget(root, relativePath);
+    if (!target || seenPaths.has(target.filePath)) {
       complete = false;
       continue;
     }
-    seenPaths.add(filePath);
-    const canonicalRelativePath = rel.split(path.sep).join('/');
+    seenPaths.add(target.filePath);
+    const { filePath, path: canonicalRelativePath } = target;
     if (action === 'Delete') {
       if (body.some((line) => line.trim() !== '') || !fs.existsSync(filePath)) {
         complete = false;
@@ -224,39 +329,54 @@ export function codexPatchWrites(patch, root) {
       writes.push({ path: canonicalRelativePath, filePath, delete: true });
       continue;
     }
-    let content;
     if (action === 'Add') {
+      const addBody = [...body];
+      while (addBody.length > 0 && addBody[addBody.length - 1] === '') addBody.pop();
       if (
-        body.length === 0 ||
+        addBody.length === 0 ||
         fs.existsSync(filePath) ||
-        body.some((line) => !line.startsWith('+'))
+        addBody.some((line) => !line.startsWith('+'))
       ) {
         complete = false;
         continue;
       }
-      content = body.filter((line) => line.startsWith('+')).map((line) => line.slice(1)).join('\n');
-      if (body.some((line) => line.startsWith('+'))) content += '\n';
-    } else {
-      if (
-        !body.some((line) => line.startsWith('@@')) ||
-        body.some((line) => !line.startsWith('@@') && !/^[ +\-]/.test(line))
-      ) {
-        complete = false;
-        continue;
-      }
-      let current;
-      try {
-        current = fs.readFileSync(filePath, 'utf8');
-      } catch {
-        complete = false;
-        continue;
-      }
-      content = applyCodexUpdatePatch(current, body);
-      if (content === null) complete = false;
-    }
-    if (typeof content === 'string') {
+      const content = `${addBody.map((line) => line.slice(1)).join('\n')}\n`;
       writes.push({ path: canonicalRelativePath, filePath, content });
+      continue;
     }
+    let current;
+    try {
+      current = fs.readFileSync(filePath, 'utf8');
+    } catch {
+      complete = false;
+      continue;
+    }
+    const content = applyCodexUpdatePatch(current, body);
+    if (content === null) {
+      complete = false;
+      continue;
+    }
+    if (moveTo === null) {
+      writes.push({ path: canonicalRelativePath, filePath, content });
+      continue;
+    }
+    // `*** Move to:` — judge the patched content at its destination, delete the source.
+    const destination = codexPatchTarget(root, moveTo);
+    if (!destination) {
+      complete = false;
+      continue;
+    }
+    if (destination.filePath === filePath) {
+      writes.push({ path: canonicalRelativePath, filePath, content });
+      continue;
+    }
+    if (seenPaths.has(destination.filePath) || fs.existsSync(destination.filePath)) {
+      complete = false;
+      continue;
+    }
+    seenPaths.add(destination.filePath);
+    writes.push({ path: destination.path, filePath: destination.filePath, content });
+    writes.push({ path: canonicalRelativePath, filePath, delete: true });
   }
   return { writes, complete: complete && sawFileDirective };
 }
@@ -371,8 +491,12 @@ export function requiredOwnerWriteDeny(config, layerName, relativePath) {
 export function formatWriteGateDeny({ file, reason, ruleId, nextAction, extraLines = [] }) {
   const target = file || 'this write';
   const why = String(reason || 'a bad import — the write doesn’t land').replace(/\s+/g, ' ').trim();
+  // Import-plane denies keep the short "move / place" line unless the rule's own action
+  // already says that. Extra planes (ArkRules, ArkRun, ArkOrder, invariants, gate
+  // availability) are not import problems: their catalog action is the only right one.
+  const extraPlane = /^(ARKRULE_|ARKRUN_|ARKORDER_|INVARIANT_|WRITE_GATE_)/.test(String(ruleId ?? ''));
   const next =
-    nextAction && /place|move|import|port/i.test(nextAction)
+    nextAction && (extraPlane || /place|move|import|port/i.test(nextAction))
       ? nextAction
       : 'Move the import or run /ark-place. Do not weaken ark.config.json.';
   const lines = [`blocked ${target} — ${why}`, `Next: ${next}`];
@@ -381,4 +505,220 @@ export function formatWriteGateDeny({ file, reason, ruleId, nextAction, extraLin
     if (extra) lines.push(extra);
   }
   return lines.join('\n');
+}
+
+/**
+ * Fail-closed envelope for the one-shot PreToolUse hook (`ark-mcp --hook`).
+ *
+ * Claude Code, Grok Build, and Codex treat any exit code other than 2 as a
+ * non-blocking error: the write lands. When the write gate itself cannot run
+ * (ark.config.json missing / unparsable / invalid, a referenced ArkRules file
+ * missing, dist/ missing or broken), exiting 1 would silently turn the hard
+ * write gate off. "No checker, no write": governed source writes are denied
+ * with the host's blocking contract instead.
+ *
+ * Plumbing cases stay fail-open, exactly like the healthy hook: no stdin or a
+ * malformed payload, non-file tools, non-source files (so ark.config.json itself
+ * can still be repaired), files outside the root, and node_modules.
+ *
+ * This section (like the whole module) must not import dist/ or the MCP runtime — it runs precisely when
+ * those are the broken part.
+ */
+const FAIL_CLOSED_SOURCE_FILE = /\.[cm]?[jt]sx?$/;
+const PATCH_FILE_DIRECTIVE = /^\*\*\* (?:Add|Update|Delete) File: (.+)$/;
+const PATCH_MOVE_DIRECTIVE = /^\*\*\* Move to: (.+)$/;
+
+/** Same root resolution as the runtime: --root, then the first non-empty --root-env var. */
+export function hookRootFromArgv(argv, env = process.env, cwd = process.cwd()) {
+  let root = cwd;
+  const rootEnv = [];
+  for (let index = 2; index < argv.length; index += 1) {
+    const value = argv[index];
+    if (value === '--root' && argv[index + 1]) root = path.resolve(argv[++index]);
+    else if (value === '--root-env' && argv[index + 1]) {
+      rootEnv.push(
+        ...String(argv[++index])
+          .split(',')
+          .map((name) => name.trim())
+          .filter((name) => /^[A-Za-z_][A-Za-z0-9_]*$/.test(name))
+      );
+    }
+  }
+  for (const name of rootEnv) {
+    const value = env[name];
+    if (typeof value === 'string' && value.trim() !== '') return path.resolve(value.trim());
+  }
+  return root;
+}
+
+function hookArgvConfig(argv) {
+  let config = 'ark.config.json';
+  let explicit = false;
+  for (let index = 2; index < argv.length; index += 1) {
+    if (argv[index] === '--config' && argv[index + 1]) {
+      config = argv[++index];
+      explicit = true;
+    }
+  }
+  return { config, explicit };
+}
+
+function walkUpForConfig(start, config) {
+  let dir = path.resolve(start);
+  for (;;) {
+    if (fs.existsSync(path.join(dir, config))) return dir;
+    const parent = path.dirname(dir);
+    if (parent === dir) return null;
+    dir = parent;
+  }
+}
+
+/**
+ * Hook project root. A set `--root-env` variable or a root that already holds the
+ * config wins (the runtime's own resolution). Otherwise — the host ran the hook from a
+ * subdirectory, or the env var is unset — walk up from the payload (each written file,
+ * then `cwd`, then `workspace_roots`, then the argv root) to the nearest config, the
+ * way `ark-check` walks up.
+ * `configFound: false` means the write is not inside any Ark project.
+ * @returns {{ root: string, configFound: boolean, configExplicit: boolean, source: string }}
+ */
+export function discoverHookRoot({
+  argv,
+  hookInput,
+  env = process.env,
+  cwd = process.cwd(),
+  grokHookEvent = Boolean(process.env.GROK_HOOK_EVENT),
+}) {
+  const base = hookRootFromArgv(argv, env, cwd);
+  const { config, explicit } = hookArgvConfig(argv);
+  const result = (root, configFound, source) => ({
+    root,
+    configFound,
+    configExplicit: explicit,
+    source,
+  });
+  if (path.isAbsolute(config)) return result(base, fs.existsSync(config), 'argv');
+  if (fs.existsSync(path.join(base, config))) return result(base, true, 'argv');
+  let payload;
+  try {
+    payload = JSON.parse(hookInput ?? '');
+  } catch {
+    payload = undefined;
+  }
+  const payloadCwd =
+    payload && typeof payload.cwd === 'string' && payload.cwd.trim() ? payload.cwd.trim() : null;
+  const starts = [];
+  if (payload && typeof payload === 'object') {
+    const targets = hookPayloadTargets(normalizeHookPayload(payload, grokHookEvent)) ?? [];
+    for (const target of targets) {
+      if (typeof target !== 'string' || !target) continue;
+      starts.push(path.dirname(path.resolve(payloadCwd ?? base, target)));
+    }
+    if (payloadCwd) starts.push(path.resolve(payloadCwd));
+    for (const workspace of Array.isArray(payload.workspace_roots) ? payload.workspace_roots : []) {
+      if (typeof workspace === 'string' && workspace.trim()) starts.push(path.resolve(workspace));
+    }
+  }
+  starts.push(base);
+  for (const start of starts) {
+    const found = walkUpForConfig(start, config);
+    if (found) return result(found, true, 'payload');
+  }
+  return result(base, false, 'none');
+}
+
+/**
+ * The write is outside any Ark project (no config found from the hook root or the
+ * payload): ArkGate does not govern it, so the hook allows it.
+ * @returns {{ status: number, stdout: string, stderr: string }}
+ */
+export function hookOutsideArkProjectResponse({ hookInput, config = 'ark.config.json', grokHookEvent }) {
+  let stdout = '';
+  let payload;
+  try {
+    payload = JSON.parse(hookInput ?? '');
+  } catch {
+    return { status: 0, stdout, stderr: '' };
+  }
+  emitHostAllow(
+    { stdout: (value) => { stdout += value; }, stderr: () => {} },
+    normalizeHookPayload(payload, grokHookEvent)
+  );
+  return {
+    status: 0,
+    stdout,
+    stderr: `[ark-mcp] no ${config} found for this write; ArkGate does not govern it.\n`,
+  };
+}
+
+function patchTargets(patch) {
+  if (typeof patch !== 'string') return [];
+  const targets = [];
+  for (const line of patch.split('\n')) {
+    const match = line.match(PATCH_FILE_DIRECTIVE) ?? line.match(PATCH_MOVE_DIRECTIVE);
+    if (match) targets.push(match[1].trim());
+  }
+  return targets;
+}
+
+/** File paths the hook payload would write, or null for non-file tools. */
+export function hookPayloadTargets(normalized) {
+  const { toolName, toolInput } = normalized;
+  if (toolName === 'ApplyPatch') {
+    return patchTargets(
+      toolInput.command ?? toolInput.patch ?? toolInput.input ?? toolInput.content
+    );
+  }
+  if (!['Write', 'Edit', 'MultiEdit'].includes(toolName)) return null;
+  return typeof toolInput.file_path === 'string' ? [toolInput.file_path] : [];
+}
+
+function isGovernedCandidate(root, target) {
+  if (!FAIL_CLOSED_SOURCE_FILE.test(target) || target.endsWith('.d.ts')) return false;
+  const relative = relativeToHookRoot(root, target);
+  if (relative === null) return false;
+  return !relative.split(path.sep).includes('node_modules');
+}
+
+/**
+ * Map an internal hook failure onto the host's blocking contract.
+ * @returns {{ status: number, stdout: string, stderr: string }}
+ */
+export function hookFailClosedResponse({ hookInput, error, root, grokHookEvent }) {
+  let stdout = '';
+  let stderr = '';
+  const output = {
+    stdout: (value) => {
+      stdout += value;
+    },
+    stderr: (value) => {
+      stderr += value;
+    },
+  };
+  let payload;
+  try {
+    payload = JSON.parse(hookInput ?? '');
+  } catch {
+    // Same as the healthy hook: no stdin / malformed payload never blocks.
+    return { status: 0, stdout, stderr };
+  }
+  const normalized = normalizeHookPayload(payload, grokHookEvent);
+  const targets = hookPayloadTargets(normalized);
+  const governed = (targets ?? []).filter((target) => isGovernedCandidate(root, target));
+  if (governed.length === 0) {
+    emitHostAllow(output, normalized);
+    return { status: 0, stdout, stderr };
+  }
+  const reason = error instanceof Error ? error.message : String(error);
+  const relative = relativeToHookRoot(root, governed[0]) ?? governed[0];
+  const file = String(relative).split(path.sep).join('/');
+  const message = formatWriteGateDeny({
+    file,
+    reason: `ArkGate write gate could not run: ${reason}`,
+    ruleId: 'WRITE_GATE_UNAVAILABLE',
+    nextAction:
+      'Fix ark.config.json (or the ArkRules file it references), or run npm run build / reinstall arkgate from npm, then retry this write. No checker, no write — do not remove the hook to get past it.',
+  });
+  emitHostDeny(output, { ...normalized, message, file });
+  return { status: 2, stdout, stderr };
 }

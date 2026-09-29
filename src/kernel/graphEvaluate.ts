@@ -6,12 +6,17 @@
  */
 import {
   composeSliceDenialMessage,
+  crossSliceEdgeAllowed,
   findDeniedEdgeDecision,
   findSharedImportsSliceBridge,
+  pathMatchesSharedWalkStop,
   pathUnderSharedRoot,
   peerSliceFolders,
+  sharedImportsSliceMode,
+  sharedImportsSliceStopAt,
   sliceFindingExtras,
   resolveGovernedSlice,
+  resolveGovernedSlicePair,
   universePairLabel,
   type EdgeRule,
 } from '../domain/layerMatch';
@@ -142,6 +147,7 @@ export function evaluateArchitectureGraph(
           fromPath: edge.from,
           toPath: edge.to,
           ruleMessage: rule.message,
+          childMessage: rule.childSlices?.message,
         })
       : rule.message ?? `${edge.fromLayer} must not ${edge.kind} ${edge.toLayer}.`;
     violations.push({
@@ -211,7 +217,7 @@ function denyingCrossParentRule(
   for (const rule of rules ?? []) {
     if (rule.from !== fromLayer || rule.to !== toLayer) continue;
     if (rule.allowed !== false || !rule.peerIsolation) continue;
-    if (rule.sharedImportsSlice !== 'deny-cross-parent') continue;
+    if (sharedImportsSliceMode(rule.sharedImportsSlice) !== 'deny-cross-parent') continue;
     return rule;
   }
   return undefined;
@@ -229,16 +235,27 @@ function placeFile(
   return { kind: 'other' };
 }
 
+/** A shared file the walk must not start at or pass through (a declared composition root). */
+function isWalkStop(rule: EdgeRule, path: string): boolean {
+  return pathMatchesSharedWalkStop(path, sharedImportsSliceStopAt(rule.sharedImportsSlice));
+}
+
 /**
  * Whole-graph pass. A slice reaches another universe only by walking shared
  * roots. One edge cannot see that, so the write hook and ESLint do not run it.
  * `sharedImportsSlice: "deny"` is unchanged and does not enter here.
+ * A shared file listed in `stopAt` is a composition root: the walk neither
+ * starts at nor passes through it. A universe edge the importer's rule declares
+ * in `allowedCrossSlice` is not reported either; it is the same dependency the
+ * direct wall already allows.
  */
 function crossParentViaSharedViolations(
   input: EvaluateArchitectureGraphInput
 ): ArchitectureEngineViolation[] {
   const rules = input.rules ?? [];
-  if (!rules.some((rule) => rule.sharedImportsSlice === 'deny-cross-parent')) return [];
+  if (!rules.some((rule) => sharedImportsSliceMode(rule.sharedImportsSlice) === 'deny-cross-parent')) {
+    return [];
+  }
 
   const outgoing = new Map<string, ValueHop[]>();
   for (const edge of input.edges) {
@@ -274,6 +291,7 @@ function crossParentViaSharedViolations(
     const origin = placeFile(rule, hop.fromLayer, hop.from, input.config.layers);
     const next = placeFile(rule, hop.fromLayer, hop.to, input.config.layers);
     if (origin.kind !== 'slice' || next.kind !== 'shared') continue;
+    if (isWalkStop(rule, hop.to)) continue;
 
     const queue: { file: string; path: string[] }[] = [{ file: hop.to, path: [hop.from, hop.to] }];
     const seen = new Set<string>([hop.to]);
@@ -285,12 +303,25 @@ function crossParentViaSharedViolations(
         if (!stepRule) continue;
         const dest = placeFile(stepRule, step.fromLayer, step.to, input.config.layers);
         if (dest.kind === 'shared') {
-          if (seen.has(step.to)) continue;
+          if (seen.has(step.to) || isWalkStop(stepRule, step.to)) continue;
           seen.add(step.to);
           queue.push({ file: step.to, path: [...current.path, step.to] });
           continue;
         }
         if (dest.kind !== 'slice' || dest.id.toLowerCase() === origin.id.toLowerCase()) continue;
+        // Declared on purpose by the importer's rule (directed); childSlices.allowedCrossSlice never counts.
+        if (crossSliceEdgeAllowed(rule.allowedCrossSlice, origin.id, dest.id)) continue;
+        if (rule.sliceIdentity === 'stars') {
+          // One-release 4.8.23 stars compatibility (legacy alias targets / allowances).
+          const pair = resolveGovernedSlicePair(
+            rule,
+            peerSliceFolders(rule, hop.fromLayer, input.config.layers),
+            hop.from,
+            step.to
+          );
+          if (pair.crossSliceAllowed) continue;
+          if (pair.from.universeId && pair.from.universeId === pair.to.universeId) continue;
+        }
         const path = [...current.path, step.to];
         const key = `${hop.from}\0${step.to}`;
         const candidate: Hit = {
@@ -332,6 +363,7 @@ function crossParentViaSharedViolations(
         target: hit.target,
         peerIsolation: true,
         ...(fromUniverse && toUniverse ? { universeFrom: fromUniverse, universeTo: toUniverse } : {}),
+        via: hit.path.slice(1, -1),
         message: `${hit.fromLayer} reaches ${hit.toLayer} in another universe through a shared root (${hit.path.join(' → ')}): cross-parent via shared ${hit.fromSlice} → ${hit.toSlice}. ${CROSS_PARENT_VIA_SHARED_HOOK}`,
       };
     });

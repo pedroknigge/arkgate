@@ -8,9 +8,11 @@ import {
   classifyArkRunInspectorStoreDurability,
 } from '../../domain/arkRunInspector';
 import { buildDependencyInformationPackage } from '../../domain/arkRunInformationPackage';
+import { unresolvableLayerFlowLayers } from '../../domain/sourcePolicy';
 import { ARK_RUN_EPHEMERAL_DEFAULT } from '../../domain/arkRunTransport';
 import { createAuditTrail } from '../audit';
-import { EventBusImpl } from '../event-bus';
+import { ArkKernelConfigError, EventBusImpl } from '../event-bus';
+import type { ObservedLayerFlowMode } from '../event-bus';
 import { createEventContractRegistry } from '../event-contracts';
 import { createDependencyGraph, syncRegistryToGraph } from '../graph';
 import { createIntentRegistry } from '../intent';
@@ -37,19 +39,18 @@ import type {
   CreateArkKernelFromConfigOptions,
   CreateArkKernelOptions,
 } from './types';
+import { nextRuntimeId } from '../runtimeIds';
 
 /**
- * Default cap for in-memory history, trace, and audit records. Without a cap a
- * long-running process grows without bound on every publish. Pass
- * `maxHistorySize: Infinity` to explicitly opt back into unbounded retention.
+ * Default cap for in-memory history, trace, audit, and default event-buffer
+ * records. Without a cap a long-running process grows without bound on every
+ * publish. Pass `maxHistorySize: Infinity` to explicitly opt back into unbounded
+ * retention. An injected `eventBuffer` owns its own retention.
  */
 export const DEFAULT_MAX_HISTORY_SIZE = 1000;
 
-let kernelSequence = 0;
-
 function nextKernelInstanceId(): string {
-  kernelSequence += 1;
-  return `ark-kernel-${Date.now()}-${kernelSequence}`;
+  return nextRuntimeId('ark-kernel');
 }
 
 function portConstructorId(port: object, fallback: string): string {
@@ -69,7 +70,10 @@ export function createArkKernel(options: CreateArkKernelOptions = {}): ArkKernel
   const auditTrail = options.auditTrail ?? createAuditTrail({ maxRecords: maxHistorySize });
   const eventContracts = options.eventContracts ?? createEventContractRegistry();
   const usedDefaultEventBuffer = options.eventBuffer === undefined && options.outbox === undefined;
-  const eventBuffer = options.eventBuffer ?? options.outbox ?? new InMemoryEventBuffer();
+  const eventBuffer =
+    options.eventBuffer ??
+    options.outbox ??
+    new InMemoryEventBuffer({ maxRecords: maxHistorySize });
   const projections =
     options.projections ?? createProjectionRegistry({ auditTrail });
   const policyEngine = new PolicyEngine([
@@ -97,6 +101,10 @@ export function createArkKernel(options: CreateArkKernelOptions = {}): ArkKernel
     enforceObservedLayerFlow:
       options.enforceObservedLayerFlow ?? (strict ? 'hard' : 'off'),
     eventBuffer,
+    // No relay drains the default in-memory buffer: settle its records when the
+    // kernel finishes delivery so the outbox monitor does not report a backlog
+    // nobody will ever drain. Injected buffers stay relay-owned (`pending`).
+    settleBufferOnLocalDelivery: usedDefaultEventBuffer,
     instanceId,
     maxHistorySize,
     onPublish: options.autoApplyProjections === false
@@ -262,36 +270,89 @@ export function createStrictArkKernel(
   });
 }
 
-function createOptionsFromConfig(
+type ConfigKernelPlan = {
+  options: CreateArkKernelOptions;
+  /** Deny-rule layers no intent maps to; non-empty only under implied hard mode. */
+  unresolvable: string[];
+};
+
+function planKernelFromConfig(
   config: ArkKernelConfig,
-  options: CreateArkKernelFromConfigOptions = {}
-): CreateArkKernelOptions {
+  options: CreateArkKernelFromConfigOptions,
+  defaultFlowMode: ObservedLayerFlowMode
+): ConfigKernelPlan {
   const { profileName, ...kernelOptions } = options;
+  const explicitMode = options.enforceObservedLayerFlow;
+  const missing =
+    (explicitMode ?? defaultFlowMode) === 'hard' ? unresolvableLayerFlowLayers(config) : [];
+  // Explicit `enforceObservedLayerFlow: 'hard'` fails closed: the caller asked for
+  // teeth the config cannot provide.
+  if (explicitMode === 'hard' && missing.length > 0) throw new ArkKernelConfigError(missing);
   return {
-    ...kernelOptions,
-    profile: createArchitectureProfileFromArkConfig(config, { name: profileName }),
+    options: {
+      ...kernelOptions,
+      profile: createArchitectureProfileFromArkConfig(config, { name: profileName }),
+    },
+    unresolvable: missing,
   };
+}
+
+/**
+ * Implied hard mode (strict default) with unresolvable deny-rule layers: the
+ * kernel still builds (the configs `ark init` presets write must not crash at
+ * startup), enforces every resolvable layer, and records the gap once as a
+ * `layer.observedFlowUnresolvable` audit record so it is never silent.
+ */
+function withUnresolvableNotice(kernel: ArkKernel, unresolvable: string[]): ArkKernel {
+  if (unresolvable.length === 0) return kernel;
+  void Promise.resolve()
+    .then(() =>
+      kernel.auditTrail.record({
+        type: 'layer.observedFlowUnresolvable',
+        subject: unresolvable.join(','),
+        details: {
+          code: 'ARKRUN_LAYER_FLOW_UNRESOLVABLE',
+          layers: unresolvable,
+          message: new ArkKernelConfigError(unresolvable).message,
+        },
+      })
+    )
+    .catch(() => undefined);
+  return kernel;
 }
 
 export function createArkKernelFromConfig(
   config: ArkKernelConfig,
   options: CreateArkKernelFromConfigOptions = {}
 ): ArkKernel {
-  return createArkKernel(createOptionsFromConfig(config, options));
+  const strict = options.strict ?? true;
+  const plan = planKernelFromConfig(config, options, strict ? 'hard' : 'off');
+  return withUnresolvableNotice(createArkKernel(plan.options), plan.unresolvable);
 }
 
+/**
+ * Strict kernel whose runtime layer profile comes from `ark.config.json`.
+ * Hard observed-layer-flow needs every layer a deny rule names to resolve an
+ * intent: declared `intentPrefixes`, or a canonical 11-layer name (`DomainModel`,
+ * `ApplicationOrchestration`, … — what `ark init` writes) which gets the built-in
+ * prefixes. A custom-named deny layer without prefixes is recorded as a
+ * `layer.observedFlowUnresolvable` audit record (`ARKRUN_LAYER_FLOW_UNRESOLVABLE`);
+ * passing `enforceObservedLayerFlow: 'hard'` explicitly throws `ArkKernelConfigError`
+ * instead.
+ */
 export function createStrictArkKernelFromConfig(
   config: ArkKernelConfig,
   options: CreateArkKernelFromConfigOptions = {}
 ): ArkKernel {
-  return createStrictArkKernel(createOptionsFromConfig(config, options));
+  const plan = planKernelFromConfig(config, options, 'hard');
+  return withUnresolvableNotice(createStrictArkKernel(plan.options), plan.unresolvable);
 }
 
 export function createLenientArkKernelFromConfig(
   config: ArkKernelConfig,
   options: CreateArkKernelFromConfigOptions = {}
 ): ArkKernel {
-  return createLenientArkKernel(createOptionsFromConfig(config, options));
+  return createLenientArkKernel(planKernelFromConfig(config, options, 'off').options);
 }
 
 export function createLenientArkKernel(

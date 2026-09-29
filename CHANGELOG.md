@@ -6,6 +6,14 @@ in the immutable pre-2.0 archive linked below.
 ## Unreleased
 
 ### Added
+- `sharedImportsSlice` accepts `{ "mode": "deny-cross-parent", "stopAt": [...] }`. The whole-graph `CROSS_PARENT_VIA_SHARED` walk never starts at or passes through a stop file, so a declared composition root (`kernel/bootstrap.ts`, `kernel/registrations/**`) is no longer reported as a crossing. `stopAt` matches like a shared root or an alias glob; a stop that covers the whole tree or a whole layer root is rejected. Findings carry `via`, and doctor `sharedWalkHubs` names a likely undeclared composition root. Adding stops is a weakening policy delta. The string forms are unchanged. arkgate 4.8.23 and older reject the object (issue [#335](https://github.com/pedroknigge/arkgate/issues/335)).
+- Optional `childSlices.message` sets the text for inner-wall findings (`CROSS_SIBLING_SLICE`, universe common code importing a child). Without it ArkGate uses its own text; the rule `message` stays the universe-wall text and is never reused on inner-wall findings. Same text in ark-check, CI, the write hook, MCP, and ESLint (issue [#337](https://github.com/pedroknigge/arkgate/issues/337)).
+- Optional `childSlices.siblings.ratchet`: `true` always fails a new advisory crossing, `false` only measures (issue [#336](https://github.com/pedroknigge/arkgate/issues/336)).
+- `arkgate mcp` / `ark mcp` start the stdio MCP server (same as `arkgate-mcp`).
+- ESLint: warn-level `ark/architecture-advisory` rule (findings ark-check reports as warnings) and `ark/arkrules-structure` (ArkRules structure sensors on the same Effective Contract).
+- New advisory `ARKRULE_FILE_UNREFERENCED` for an `arkrules/*.json` the config does not reference, and `doctor.rulesMigration`.
+- `ark-dashboard --help`, `--version`, `--once`, `ARK_DASHBOARD_URL`.
+- `npm run bench:memory` regression guard (budgets in `eval/performance/memory-budgets.v1.json`).
 - Soft doctor residual when Domain is declared but empty and the UI holds the
   rules (`noDomainFrontend`). Projects empty Domain + presentation share, or
   the existing `domain-logic-in-ui` smell. Friendly next step: one Domain file
@@ -48,6 +56,18 @@ in the immutable pre-2.0 archive linked below.
   short phrase templates so the shape is visible. No new skill, schema, or flag.
 
 ### Changed
+- **Memory and speed.** ark-check, `--doctor`, the write hook, ApplyPatch preflight, the MCP server and the ESLint plugin use much less memory; verdicts are byte-identical. On a 20k-file repo: ark-check peak 422 → 303 MB (3.7 → 2.3 s), ApplyPatch hook 649 → 414 MB (9.5 → 3.6 s), Write hook 163 → 146 MB (0.68 → 0.24 s), MCP server after 50 calls 725 → 442 MB. Sources are read one at a time and released, the facts hash streams, module resolution is memoized per run, the Write/Edit hook no longer walks the whole `include` tree for tsconfig aliases, and preflight reuses base parses.
+- Advisory sibling crossings are advisory on day 1. The anti-growth ratchet is judged per rule and turns on only when the baseline in use already records an advisory sibling crossing of that rule (issue [#336](https://github.com/pedroknigge/arkgate/issues/336)).
+- `CONFIG_CHILD_SLICES_VERSION` (and the other new-key version warnings) fire only with evidence that the repo pins an older arkgate (exact `package.json` dependency, installed copy, lockfile, hook script, or CI workflow). The finding points at that file and line and names the version to bump to (issue [#338](https://github.com/pedroknigge/arkgate/issues/338)).
+- `childSlices` on a rule without `peerIsolation: true` and `allowed: false` still loads (as in 4.8.23) but is inert; ark-check now warns `CONFIG_CHILD_SLICES_INERT` and says how to fix it (add both flags to the rule, or remove `childSlices`). No config that loads in 4.8.23 fails to load.
+- `sliceIdentity: "stars"` keeps every star binding (`modules/*/api/*` binds `orders/api/v1`, not `api/v1`). **Migration:** a `sliceAliases` `to` or an `allowedCrossSlice` / `childSlices.allowedCrossSlice` entry written against the 4.8.23 id (`api/v1/x`, `api/v1`) keeps loading and keeps its 4.8.23 verdict for this release: the alias joins the universe whose old id it names, and the allowance still clears the edge it cleared. ark-check warns `CONFIG_SLICE_LEGACY_STARS_ID` and names the new id to write (`orders/api/v1/x`). A legacy alias target is rejected at config load only when it maps to more than one universe shape of the rule. The legacy form is removed in the next minor release.
+- `childSlices.commonFolders` counts only a folder directly under the universe; the same name inside a child belongs to that child.
+- The write hook fails closed: if it cannot run inside an Ark project (invalid config, missing ArkRules file, missing `dist/`), governed writes are denied with exit 2 (`WRITE_GATE_UNAVAILABLE`) instead of exit 1, which hosts let through. The hook finds its project root like ark-check: a set `--root-env` variable, else the root that holds `ark.config.json`, else it walks up from the payload (written file, `cwd`, `workspace_roots`) to the nearest `ark.config.json`. A write outside any Ark project (no `ark.config.json` found) is allowed, as in 4.8.23.
+- `ark start --apply --remove-host <host>` removes only the Ark hook entries from a merged `.claude/settings.json`, `.codex/hooks.json`, `.cursor/hooks.json` or `.agents/hooks.json` (same identity as the merge) and keeps every user key and hook; the file is deleted only when nothing else remains. "customized" is reported only when the Ark entry itself was edited.
+- An enforced invariant with `coverage: { test: false }` and no `coverage.symbol` is uncovered; `coverage.symbol: "Class.member"` needs the member declared in that class.
+- ArkOrder `apply()` only accepts a proposal bound to the current Release (`ARKORDER_STALE_PROPOSAL`); `restore()` never changes ξ or rolls the version back; `ReleaseStore.load()` is validated; the plane advances only after `save()`; `informationBudget` is enforced when a Release is created.
+- ArkRun: the default event buffer is capped and settles after local delivery; broker handoff failures are recorded (`event.handoffFailed`); config kernels with canonical layer names enforce hard observed-layer-flow.
+- `ark-check --update-baseline` always freezes the whole tree and refuses `--changed` / `--local`.
 - Compact `--doctor` names ArkRules only when the `arkRules` map is on
   (one breath + counts, not a score). Absence stays silent. Reuses
   `rulesUnderContract` — no new schema, flag, or skill. `--doctor --all`
@@ -66,6 +86,27 @@ in the immutable pre-2.0 archive linked below.
   Required CI is still the shared merge line. No new skill, schema, or host.
 
 ### Fixed
+- `--changed`, `--local`, `--against` and `--persona` no longer give a false green: paths resolve relative to `--root` (monorepo packages), non-ASCII names are kept, large or failed git listings exit 2, and a missing base ref exits 2 (`changed-needs-base`) instead of "nothing changed".
+- `--changed` catches a new `CROSS_PARENT_VIA_SHARED` created by editing only a shared-root file, and no longer warns `CONFIG_LAYER_PATTERN_NO_MATCHES` for untouched layers.
+- `ark-check --report`, `latest.json`, `--doctor` and `ark status` agree on frozen versus active findings.
+- Write path parity with CI: the hook, `validate_code`, `ark_prepare_write`, `ark_prepare_change` and ApplyPatch preflight enforce ArkRules structure sensors and ArkOrder editor sensors, load ArkRules like ark-check, handle realpath aliases, and accept the full Codex `apply_patch` format.
+- MCP: `validate_code` / `ark_check` output schemas pass MCP SDK validation (tools no longer disappear); a stale contract returns `CONTRACT_STALE`; `ark_status` honors `--config`; `arkgate-mcp --help` / `--version` exit.
+- MCP Registry: `server.json` runs `npx arkgate@<version> mcp --root .`; the old descriptor never started the server.
+- CommonJS TypeScript consumers: `.d.cts` declarations ship and are mapped for every entry.
+- ESLint: warnings in ark-check are warnings in ESLint; messages carry the rule message and slice reason; ArkOrder rules show real text at 1-based columns; tsconfig JSONC / nearest tsconfig / `extends` are read correctly; an invalid config reports one diagnostic instead of crashing; `require('arkgate/eslint')` returns the plugin (it also carries a non-enumerable `__esModule`, so Babel `_interopRequireWildcard` and TypeScript `__importStar` still see every named export); `--cache` invalidates on contract change; forbidden-globals catches destructuring and bracket access.
+- Slices: adapter diagnostics carry `reasonId` and the universe pair; `CROSS_PARENT_VIA_SHARED` honors the universe `allowedCrossSlice`; fail-closed reasons are named in the hook and MCP; folder-form `sliceAliases` cover their subtree; the flat-parent move card counts every resolved importer; `SHARED_IMPORTS_SLICE` is catalogued.
+- Setup: `ark start --archetype/--preset` writes that shape; re-running `ark start --apply` works; `--remove-host` does not touch packages; existing `.claude/settings.json` / `.codex/hooks.json` are merged instead of skipped or wiped; `typecheck` is added only when TypeScript is present; the steward lock holds under `--strict-merge --contract-session`; `ark status --config` / `ark agents-md --config` work; starter ArkRules ids are unique.
+- ArkRules: policy delta reads base ArkRules from the base ref (demoting an enforced rule is weakening); class-shape sensors see generic classes, ignore braces in strings and regexes, and skip a `static { … }` initialization block (it is not a public member); `ArkRulesValidationError` is exported from the root.
+- ArkRun: undeclared emit/handle/depend count only kernel-traced receivers (`res.send`, `require.resolve`, rxjs `subscribe` are ignored); typed `send(Creator)` resolves names; `ArkModule.forRoot()` is a composition root; `arkgate/runtime` and `arkgate/nestjs` share one kernel chunk (`instanceof` works). A namespace import of a composition root (`import * as main from '../main'; main.ark.publisher(..)`) is traced as a kernel receiver, and an untraced receiver counts when its name carries one of the project's effective intent prefixes (configured `layers[].intentPrefixes` plus the canonical ones), not only `Domain.`/`Application.`….
+- ArkOrder: `ARKORDER_XI_FIELD_WRITE` recognizes Prisma/ORM clients by construction, `GENERIC_UPDATE` / `INGEST_WRITES_XI` false positives removed, `xi-ttl` and `information-budget` sensors emit, NaN/Infinity rejected, documented types exported, and the shipped `bin/lib/ark-order-invariants.mjs` loads.
+- Docs: the composite Action pin tracks the current release, and configuration.md names the real policy-delta entry points.
+- Generated CI workflows, host hooks and MCP entries in a project that does not
+  have arkgate as a local dependency run `npx -y -p arkgate@<exact version> <bin>`
+  instead of a bare `npx ark-check` / `npx arkgate-mcp` (npm resolved those as a
+  nonexistent package, or ran a stale global). Without a `package.json` the workflow
+  skips the install step and the npm cache. `--migrate-commands` rewrites bare runners
+  into the pinned form, and `--doctor` leads with `PACKAGE_PIN_ABSENT` when a generated
+  file still uses the local runner without the pin.
 - Write hook and `ark-check` now agree on overlapping layer globs: the hook
   probes the same specifier extensions as `ark-check` and classifies with
   `layerForRelativePath` (explicit `money.ts` beats `src/lib/**`). Field

@@ -6,12 +6,14 @@
  */
 
 import type {
+  ResolvedArkOrderBudgetLeakFact,
   ResolvedArkOrderGenericUpdateFact,
   ResolvedArkOrderIngestWriteFact,
   ResolvedArkOrderPlaneCallFact,
   ResolvedArkOrderReleaseKeyCountFact,
   ResolvedArkOrderRootHitFact,
   ResolvedArkOrderXiFieldWriteFact,
+  ResolvedArkOrderXiTtlFact,
 } from './arkOrderFacts';
 
 /** 1.1 adds optional classShapes[] (ADR 0013). 1.2 adds optional ArkRun facts (ADR 0022). 1.0/1.1 remain loadable. */
@@ -121,6 +123,8 @@ export type ResolvedClassShapeFact = {
     referencesGuardOrPublish: boolean;
   }[];
   dataOnly?: boolean;
+  /** Source offset where the class-shape scan stopped (unwalkable body/header). */
+  truncatedUntil?: number;
 };
 
 export type ResolvedDependencyFact = {
@@ -213,6 +217,8 @@ export type ResolvedCandidateFactsInput = {
   arkOrderXiFieldWrites?: readonly ResolvedArkOrderXiFieldWriteFact[];
   arkOrderIngestWritesXi?: readonly ResolvedArkOrderIngestWriteFact[];
   arkOrderReleaseKeyCounts?: readonly ResolvedArkOrderReleaseKeyCountFact[];
+  arkOrderXiTtlKeys?: readonly ResolvedArkOrderXiTtlFact[];
+  arkOrderBudgetLeaks?: readonly ResolvedArkOrderBudgetLeakFact[];
 };
 
 export type ResolvedCandidateFacts = Omit<
@@ -225,6 +231,8 @@ export type ResolvedCandidateFacts = Omit<
   | 'arkOrderXiFieldWrites'
   | 'arkOrderIngestWritesXi'
   | 'arkOrderReleaseKeyCounts'
+  | 'arkOrderXiTtlKeys'
+  | 'arkOrderBudgetLeaks'
   | 'arkOrderRootHits'
   | 'arkRunManagedNews'
   | 'arkRunCompositionRootHits'
@@ -251,5 +259,7 @@ export type ResolvedCandidateFacts = Omit<
   arkOrderXiFieldWrites: ResolvedArkOrderXiFieldWriteFact[];
   arkOrderIngestWritesXi: ResolvedArkOrderIngestWriteFact[];
   arkOrderReleaseKeyCounts: ResolvedArkOrderReleaseKeyCountFact[];
+  arkOrderXiTtlKeys: ResolvedArkOrderXiTtlFact[];
+  arkOrderBudgetLeaks: ResolvedArkOrderBudgetLeakFact[];
   factsHash: string;
 };

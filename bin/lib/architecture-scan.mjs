@@ -2,15 +2,22 @@
  * Architecture check pipeline: content scan → import graph → layer edges → cycles.
  * Extracted from ark-check entry (R3). Entry remains orchestration + presentation.
  */
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { summarizeParseHealth } from './parse-health.mjs';
 import {
   analyzeTrustedResolvedProject,
+  configVersionFloors,
   loadContract,
 } from './analysis-engine.mjs';
+import { pathUnderSharedRoot, sharedImportsSliceMode } from '../ark-layer-match.mjs';
+import { collectArkgatePins, runningArkgateVersion } from './arkgate-pins.mjs';
 import { effectiveAnalysisConfig } from './analysis-policy.mjs';
 import { resolveCandidateFacts } from './resolved-candidate-facts.mjs';
-import { loadEffectiveArkRulesFromDisk } from './effective-contract-load.mjs';
+import {
+  arkRulesDriftWarnings,
+  loadEffectiveArkRulesFromDisk,
+} from './effective-contract-load.mjs';
 import {
   coverageOptionsFromConfig,
   invariantIdsFromCatalog,
@@ -66,6 +73,28 @@ function fileLocalScope(root, files, config, { changed = false } = {}) {
   return scoped;
 }
 
+/**
+ * `--changed` resolves the touched files plus their forward import closure.
+ * The deny-cross-parent pass attributes a finding to the slice file that
+ * imports a shared root, so an edit to a shared file alone can complete a new
+ * cross-universe path whose importer is outside that closure. When a touched
+ * file sits under such a rule's sharedRoots, the graph runs full-tree.
+ */
+function changedSharedRootNeedsFullGraph(scoped, rules) {
+  if (!scoped) return false;
+  const walls = (rules ?? []).filter(
+    (rule) =>
+      rule?.allowed === false &&
+      rule.peerIsolation === true &&
+      sharedImportsSliceMode(rule.sharedImportsSlice) === 'deny-cross-parent'
+  );
+  if (walls.length === 0) return false;
+  for (const file of scoped) {
+    if (walls.some((rule) => pathUnderSharedRoot(file, rule.sharedRoots))) return true;
+  }
+  return false;
+}
+
 function coversGovernedSet(root, scoped, config) {
   const governed = collectGovernedFiles(root, config);
   if (governed.length === 0) return false;
@@ -100,7 +129,11 @@ function hintCacheKey(root, scopedFiles, arkRules) {
         `${rule.sensor ?? ''}\0${rule.mode ?? ''}\0${(rule.appliesTo ?? []).join(',')}`
     )
     .join('\n');
-  return `${path.resolve(root)}\0${filesPart}\0${rulesPart}`;
+  // A full-tree key lists every governed file; retaining up to HINT_CACHE_CAP of
+  // those raw strings in a long-lived MCP process held megabytes per entry.
+  return createHash('sha256')
+    .update(`${path.resolve(root)}\0${filesPart}\0${rulesPart}`)
+    .digest('hex');
 }
 
 function rememberHintCache(key, value) {
@@ -155,15 +188,17 @@ export function resolveArchitectureSnapshot({
   const scoped = fileLocalScope(root, files, effectiveConfig, {
     changed: args?.changed === true,
   });
+  // File-local sensors stay on `scoped`; only the graph widens (see helper).
+  const graphScope = changedSharedRootNeedsFullGraph(scoped, effectiveConfig.rules) ? null : scoped;
   const facts = resolveCandidateFacts({
     root,
     config: effectiveConfig,
     ts,
     ...(args?.tsconfig ? { tsconfig: args.tsconfig } : {}),
     observeInput,
-    ...(scoped
-      ? { scopeFiles: [...scoped] }
-      : args?.changed
+    ...(graphScope
+      ? { scopeFiles: [...graphScope] }
+      : args?.changed && !scoped
         ? { scopeFiles: [] }
         : {}),
   });
@@ -212,9 +247,17 @@ export function resolveArchitectureSnapshot({
   const rootsPresent = catalogHasEnforcedInvariant(arkRulesLoad.arkRules?.invariants)
     ? declaredCoverageRootsPresent(root, effectiveConfig.coverage)
     : true;
+  // Version floor evidence (#338): zero extra I/O unless a floored key is in use.
+  const pinEvidence = configVersionFloors(effectiveConfig.rules)
+    ? {
+        arkgatePins: collectArkgatePins(root, { observeInput }),
+        runningArkgateVersion: runningArkgateVersion(),
+      }
+    : {};
   const analyzed = analyzeTrustedResolvedProject({
     contract: analysisContract,
     facts,
+    ...pinEvidence,
     ...(adopted ? { adopted: true } : {}),
     ...(adopted && pathPresent === false ? { invariantTestsPathPresent: false } : {}),
     ...(rootsPresent === false ? { coverageRootsPresent: false } : {}),
@@ -229,7 +272,8 @@ export function resolveArchitectureSnapshot({
   );
   const result = {
     violations: analyzed.ir.violations,
-    warnings: analyzed.ir.warnings,
+    // ADR 0012 D2: an unreferenced arkrules/*.json is advisory drift, never a failure.
+    warnings: [...analyzed.ir.warnings, ...arkRulesDriftWarnings(arkRulesLoad.warnings)],
     safety: analyzed.safety,
     parseHealth,
     completeness: analyzed.completeness,

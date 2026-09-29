@@ -106,7 +106,7 @@ import {
   normalize,
   walk,
 } from './lib/scan-files.mjs';
-import { configWarning } from './lib/config-warnings.mjs';
+import { configInvalidJsonEnvelope, configWarning } from './lib/config-warnings.mjs';
 import { runArchitectureScan } from './lib/architecture-scan.mjs';
 import {
   ANALYSIS_COMPLETENESS,
@@ -124,6 +124,7 @@ import {
   applyAgainstRatchet,
   bindTeamBaseRefs,
   contractSessionFrom,
+  pruneScopedPatternWarnings,
   runTeamPreflight,
   ungovernedDumpMessage,
 } from './lib/team-parliament-io.mjs';
@@ -135,7 +136,9 @@ import {
   resolveEffectiveProjectRoot,
 } from './lib/project-root.mjs';
 import { demoteArkRuleTeethUnderClassificationFloor } from './lib/rules-under-contract.mjs';
-import { localCheckEnvelope, parseArgs, resolveDesignDeltaBaseRef } from './lib/check-args.mjs';
+import {
+  effectiveBaselineName, localCheckEnvelope, parseArgs, resolveDesignDeltaBaseRef, UPDATE_BASELINE_SCOPE_MESSAGE,
+} from './lib/check-args.mjs';
 import { detectConfig, proposeForUncovered } from './lib/check-config-detect.mjs';
 import { runWatchMode } from './lib/check-watch.mjs';
 
@@ -1333,6 +1336,7 @@ async function main() {
     strictMerge: args.strictMerge || args.contractDiff,
     basePath: args.policyBase,
     baseRef: args.policyBaseRef,
+    adoptMissingBase: args.policyBaseFromTeam === true,
     acknowledgementPath: args.policyAck,
   });
   const preflight = runTeamPreflight({
@@ -1447,6 +1451,7 @@ async function main() {
     args,
   });
 
+  if (args.changed) pruneScopedPatternWarnings(warnings, root, loadGovernedFiles);
   // Align merge with extraMergeTeeth stamp: demote enforced ArkRules under classification floor.
   const preCov = computeCoverage(root, config, files, rules);
   const populatedLayerCount = Array.isArray(preCov.layers)
@@ -1515,6 +1520,8 @@ async function main() {
   }
 
   if (args.updateBaseline) {
+    // A persona can turn on --changed after parseArgs; a subset scan must never rewrite the baseline.
+    if (args.changed) { console.error(UPDATE_BASELINE_SCOPE_MESSAGE); process.exitCode = 2; return; }
     if (!contractSessionFrom(args)) {
       console.error('Growing the baseline requires --contract-session. Freeze in a law-only PR.');
       process.exitCode = 1;
@@ -1587,14 +1594,16 @@ async function main() {
       changed: args.changed,
       changedPaths,
       occurrenceKeys: baselineOccurrenceKeys(violations),
+      rules,
+      layers: config.layers,
     });
     activeViolations = ratcheted.activeViolations;
     suppressed = ratcheted.suppressed;
-  } else if (args.baseline) {
-    const baseline = readBaseline(root, args.baseline);
+  } else if (effectiveBaselineName(args, root)) {
+    const baseline = readBaseline(root, effectiveBaselineName(args, root));
     if (baseline.exists) {
       const occurrenceKeys = baselineOccurrenceKeys(violations);
-      const judged = applyAdvisorySiblingRatchet(violations, occurrenceKeys, baseline.keys);
+      const judged = applyAdvisorySiblingRatchet(violations, occurrenceKeys, baseline.keys, { rules, layers: config.layers });
       suppressed = judged.filter((_, index) => baseline.keys.has(occurrenceKeys[index]));
       activeViolations = judged.filter((_, index) => !baseline.keys.has(occurrenceKeys[index]));
       const currentKeys = new Set(occurrenceKeys);
@@ -1639,81 +1648,16 @@ async function main() {
   }
 
   if (args.rulesInventory) {
-    const { buildRulesInventory, inventoryToExtractionCard } = await import('./lib/rules-inventory.mjs');
-    const fileContents = {};
-    const fileLayers = {};
-    for (const file of files.slice(0, 400)) {
-      const rel = normalize(path.relative(root, file));
-      try {
-        fileContents[rel] = fs.readFileSync(file, 'utf8');
-        const layer = layerForFile(root, file, config.layers);
-        if (layer) fileLayers[rel] = layer;
-      } catch {
-        /* skip unreadable */
-      }
-    }
-    const contracted = [];
-    if (config.arkRules) {
-      try {
-        const { loadEffectiveArkRulesFromDisk } = await import('./lib/effective-contract-load.mjs');
-        const loaded = loadEffectiveArkRulesFromDisk(root, config);
-        for (const rule of loaded.arkRules.structure ?? []) contracted.push(rule.id);
-        for (const inv of loaded.arkRules.invariants ?? []) contracted.push(inv.id);
-      } catch {
-        /* advisory inventory still useful */
-      }
-    }
-    const inventory = buildRulesInventory({
-      fileContents,
-      fileLayers,
-      layerContexts: (config.layers ?? []).map((layer) => ({
-        name: layer.name,
-        intentPrefixes: layer.intentPrefixes ?? [],
-      })),
-      contractedRuleIds: contracted,
-    });
-    const nextPilot =
-      inventory.candidates[0] != null
-        ? inventoryToExtractionCard(inventory.candidates[0])
-        : null;
-    let evidenceLines = [];
-    let coverageEvidence = null;
-    if (config.arkRules && Object.keys(config.arkRules).length > 0) {
-      try {
-        const { summarizeRulesUnderContract, formatArkRulesEvidenceLines } = await import(
-          './lib/rules-under-contract.mjs'
-        );
-        const section = summarizeRulesUnderContract(root, config, {
-          files: files.map((file) => ({ path: normalize(path.relative(root, file)) })),
-        });
-        evidenceLines = formatArkRulesEvidenceLines(section);
-        if (section.active === true) {
-          coverageEvidence = {
-            symbolEvidence: section.symbolEvidence ?? [],
-            discarded: section.coverageStats?.discarded ?? null,
-          };
-        }
-      } catch {
-        /* inventory still useful when coverage cannot be read */
-      }
-    }
-    const payload = {
-      rulesInventory: inventory,
-      rulesMigration: {
-        inventoried: inventory.inventoried,
-        underContract: inventory.underContract,
-        frozen: inventory.frozen,
-        notAScore: true,
-      },
-      nextPilot: nextPilot,
-      ...(coverageEvidence ? { coverageEvidence } : {}),
-    };
+    // Same helper as MCP ark_rules_inventory and doctor.rulesMigration (AR15).
+    const { buildRulesInventoryPayload, formatRulesMigrationCounts } = await import(
+      './lib/rules-under-contract.mjs'
+    );
+    const { payload, evidenceLines } = buildRulesInventoryPayload(root, config, files);
+    const { rulesInventory: inventory, nextPilot } = payload;
     if (args.json) {
       console.log(JSON.stringify(payload, null, 2));
     } else {
-      console.log(
-        `Rules inventory: ${inventory.inventoried} inventoried, ${inventory.underContract} under contract, ${inventory.frozen} frozen (not a score).`
-      );
+      console.log(`Rules inventory: ${formatRulesMigrationCounts(payload.rulesMigration)}.`);
       for (const c of inventory.candidates.slice(0, 12)) {
         console.log(`  - [${c.confidence}] ${c.kind} @ ${c.file}:${c.line} — ${c.message}`);
       }
@@ -1865,6 +1809,7 @@ async function main() {
       ? renderBeginnerHtmlReport(reportPayload)
       : renderHtmlReport(reportPayload);
     const reportPath = path.isAbsolute(args.report) ? args.report : path.join(root, args.report);
+    fs.mkdirSync(path.dirname(reportPath), { recursive: true });
     fs.writeFileSync(reportPath, html);
 
     const archive = archiveReportSnapshots(root, {
@@ -2087,6 +2032,8 @@ async function main() {
 }
 
 main().catch((error) => {
+  const envelope = configInvalidJsonEnvelope(error, process.argv);
+  if (envelope) console.log(envelope);
   console.error(
     process.env.ARK_DEBUG_STACK === '1' && error instanceof Error
       ? error.stack

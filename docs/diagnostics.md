@@ -27,6 +27,7 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 | [`LAYER_IMPORT_VIOLATION`](#LAYER_IMPORT_VIOLATION) | layer | This import is not allowed |
 | [`LAYER_INTENT_REFERENCE_VIOLATION`](#LAYER_INTENT_REFERENCE_VIOLATION) | layer | Intent referenced across a blocked layer edge |
 | [`LAYER_REFERENCE_VIOLATION`](#LAYER_REFERENCE_VIOLATION) | layer | Layer reference blocked (snippet / AI gate) |
+| [`SHARED_IMPORTS_SLICE`](#SHARED_IMPORTS_SLICE) | layer | A shared root imports a slice |
 | [`CIRCULAR_DEPENDENCY`](#CIRCULAR_DEPENDENCY) | layer | Dependency cycle |
 | [`FORBIDDEN_GLOBAL`](#FORBIDDEN_GLOBAL) | capability | Forbidden ambient global or dual import |
 | [`CAPABILITY_VIOLATION`](#CAPABILITY_VIOLATION) | capability | Denied effect capability |
@@ -44,6 +45,7 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 | [`ARKRULE_INVARIANT`](#ARKRULE_INVARIANT) | arkrules | ArkRule invariant failed |
 | [`ARKRULE_SCOPE_EMPTY`](#ARKRULE_SCOPE_EMPTY) | arkrules | ArkRule appliesTo matched zero files |
 | [`ARKRULE_HINT_BUDGET_EXHAUSTED`](#ARKRULE_HINT_BUDGET_EXHAUSTED) | arkrules | Structural-hint budget exhausted |
+| [`ARKRULE_FILE_UNREFERENCED`](#ARKRULE_FILE_UNREFERENCED) | arkrules | ArkRules file not referenced |
 | [`INVARIANT_CATALOG_EMPTY`](#INVARIANT_CATALOG_EMPTY) | arkrules | Domain invariant catalog is empty |
 | [`INVARIANT_UNCOVERED`](#INVARIANT_UNCOVERED) | arkrules | Invariant without coverage evidence |
 | [`INVARIANT_COVERAGE_OUTSIDE_ROOTS`](#INVARIANT_COVERAGE_OUTSIDE_ROOTS) | arkrules | Covering test outside the declared coverage roots |
@@ -62,6 +64,7 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 | [`ARKORDER_TOO_MANY_PARAMS`](#ARKORDER_TOO_MANY_PARAMS) | arkorder | Too many slow keys |
 | [`ARKORDER_INGEST_WRITES_XI`](#ARKORDER_INGEST_WRITES_XI) | arkorder | ingest assigned into ξ |
 | [`ARKORDER_UNVALVED_RELEASE`](#ARKORDER_UNVALVED_RELEASE) | arkorder | Second freeze without the valve |
+| [`ARKORDER_STALE_PROPOSAL`](#ARKORDER_STALE_PROPOSAL) | arkorder | Proposal is not bound to the current Release |
 | [`INVALID_CHANGE_PATH`](#INVALID_CHANGE_PATH) | preflight | Unsafe change path |
 | [`DUPLICATE_CHANGE_PATH`](#DUPLICATE_CHANGE_PATH) | preflight | Duplicate path in change set |
 | [`DELETE_TARGET_MISSING`](#DELETE_TARGET_MISSING) | preflight | Delete target missing |
@@ -72,6 +75,7 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 | [`CANDIDATE_CONTENT_HASH_MISMATCH`](#CANDIDATE_CONTENT_HASH_MISMATCH) | preflight | Candidate content hash mismatch |
 | [`UNDECLARED_CANDIDATE_CHANGE`](#UNDECLARED_CANDIDATE_CHANGE) | preflight | Undeclared candidate change |
 | [`ATOMIC_PREFLIGHT_UNAVAILABLE`](#ATOMIC_PREFLIGHT_UNAVAILABLE) | preflight | Atomic preflight unavailable |
+| [`WRITE_GATE_UNAVAILABLE`](#WRITE_GATE_UNAVAILABLE) | preflight | Write gate could not run |
 | [`DESIGN_SMELL_REGRESSION`](#DESIGN_SMELL_REGRESSION) | preflight | Design smell regression on base-relative ratchet |
 | [`ANALYSIS_PARSE_INCOMPLETE`](#ANALYSIS_PARSE_INCOMPLETE) | analysis | Parse incomplete |
 | [`LEXICAL_EVIDENCE_INCOMPLETE`](#LEXICAL_EVIDENCE_INCOMPLETE) | analysis | Lexical evidence incomplete |
@@ -102,9 +106,11 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 | [`CONFIG_UNCLASSIFIED_FILES`](#CONFIG_UNCLASSIFIED_FILES) | config | Unclassified included files |
 | [`CONFIG_LAYER_MISSING_OWNER`](#CONFIG_LAYER_MISSING_OWNER) | config | Layer missing owner |
 | [`CONFIG_SLICE_IDENTITY_COLLISION`](#CONFIG_SLICE_IDENTITY_COLLISION) | config | Starred slice prefixes share one id |
-| [`CONFIG_CHILD_SLICES_VERSION`](#CONFIG_CHILD_SLICES_VERSION) | config | childSlices needs a newer arkgate |
+| [`CONFIG_CHILD_SLICES_VERSION`](#CONFIG_CHILD_SLICES_VERSION) | config | Config needs a newer arkgate than a pinned copy |
 | [`CONFIG_CHILD_SLICE_EXTENDS`](#CONFIG_CHILD_SLICE_EXTENDS) | config | Child slice id does not extend its universe |
 | [`CONFIG_CHILD_SLICE_CROSS_UNIVERSE`](#CONFIG_CHILD_SLICE_CROSS_UNIVERSE) | config | Child slice allowance cannot cross the universe wall |
+| [`CONFIG_CHILD_SLICES_INERT`](#CONFIG_CHILD_SLICES_INERT) | config | childSlices on a rule that cannot run it |
+| [`CONFIG_SLICE_LEGACY_STARS_ID`](#CONFIG_SLICE_LEGACY_STARS_ID) | config | Slice id written in the 4.8.23 stars form |
 | [`ARK_UNKNOWN`](#ARK_UNKNOWN) | meta | Unknown diagnostic |
 
 ## Layer and dependency graph
@@ -117,8 +123,8 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 
 - **Why:** This file imported a folder it may not reach. The write doesn’t land. The same check fails the pull request.
 - **Fix:** Branch by import kind: constants/types/pure → adopt into DomainModel or SharedKernel (do not invent a port); kernel/events/bootstrap from Persistence → inject a port or move the map to SharedTypes (Persistence must not emit); define a port only when the target is a real use-case. Type-only edges use `import type`. Then preflight again. Do not weaken the layer rule without a hash-bound policy acknowledgement.
-- **Slice reasons:** the ruleId stays `LAYER_IMPORT_VIOLATION`. When a rule sets `childSlices`, the finding may also carry `reasonId` `CROSS_PARENT_SLICE` (this import crosses two universe slices; the child wall cannot allow another universe) or `CROSS_SIBLING_SLICE` (this import crosses two feature slices inside one universe). `siblings` may be `"deny"`, `"advisory"`, or `{ "default", "enforce" }`. An enforced importer (`enforce` entry is that child id or a subtree path of the file) is an error. Every other sibling crossing is a warning, and a new one past the baseline still fails. `default: "deny"` denies every sibling crossing. `childSlices.allowedCrossSlice` may use a whole-segment `*` and clears only a sibling crossing. It does not clear `CROSS_PARENT_SLICE` or `CROSS_PARENT_VIA_SHARED`. The universe `allowedCrossSlice` still treats `*` as a literal. `childSlices.sliceAliases` maps a source path glob onto a child slice id (the universe id plus one child segment). An aliased file takes that universe id and that child id for both walls, so an import into another universe is still `CROSS_PARENT_SLICE`. A bare name, a universe id alone, an unknown universe, and a wildcard in `to` are rejected at config load. A glob that overlaps a slice folder is rejected. Two aliases that can match the same file are rejected. Doctor lists each alias as an owed move — the files, the target slice, and the destination folder — and does not count those files as finished. Adding aliases is a strengthening policy delta. Removing them is weakening. Additions and removals together, including a retarget, need a judgment. The baseline key does not include `reasonId`. Without `childSlices`, `reasonId` is absent on a direct edge. The write hook, ESLint, snippet analysis, ark-check, and CI all see this per-edge decision. arkgate 4.8.22 and older reject `childSlices`. A build that still types `siblings` as a string enum rejects the object at config load (`must be one of deny, advisory`). A build that still rejects unknown `childSlices` fields rejects `allowedCrossSlice` and `sliceAliases` at config load (`unknown field`). No published release through 4.8.22 accepts `sliceAliases`. Doctor may also suggest moving a flat universe-level file that exactly one child imports (`doctor.flatParentPilot`). That suggestion is not a finding, not a `ruleId`, and not part of the baseline key. A file imported by two children, or by none, is not suggested.
-- **`CROSS_PARENT_VIA_SHARED`:** `sharedImportsSlice` is `"deny-cross-parent"`. A slice reaches another universe only through a shared root. The finding's `file` is the slice that imported the shared root and `target` is the file in the other universe. The baseline key stays `ruleId|file|fromLayer|toLayer|target` and does not include `reasonId`. A shared hop that stays inside one universe is not this finding. The direct shared-root hop stays the `SHARED_IMPORTS_SLICE` warning. `"deny"` is unchanged and does not emit this reason. Doctor slice counts stay on `CROSS_PARENT_SLICE` and `CROSS_SIBLING_SLICE`. **ark-check and CI report this path. The write hook and ESLint see one edge at a time and do not block it.** arkgate 4.8.22 and older reject `"deny-cross-parent"` at config load.
+- **Slice reasons:** the ruleId stays `LAYER_IMPORT_VIOLATION`. When a rule sets `childSlices`, the finding may also carry `reasonId` `CROSS_PARENT_SLICE` (this import crosses two universe slices; the child wall cannot allow another universe) or `CROSS_SIBLING_SLICE` (this import crosses two feature slices inside one universe). `siblings` may be `"deny"`, `"advisory"`, or `{ "default", "enforce", "ratchet" }`. An enforced importer (`enforce` entry is that child id or a subtree path of the file) is an error. Every other sibling crossing is a warning. With a baseline in use, a new advisory crossing fails only when the baseline already records an advisory crossing of that rule and that rule's advisory count grows past the recorded count (judged per rule; a recorded key whose crossing was removed still counts), or when `ratchet` is `true`; `ratchet: false` measures only. `default: "deny"` denies every sibling crossing. A `commonFolders` name counts only directly under the universe; the same folder name inside a child belongs to the child. The rule `message` is the universe-wall text; `childSlices.message` is the text for `CROSS_SIBLING_SLICE` and universe common importing a child (absent: ArkGate's default, never the rule message). `childSlices.allowedCrossSlice` may use a whole-segment `*` and clears only a sibling crossing. It does not clear `CROSS_PARENT_SLICE` or `CROSS_PARENT_VIA_SHARED`. The universe `allowedCrossSlice` still treats `*` as a literal. `childSlices.sliceAliases` maps a source path glob onto a child slice id (the universe id plus one child segment). A `from` with no wildcard in its last segment also covers its subtree. An aliased file takes that universe id and that child id for both walls, so an import into another universe is still `CROSS_PARENT_SLICE`. A bare name, a universe id alone, a target outside every universe shape, and a wildcard in `to` are rejected at config load; config load checks only the shape, and doctor flags a target universe no file belongs to (`unknownUniverse`). A glob that overlaps a slice folder is rejected. Two aliases that can match the same file are rejected. Doctor lists each alias as an owed move — the files, the target slice, and the destination folder — and does not count those files as finished. Adding aliases is a strengthening policy delta. Removing them is weakening. Additions and removals together, including a retarget, need a judgment. The baseline key does not include `reasonId`. Without `childSlices`, `reasonId` is absent on a direct edge. The write hook, ESLint, snippet analysis, ark-check, and CI all see this per-edge decision. Adapter diagnostics carry `evidence.reasonId` (plus `evidence.universeFrom` / `universeTo`) and a `nextAction` taken from that reason's own hint (an advisory `CROSS_SIBLING_SLICE` also gets the ratchet note; a blocking one gets only the action). arkgate 4.8.22 and older reject `childSlices`. A build that still types `siblings` as a string enum rejects the object at config load (`must be one of deny, advisory`). A build that still rejects unknown `childSlices` fields rejects `allowedCrossSlice` and `sliceAliases` at config load (`unknown field`). No published release through 4.8.22 accepts `sliceAliases`. Doctor may also suggest moving a flat universe-level file that exactly one child imports (`doctor.flatParentPilot`). That suggestion is not a finding, not a `ruleId`, and not part of the baseline key. A file imported by two children, by none, or by anything outside its one importing child (universe common, a shared root, another universe, tsconfig-alias importers included) is not suggested.
+- **`CROSS_PARENT_VIA_SHARED`:** `sharedImportsSlice` is `"deny-cross-parent"`. A slice reaches another universe only through a shared root. The finding's `file` is the slice that imported the shared root and `target` is the file in the other universe. The baseline key stays `ruleId|file|fromLayer|toLayer|target` and does not include `reasonId`. A shared hop that stays inside one universe is not this finding. The direct shared-root hop stays the `SHARED_IMPORTS_SLICE` warning. `"deny"` is unchanged and does not emit this reason. Doctor slice counts stay on `CROSS_PARENT_SLICE` and `CROSS_SIBLING_SLICE`. **ark-check and CI report this path. The write hook and ESLint see one edge at a time and do not block it.** A universe edge the importer's rule declares in `allowedCrossSlice` is not reported through a shared root; `childSlices.allowedCrossSlice` never clears it. A composition root listed in `sharedImportsSlice.stopAt` (object form) stops the walk: a path through it is not a crossing. Config load rejects a stop that covers the whole tree or a whole layer root of the rule. Each finding carries `via` (the shared hops); doctor `sharedWalkHubs` names a shared file on at least half of ten or more such findings. `ark-check --changed` runs this pass full-tree when a changed file sits under such a rule's `sharedRoots`. arkgate 4.8.22 and older reject `"deny-cross-parent"` at config load; 4.8.23 and older reject the object form.
 
 <a id="LAYER_INTENT_REFERENCE_VIOLATION"></a>
 
@@ -137,6 +143,15 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 
 - **Why:** Snippet analysis found an intent or string reference that would couple layers in a direction the architecture profile forbids.
 - **Fix:** Move the reference to an allowed layer or introduce a port/event boundary, then re-run the snippet gate.
+
+<a id="SHARED_IMPORTS_SLICE"></a>
+
+### `SHARED_IMPORTS_SLICE`
+
+**A shared root imports a slice**
+
+- **Why:** A declared shared root imports a slice directly. That hop is allowed while `sharedImportsSlice` is unset or `"deny-cross-parent"`, so this is advisory: the universe wall is direct-only.
+- **Fix:** Move the code the shared root needs into the shared root, or invert the dependency. Set `sharedImportsSlice: "deny"` to make these edges errors. With `"deny-cross-parent"`, a slice that reaches another universe through a shared root is reported as `LAYER_IMPORT_VIOLATION` with `reasonId` `CROSS_PARENT_VIA_SHARED`. `stopAt` does not silence this warning. Advisory — it does not fail the check.
 
 <a id="CIRCULAR_DEPENDENCY"></a>
 
@@ -299,6 +314,15 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 - **Why:** `orchestration-only`, `thin-adapter`, and `writes-via-aggregate` only evaluate files the hint loader preloaded. When eligible governed files exceed that budget (`coverage.maxFiles`, default `400` — there is no `arkrules.hintBudget`), those sensors never saw the rest of their scope. Enforced + unreviewed is not green. The finding names exact hinted/governed counts and per-sensor reviewed N/M of scope.
 - **Fix:** Raise `coverage.maxFiles` in ark.config.json (this cap also bounds structural-hint preload; `--doctor` names the coupling) so hinted/governed counts match, then re-run with `--strict-config`. An enforced hint sensor that cannot see its scope fails strict.
 
+<a id="ARKRULE_FILE_UNREFERENCED"></a>
+
+### `ARKRULE_FILE_UNREFERENCED`
+
+**ArkRules file not referenced** · often advisory
+
+- **Why:** A JSON file under `arkrules/` is not referenced by the `arkRules` map in ark.config.json (or no map exists), so none of its rules are enforced or reported. Drift looks like governance until someone notices.
+- **Fix:** Reference the file from `arkRules` (`"<Layer>": "arkrules/<file>.json"`), or delete it. Advisory only: it never fails the check.
+
 <a id="INVARIANT_CATALOG_EMPTY"></a>
 
 ### `INVARIANT_CATALOG_EMPTY`
@@ -314,7 +338,7 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 
 **Invariant without coverage evidence**
 
-- **Why:** An ArkRules invariant is under contract but no covering test title or declared symbol evidence was found (or coverage is partial). A title is a `describe` / `it` / `test` / `context` string. A comment, string, test body, or import that only mentions the id does not count. `coverage.symbol` is a non-test declaration: `function`, `class`, `const`, `method`, `type`, `interface`, or `enum`. Kind is `never-had-tests` (adopt residual) vs `tests-disappeared` (suite exists). The message names what the scan found.
+- **Why:** An ArkRules invariant is under contract but no covering test title or declared symbol evidence was found (or coverage is partial). A title is a `describe` / `it` / `test` / `context` string. A comment, string, test body, or import that only mentions the id does not count. `coverage.symbol` is a non-test declaration: `function`, `class`, `const`, `method`, `type`, `interface`, or `enum`; a `Class.member` symbol must be a member of `class Class` (or of a `const Class = class {}`, `namespace Class {}`, or `const Class = {}` object literal). An enforced invariant cannot opt out with `coverage.test: false` unless it names a `coverage.symbol`: that shape is reported here as "enforced but declares no evidence". Kind is `never-had-tests` (adopt residual) vs `tests-disappeared` (suite exists). The message names what the scan found.
 - **Fix:** Put the invariant id in a `describe` / `it` title, or declare the `coverage.symbol` name in a non-test file, then preflight again. A comment is not a title — move the id into the `it()` title. Treat never-had-tests as adopt residual; treat tests-disappeared as a regression. Missing test globs report partial — never fake green. When the message reports an exhausted file budget, raise `coverage.maxFiles` (or narrow `coverage.testGlobs`) in ark.config.json. The message also names every file the scan discarded and why (budget, per-file byte cap, unreadable, walk depth limit, symlink resolving outside the project root, no catalogued invariant named) — nothing is dropped in silence.
 
 <a id="INVARIANT_COVERAGE_OUTSIDE_ROOTS"></a>
@@ -355,13 +379,28 @@ Not adopted, no catalogued invariants, or every invariant sets `coverage.test: f
 Live adapters specialize `nextAction` with the call-site name or specifier when present
 (casual `enthusiastHint` + engineer `nextAction`). Catalog **Fix** is the stable no-target form.
 
+The undeclared-* sensors only count a call whose receiver is **traced to the kernel**: a local
+bound from a kernel factory, an identifier imported from a `kernelRoots` / `compositionRoots`
+module (resolved through tsconfig `paths`, and through barrels that re-export a root), a plain
+alias (`const kernel = ark`) or `typeof ark` binding, a binding typed `ArkKernel` / `EventBus` / `EventPublisher` / `ArkRunPublisher` imported
+from `arkgate/runtime` or `arkgate/nestjs` (including `this.ark` constructor injection), its
+`.eventBus`, a `publisher(..)` result, or destructured kernel members. `res.send`,
+`require.resolve`, `subject.subscribe`, and other same-named methods are not kernel calls — unless
+the receiver cannot be traced (an untyped parameter) **and** the literal name is a kernel-valid
+intent (`Domain.…`, `Application.…`, the only names a kernel accepts); then it counts.
+The call name is a string literal or a same-file `define(..)` / `defineIntent(..)` creator
+(or string constant). When an enforced call names neither (for example an imported creator),
+analysis reports completeness reason `ARKRUN_INTERACTION_NAME_INCOMPLETE` (partial, never green).
+A `publisher(source)` binding without a literal is not incomplete — the emitted name is checked
+on the chained `.publish` / `.send`.
+
 <a id="ARKRUN_MISSING_ROOT"></a>
 
 ### `ARKRUN_MISSING_ROOT`
 
 **No kernel factory in composition roots**
 
-- **Why:** The ArkRun extra is on but no createArkKernel / createStrictArkKernel / createArkKernelFromConfig / createStrictArkKernelFromConfig factory was found in arkRun.compositionRoots, so agents can skip the kernel while the write gate stays green.
+- **Why:** The ArkRun extra is on but no kernel factory (createArkKernel / createStrictArkKernel / createLenientArkKernel, their *FromConfig variants, or ArkModule.forRoot / forRootAsync imported from arkgate/nestjs) was found in arkRun.compositionRoots, so agents can skip the kernel while the write gate stays green.
 - **Fix:** Import createStrictArkKernel from arkgate/runtime (same npm package; @arkgate/runtime is deprecated) and call it in a composition root listed in arkRun.compositionRoots, then preflight again. Never mechanical-safe — factory placement is a design decision.
 
 <a id="ARKRUN_KERNEL_IN_DOMAIN"></a>
@@ -370,7 +409,7 @@ Live adapters specialize `nextAction` with the call-site name or specifier when 
 
 **Domain-role layer imports the kernel**
 
-- **Why:** A Domain-role layer imports arkgate/runtime, @arkgate/runtime, or kernel types. Domain stays kernel-free; composition roots and adapters own the factory.
+- **Why:** A Domain-role layer imports arkgate/runtime, arkgate/nestjs, @arkgate/runtime, or kernel types. Domain stays kernel-free; composition roots and adapters own the factory.
 - **Fix:** Move the kernel import out of the Domain-role layer into a composition root or adapter. Import from arkgate/runtime (same npm package; @arkgate/runtime is deprecated), then preflight again. Never mechanical-safe.
 
 <a id="ARKRUN_DIRECT_NEW"></a>
@@ -388,7 +427,7 @@ Live adapters specialize `nextAction` with the call-site name or specifier when 
 
 **Emit name not in raises/sends**
 
-- **Why:** A publisher / publish / raise / send call-site literal is not listed in the file’s raises or sends declaration.
+- **Why:** A publisher / publish / raise / send call on a receiver traced to the kernel names an intent (string literal or same-file define/defineIntent binding) that is not listed in the file’s raises or sends declaration.
 - **Fix:** Add the existing call-site name to raises or sends on the managed component, then preflight again. Mechanical-safe only when that literal already exists and the edit is the declaration list; inventing a new emit stays judgment.
 
 <a id="ARKRUN_UNDECLARED_HANDLE"></a>
@@ -397,7 +436,7 @@ Live adapters specialize `nextAction` with the call-site name or specifier when 
 
 **Handle name not in reactsTo**
 
-- **Why:** A subscribe / registerHandler call-site literal is not listed in the file’s reactsTo declaration.
+- **Why:** A subscribe / registerHandler call on a receiver traced to the kernel names an intent (string literal or same-file define/defineIntent binding) that is not listed in the file’s reactsTo declaration.
 - **Fix:** Add the existing call-site name to reactsTo on the managed component, then preflight again. Mechanical-safe only when that literal already exists and the edit is the declaration list; inventing a new handle stays judgment.
 
 <a id="ARKRUN_UNDECLARED_DEPEND"></a>
@@ -406,7 +445,7 @@ Live adapters specialize `nextAction` with the call-site name or specifier when 
 
 **Depend name not in uses**
 
-- **Why:** A resolve / resolveSingleton call-site literal is not listed in the file’s uses declaration.
+- **Why:** A resolve / resolveSingleton call on a receiver traced to the kernel names a component that is not listed in the file’s uses declaration.
 - **Fix:** Add the existing call-site name to uses on the managed component, then preflight again. Mechanical-safe only when that literal already exists and the edit is the declaration list; inventing a new depend stays judgment.
 
 <a id="ARKRUN_TRANSPORT_BYPASS"></a>
@@ -446,7 +485,7 @@ Haken slaving: few slow keys (ξ) determine derived fast state. Field ingest nev
 
 **Generic update of ξ**
 
-- **Why:** A call to update/patch/set on the order plane rewrites the slow pattern. Haken slaving forbids generic ξ mutation.
+- **Why:** A call to update/patch/set on the order plane rewrites the slow pattern. Haken slaving forbids generic ξ mutation. The static sensor only reports a receiver that is a plane on direct evidence: an identifier bound to `createOrderPlane(...)` in the same file, annotated `: OrderPlane`, a `plane` / `*Plane` named import from a declared `planeRoots` module, or a `plane` / `*Plane` name in a file that imports `arkgate/order` (also through `?.`, `!`, or `(x as T)`). A name alone is not evidence: `clipPlane.set(...)` / `controlPlane.update(...)` with no ArkOrder import stay silent, and so do `new Map().set(...)` or `prisma.x.update(...)` in the plane-root file.
 - **Fix:** Use release() for the first freeze of ξ. Later pattern change is proposeRelease then apply(ProposeResult). Never update/patch/set. Never mechanical-safe.
 
 <a id="ARKORDER_TOO_MANY_PARAMS"></a>
@@ -464,7 +503,7 @@ Haken slaving: few slow keys (ξ) determine derived fast state. Field ingest nev
 
 **ingest assigned into ξ**
 
-- **Why:** An ingest() result is written into a Release or ξ store. ingest may absorb, escalate_up, or hold; it never mints a pattern.
+- **Why:** An ingest() result is written into a Release or ξ store. ingest may absorb, escalate_up, or hold; it never mints a pattern. Static evidence is a whole-word `xi` / `release` / `pattern` / `house` / `current` holder, an `xi` camelCase head (`xiNext`), or a `…Xi` / `…Release` / `…Pattern` tail (`nextXi`, `currentRelease`), as a binding or a property write such as `store.xi =` / `this.nextXi =`. Names that only start with those words (`currentResidual`, `patternResult`, `releaseState`) and comparisons (`===`) are not evidence — a deliberate false negative.
 - **Fix:** Keep ingest results as absorb/escalate_up/hold only. Change ξ with proposeRelease then apply(ProposeResult). Never mechanical-safe.
 
 <a id="ARKORDER_XI_FIELD_WRITE"></a>
@@ -473,7 +512,7 @@ Haken slaving: few slow keys (ξ) determine derived fast state. Field ingest nev
 
 **Slow key written around the order plane**
 
-- **Why:** A managed-layer file imports a persistence driver and writes a declared arkOrder.xiKeys name. Field events absorb or escalate; they do not PATCH the slow pattern.
+- **Why:** A managed-layer file imports a persistence driver and writes a declared arkOrder.xiKeys name. Field events absorb or escalate; they do not PATCH the slow pattern. The write must go through a persistence client: `db` / `tx` / `client` / `prisma` / `drizzle`, an inline `new PrismaClient()` / `drizzle(...)`, a name bound in the file to a driver constructor (`const orm = new PrismaClient()`, a class field, or `this.orm = ...`), a name annotated with a driver client type (`constructor(private readonly orm: PrismaClient)`), or a named import from a local `db` / `database` / `prisma` / `drizzle` / `orm` module. `repo.update(...)` and a client from any other module name are not evidence.
 - **Fix:** Keep invoices, seats, hours, and logs on ingest. Change the slow key with proposeRelease then apply(ProposeResult), then preflight again. Never mechanical-safe.
 
 <a id="ARKORDER_INFORMATION_BUDGET"></a>
@@ -482,7 +521,7 @@ Haken slaving: few slow keys (ξ) determine derived fast state. Field ingest nev
 
 **Projection observes a forbidden kind**
 
-- **Why:** h(ξ) allowedKinds includes a kind listed in informationBudget.cannotObserve. A scale may not look at what it was told not to see.
+- **Why:** h(ξ) allowedKinds includes a kind listed in informationBudget.cannotObserve. A scale may not look at what it was told not to see. Static sensor (`arkorder-information-budget`): a literal `allowedKinds: [...]` entry that a literal `cannotObserve: [...]` denies, in a file that calls createOrderPlane; computed arrays stay silent. Runtime: release, proposeRelease, apply, refreshSigma, and restore throw before the Release is offered or persisted; project and ingest re-check.
 - **Fix:** Cut that kind from the projector or from cannotObserve, then preflight again. Never mechanical-safe.
 
 <a id="ARKORDER_XI_TTL"></a>
@@ -491,7 +530,7 @@ Haken slaving: few slow keys (ξ) determine derived fast state. Field ingest nev
 
 **Slow key carries a freshness field**
 
-- **Why:** ξ named ttl/freshUntil/maxAge. Freshness belongs on σ. A slow parameter that expires per transaction is not slow.
+- **Why:** ξ named ttl/freshUntil/maxAge. Freshness belongs on σ. A slow parameter that expires per transaction is not slow. Static sensor (`arkorder-xi-ttl`): such a key (including shorthand `{ plan, ttl }`) in the ξ literal (first argument) of `plane.release({...})` / `plane.proposeRelease({...})` on a plane receiver (same evidence as `ARKORDER_GENERIC_UPDATE`); σ (second argument) may carry freshUntil. The runtime plane throws the same code.
 - **Fix:** Move freshness onto σ (freshUntil) and keep ξ stable, then preflight again. Never mechanical-safe.
 
 <a id="ARKORDER_STALE_SIGMA"></a>
@@ -500,7 +539,7 @@ Haken slaving: few slow keys (ξ) determine derived fast state. Field ingest nev
 
 **σ is stale**
 
-- **Why:** ingest ran after σ.freshUntil (or sigmaMaxAgeMs). ξ does not TTL.
+- **Why:** ingest ran after σ.freshUntil (or sigmaMaxAgeMs). ξ does not TTL. A numeric σ.freshUntil is honored on its own and wins over sigmaMaxAgeMs. Runtime only: ingest returns `hold` with reason `stale-sigma`; this is not a static sensor and `arkOrder.mode` does not promote it.
 - **Fix:** Call refreshSigma and ingest again, or proposeRelease then apply(ProposeResult) if the pattern changed. Never mechanical-safe.
 
 <a id="ARKORDER_UNVALVED_RELEASE"></a>
@@ -511,6 +550,17 @@ Haken slaving: few slow keys (ξ) determine derived fast state. Field ingest nev
 
 - **Why:** release() already froze the big choice. A later release() with a different value does not land. First freeze is release(); later change is proposeRelease then apply.
 - **Fix:** Change the choice with proposeRelease then apply. release() is only the first freeze. Never mechanical-safe.
+
+`restore()` raises the same code on a live plane when the Release would change ξ or carry a version other than the current one or the next one (no rollback, no jump).
+
+<a id="ARKORDER_STALE_PROPOSAL"></a>
+
+### `ARKORDER_STALE_PROPOSAL`
+
+**Proposal is not bound to the current Release**
+
+- **Why:** apply() got a ProposeResult computed against another Release (another apply landed first), one missing its base binding, or one whose reviewed blast radius is not the transition that would commit. The binding is data, not a capability: a proposal that states the current base and the exact transition applies whoever built it. Runtime only.
+- **Fix:** Run proposeRelease again against the current Release, review the new blast radius, then apply that proposal. Never mechanical-safe.
 
 ## Atomic preflight and change sets
 
@@ -604,6 +654,15 @@ Haken slaving: few slow keys (ξ) determine derived fast state. Field ingest nev
 - **Why:** The host/MCP path could not run the atomic preflight engine (missing facts, incomplete setup, or unsupported mode).
 - **Fix:** Use resolved-candidate facts / ark_prepare_change with a complete batch, or fall back to ark-check on disk. Do not treat missing preflight as green.
 
+<a id="WRITE_GATE_UNAVAILABLE"></a>
+
+### `WRITE_GATE_UNAVAILABLE`
+
+**Write gate could not run**
+
+- **Why:** The write gate could not load its own inputs (`ark.config.json` missing, unreadable, or invalid; a referenced ArkRules file missing or invalid; or the built library missing), so it cannot judge this governed source write (existing files included), or a write would leave `ark.config.json` or a referenced ArkRules file unloadable. No checker, no write: the hook blocks instead of letting the write through unchecked.
+- **Fix:** Fix the reported input (repair `ark.config.json` or the ArkRules file, or run `npm run build` / reinstall arkgate from npm), then retry the same write. Do not remove the hook to get past it.
+
 <a id="DESIGN_SMELL_REGRESSION"></a>
 
 ### `DESIGN_SMELL_REGRESSION`
@@ -631,7 +690,7 @@ Haken slaving: few slow keys (ξ) determine derived fast state. Field ingest nev
 **Lexical evidence incomplete**
 
 - **Why:** This check only saw one file, so it cannot fully prove how the import resolves. The result is provisional — `ark-check` on the project is the authority.
-- **Fix:** Run `npx arkgate-check --root . --config ark.config.json` to confirm. Do not call `ark_prepare_change` from a hook deny.
+- **Fix:** For a complete verdict, run `npx arkgate-check --root . --config ark.config.json` (or `ark_prepare_change` over MCP with the full candidate batch). Read `lexicalValid` for the one-file result. The write hook adds its own hook-only note to its deny text.
 
 <a id="ANALYSIS_COVERS_NO_FILES"></a>
 
@@ -913,10 +972,10 @@ never opting out of knowing.
 
 ### `CONFIG_CHILD_SLICES_VERSION`
 
-**childSlices needs a newer arkgate**
+**Config needs a newer arkgate than a pinned copy**
 
-- **Why:** The rule schema sets additionalProperties to false. arkgate 4.8.22 and older reject a config that contains childSlices instead of ignoring the key.
-- **Fix:** Pin arkgate newer than 4.8.22 before shipping a config that sets childSlices. This warning does not fail the check.
+- **Why:** `ark.config.json` uses a slice key (`childSlices`, `sharedImportsSlice` `"deny-cross-parent"` or its object form, `sliceIdentity`, `sharedImportsSlice`, `childSlices.message`, `siblings.ratchet`) that an arkgate pinned in this repo rejects at config load. Emitted only with evidence of that pin: an exact `package.json` dependency, the installed `node_modules/arkgate`, `package-lock.json`, a `scripts/*hook*` or host hook command, or a CI workflow. Silent otherwise. The finding's location is that file and line.
+- **Fix:** Bump the named file to the version the finding's `nextAction` gives (or newer), then run Ark again. This warning does not fail the check.
 
 <a id="CONFIG_CHILD_SLICE_EXTENDS"></a>
 
@@ -935,6 +994,24 @@ never opting out of knowing.
 
 - **Why:** childSlices.allowedCrossSlice names a pattern that can match two universes. That list clears only a sibling crossing inside one universe. The universe wall still denies the edge.
 - **Fix:** Narrow the pattern so both sides share one universe prefix (features/projects/* to features/projects/d2d-item), or remove the entry. This warning does not fail the check.
+
+<a id="CONFIG_CHILD_SLICES_INERT"></a>
+
+### `CONFIG_CHILD_SLICES_INERT`
+
+**childSlices on a rule that cannot run it**
+
+- **Why:** A rule sets childSlices without peerIsolation: true and allowed: false. The child wall runs only inside a universe wall, so on this rule childSlices enforces nothing. Config load still accepts it (arkgate 4.8.23 did too).
+- **Fix:** Add "peerIsolation": true and "allowed": false to the same rule so the child wall runs, or remove childSlices. This warning does not fail the check.
+
+<a id="CONFIG_SLICE_LEGACY_STARS_ID"></a>
+
+### `CONFIG_SLICE_LEGACY_STARS_ID`
+
+**Slice id written in the 4.8.23 stars form**
+
+- **Why:** Under sliceIdentity "stars", a sliceAliases target or an allowedCrossSlice entry names the 4.8.23 stars id, which dropped a star binding before the last literal (modules/*/api/* bound api/v1). The id now keeps that binding (orders/api/v1). For one release the entry keeps its 4.8.23 meaning, so verdicts do not change.
+- **Fix:** Rewrite the entry with the new id the warning names (for example orders/api/v1/x instead of api/v1/x). A sliceAliases target that maps to more than one universe shape is rejected at config load. This warning does not fail the check.
 
 ## Meta
 

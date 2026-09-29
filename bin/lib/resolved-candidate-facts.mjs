@@ -36,16 +36,21 @@ import {
 import { provePortProofInject } from './port-proof.mjs';
 import { extractClassShapesFromSource } from './arkrules-sensors.mjs';
 import {
+  arkRunEffectiveIntentPrefixes,
+  createArkRunKernelRootSpecifierMatcher,
   extractArkRunDeclarationsFromSource,
+  reexportsArkRunKernelRoot,
   extractArkRunKernelCallsFromSource,
   extractArkRunManagedNewsFromSource,
 } from './ark-run-facts.mjs';
 import {
+  extractArkOrderBudgetLeaksFromSource,
   extractArkOrderGenericUpdatesFromSource,
   extractArkOrderIngestWritesXiFromSource,
   extractArkOrderPlaneCallsFromSource,
   extractArkOrderReleaseKeyCountsFromSource,
   extractArkOrderXiFieldWritesFromSource,
+  extractArkOrderXiTtlKeysFromSource,
 } from './ark-order-facts.mjs';
 import {
   collectGovernedFiles,
@@ -89,6 +94,17 @@ function canonicalProjectPath(value) {
   return normalized;
 }
 
+/**
+ * `path.resolve` that reuses an equal string instead of allocating a copy, so
+ * one file's absolute/real path is one string across the resolver's maps.
+ * `sameAs` lets a real path that equals the lexical path share that instance.
+ */
+function resolvedPath(value, sameAs) {
+  const resolved = path.resolve(value);
+  if (sameAs !== undefined && resolved === sameAs) return sameAs;
+  return resolved === value ? value : resolved;
+}
+
 function isInsideRoot(root, target) {
   const relative = path.relative(root, target);
   return (
@@ -129,13 +145,13 @@ function readPackageName(root, observeInput) {
 function rememberCanonicalAlias(aliases, real, relative, absolute) {
   const current = aliases.get(real);
   if (!current || relative < current.relative) {
-    aliases.set(real, { relative, absolute: path.resolve(absolute) });
+    aliases.set(real, { relative, absolute: resolvedPath(absolute) });
   }
 }
 
 function rememberDirectoryAlias(aliases, real, relative, absolute) {
   const current = aliases.get(real) ?? new Map();
-  if (!current.has(relative)) current.set(relative, { relative, absolute: path.resolve(absolute) });
+  if (!current.has(relative)) current.set(relative, { relative, absolute: resolvedPath(absolute) });
   aliases.set(real, current);
 }
 
@@ -244,10 +260,20 @@ function discoverScopedFiles(root, config, scopeRelatives, observeInput) {
   );
 }
 
-function collectCandidateFiles(root, config, changes, observeInput, scopeRelatives) {
+function collectCandidateFiles(
+  root,
+  config,
+  changes,
+  observeInput,
+  scopeRelatives,
+  { readContents = true } = {}
+) {
   const files = new Map();
   const directoryAliases = new Map();
   const expandedAliasDirectories = new Set();
+  // The walk already resolved each file's real path; reuse it instead of a
+  // second realpath per file.
+  const walkedRealpaths = new Map();
   const discovered = Array.isArray(scopeRelatives)
     ? discoverScopedFiles(root, config, scopeRelatives, observeInput)
     : (config.include ?? [])
@@ -259,13 +285,16 @@ function collectCandidateFiles(root, config, changes, observeInput, scopeRelativ
               if (relative === '.') relative = '';
               rememberDirectoryAlias(directoryAliases, real, relative, absolute);
             },
+            onFile(absolute, real) {
+              walkedRealpaths.set(absolute, real);
+            },
           })
         )
         .map((absolute) => {
           observeResolvedInput(observeInput, absolute, 'realpath');
           return {
             absolute,
-            real: fs.realpathSync(absolute),
+            real: walkedRealpaths.get(absolute) ?? fs.realpathSync(absolute),
             relative: canonicalProjectPath(normalize(path.relative(root, absolute))),
           };
         })
@@ -306,12 +335,14 @@ function collectCandidateFiles(root, config, changes, observeInput, scopeRelativ
     }
   }
   for (const { absolute, real, relative } of canonicalByRealpath.values()) {
-    observeResolvedInput(observeInput, absolute, 'source');
+    // Path-only callers (overlay canonicalization, tsconfig closure) never read
+    // source text: do not load every file's contents for them.
+    if (readContents) observeResolvedInput(observeInput, absolute, 'source');
     files.set(relative, {
       path: relative,
-      absolute: path.resolve(absolute),
-      real: path.resolve(real),
-      content: fs.readFileSync(absolute, 'utf8'),
+      absolute: resolvedPath(absolute),
+      real: resolvedPath(real, absolute),
+      ...(readContents ? { content: fs.readFileSync(absolute, 'utf8') } : {}),
     });
   }
 
@@ -364,7 +395,9 @@ function collectCandidateFiles(root, config, changes, observeInput, scopeRelativ
 /** Canonicalize a Tooling overlay without exposing filesystem identity to Kernel. */
 export function canonicalizeCandidateChanges({ root, config, changes = [] }) {
   const canonicalRoot = fs.realpathSync(root);
-  return collectCandidateFiles(canonicalRoot, config, changes).changes.map((change) =>
+  return collectCandidateFiles(canonicalRoot, config, changes, undefined, undefined, {
+    readContents: false,
+  }).changes.map((change) =>
     change.delete === true
       ? { path: change.path, delete: true }
       : { path: change.path, content: change.content }
@@ -390,13 +423,17 @@ function createOverlayModuleHost(ts, root, files, changes, observeInput) {
   const rememberVirtualDirectories = (absolute) => {
     let directory = path.dirname(absolute);
     while (isInsideRoot(root, directory)) {
-      virtualDirectories.add(path.resolve(directory));
-      if (path.resolve(directory) === root) break;
+      const resolved = path.resolve(directory);
+      // Every walk records the whole chain up to root, so a known directory
+      // already has all of its ancestors: stop instead of re-walking to root.
+      if (virtualDirectories.has(resolved) && resolved !== root) break;
+      virtualDirectories.add(resolved);
+      if (resolved === root) break;
       directory = path.dirname(directory);
     }
   };
   const remember = (absolute, file) => {
-    const key = path.resolve(absolute);
+    const key = resolvedPath(absolute);
     byAbsolute.set(key, file);
     pathByAbsolute.set(key, file.path);
     rememberVirtualDirectories(key);
@@ -442,7 +479,9 @@ function createOverlayModuleHost(ts, root, files, changes, observeInput) {
     observeResolvedInput(observeInput, absolute, 'module-read');
     if (deleted.has(absolute)) return undefined;
     const candidate = byAbsolute.get(absolute);
-    if (candidate) return candidate.content;
+    // Overlay candidates carry their proposed text. On-disk candidates are read
+    // lazily (their text is not held for the whole resolution).
+    if (typeof candidate?.content === 'string') return candidate.content;
     if (sys?.readFile) return sys.readFile(fileName);
     try {
       return fs.readFileSync(fileName, 'utf8');
@@ -495,6 +534,13 @@ function createOverlayModuleHost(ts, root, files, changes, observeInput) {
   };
 
   return {
+    /** Drop the per-file lookup tables once module resolution is finished. */
+    dispose() {
+      byAbsolute.clear();
+      pathByAbsolute.clear();
+      deleted.clear();
+      virtualDirectories.clear();
+    },
     fileExists,
     readFile,
     directoryExists,
@@ -597,7 +643,7 @@ function compilerContext(ts, root, tsconfig, candidateFiles, observeInput) {
   const configByFile = new Map();
   const nearestConfigByDirectory = new Map();
   if (explicitPath) {
-    for (const file of candidateFiles) configByFile.set(path.resolve(file.absolute), explicitPath);
+    for (const file of candidateFiles) configByFile.set(resolvedPath(file.absolute), explicitPath);
   } else if (!explicitPath) {
     for (const file of candidateFiles) {
       const nearest = nearestTsconfig(
@@ -606,7 +652,7 @@ function compilerContext(ts, root, tsconfig, candidateFiles, observeInput) {
         nearestConfigByDirectory,
         observeInput
       );
-      if (nearest) configByFile.set(path.resolve(file.absolute), nearest);
+      if (nearest) configByFile.set(resolvedPath(file.absolute), nearest);
     }
   }
   const configPaths = [...new Set(configByFile.values())].sort((left, right) => {
@@ -678,7 +724,7 @@ function compilerContext(ts, root, tsconfig, candidateFiles, observeInput) {
   };
   for (const configPath of configPaths) loadConfigOptions(configPath);
 
-  const optionsFor = (fileName) => {
+  const configPathFor = (fileName) => {
     const resolved = path.resolve(fileName);
     let configPath = configByFile.get(resolved);
     if (!configPath) {
@@ -686,6 +732,10 @@ function compilerContext(ts, root, tsconfig, candidateFiles, observeInput) {
         ?? nearestTsconfig(root, resolved, nearestConfigByDirectory, observeInput);
       if (configPath) configByFile.set(resolved, configPath);
     }
+    return configPath;
+  };
+  const optionsFor = (fileName) => {
+    const configPath = configPathFor(fileName);
     return configPath ? loadConfigOptions(configPath) ?? {} : {};
   };
   const configs = configPaths.map((configPath) => ({
@@ -713,6 +763,8 @@ function compilerContext(ts, root, tsconfig, candidateFiles, observeInput) {
     .sort();
   return {
     optionsFor,
+    /** Options are a function of the governing tsconfig path ('' = none). */
+    optionsKeyFor: (fileName) => configPathFor(fileName) ?? '',
     reasons,
     configInputPaths,
     tsconfigHash: deterministicHash(stableSerialize(configClosure)),
@@ -734,7 +786,9 @@ export function resolvedCompilerInputPaths({
   if (!ts?.readConfigFile || !ts?.parseJsonConfigFileContent) return [];
   observeResolvedInput(observeInput, root, 'realpath');
   const canonicalRoot = fs.realpathSync(root);
-  const candidate = collectCandidateFiles(canonicalRoot, config, changes, observeInput);
+  const candidate = collectCandidateFiles(canonicalRoot, config, changes, observeInput, undefined, {
+    readContents: false,
+  });
   return compilerContext(ts, canonicalRoot, tsconfig, candidate.files, observeInput)
     .configInputPaths;
 }
@@ -1081,6 +1135,30 @@ function unavailableFacts(config, ts, reason) {
   });
 }
 
+const SOURCE_READ_FAILURE = Symbol('ark.sourceReadFailure');
+
+/**
+ * Share per-file parse results between resolutions of one config (a base tree
+ * and its overlay candidate). Pass the same object to both calls; it is only
+ * used while `config` is the identical object.
+ */
+export function createResolverIngestCache(config) {
+  return { config, records: new Map() };
+}
+
+/** Overlay text when present; otherwise read the on-disk source now (not held afterwards). */
+function readCandidateSource(candidate, observeInput) {
+  if (typeof candidate.content === 'string') return candidate.content;
+  observeResolvedInput(observeInput, candidate.absolute, 'source');
+  try {
+    return fs.readFileSync(candidate.absolute, 'utf8');
+  } catch (error) {
+    const failure = error instanceof Error ? error : new Error(String(error));
+    failure[SOURCE_READ_FAILURE] = true;
+    throw failure;
+  }
+}
+
 function loadOneCandidateFile(root, config, relative, observeInput) {
   const discovered = discoverScopedFiles(root, config, [relative], observeInput);
   const found = discovered[0];
@@ -1088,8 +1166,8 @@ function loadOneCandidateFile(root, config, relative, observeInput) {
   observeResolvedInput(observeInput, found.absolute, 'source');
   return {
     path: found.relative,
-    absolute: path.resolve(found.absolute),
-    real: path.resolve(found.real),
+    absolute: resolvedPath(found.absolute),
+    real: resolvedPath(found.real, found.absolute),
     content: fs.readFileSync(found.absolute, 'utf8'),
   };
 }
@@ -1103,6 +1181,7 @@ export function resolveCandidateFacts({
   changes = [],
   observeInput,
   scopeFiles,
+  ingestCache,
 }) {
   if (!ts?.createSourceFile || !ts?.resolveModuleName) {
     return unavailableFacts(config, ts, 'No API-compatible TypeScript resolver is available.');
@@ -1116,12 +1195,15 @@ export function resolveCandidateFacts({
   try {
     observeResolvedInput(observeInput, root, 'realpath');
     canonicalRoot = fs.realpathSync(root);
+    // Source text is read one file at a time in `ingest` and released after it,
+    // instead of holding every file's text for the whole resolution.
     const candidate = collectCandidateFiles(
       canonicalRoot,
       config,
       changes,
       observeInput,
-      scoped ? scopeFiles : undefined
+      scoped ? scopeFiles : undefined,
+      { readContents: false }
     );
     candidateFiles = candidate.files;
     canonicalChanges = candidate.changes;
@@ -1141,6 +1223,28 @@ export function resolveCandidateFacts({
     canonicalChanges,
     observeInput
   );
+  // TypeScript resolves a specifier from its containing directory (its own
+  // module cache is keyed the same way), and this run's host never changes.
+  // Resolve each (tsconfig, directory, specifier) once instead of once per
+  // importing file: a shared `react` or `@/lib/x` no longer re-walks every
+  // ancestor node_modules for each file. Only the small verdict is kept.
+  const resolutionMemo = new Map();
+  const resolveOnce = (dependency, containingFile) => {
+    if (!dependency.specifier) return resolveDependency(ts, dependency, containingFile, {}, host);
+    const key = `${compiler.optionsKeyFor(containingFile)}\0${path.dirname(containingFile)}\0${dependency.specifier}`;
+    let resolved = resolutionMemo.get(key);
+    if (!resolved) {
+      resolved = resolveDependency(
+        ts,
+        dependency,
+        containingFile,
+        compiler.optionsFor(containingFile),
+        host
+      );
+      resolutionMemo.set(key, resolved);
+    }
+    return resolved;
+  };
   const forbiddenGlobals = [
     ...new Set([
       ...AMBIENT_CAPABILITY_ENTRIES,
@@ -1168,6 +1272,8 @@ export function resolveCandidateFacts({
   const arkOrderXiFieldWrites = [];
   const arkOrderIngestWritesXi = [];
   const arkOrderReleaseKeyCounts = [];
+  const arkOrderXiTtlKeys = [];
+  const arkOrderBudgetLeaks = [];
   const arkRunActive = config.arkRun != null && typeof config.arkRun === 'object';
   const arkOrderActive = config.arkOrder != null && typeof config.arkOrder === 'object';
   const arkRulesActive =
@@ -1178,13 +1284,21 @@ export function resolveCandidateFacts({
   const compositionRootPatterns = arkRunActive
     ? [...(config.arkRun?.compositionRoots ?? [])]
     : [];
+  // Identifiers imported from a kernel root module are traced kernel receivers.
+  const kernelRootPatterns = arkRunActive
+    ? [...(config.arkRun?.kernelRoots ?? config.arkRun?.compositionRoots ?? [])]
+    : [];
   const planeRootPatterns = arkOrderActive ? [...(config.arkOrder?.planeRoots ?? [])] : [];
 
   const seedPathSet = new Set(candidateFiles.map((file) => file.path));
-  const ingest = (candidate, fullExtract) => {
+  const ingestFresh = (candidate, fullExtract, knownContent) => {
+    const content = knownContent ?? readCandidateSource(candidate, observeInput);
+    // Keep the text only when a later pass re-reads it (ArkRun kernel calls, kernel-root
+    // barrels and managed-new facts).
+    if (arkRunActive && candidate.content === undefined) candidate.content = content;
     const sourceFile = ts.createSourceFile(
       candidate.absolute,
-      candidate.content,
+      content,
       ts.ScriptTarget.Latest,
       true,
       ts.getScriptKindFromFileName?.(candidate.absolute)
@@ -1199,10 +1313,10 @@ export function resolveCandidateFacts({
       namedBindings: namedModuleBindings(ts, node),
     }));
     let portProofEligible = false;
-    if (/\bimport\s*\{[^}]+\}\s*from\s*['"]\.\.?\//.test(candidate.content)) {
+    if (/\bimport\s*\{[^}]+\}\s*from\s*['"]\.\.?\//.test(content)) {
       try {
         portProofEligible = Boolean(
-          provePortProofInject(ts, candidate.content, { filePath: candidate.absolute, sourceFile })
+          provePortProofInject(ts, content, { filePath: candidate.absolute, sourceFile })
             .eligible
         );
       } catch {
@@ -1219,7 +1333,7 @@ export function resolveCandidateFacts({
     });
     files.push({
       path: candidate.path,
-      contentHash: deterministicHash(candidate.content),
+      contentHash: deterministicHash(content),
       parseStatus: parseDiagnosticCount === 0 ? 'parsed' : 'invalid',
       parseDiagnosticCount,
       exportsOnlyTypes,
@@ -1260,7 +1374,7 @@ export function resolveCandidateFacts({
     publishCalls.push(...policy.publishCalls);
     intentReferences.push(...policy.intentReferences);
     safetyUses.push(
-      ...collectSafetyUses(ts, sourceFile, candidate.path, candidate.content, semanticDependencies)
+      ...collectSafetyUses(ts, sourceFile, candidate.path, content, semanticDependencies)
     );
     // Class-shape extraction is text-conservative (false negatives over false positives).
     // Only TS/TSX candidates; sensors consume the same shape via facts.classShapes.
@@ -1268,22 +1382,17 @@ export function resolveCandidateFacts({
     if (/\.(tsx?|mts|cts)$/i.test(candidate.path)) {
       if (arkRulesActive || arkRunActive) {
         try {
-          classShapes.push(...extractClassShapesFromSource(candidate.path, candidate.content));
+          classShapes.push(...extractClassShapesFromSource(candidate.path, content));
         } catch {
           // Never fail the resolver for shape extraction; sensors stay silent on this file.
         }
       }
       if (arkRunActive) {
-        try {
-          arkRunKernelCalls.push(
-            ...extractArkRunKernelCallsFromSource(candidate.path, candidate.content)
-          );
-        } catch {
-          // Never fail the resolver for ArkRun call extraction.
-        }
+        // Kernel calls are extracted after every file is parsed, so imports of a
+        // kernel root resolve through tsconfig paths and barrel re-exports.
         try {
           arkRunDeclarations.push(
-            ...extractArkRunDeclarationsFromSource(candidate.path, candidate.content)
+            ...extractArkRunDeclarationsFromSource(candidate.path, content)
           );
         } catch {
           // Never fail the resolver for ArkRun declaration extraction.
@@ -1292,44 +1401,125 @@ export function resolveCandidateFacts({
       if (arkOrderActive) {
         try {
           arkOrderPlaneCalls.push(
-            ...extractArkOrderPlaneCallsFromSource(candidate.path, candidate.content)
+            ...extractArkOrderPlaneCallsFromSource(candidate.path, content)
           );
         } catch {
           // Never fail the resolver for ArkOrder factory extraction.
         }
         try {
           arkOrderGenericUpdates.push(
-            ...extractArkOrderGenericUpdatesFromSource(candidate.path, candidate.content)
+            ...extractArkOrderGenericUpdatesFromSource(candidate.path, content, {
+              planeRoots: planeRootPatterns,
+            })
           );
         } catch {
           // Never fail the resolver for ArkOrder generic-update extraction.
         }
         try {
           arkOrderXiFieldWrites.push(
-            ...extractArkOrderXiFieldWritesFromSource(candidate.path, candidate.content, xiKeys)
+            ...extractArkOrderXiFieldWritesFromSource(candidate.path, content, xiKeys)
           );
         } catch {
           // Never fail the resolver for ArkOrder xi-field-write extraction.
         }
         try {
           arkOrderIngestWritesXi.push(
-            ...extractArkOrderIngestWritesXiFromSource(candidate.path, candidate.content)
+            ...extractArkOrderIngestWritesXiFromSource(candidate.path, content)
           );
         } catch {
           // Never fail the resolver for ArkOrder ingest-writes-ξ extraction.
         }
         try {
           arkOrderReleaseKeyCounts.push(
-            ...extractArkOrderReleaseKeyCountsFromSource(candidate.path, candidate.content)
+            ...extractArkOrderReleaseKeyCountsFromSource(candidate.path, content)
           );
         } catch {
           // Never fail the resolver for ArkOrder release key-count extraction.
+        }
+        try {
+          arkOrderXiTtlKeys.push(
+            ...extractArkOrderXiTtlKeysFromSource(candidate.path, content, {
+              planeRoots: planeRootPatterns,
+            })
+          );
+        } catch {
+          // Never fail the resolver for ArkOrder ξ-TTL extraction.
+        }
+        try {
+          arkOrderBudgetLeaks.push(
+            ...extractArkOrderBudgetLeaksFromSource(candidate.path, content)
+          );
+        } catch {
+          // Never fail the resolver for ArkOrder information-budget extraction.
         }
       }
     }
   };
 
-  for (const candidate of candidateFiles) ingest(candidate, true);
+  // Per-file facts depend only on (config, path, text). A base/candidate pair
+  // (atomic preflight) shares one cache: every file the overlay does not touch
+  // is parsed once, not twice. Overlay files are never cached or reused.
+  const accumulators = {
+    completenessReasons,
+    files,
+    capabilityUses,
+    ambientUses,
+    publishCalls,
+    intentReferences,
+    safetyUses,
+    classShapes,
+    arkRunDeclarations,
+    arkOrderPlaneCalls,
+    arkOrderGenericUpdates,
+    arkOrderXiFieldWrites,
+    arkOrderIngestWritesXi,
+    arkOrderReleaseKeyCounts,
+    arkOrderXiTtlKeys,
+    arkOrderBudgetLeaks,
+  };
+  const accumulatorNames = Object.keys(accumulators);
+  const reusable = ingestCache?.config === config ? ingestCache.records : undefined;
+  const ingest = (candidate, fullExtract) => {
+    if (!reusable || !fullExtract || typeof candidate.content === 'string') {
+      ingestFresh(candidate, fullExtract);
+      return;
+    }
+    const content = readCandidateSource(candidate, observeInput);
+    const contentHash = deterministicHash(content);
+    const cached = reusable.get(candidate.path);
+    if (cached && cached.absolute === candidate.absolute && cached.contentHash === contentHash) {
+      if (arkRunActive) candidate.content = content;
+      parsed.set(candidate.path, { ...cached.parsed, candidate });
+      for (const name of accumulatorNames) {
+        const slice = cached.slices[name];
+        if (slice) accumulators[name].push(...slice);
+      }
+      return;
+    }
+    const before = accumulatorNames.map((name) => accumulators[name].length);
+    ingestFresh(candidate, fullExtract, content);
+    const slices = {};
+    accumulatorNames.forEach((name, index) => {
+      if (accumulators[name].length > before[index]) {
+        slices[name] = accumulators[name].slice(before[index]);
+      }
+    });
+    const { candidate: _candidate, ...parsedFacts } = parsed.get(candidate.path);
+    reusable.set(candidate.path, {
+      absolute: candidate.absolute,
+      contentHash,
+      parsed: parsedFacts,
+      slices,
+    });
+  };
+
+  try {
+    for (const candidate of candidateFiles) ingest(candidate, true);
+  } catch (error) {
+    // Same outcome as the former eager read inside the discovery try-block.
+    if (error?.[SOURCE_READ_FAILURE] !== true) throw error;
+    return unavailableFacts(config, ts, error.message);
+  }
 
   if (scoped) {
     const loaded = new Set(candidateFiles.map((file) => file.path));
@@ -1340,13 +1530,7 @@ export function resolveCandidateFacts({
         const parsedFile = parsed.get(source.path);
         if (!parsedFile) continue;
         for (const dependency of parsedFile.dependencies) {
-          const resolved = resolveDependency(
-            ts,
-            dependency,
-            parsedFile.candidate.absolute,
-            compiler.optionsFor(parsedFile.candidate.absolute),
-            host
-          );
+          const resolved = resolveOnce(dependency, parsedFile.candidate.absolute);
           if (resolved.resolution !== 'resolved-project' || !resolved.target) continue;
           if (loaded.has(resolved.target)) continue;
           const extra = loadOneCandidateFile(
@@ -1369,6 +1553,27 @@ export function resolveCandidateFacts({
   const extractCandidates = scoped
     ? candidateFiles.filter((file) => seedPathSet.has(file.path))
     : candidateFiles;
+  if (arkRunActive) {
+    const rootMatcherFor = arkRunKernelRootMatchers({
+      parsed,
+      patterns: kernelRootPatterns,
+      resolveTarget: (file, dependency) => resolveOnce(dependency, file.candidate.absolute),
+    });
+    const intentPrefixes = arkRunEffectiveIntentPrefixes(config);
+    for (const candidate of extractCandidates) {
+      if (!/\.(tsx?|mts|cts)$/i.test(candidate.path)) continue;
+      try {
+        arkRunKernelCalls.push(
+          ...extractArkRunKernelCallsFromSource(candidate.path, candidate.content, {
+            isKernelRootSpecifier: rootMatcherFor(candidate.path),
+            intentPrefixes,
+          })
+        );
+      } catch {
+        // Never fail the resolver for ArkRun call extraction.
+      }
+    }
+  }
   const admittedTypeNames = new Set(classShapes.map((shape) => shape.className));
   if (arkRunActive) {
     for (const candidate of extractCandidates) {
@@ -1428,13 +1633,7 @@ export function resolveCandidateFacts({
   const dependencies = [];
   for (const source of parsed.values()) {
     for (const dependency of source.dependencies) {
-      const resolved = resolveDependency(
-        ts,
-        dependency,
-        source.candidate.absolute,
-        compiler.optionsFor(source.candidate.absolute),
-        host
-      );
+      const resolved = resolveOnce(dependency, source.candidate.absolute);
       if (resolved.resolverFailed) {
         completenessReasons.push({
           code: 'MODULE_RESOLUTION_FAILURE',
@@ -1486,6 +1685,11 @@ export function resolveCandidateFacts({
   }
 
   const projectPackageName = readPackageName(canonicalRoot, observeInput);
+  // Canonicalization copies every fact. Release the per-file parse records and
+  // the module host (closures keep them reachable) before that copy is built.
+  parsed.clear();
+  resolutionMemo.clear();
+  host.dispose();
   return createTrustedResolvedCandidateFacts({
     schemaVersion: '1.2',
     completeness: completenessReasons.length === 0 ? 'complete' : 'partial',
@@ -1514,5 +1718,61 @@ export function resolveCandidateFacts({
     arkOrderXiFieldWrites,
     arkOrderIngestWritesXi,
     arkOrderReleaseKeyCounts,
+    arkOrderXiTtlKeys,
+    arkOrderBudgetLeaks,
   });
+}
+
+/**
+ * Per-file predicate: does an import specifier reach an ArkRun kernel root?
+ * Uses real module resolution (tsconfig `paths`, package links) plus the
+ * relative-glob fallback, and treats barrels that re-export a root as roots
+ * (fixpoint), so `import { ark } from '@/main'` or a re-exporting index is traced.
+ */
+function arkRunKernelRootMatchers({ parsed, patterns, resolveTarget }) {
+  const regexes = [];
+  for (const pattern of patterns) {
+    try {
+      regexes.push(globToRegExp(pattern));
+    } catch {
+      // Invalid glob: the relative fallback still applies.
+    }
+  }
+  const roots = new Set([...parsed.keys()].filter((file) => regexes.some((re) => re.test(file))));
+  const targets = new Map();
+  if (patterns.length > 0) {
+    for (const [file, info] of parsed) {
+      const bySpecifier = new Map();
+      for (const dependency of info.dependencies) {
+        if (!dependency.specifier || (dependency.kind !== 'import' && dependency.kind !== 'export')) {
+          continue;
+        }
+        if (bySpecifier.has(dependency.specifier)) continue;
+        const resolved = resolveTarget(info, dependency);
+        if (resolved.resolution === 'resolved-project' && resolved.target) {
+          bySpecifier.set(dependency.specifier, resolved.target);
+        }
+      }
+      targets.set(file, bySpecifier);
+    }
+  }
+  const matcherFor = (file) => {
+    const relative = createArkRunKernelRootSpecifierMatcher(file, patterns);
+    const bySpecifier = targets.get(file);
+    return (specifier) => {
+      const target = bySpecifier?.get(specifier);
+      return target !== undefined ? roots.has(target) : relative(specifier);
+    };
+  };
+  for (let changed = patterns.length > 0; changed; ) {
+    changed = false;
+    for (const [file, info] of parsed) {
+      if (roots.has(file)) continue;
+      if (reexportsArkRunKernelRoot(info.candidate.content, matcherFor(file))) {
+        roots.add(file);
+        changed = true;
+      }
+    }
+  }
+  return matcherFor;
 }

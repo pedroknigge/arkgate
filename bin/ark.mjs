@@ -20,7 +20,9 @@ import {
   resolveOperatingMode,
   shouldSkipArkgateInstall,
 } from './ark-shared.mjs';
-import { pinArkgateDevDependency, FALSE_GREEN_GAP_ID } from './lib/field-install.mjs';
+import { FALSE_GREEN_GAP_ID } from './lib/field-install.mjs';
+
+export { ensureProjectArkgateDependency };
 import { validateHardWriteRequest } from './lib/enforcement-profiles.mjs';
 import {
   applyStartPreview,
@@ -30,7 +32,9 @@ import {
   renderStartPreview,
 } from './lib/start-preview.mjs';
 import {
+  ensureProjectArkgateDependency,
   formatStartPackageInstallFailure,
+  pinArkgateForSetup,
   runStartPackageInstall,
 } from './lib/start-install-recovery.mjs';
 import { runUpgradeCommand } from './lib/upgrade-command.mjs';
@@ -47,50 +51,34 @@ import { runStatusCommand } from './lib/status-command.mjs';
 import { runAgentProjectionCommand } from './lib/agent-projection-command.mjs';
 import { setupUsage, setupUsageAll, upgradeUsage } from './lib/first-run-help.mjs';
 import { runUpstreamReportCommand } from './lib/upstream-report.mjs';
+import {
+  dashboardHelp,
+  isMcpCommand,
+  isPassthroughCommand,
+  runDashboard,
+  runMcp,
+  withDashboardHelp,
+} from './lib/passthrough-commands.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const arkCheck = path.join(here, 'ark-check.mjs');
-const arkDashboard = path.join(here, 'ark-dashboard.mjs');
-const dashboardHelp = `arkgate dashboard (alias ark dashboard) — observability TUI.
-Usage: arkgate dashboard [--url <snapshot-url>] [--interval <ms>]
-Polls an ArkRun inspector; it does not start the kernel.`;
-
-function withDashboardHelp(text, detailed) {
-  const extra = detailed
-    ? '  arkgate dashboard [--url <snapshot-url>] [--interval <ms>]\n  arkgate report  [--root <project>] [--json] [--title <text>] [--finding <ref>] [--submit] [--i-confirm-submit]\n'
-    : '';
-  const extraDesc = detailed
-    ? '  dashboard  ANSI observability TUI (spawns ark-dashboard).\n  report     Draft an upstream GitHub issue for pedroknigge/arkgate. Create needs --submit plus confirm. --yes does not submit.\n'
-    : '';
-  if (detailed) {
-    return text
-      .replace('  arkgate agents-md [--root', `${extra}  arkgate agents-md [--root`)
-      .replace('  agents-md Version-matched', `${extraDesc}  agents-md Version-matched`);
-  }
-  return text.replace(
-    '  arkgate-check --doctor     status — one next step\n',
-    '  arkgate-check --doctor     status — one next step\n  arkgate dashboard         observability TUI (inspector)\n  arkgate report            draft an upstream GitHub issue\n'
-  );
-}
-
-function runDashboard(passthroughArgs) {
-  const result = spawnSync(process.execPath, [arkDashboard, ...passthroughArgs], {
-    stdio: 'inherit',
-    encoding: 'utf8',
-  });
-  return result.status ?? 1;
-}
-
 /**
  * Day-zero architecture picture: freeze origin under `.ark/reports/` as soon as
  * `ark.config.json` exists — **before** agent docs, skills, CI templates, or cleanups.
  * Idempotent: origin is written only once (`--report` archive semantics).
  */
+/**
+ * Day-zero HTML lives under `.ark/reports/`, never as a stray root artifact. The report
+ * writer appends an `.ark/` rule only to an existing `.gitignore` (EH03); a fresh project
+ * without one still sees `.ark/` as untracked.
+ */
+const DAY_ZERO_REPORT_PATH = path.join('.ark', 'reports', 'latest.html');
+
 function freezeDayZeroOrigin(root) {
   const configPath = path.join(root, 'ark.config.json');
   if (!fs.existsSync(configPath)) {
     console.log(
-      `  Skip origin freeze — no ark.config.json yet. After init: ${arkCommand(root, 'ark-check', '--report ark-report.html')}`
+      `  Skip origin freeze — no ark.config.json yet. After init: ${arkCommand(root, 'ark-check', '--report .ark/reports/latest.html')}`
     );
     return;
   }
@@ -102,10 +90,13 @@ function freezeDayZeroOrigin(root) {
       : 'Freezing day-zero architecture picture (origin) before agent docs / gates…'
   );
   runArkCheck(
-    ['--root', root, '--config', 'ark.config.json', '--report', 'ark-report.html'],
+    ['--root', root, '--config', 'ark.config.json', '--report', DAY_ZERO_REPORT_PATH],
     { cwd: root }
   );
 }
+
+/** Commands that read a non-default contract file via --config. */
+const CONFIG_FLAG_COMMANDS = new Set(['preflight', 'status', 'agents-md', 'agent-projection']);
 
 function parseArgs(argv) {
   const args = {
@@ -191,8 +182,8 @@ function parseArgs(argv) {
     else if (arg === '--version' || arg === '-V') args.version = true;
     else if (!arg.startsWith('-') && args.command === undefined) {
       args.command = arg;
-      // Dashboard owns its flags (--url/--interval); pass the rest through untouched.
-      if (arg === 'dashboard' || arg === 'report') {
+      // dashboard / report / mcp own their flags; pass the rest through untouched.
+      if (isPassthroughCommand(arg)) {
         args.passthrough = argv.slice(i + 1);
         break;
       }
@@ -263,33 +254,6 @@ async function askYesNo(rl, question, defaultYes = true) {
   const answer = (await rl.question(`${question}${suffix}`)).trim().toLowerCase();
   if (!answer) return defaultYes;
   return answer === 'y' || answer === 'yes';
-}
-
-/**
- * Pin arkgate in package.json (and optionally run the package manager).
- * start calls this so CI/`npx` is not forced to rely on a stale global install.
- *
- * @param {string} root
- * @param {{ install?: boolean, runPackageManager?: boolean }} [opts]
- */
-export function ensureProjectArkgateDependency(root, opts = {}) {
-  const install = opts.install !== false;
-  const runPm = opts.runPackageManager === true;
-  if (!install) {
-    return { pinned: { changed: false, reason: 'skipped-no-install' }, installStatus: null };
-  }
-  const pinned = pinArkgateDevDependency(root);
-  let installStatus = null;
-  let hostOutput = '';
-  // Only run the package manager after a successful pin change — avoid surprise
-  // network on every start when arkgate is already listed.
-  if (runPm && pinned.changed) {
-    const [command, commandArgs] = packageInstallArgv(root, pinned.version);
-    const install = runStartPackageInstall(command, commandArgs, root);
-    installStatus = install.status;
-    hostOutput = `${install.stdout}\n${install.stderr}`;
-  }
-  return { pinned, installStatus, hostOutput };
 }
 
 async function resolveArchetypeInteractive(rl, root) {
@@ -384,6 +348,10 @@ async function init(args) {
       console.log('Skipped ark.config.json generation.');
     }
 
+    // Pin arkgate before the gate templates that call its bins (CI workflow, host hooks, MCP).
+    console.log('');
+    pinArkgateForSetup(root, args, cliVersion);
+
     // Origin first: contract-on-tree picture before AGENTS.md / skills / CI templates.
     console.log('');
     freezeDayZeroOrigin(root);
@@ -447,7 +415,12 @@ async function start(args) {
         confidence: preview.analysis?.confidence,
         projectedCoveragePercent: preview.projectedCoverage?.percent,
         totalFiles: preview.projectedCoverage?.totalFiles,
-        explicitShape: Boolean(args.archetype || args.preset),
+        // An existing ark.config.json is a locked shape: start keeps it verbatim, so an
+        // idempotent re-run (or the remove-host restore command) must not be re-gated on
+        // auto-detected confidence. Low coverage still surfaces as an unresolved decision.
+        explicitShape:
+          Boolean(args.archetype || args.preset) ||
+          fs.existsSync(path.join(args.root, 'ark.config.json')),
         force: Boolean(args.force),
       });
       if (!gate.ok) {
@@ -493,8 +466,11 @@ async function start(args) {
     }
     // After applying exact preview bytes, install the pinned package when requested
     // (preview itself never runs the package manager — field: start left pin without node_modules).
+    // Host removal never needs the package: no network, no package.json edits.
     if (
       args.install &&
+      !args.removeHost &&
+      preview.mode !== 'remove-host' &&
       !args.skipPackageManager &&
       fs.existsSync(path.join(args.root, 'package.json'))
     ) {
@@ -549,9 +525,18 @@ async function start(args) {
       rec = undefined;
     }
 
-    // 2) Suggest a shape, in plain language, and confirm.
-    let archetype = rec?.archetype;
-    if (rec) {
+    // 2) Suggest a shape, in plain language, and confirm. An explicit --archetype/--preset
+    // locks the shape: it must drive the written contract, not just bypass the preview gate.
+    const explicitShape = resolveInitPreset(args);
+    let archetype = explicitShape ? explicitShape.archetype : rec?.archetype;
+    if (explicitShape) {
+      console.log('');
+      console.log(
+        explicitShape.archetype
+          ? `Using your shape: ${explicitShape.archetype} → preset ${explicitShape.preset}.`
+          : `Using your preset: ${explicitShape.preset}.`
+      );
+    } else if (rec) {
       console.log('');
       console.log(`Your project looks like: ${rec.label}.`);
       if (rec.analogy) console.log(`In plain terms — ${rec.analogy}`);
@@ -573,30 +558,7 @@ async function start(args) {
 
     // 2b) Pin arkgate as a project devDependency so CI/npx do not depend on a stale global.
     // Default install=true; only --no-install skips. (installExplicit tracks user override for copy.)
-    if (args.install && fs.existsSync(path.join(root, 'package.json'))) {
-      const { pinned, installStatus, hostOutput } = ensureProjectArkgateDependency(root, {
-        install: true,
-        runPackageManager: !args.skipPackageManager,
-      });
-      if (pinned.changed) {
-        console.log(`  Pinned arkgate@${pinned.version} in package.json devDependencies.`);
-        if (installStatus !== null && installStatus !== 0) {
-          const [command, commandArgs] = packageInstallArgv(root, pinned.version);
-          console.error(
-            formatStartPackageInstallFailure({
-              exitStatus: installStatus,
-              installCommand: `${command} ${commandArgs.join(' ')}`,
-              hostOutput,
-              packageVersion: cliVersion(),
-            })
-          );
-        }
-      } else if (pinned.reason === 'already-present') {
-        console.log(`  arkgate already in package.json (${pinned.version}).`);
-      }
-    } else if (!args.install) {
-      console.log('  Skipping arkgate package pin (--no-install).');
-    }
+    pinArkgateForSetup(root, args, cliVersion);
 
     // 3) Contract first (config only). Greenfield → shape preset; established repo → detection,
     // so the contract anchors to directories you already have instead of aspirational globs.
@@ -605,7 +567,10 @@ async function start(args) {
     const configPath = path.join(root, 'ark.config.json');
     if (!fs.existsSync(configPath)) {
       const initArgs = ['--root', root, '--init'];
-      const startPreset = resolveStartInitPreset(root, rec ?? {}, archetype);
+      // Explicit shape bypasses detection entirely (monorepo/ui-surface heuristics included).
+      const startPreset = explicitShape?.preset
+        ? explicitShape.preset
+        : resolveStartInitPreset(root, rec ?? {}, archetype);
       const includeRoots = resolveIncludeRoots(root);
       const tsPackages = detectTsPackageRoots(root);
       const nestedTsPackages = tsPackages.filter((entry) => entry !== '.');
@@ -814,6 +779,8 @@ async function main() {
     console.error(error instanceof Error ? error.message : String(error));
     return 2;
   }
+  // Before --version/--help: the MCP server owns stdout (JSON-RPC) and all of its flags.
+  if (isMcpCommand(args.command)) return runMcp(args.passthrough);
   if (args.version) {
     console.log(cliVersion());
     return 0;
@@ -843,12 +810,13 @@ async function main() {
   }
   if (
     args.command !== 'preflight' &&
-    (args.changes || args.changeMap || args.manifest || args.tsconfig ||
-      args.config !== 'ark.config.json')
+    (args.changes || args.changeMap || args.manifest || args.tsconfig)
   ) {
-    console.error(
-      '--changes, --change-map, --config, --manifest, and --tsconfig are supported by ark preflight.'
-    );
+    console.error('--changes, --change-map, --manifest, and --tsconfig are supported by ark preflight.');
+    return 2;
+  }
+  if (args.config !== 'ark.config.json' && !CONFIG_FLAG_COMMANDS.has(args.command)) {
+    console.error('--config is supported by ark preflight, ark status, and ark agents-md.');
     return 2;
   }
   const enforcement = validateHardWriteRequest({

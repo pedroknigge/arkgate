@@ -25,42 +25,15 @@ import type {
   ResolvedDependencyFact,
   ResolvedDependencyKind,
 } from '../domain/resolvedCandidateFactsTypes';
+import {
+  editorSourceText,
+  type ArkRule,
+  type AstNode,
+  type RuleContext,
+  type RuleListener,
+} from './ruleSupport';
 
-export type RuleContext = {
-  report(descriptor: Record<string, unknown>): void;
-  filename?: string;
-  physicalFilename?: string;
-  getFilename?: () => string;
-  options?: unknown[];
-};
-
-export type AstNode = {
-  type?: string;
-  name?: string;
-  value?: unknown;
-  source?: AstNode;
-  callee?: AstNode;
-  object?: AstNode;
-  property?: AstNode;
-  arguments?: AstNode[];
-  importKind?: string;
-  exportKind?: string;
-  specifiers?: AstNode[];
-  loc?: { start?: { line?: number; column?: number } };
-  computed?: boolean;
-};
-
-type RuleListener = Record<string, (node: AstNode) => void>;
-
-type ArkRule = {
-  meta: {
-    type: 'problem';
-    docs: { description: string };
-    messages: Record<string, string>;
-    schema: unknown[];
-  };
-  create(context: RuleContext): RuleListener;
-};
+export type { AstNode, RuleContext } from './ruleSupport';
 
 export type ArkRunEslintHelpers = {
   findConfigPath: (startFile: string) => string | null;
@@ -347,7 +320,8 @@ function directNewListener(
   context: RuleContext,
   file: EditorFile
 ): RuleListener {
-  const content = readUtf8(file.absFile) ?? '';
+  // Findings come from the buffer ESLint is linting (unsaved edits, --stdin), not disk.
+  const content = editorSourceText(context) ?? readUtf8(file.absFile) ?? '';
   const admitted = admittedTypeNamesForEditor(helpers, file, content);
   const managedNews = extractArkRunManagedNewsFromSource(file.relFile, content, admitted);
   const { findings } = evaluateArkRunEditorSensors({
@@ -370,10 +344,9 @@ function directNewListener(
       const typeName = constructedTypeName(node);
       if (!typeName) return;
       const line = node.loc?.start?.line;
-      const finding =
-        newsFindings.find(
-          (item) => item.target === typeName && (line === undefined || item.line === line)
-        ) ?? newsFindings.find((item) => item.target === typeName);
+      const finding = newsFindings.find(
+        (item) => item.target === typeName && (line === undefined || item.line === line)
+      );
       if (!finding) return;
       reportFinding(helpers, context, node, 'directNew', finding, {
         fromLayer: finding.fromLayer ?? file.fromLayer,
@@ -426,7 +399,7 @@ export function createArkRunEslintRules(helpers: ArkRunEslintHelpers): {
         type: 'problem',
         docs: {
           description:
-            'Disallow `new` of ArkRun-admitted types outside a composition-root factory (on-disk import/`new` envelope).',
+            'Disallow `new` of ArkRun-admitted types outside a composition-root factory (editor-buffer `new` envelope; on-disk import targets).',
         },
         messages: {
           directNew:

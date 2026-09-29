@@ -48,22 +48,22 @@ import { enforcePublishPolicy } from './publishPolicy';
 import {
   appendTrace as appendTraceToBuffers,
   recordAudit as recordAuditToBuffers,
+  recordHandoffFailure,
   recordRawPublishDiagnostic,
   recordSuccessfulPublish,
+  settleBufferRecord,
   enrichMetadata,
   type RecordingBuffers,
 } from './publishRecording';
+import { nextRuntimeId } from '../runtimeIds';
 
 interface InternalSubscription {
   intentName: string;
   handler: EventHandler<IntentName, unknown>;
 }
 
-let interceptorSequence = 0;
-
 function nextInterceptorRegistrationId(): string {
-  interceptorSequence += 1;
-  return `interceptor-${Date.now()}-${interceptorSequence}`;
+  return nextRuntimeId('interceptor');
 }
 
 export class EventBusImpl<Context = unknown> implements EventBus {
@@ -81,6 +81,7 @@ export class EventBusImpl<Context = unknown> implements EventBus {
   private readonly architectureProfile?: ArchitectureProfile;
   private readonly enforceObservedLayerFlowMode: ObservedLayerFlowMode;
   private readonly rethrowHandlerErrors: boolean;
+  private readonly settleBufferOnLocalDelivery: boolean;
   private readonly policyEngine?: PolicyEngine<Context>;
   private readonly getPolicyContext: (event: DomainEvent) => Context;
   private readonly intentRegistry?: IntentRegistry;
@@ -98,6 +99,7 @@ export class EventBusImpl<Context = unknown> implements EventBus {
     this.architectureProfile = options.architectureProfile;
     this.enforceObservedLayerFlowMode = options.enforceObservedLayerFlow ?? 'off';
     this.rethrowHandlerErrors = options.rethrowHandlerErrors ?? false;
+    this.settleBufferOnLocalDelivery = options.settleBufferOnLocalDelivery ?? false;
     this.intentRegistry = options.intentRegistry;
     this.dependencyGraph = options.dependencyGraph;
     this.strictRegistry =
@@ -256,12 +258,16 @@ export class EventBusImpl<Context = unknown> implements EventBus {
     }
 
     // 6. History / outbox / published trace
-    await recordSuccessfulPublish(
+    const { bufferRecord } = await recordSuccessfulPublish(
       this.recording,
       event as DomainEvent,
       notifySubscribers ? matching.length : 0,
       control.tx
     );
+    if (bufferRecord) control.onBufferRecord?.(bufferRecord);
+    const settleLocally =
+      bufferRecord !== undefined &&
+      (control.settleBufferOnLocalDelivery ?? this.settleBufferOnLocalDelivery);
 
     // 7. Handlers + onPublish hook
     const handlerWork = (async () => {
@@ -279,15 +285,50 @@ export class EventBusImpl<Context = unknown> implements EventBus {
       }
     })();
 
+    const settled = settleLocally
+      ? handlerWork.then(
+          () =>
+            this.settleBufferRecord(event as DomainEvent, bufferRecord.id, { ok: true }),
+          async (error: unknown) => {
+            await this.settleBufferRecord(event as DomainEvent, bufferRecord.id, {
+              ok: false,
+              error,
+            });
+            throw error;
+          }
+        )
+      : handlerWork;
+
     if (awaitHandlers) {
-      await handlerWork;
+      await settled;
     } else {
-      void handlerWork.then(undefined, () => {
+      void settled.then(undefined, () => {
         /* Avoid unhandled rejection when handlers are not awaited. */
       });
     }
 
     return event;
+  }
+
+  /**
+   * Kernel-internal: settle an event-buffer record after the kernel itself
+   * finished delivery (e.g. a broker handoff). Not part of the EventBus interface.
+   */
+  async settleBufferRecord(
+    event: DomainEvent,
+    bufferRecordId: string,
+    outcome: { ok: true } | { ok: false; error: unknown }
+  ): Promise<void> {
+    await settleBufferRecord(this.recording, event, bufferRecordId, outcome);
+  }
+
+  /** Kernel-internal: trace + audit a failed broker handoff (`event.handoffFailed`). */
+  async recordHandoffFailure(
+    event: DomainEvent,
+    error: unknown,
+    transport: string
+  ): Promise<void> {
+    await recordHandoffFailure(this.recording, event, error, transport);
   }
 
   createPublisher<N extends IntentName, P>(

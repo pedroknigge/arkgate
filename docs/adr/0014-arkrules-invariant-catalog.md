@@ -19,7 +19,7 @@ entries are declarative; core does not evaluate arbitrary predicates.
 1. Test title contains the invariant ID (project test globs). A `describe` / `it` /
    `test` / `context` title counts. A comment, string, test body, or import that
    only mentions the id does not.
-2. Deterministic symbol match (`coverage.symbol`, e.g. `Order.ensureInvariants`) — a declaration of that identifier in a non-test file, witnessed by path. `function`, `class`, `const`, `method`, `type`, `interface`, and `enum` are declarations. Imports and test calls do not count.
+2. Deterministic symbol match (`coverage.symbol`, e.g. `Order.ensureInvariants`) — a declaration of that identifier in a non-test file, witnessed by path. `function`, `class`, `const`, `method`, `type`, `interface`, and `enum` are declarations. Imports and test calls do not count. A `Class.member` symbol requires the member to be declared inside `class Class`, a `const Class = class {}` expression, a `namespace Class {}`, or as a top-level key of a `const Class = {}` object literal (membership, not a substring match on the class name). `coverage.test: false` without `coverage.symbol` declares no evidence and is advisory-only: on an enforced invariant it reports `INVARIANT_UNCOVERED` (fails strict) and promotion refuses it.
 Missing test globs → analysis `partial`, never covered. Uncovered → `INVARIANT_UNCOVERED`
 (advisory by default; failsStrict only when mode is enforced).
 

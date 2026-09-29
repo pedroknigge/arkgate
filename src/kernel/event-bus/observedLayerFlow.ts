@@ -41,9 +41,14 @@ export async function assertObservedLayerFlowAllowed(
   if (!fromLayer || !toLayer) return;
 
   // Same deny SoT as CI / write-gate. This path has producer/intent names, not
-  // a referencing file: do not invent a fromPath. File-based intent checks pass
-  // fromPath so sharedRoots classify; without a file, peerIsolation fail-closes.
-  const blocked = findDeniedEdgeRule(profile.rules, fromLayer, toLayer);
+  // a referencing file: do not invent a fromPath. `peerIsolation` rules are slice
+  // walls over file paths (the static gate owns them); names cannot place a
+  // slice, so runtime skips them instead of rejecting every same-layer flow.
+  const blocked = findDeniedEdgeRule(
+    profile.rules.filter((rule) => rule.peerIsolation !== true),
+    fromLayer,
+    toLayer
+  );
   if (!blocked) return;
 
   const severity = deps.mode;

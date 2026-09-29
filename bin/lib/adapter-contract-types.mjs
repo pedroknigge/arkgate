@@ -118,6 +118,11 @@ export const ARK_ANALYSIS_RESULT_SCHEMA = {
                             edgeKind: { type: 'string', minLength: 1 },
                             arkruleId: { type: 'string', minLength: 1 },
                             arkruleSource: { type: 'string', minLength: 1 },
+                            reasonId: {
+                                enum: ['CROSS_PARENT_SLICE', 'CROSS_SIBLING_SLICE', 'CROSS_PARENT_VIA_SHARED'],
+                            },
+                            universeFrom: { type: 'string', minLength: 1 },
+                            universeTo: { type: 'string', minLength: 1 },
                         },
                     },
                     nextAction: { type: 'string', minLength: 1 },

@@ -19,6 +19,12 @@ export interface AICodeGateViolation {
   toLayer?: string;
   /** Nested-wall reason. Absent on a classic layer deny and on a child-only parent import. */
   reasonId?: string;
+  /** Last segment of the importer universe id, with a reasonId. */
+  universeFrom?: string;
+  /** Last segment of the importee universe id, with a reasonId. */
+  universeTo?: string;
+  /** True when a peerIsolation rule produced this finding (also mirrored in details). */
+  peerIsolation?: boolean;
   /** False for an advisory sibling crossing. Omitted findings still block the snippet. */
   failsStrict?: boolean;
   details?: unknown;

@@ -175,6 +175,11 @@ export function defaultHonestLabel(writePath, host) {
  * Deterministic next action from residual facts (no LLM).
  * Prefer explicit override from productHonesty when provided.
  */
+function normalizedConfigErrors(errors) {
+    if (!Array.isArray(errors))
+        return [];
+    return errors.filter((entry) => typeof entry === 'string' && entry.length > 0);
+}
 export function resolveStatusNextAction(facts, binding, activation, lastCheck, rules) {
     if (facts.nextActionOverride?.id && facts.nextActionOverride.summary) {
         return {
@@ -202,22 +207,31 @@ export function resolveStatusNextAction(facts, binding, activation, lastCheck, r
             summary: 'No ark.config.json found — run ark start (preview) then ark start --apply.',
         };
     }
+    const configErrors = normalizedConfigErrors(facts.configErrors);
+    if (configErrors.length > 0) {
+        return {
+            id: 'fix-config',
+            summary: `The Ark config is invalid, so ark-check, MCP and ESLint refuse it — fix: ${configErrors
+                .slice(0, 3)
+                .join('; ')}${configErrors.length > 3 ? ` (+${configErrors.length - 3} more)` : ''}`,
+        };
+    }
     if (lastCheck.verdict === 'fail' || (lastCheck.activeViolations ?? 0) > 0) {
         return {
             id: 'fix-active-violations',
-            summary: `Clear ${lastCheck.activeViolations ?? 'active'} blocking architecture finding(s), then re-run ark-check (or ark-check --doctor).`,
+            summary: `Clear ${lastCheck.activeViolations ?? 'active'} blocking architecture finding(s), then re-run ark-check --report to refresh the last-check snapshot (a plain check or --doctor does not update .ark/reports/latest.json).`,
         };
     }
     if (lastCheck.verdict === 'incomplete') {
         return {
             id: 'restore-complete-analysis',
-            summary: 'Last check was incomplete — restore TypeScript/analysis inputs and re-run ark-check.',
+            summary: 'Last check was incomplete — restore TypeScript/analysis inputs and re-run ark-check --report to refresh the snapshot.',
         };
     }
     if (lastCheck.verdict == null && lastCheck.at == null) {
         return {
             id: 'run-ark-check',
-            summary: 'No last-check snapshot yet — run ark-check --report (or --doctor) to freeze session evidence.',
+            summary: 'No last-check snapshot yet — run ark-check --report to freeze session evidence (--doctor does not write the snapshot).',
         };
     }
     if (activation.writePath === 'unavailable') {
@@ -334,6 +348,10 @@ export function buildStatusManifest(facts) {
         rules,
         nextAction: resolveStatusNextAction(facts, binding, activation, lastCheck, rules),
     };
+    const configErrors = normalizedConfigErrors(facts.configErrors);
+    if (projectIdentity.resolvedConfigPath && configErrors.length > 0) {
+        status.contract = { valid: false, errors: configErrors };
+    }
     const compass = normalizeStatusImprovementCompass(facts.improvementCompass);
     if (compass)
         status.improvementCompass = compass;
@@ -433,7 +451,7 @@ export function unavailableStatusImprovementCompass(input = {}) {
         topResidual: [],
         reasonCode: input.reasonCode ?? STATUS_COMPASS_REASON_CODES.NO_SESSION_SNAPSHOT,
         reason: input.reason ??
-            'No session compass facts yet — run ark-check --doctor or --report for residual lenses. Status never invents green.',
+            'No session compass facts yet — run ark-check --report to write the session snapshot (--doctor shows full lenses but does not write it). Status never invents green.',
         factsSource: 'none',
         contractHash: input.contractHash,
     });
@@ -589,6 +607,16 @@ export const ARK_STATUS_MANIFEST_SCHEMA = {
             properties: {
                 id: { type: 'string', minLength: 1 },
                 summary: { type: 'string', minLength: 1 },
+            },
+        },
+        contract: {
+            type: 'object',
+            description: 'Present only when the resolved config fails the shared contract validator (the same fail-closed rules ark-check, MCP and ESLint apply).',
+            additionalProperties: false,
+            required: ['valid', 'errors'],
+            properties: {
+                valid: { const: false },
+                errors: { type: 'array', minItems: 1, items: { type: 'string', minLength: 1 } },
             },
         },
         improvementCompass: {

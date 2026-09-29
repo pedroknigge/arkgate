@@ -12,7 +12,7 @@ export default defineConfig({
   format: ['esm', 'cjs'],
   external: ['@nestjs/common'],
   dts: true,
-  splitting: false,
+  splitting: true,
   sourcemap: false,
   clean: true,
   // Same trade as the gate bundle (tsup.config.ts at the root): compact the

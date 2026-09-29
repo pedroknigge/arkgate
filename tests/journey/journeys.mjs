@@ -14,6 +14,12 @@
  * #326 PR6 is `pr6-doctor`: a move card for `rfi-repository.ts` (one importer);
  * none for `catalog-repository.ts` (two importers). The destination check must
  * agree with the walls under `sliceIdentity: "stars"`.
+ *
+ * 4.8.23 follow-ups: `335-stop-at` (a composition root under sharedRoots stops the
+ * deny-cross-parent walk), `336-legacy-baseline` (a baseline frozen before the
+ * child wall keeps advisory siblings advisory), `337-wall-messages` (inner-wall
+ * findings never reuse the universe rule message), `338-version-silent` (no
+ * CONFIG_CHILD_SLICES_VERSION without a stale pin).
  */
 const crossParentEdges = Object.freeze([
   Object.freeze({
@@ -142,6 +148,17 @@ export const JOURNEYS = Object.freeze({
     Object.freeze(['ark-check', '--json', '--no-cache', '--config', 'ark.config.aliases-overlap.json']),
     Object.freeze(['ark-check', '--json', '--no-cache', '--config', 'ark.config.doctor-pilot.json']),
     Object.freeze(['ark-check', '--doctor', '--json', '--no-cache', '--config', 'ark.config.doctor-pilot.json']),
+    Object.freeze(['ark-check', '--json', '--no-cache', '--config', 'ark.config.stop-at.json']),
+    Object.freeze([
+      'ark-check',
+      '--json',
+      '--no-cache',
+      '--config',
+      'ark.config.subtree.json',
+      '--baseline',
+      'baseline.legacy.json',
+    ]),
+    Object.freeze(['ark-check', '--json', '--no-cache', '--config', 'ark.config.wall-messages.json']),
   ]),
 });
 
@@ -360,7 +377,7 @@ export const JOURNEY_CASES = Object.freeze({
           'src/lib/compliance/retention.ts',
           'src/lib/compliance/uses-management.ts',
         ]),
-        badTargetSnippet: 'child of an existing universe',
+        badTargetSnippet: 'child of a universe shape',
         overlapSnippet: 'overlaps a slice folder',
         plainCrossParent: 5,
         plainSibling: 3,
@@ -387,6 +404,75 @@ export const JOURNEY_CASES = Object.freeze({
         pilotSource: 'flat-parent',
         evidenceSnippet: 'suggestion',
       }),
+    }),
+    Object.freeze({
+      id: '335-stop-at',
+      owner: '#335',
+      expect: 'pass',
+      kind: 'stop-at',
+      note: 'Owned by #335. rfi-deps.ts reaches management and operations only through the composition root lib/shared/composition/register-all.ts. With sharedImportsSlice { mode: "deny-cross-parent", stopAt } that path is not a crossing. The two laundering paths of pr2 stay, each with its shared hop in via. The direct shared-root hop from the composition root stays a SHARED_IMPORTS_SLICE warning.',
+      stopFile: 'src/lib/features/projects/rfi/rfi-deps.ts',
+      compositionRoot: 'src/lib/shared/composition/register-all.ts',
+      edges: Object.freeze([
+        Object.freeze({
+          file: 'src/lib/features/management/eos/eos-summary.ts',
+          target: 'src/lib/features/operations/dispatch/dispatch-board.ts',
+        }),
+        Object.freeze({
+          file: 'src/components/features/projects/rfi/rfi-screen.tsx',
+          target: 'src/components/features/management/eos/eos-screen.tsx',
+        }),
+      ]),
+      want: Object.freeze({
+        reasonId: 'CROSS_PARENT_VIA_SHARED',
+        count: 2,
+        fromStopFile: 0,
+        rootWarnings: 2,
+      }),
+    }),
+    Object.freeze({
+      id: '336-legacy-baseline',
+      owner: '#336',
+      expect: 'pass',
+      kind: 'legacy-baseline',
+      note: 'Owned by #336. baseline.legacy.json freezes every non-sibling finding of the subtree wall and no advisory sibling. Advisory is advisory on day 1: the two advisory crossings stay warnings and the check passes.',
+      advisory: Object.freeze([
+        Object.freeze({
+          file: 'src/components/features/operations/dispatch/dispatch-screen.tsx',
+          target: 'src/components/features/operations/fleet/fleet-screen.tsx',
+        }),
+        Object.freeze({
+          file: 'src/lib/repositories/features/management/eos/eos-repository.ts',
+          target: 'src/lib/repositories/features/management/people/people-repository.ts',
+        }),
+      ]),
+      want: Object.freeze({ ok: true, advisoryWarnings: 2, errors: 0 }),
+    }),
+    Object.freeze({
+      id: '337-wall-messages',
+      owner: '#337',
+      expect: 'pass',
+      kind: 'wall-messages',
+      note: 'Owned by #337. Every rule sets a universe message; Presentation and Application also set childSlices.message. CROSS_PARENT_SLICE rows start with the universe text. Sibling and common-to-child rows never contain it: they use the inner text, or the ArkGate default where the rule has no inner text (Persistence).',
+      universeText: 'Universe wall (atlasgrid): do not import another universe.',
+      innerText: 'Inner wall (atlasgrid): import universe common, not a sibling feature.',
+      commonEdge: Object.freeze({
+        file: 'src/lib/features/projects/domain/project-codes.ts',
+        target: 'src/lib/features/projects/rfi/rfi-intake.ts',
+      }),
+      defaultRow: Object.freeze({
+        file: 'src/lib/repositories/features/management/eos/eos-repository.ts',
+        prefix: 'Persistence must not import another slice of Persistence',
+      }),
+      want: Object.freeze({ crossParent: 5, crossParentWithUniverseText: 5, innerRows: 4, innerWithUniverseText: 0 }),
+    }),
+    Object.freeze({
+      id: '338-version-silent',
+      owner: '#338',
+      expect: 'pass',
+      kind: 'version-silent',
+      note: 'Owned by #338. The fixture pins no older arkgate (the installed copy is the candidate), so no childSlices step warns CONFIG_CHILD_SLICES_VERSION.',
+      want: Object.freeze({ versionWarnings: 0 }),
     }),
   ]),
 });

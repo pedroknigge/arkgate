@@ -207,6 +207,16 @@ npx ark status --json
 npx ark status --json --expected-root /abs/project/root
 ```
 
+`--config <file>` reads a non-default contract (same for `ark agents-md --config <file>`).
+When the resolved config fails the shared contract validator, status adds
+`contract: { valid: false, errors: [...] }` and the next action is `fix-config` — the same
+config every enforcing surface refuses is never reported as ready. `ark-check --json` (and
+`--doctor --json`) print `{ "ok": false, "error": "CONFIG_INVALID", "configPath", "messages" }`
+on stdout for that case (exit 2), so a JSON consumer always gets the reason. Any other fatal
+error under `--json` prints `{ "ok": false, "error": "POLICY_BASE_UNREADABLE" | "CHECK_ERROR", "message" }`
+(also exit 2); `POLICY_BASE_UNREADABLE` means the policy base ref (for example `GITHUB_BASE_REF`)
+could not be read in this checkout — fetch it or pass `--base <ref>`.
+
 MCP parity tool: **`ark_status`** (same envelope; pass `project.expectedRoot` after `ark_identity`).
 Schema: `arkgate/schema/status-manifest`. Never prompts; under `CI=1` JSON is forced. **Not a
 score** — counts, honesty modes, and residual ids only. Write-path interpretation of activation vs
@@ -312,14 +322,35 @@ npx ark-check --ratchet-cores                   # require populated core layers 
 npx ark-check --watch                           # debounced re-check when governed files change
 ```
 
+**Package pin:** `ark start` and `ark init` both pin `arkgate` in `package.json`
+`devDependencies` (and install it unless `--skip-package-manager`) before writing the CI workflow
+and host hooks, because those call the local `ark-check` / `arkgate-mcp` bins. `--no-install`
+skips the pin; without a `package.json` setup prints a warning instead. When arkgate is not a
+local dependency (no pin, no `node_modules/arkgate`), every generated command runs
+`npx -y -p arkgate@<exact version> <bin>` instead of a bare `npx ark-check`, which npm would
+resolve as a nonexistent `ark-check` package (404) or a stale global. `--doctor` leads with
+`PACKAGE_PIN_ABSENT` when an existing generated file still uses the local runner without the pin.
+`start --remove-host`
+never runs the package manager. An explicit `--archetype` / `--preset` on `ark start` is the
+contract that is written (not only a way past the shape-confidence gate), and re-running
+`ark start --apply` on a project that already has `ark.config.json` keeps that contract and is not
+re-gated on detected shape confidence (so the `--remove-host` restore command works).
+The generated `typecheck` script and CI step are added only when `typescript` is a dependency
+(or resolves from the project root); otherwise setup prints a note.
+
 **Day-zero origin (2.12+):** `ark init` freezes `.ark/reports/origin.*` before writing agent
-docs or CI templates. Compact `ark start` previews first and keeps the applied setup small
+docs or CI templates (the day-zero HTML is written under `.ark/reports/`, not the project root). Compact `ark start` previews first and keeps the applied setup small
 (budget: 8 files / 32 KB including project `.mcp.json`);
 run `ark-check --report ark-report.html` explicitly when you want to establish an origin/evolution
 baseline. Do not `--reset-origin` unless the user explicitly wants a new baseline.
 `ark-check --report --no-archive` still creates `origin.*` on the first report (or on an explicit
 reset) and refreshes `latest.*`; it skips only the timestamped JSON file under
 `.ark/reports/history/`.
+`--report` applies the committed `.ark-baseline.json` by default (the same freeze `--doctor`
+reads), so `latest.json` and `ark status` count frozen debt as frozen, not active. Under
+`--strict` / `--strict-merge` / `--contract-diff` the implicit freeze is not applied (pass
+`--baseline` explicitly), so `--report` never changes a merge verdict. Only
+`--report` refreshes that snapshot; a plain check or `--doctor` does not.
 Snapshots record best-effort, shell-free Git provenance (`HEAD`, attached branch, and dirty
 worktree state). Evolution keeps raw metrics visible across ArkGate upgrades, but an Ark score
 delta is comparable—and therefore rendered—only when origin and current snapshots use the same
@@ -625,7 +656,9 @@ Plan by default — there is no `--dry-run` anywhere in `bin/`. `--apply` needs
 one named rule id: `--promote <ruleId> --apply`, or `--promote=<ruleId>` when
 the id starts with `-`. It refuses a bare `--promote --apply` rather than
 rewriting the contract in bulk behind a single flag, refuses an id declared in
-two documents rather than silently writing the first, and refuses to make a
+two documents rather than silently writing the first (starter ids are unique:
+`thin-persistence-adapter` / `thin-presentation-adapter`, and a layer that clones
+another layer's archetype gets its ids prefixed with its kebab-cased name), and refuses to make a
 contract change on a cost this run did not measure. `--promote` cannot be
 combined with a mode that answers first (`--sensors`, `--coverage`, `--plan`,
 `--doctor`, …) — that printed the report and exited 0 having written nothing —
@@ -1005,6 +1038,13 @@ a `Domain.*` event — the publish throws `ObservedLayerFlowViolationError` befo
 reaches history, outbox, or subscribers. Use `'soft'` to record `layer.observedViolation`
 trace/audit records without blocking, or `'off'` to disable. Agents should name the event's
 `source` honestly: it is checked against the layer matrix, not just the intent name.
+Kernels built from `ark.config.json` map intents to layers through `layers[].intentPrefixes`;
+canonical layer names (`DomainModel`, `ApplicationOrchestration`, … as `ark init` writes them)
+without prefixes get the built-in ones. A custom-named deny-rule layer with no prefixes is
+recorded once as a `layer.observedFlowUnresolvable` audit record
+(`ARKRUN_LAYER_FLOW_UNRESOLVABLE`) and listed by `ark doctor`; pass
+`enforceObservedLayerFlow: 'hard'` explicitly to make it throw `ArkKernelConfigError`.
+`peerIsolation` slice walls are not evaluated at runtime (names cannot place a slice).
 
 Strict kernels also require published events to have a registered source intent
 and a matching event contract:
@@ -1150,9 +1190,9 @@ edges are not denied by that rule.
 - **Denied:** `src/features/auth/**` → `src/features/payments/**` (different slice id).
 - **Allowed:** same-slice imports when both paths classify; classic non-peerIsolation denies still apply across layers.
 - **`sliceFolders`:** optional parent segments (default: inferred from layer globs). A bare name stays an unanchored one-segment match (`features` on `src/features/auth` is `features/auth`). A starred anchored pattern with `sliceIdentity` `path` (the default) includes the literal prefix plus the star bindings (`lib/features/*/*` → `lib/features/projects/rfi`), so parallel trees get different ids.
-- **`sliceIdentity`:** `path` (default, also when the key is absent) or `stars`. `path` keeps today's slice ids. `stars` names a starred prefix as the last literal plus the star bindings (`lib/features/*/*` and `lib/repositories/features/*/*` both yield `features/projects/rfi`). Doctor names both prefixes when they collapse onto one id. Additive — no migration.
+- **`sliceIdentity`:** `path` (default, also when the key is absent) or `stars`. `path` keeps today's slice ids. `stars` names a starred prefix as the last literal plus every star binding (`lib/features/*/*` and `lib/repositories/features/*/*` both yield `features/projects/rfi`; `modules/*/api/*` keeps the module: `orders/api/v1`). Doctor names both prefixes when they collapse onto one id. Additive — no migration.
 - **Fail-closed:** missing paths, empty/unresolvable slice folders, or unclassifiable either side → **deny** via peerIsolation (cannot prove same-slice).
-- **`childSlices`** (optional): a second wall under the same rule. The universe wall runs first and is unchanged when the block is absent. With it present, a cross-universe deny is `reasonId` `CROSS_PARENT_SLICE` (never advisory). Inside one universe, `commonFolders` and flat files are common; a child may import them; common may import a child only when `parentMayImportChild` is true. Sibling crossings are `CROSS_SIBLING_SLICE` — error when `siblings` is `deny` (the default), warning when `advisory`, and a new one past the baseline still fails. `ruleId` stays `LAYER_IMPORT_VIOLATION`. arkgate 4.8.22 and older reject the key.
+- **`childSlices`** (optional): a second wall under the same rule. The universe wall runs first and is unchanged when the block is absent. With it present, a cross-universe deny is `reasonId` `CROSS_PARENT_SLICE` (never advisory). Needs `peerIsolation: true` and `allowed: false` on the rule. Inside one universe, flat files and a `commonFolders` directory directly under the universe are common (the same folder name inside a child belongs to the child); a child may import them; common may import a child only when `parentMayImportChild` is true. Sibling crossings are `CROSS_SIBLING_SLICE` — error when `siblings` is `deny` (the default), warning when `advisory`. With a baseline, a new advisory crossing fails only when the baseline already records an advisory crossing of that rule, or with `siblings.ratchet: true`; `ratchet: false` measures only. `childSlices.message` is the inner-wall text; the rule `message` stays the universe-wall text. `ruleId` stays `LAYER_IMPORT_VIOLATION`; adapter diagnostics carry `evidence.reasonId`. arkgate 4.8.22 and older reject the key; `CONFIG_CHILD_SLICES_VERSION` fires only when the repo pins such a version (package.json, hook, CI), at that file.
 - **`sharedRoots`** (4.8.4): roots the repo declares shared on purpose (`["ui", "hooks", "lib/permissions"]`). A file under a declared shared root is evidence, not an unclassifiable path, so fail-closed stops firing on every shared file. **Anchored** — the root starts the path, optionally after one `src/` or `app/`; write deeper or monorepo roots out (`packages/web/src/ui`) or glob them, and a bare `*` / `**` is refused. A path that still resolves to a slice keeps its slice.
 - **`allowedCrossSlice`** (4.8.4): `[{ "from": "features/checkout", "to": "features/catalog" }]` — one directed slice→slice edge the repo declares on purpose. The reverse still denies.
 - **The denial names its reason:** `cross-slice edge a → b` (a fact about the code) vs `unclassifiable path (…)`, `no slice folders`, `no path evidence` (facts about the evidence ArkGate had).
@@ -1241,8 +1281,14 @@ imports/exports; resolved CLI/preflight is authoritative outside that envelope),
 `ark/no-denied-capabilities` (per-layer capability deny sets),
 `ark/no-arkrun-kernel-in-domain` / `ark/no-arkrun-direct-new` /
 `ark/no-arkrun-transport-bypass` (ArkRun extra; silent when absent; import / `new`
-envelope only), `ark/no-raw-event-publish`, and
-`ark/require-publish-source`. See [ai-gates.md](ai-gates.md).
+envelope only), `ark/no-arkorder-kernel-in-domain` / `ark/no-arkorder-generic-update`
+(ArkOrder extra), `ark/arkrules-structure` (ArkRules structure sensors, file-local),
+`ark/no-raw-event-publish`, and `ark/require-publish-source`. Findings ark-check reports as
+warnings (type-only placement debt, advisory slice walls, advisory extras) report on the
+warn-level `ark/architecture-advisory`, so ESLint errors only where ark-check fails (a
+config without that rule gets them on the blocking rule id, tagged advisory). An
+invalid contract is one `configInvalid` error per file, not a crash. See
+[ai-gates.md](ai-gates.md#eslint-editor-feedback--bounded-parity-envelope).
 
 ## Runtime Observability
 
@@ -1324,7 +1370,10 @@ not replace your web framework, HTTP clients, or job scheduler.
 The strongest place to constrain an AI agent is the moment it writes a file, not after.
 `arkgate-mcp` / `ark-mcp` exposes ArkGate over MCP (JSON-RPC over stdio; it prefers a usable
 project TypeScript API, then exact `typescript-ark-host@6.0.3`) so a host can gate
-the write path:
+the write path. `arkgate mcp` / `ark mcp` starts the same server; that is the form
+`npx arkgate@<version> mcp --root .` and the MCP Registry use, since npx runs the bin named
+after the package. Without `--config` the server reads `ark.config.json` when it exists and still
+starts in a fresh project; an explicit `--config` that points at a missing file exits 1:
 
 For a complete multi-file candidate, use `ark preflight --changes changes.json --json` or MCP
 `ark_prepare_change`. Add `--change-map map.json` (or MCP `changeMap`) only for an explicit schema
@@ -1370,13 +1419,13 @@ The server exposes these thirteen tools. Every tool accepts the additive
 |------|---------------------------|
 | `ark_identity` | `{ project: { expectedRoot, expectedProjectId? } }`: return the canonical root/config, stable project id, contract identity, and live runtime identity; use it before every other project-bound surface. |
 | `ark_manifest` | No non-project args: return the machine-readable architecture contract with an authoritative binding after the identity handshake. |
-| `validate_code` | `{ source, layer?, filePath? }`: validate one snippet; infer the layer from `filePath` when possible; return an error result when invalid. |
+| `validate_code` | `{ source, layer?, filePath? }`: single-file lexical check (layer plane plus the enforced ArkRun / ArkRules structure / ArkOrder sensors CI runs on that file); infer the layer from `filePath` when possible. Always partial: `valid:false` / `isError:true` until complete-candidate preflight — read `lexicalValid` for the one-file verdict. Not a hook; hard blocking is `arkgate-mcp --hook`. |
 | `ark_check` | `{ strict?, baseline? }`: run the full project architecture check. `verdict` separates `identity`, `completeness`, `graph`, `coverage`, `gates`, and `overallOk`; no individual green fact substitutes for the combined verdict. |
-| `ark_policy_delta` | `{ baseConfig, candidateConfig?, acknowledgement? }`: classify a complete contract transition; never edits the contract. Weakening / new layer / new allow edge needs `adrPath` on the acknowledgement. |
+| `ark_policy_delta` | `{ baseConfig, candidateConfig?, baseArkRuleFiles?, candidateArkRuleFiles?, acknowledgement? }`: classify a complete contract transition, ArkRules included; never edits the contract. `baseArkRuleFiles` (`{ "<path from baseConfig.arkRules>": <file JSON> }`) is required when `baseConfig` maps `arkRules`. Weakening / new layer / new allow edge needs `adrPath` on the acknowledgement. |
 | `ark_coverage` | No args: report per-layer counts, every unclassified file, unmatched layers, and missing rule edges. |
-| `ark_place` | `{ filePath?, description? }`: resolve or propose a governed home and return its import/global constraints. |
-| `ark_prepare_write` | `{ source, filePath?, description?, layer? }`: compose placement and snippet validation, with hashes and a mechanical-safe patch when available. |
-| `ark_prepare_change` | `{ changes, changeMap? }`: preflight one complete create/update/delete batch in memory; never writes files. |
+| `ark_place` | `{ filePath, description? }`: resolve the governed home for `filePath` (fail-closed without it; never invents a path) and return its import/global constraints. |
+| `ark_prepare_write` | `{ source, filePath, description?, layer? }`: compose placement and snippet validation, with hashes and a mechanical-safe patch when available. `filePath` is required (fail-closed). Partial like `validate_code`: read `lexicalValid`. |
+| `ark_prepare_change` | `{ changes, changeMap? }`: preflight one complete create/update/delete batch in memory against the same Effective Contract as `ark-check` (ArkRules included: same `policyHash`, structure/invariant findings; a missing referenced ArkRules file fails closed); ArkRules-plane findings the base tree already has are returned as `preExisting: true` warnings and do not block, so baselined brownfield debt does not reject an unrelated batch; never writes files. |
 | `ark_recommend` | No args: return the deterministic application-shape plan used by `ark-check --recommend --json`. |
 | `ark_suggest_include` | No args: propose TypeScript/JavaScript include roots from workspaces and nested packages. |
 | `ark_rules_inventory` | No args: inventory possible intra-layer rules using configured layer evidence when available; test/fixture/seed/migration surfaces and narrow technical constants are excluded from extraction pilots. Counts are not a score. |
@@ -1406,7 +1455,13 @@ Every project-bound tool success, tool error, and JSON-RPC error data carries:
 ```
 
 `projectId` stays stable across process restarts and contract edits; `runtimeId` and
-`processStartedAt` identify this live process. Binding states are:
+`processStartedAt` identify this live process. The contract (`ark.config.json`, the project
+manifest, referenced ArkRules files) is loaded once at startup: after any of them changes on
+disk, every project tool except `ark_identity` returns `CONTRACT_STALE` (`isError`,
+`authoritative: false`, `contractStale: true`) until the MCP server restarts — the process never
+answers authoritatively from an old contract. `ark_identity` keeps answering with
+`contractStale: true` so the host can diagnose it; the project-local CLI reads the current
+contract meanwhile. Binding states are:
 
 - `matched` — canonical `expectedRoot` is the exact project root, or it is a contained
   descendant and the caller also supplied the matching project id; `authoritative` is `true`;
@@ -1513,8 +1568,22 @@ doctor → compact router (and `/ark-autopilot` only after the skill pack).
 | `GET /workflows` | Workflows monitor: counts + `workflows[]` summaries (`id`, `name`, `status`, optional `currentStep` / `error`) |
 
 Dual package bins **`ark-dashboard`** and **`arkgate-dashboard`**
-(`bin/ark-dashboard.mjs`) poll `--url` (default `http://127.0.0.1:3000/snapshot`)
-and sibling `/outbox` + `/workflows` on an interval (`--interval`, 200–60000 ms).
+(`bin/ark-dashboard.mjs`) poll `--url` and sibling `/outbox` + `/workflows` on an
+interval (`--interval` / `--timeout`, clamped to 200–60000 ms). `--url` accepts the
+inspector root (`handle.url`) or `handle.snapshotUrl`. `startInspector()` binds a
+**random port** unless you pass `{ port }`, so pass the URL your app printed (or set
+`ARK_DASHBOARD_URL`); the fallback `http://127.0.0.1:3000/snapshot` only matches
+`startInspector({ port: 3000 })`, and the dashboard prints that hint when it cannot
+connect. `--once` renders one frame and exits (non-zero when unreachable);
+`--help` / `--version` exit 0; unknown flags exit 2 with one line.
+
+The default in-memory event buffer (`InMemoryEventBuffer`) is capped at
+`maxHistorySize` (default 1000) and its records are marked `dispatched` once the kernel
+finishes local delivery, so `/outbox` shows real backlog only. Broker sends are marked
+`dispatched` / `failed` from the handoff outcome, and a failed handoff (awaited or
+fire-and-forget) records an `event.handoffFailed` trace + audit entry. An injected
+`eventBuffer` stays relay-owned: records remain `pending` for your relay's `claim` /
+`markDispatched` (except broker handoffs the kernel performs itself).
 ANSI escape sequences + polling only — no React, Ink, or Blessed. Use
 `ark dashboard` / `arkgate dashboard` (passthrough to `bin/ark-dashboard.mjs`) or the
 dual bins `ark-dashboard` / `arkgate-dashboard`.

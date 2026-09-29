@@ -71,15 +71,18 @@ export function collectAgentProjectionFacts(options = {}) {
   const startRoot = path.resolve(options.root || process.cwd());
   const configName = options.config || 'ark.config.json';
   let resolvedRoot = startRoot;
+  let configPath = null;
   try {
     const resolved = resolveEffectiveProjectRoot(startRoot, {
       configName,
       writeMode: false,
     });
     resolvedRoot = path.resolve(resolved.root || startRoot);
+    if (resolved.configFound && resolved.configPath) configPath = path.resolve(resolved.configPath);
   } catch {
     resolvedRoot = startRoot;
   }
+  if (!configPath) configPath = path.resolve(resolvedRoot, configName);
 
   const version =
     (typeof options.arkgateVersion === 'string' && options.arkgateVersion.trim()) ||
@@ -88,7 +91,8 @@ export function collectAgentProjectionFacts(options = {}) {
 
   let layers = options.layers;
   if (layers === undefined) {
-    layers = loadConfigLayersForAgents(resolvedRoot);
+    // Read the contract the caller named (--config), not a hardcoded ark.config.json.
+    layers = loadConfigLayersForAgents(resolvedRoot, configPath);
   }
 
   const layerSummaries = Array.isArray(layers)

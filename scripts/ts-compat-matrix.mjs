@@ -563,7 +563,7 @@ const factsSchema = JSON.parse(fs.readFileSync(factsSchemaPath, 'utf8'));
 const identitySchema = JSON.parse(fs.readFileSync(identitySchemaPath, 'utf8'));
 if (typeof gate.createAICodeGate !== 'function') throw new Error('missing CJS gate export');
 if (typeof gate.createProjectIdentity !== 'function') throw new Error('missing CJS identity export');
-if (!eslint.default && !eslint.rules) throw new Error('missing CJS eslint export');
+if (!eslint.configs || !eslint.configs.recommended || !eslint.rules || eslint.default !== eslint) throw new Error('CJS eslint export is not the plugin (configs/rules/default)');
 if (!schema.required.includes('completeness')) throw new Error('schema omits completeness');
 if (!schema.required.includes('mode')) throw new Error('schema omits analysis mode');
 if (!schema.required.includes('completenessReasons')) throw new Error('schema omits completeness reasons');

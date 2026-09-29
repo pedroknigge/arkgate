@@ -172,7 +172,14 @@ describe('ci-merge-boundary github mapping', () => {
 describe('consumer-workflow-not-required', () => {
   it('doctor does not sound like success; finished false; #1 is merge boundary', () => {
     const root = mk();
-    writeConsumerTree(root);
+    // No package.json here, so the workflow names the exact arkgate (a bare `npx arkgate-check`
+    // would depend on a missing pin and PACKAGE_PIN_ABSENT would lead instead).
+    writeConsumerTree(root, {
+      '.github/workflows/ark-check.yml': FAIL_CLOSED_WORKFLOW.replace(
+        'npx arkgate-check',
+        'npx -y -p arkgate@4.8.23 arkgate-check'
+      ),
+    });
     const jsonText = captureDoctor(root, true);
     const payload = JSON.parse(jsonText);
     expect(payload.ok).toBe(true);

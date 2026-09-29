@@ -8,6 +8,7 @@
  * Pure CLI helper (bin/lib/invariant-coverage.mjs). Zero Node I/O.
  */
 
+import { findClassDeclarations, findMemberContainers, objectLiteralMemberNames, scanClassMembers, } from './class-source-scan.mjs';
 /** Adopted + catalogued invariants, but no declared tests path (P2 §10). */
 export const INVARIANT_TESTS_PATH_RULE_ID = 'INVARIANT_TESTS_PATH_MISSING';
 export const INVARIANT_TESTS_PATH_MESSAGE = 'This project is adopted and has domain invariants, but ark.config.json does not name a real tests path. Add coverage.testGlobs or coverage.coverageRoots pointing at the folder where those tests live, then re-run. Without that path, coverage is an empty checkbox.';
@@ -185,6 +186,38 @@ function declarationShape(content, name) {
     }
     return undefined;
 }
+/**
+ * `Name.member` coverage: the member must be declared inside the body of
+ * `class Name` (exported, default-exported, abstract, or local), a
+ * `const Name = class { … }` expression, a `namespace Name { … }` (function or
+ * const member), or a `const Name = { … }` object literal, in this file. A
+ * member of another container, a free function, or a file that merely mentions
+ * the name does not count.
+ */
+function classMemberShape(content, className, member) {
+    const hasClassMethod = (body) => scanClassMembers(body).members.some((m) => m.kind === 'method' && m.name === member);
+    for (const decl of findClassDeclarations(content)) {
+        if (decl.name !== className || decl.bodyStart == null)
+            continue;
+        if (hasClassMethod(content.slice(decl.bodyStart, decl.bodyEnd ?? content.length))) {
+            return 'method';
+        }
+    }
+    for (const container of findMemberContainers(content, className)) {
+        const body = content.slice(container.bodyStart, container.bodyEnd);
+        if (container.kind === 'class-expression' && hasClassMethod(body))
+            return 'method';
+        if (container.kind === 'object' && objectLiteralMemberNames(body).includes(member)) {
+            return 'method';
+        }
+        if (container.kind === 'namespace') {
+            const shape = declarationShape(body, member);
+            if (shape === 'function' || shape === 'const')
+                return shape;
+        }
+    }
+    return undefined;
+}
 function lineAt(content, index) {
     const start = content.lastIndexOf('\n', index - 1) + 1;
     const end = content.indexOf('\n', index);
@@ -298,7 +331,8 @@ function symbolNeedle(symbol) {
     const name = parts[parts.length - 1] ?? '';
     if (!name)
         return undefined;
-    const className = parts.length > 1 ? (parts[0] ?? null) : null;
+    // `Aggregate.method` (or `ns.Aggregate.method`): the segment before the member names the class.
+    const className = parts.length > 1 ? (parts[parts.length - 2] || null) : null;
     return { className, name };
 }
 function declaredLabel(invariant) {
@@ -344,9 +378,9 @@ function rankCoverage(invariant, files, scanTests = true) {
             const content = files.fileContents[file];
             if (!content)
                 continue;
-            if (needle.className && !content.includes(needle.className))
-                continue;
-            const shape = declarationShape(content, needle.name);
+            const shape = needle.className
+                ? classMemberShape(content, needle.className, needle.name)
+                : declarationShape(content, needle.name);
             if (!shape)
                 continue;
             declaration = { file, shape };
@@ -513,10 +547,14 @@ export function evaluateInvariantCoverage(input) {
         // Covered if the policy says this verdict counts.
         // When coverage declares neither test nor symbol, require at least description-only advisory presence = not covered.
         const requiresEvidence = inv.coverage?.test === true || Boolean(symbol) || inv.coverage === undefined;
+        // `coverage.test: false` without a symbol declares zero evidence. That opt-out is
+        // advisory-only: on an enforced invariant it is reported uncovered (never a false
+        // green), not refused at load, so the rest of the contract still evaluates.
+        const zeroEvidenceOptOut = inv.coverage?.test === false && !symbol;
         const covered = requiresEvidence && counts
             ? true
-            : inv.coverage?.test === false && !symbol
-                ? true // explicitly no coverage requirements
+            : zeroEvidenceOptOut && inv.mode !== 'enforced'
+                ? true // explicitly no coverage requirements (advisory-only opt-out)
                 : counts;
         // Partial only when tests are missing *and* no other evidence (e.g. symbol) completed coverage.
         const partial = testGlobsMissing && wantsTest && !counts;
@@ -562,11 +600,13 @@ export function evaluateInvariantCoverage(input) {
                     ? coverageBudgetExhausted
                         ? `Invariant ${inv.id} coverage cannot be proven (${budgetDetail}); reporting partial, not covered.`
                         : `Invariant ${inv.id} coverage cannot be proven (test globs missing or empty); reporting partial, not covered (never-had-tests).`
-                    : // The sentence is the verdict. It names a title, a declaration
-                        // shape, a bare mention, or silence — it does not re-scan.
-                        `Invariant ${inv.id}: ${describeCoverage(inv, ev)} (${kind === 'tests-disappeared'
-                            ? 'tests-disappeared — a suite exists'
-                            : 'never-had-tests — the scan found no tests at all'}). ArkGate matches declared text; it never executes tests.`) +
+                    : zeroEvidenceOptOut
+                        ? `Invariant ${inv.id} is enforced but declares no evidence (coverage.test is false and no coverage.symbol); set coverage.symbol, drop test:false, or keep mode "advisory".`
+                        : // The sentence is the verdict. It names a title, a declaration
+                            // shape, a bare mention, or silence — it does not re-scan.
+                            `Invariant ${inv.id}: ${describeCoverage(inv, ev)} (${kind === 'tests-disappeared'
+                                ? 'tests-disappeared — a suite exists'
+                                : 'never-had-tests — the scan found no tests at all'}). ArkGate matches declared text; it never executes tests.`) +
                     (partial && coverageBudgetExhausted ? budgetExhaustedTail : discardTail),
                 file: inv.provenance.sourceFile,
                 line: 1,
@@ -606,6 +646,14 @@ export function canPromoteInvariant(coverage) {
         return {
             ok: false,
             reason: `Invariant ${coverage.invariantId} is uncovered; add a test title or symbol before promoting to enforced.`,
+        };
+    }
+    // A `coverage.test: false` opt-out without a symbol reports covered with no
+    // evidence at all. That is fine while advisory; it is not a basis for enforcing.
+    if (Array.isArray(coverage.evidence) && coverage.evidence.length === 0) {
+        return {
+            ok: false,
+            reason: `Invariant ${coverage.invariantId} declares no evidence (coverage.test:false and no symbol); add coverage.symbol or a test title before promoting to enforced.`,
         };
     }
     // Promotion is the moment coverage stops being advice, so an evidence file

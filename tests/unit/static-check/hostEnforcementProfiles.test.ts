@@ -327,7 +327,8 @@ describe('host-specific enforcement profiles', () => {
       fs.mkdirSync(path.join(root, '.claude'), { recursive: true });
       fs.writeFileSync(
         path.join(root, '.claude', 'settings.json'),
-        '{"hooks":{"PreToolUse":[]}}\n'
+        // Not mergeable JSON: mergeable settings are upserted, so only this still refuses.
+        '{"hooks":{"PreToolUse":[]}\n'
       );
       const before = snapshotTree(root);
       const result = run(
@@ -348,7 +349,7 @@ describe('host-specific enforcement profiles', () => {
       );
       expect(result.status).toBe(2);
       expect(`${result.stdout}\n${result.stderr}`).toMatch(
-        /\.claude\/settings\.json.*without an Ark hard-write hook.*--force/i
+        /\.claude\/settings\.json.*not a JSON object Ark can merge into.*--force/i
       );
       expect(snapshotTree(root)).toEqual(before);
     } finally {

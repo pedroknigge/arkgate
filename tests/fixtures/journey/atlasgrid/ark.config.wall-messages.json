@@ -1,0 +1,287 @@
+{
+  "$schema": "https://unpkg.com/arkgate@4/schemas/ark.config.schema.json",
+  "schemaVersion": "1.3",
+  "name": "atlasgrid",
+  "include": [
+    "src"
+  ],
+  "layers": [
+    {
+      "name": "Presentation",
+      "description": "Screens for one universe feature.",
+      "patterns": [
+        "src/components/**"
+      ]
+    },
+    {
+      "name": "Application",
+      "description": "Use cases, universe-common domain, and shared helpers.",
+      "patterns": [
+        "src/lib/features/**",
+        "src/lib/shared/**",
+        "src/lib/compliance/**"
+      ]
+    },
+    {
+      "name": "Persistence",
+      "description": "Repositories for one universe feature.",
+      "patterns": [
+        "src/lib/repositories/**"
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "from": "Presentation",
+      "to": "Presentation",
+      "allowed": false,
+      "peerIsolation": true,
+      "sliceFolders": [
+        "features"
+      ],
+      "sharedRoots": [
+        "components/ui",
+        "lib/shared"
+      ],
+      "childSlices": {
+        "sliceFolders": [
+          "lib/features/*/*",
+          "components/features/*/*",
+          "lib/repositories/features/*/*"
+        ],
+        "sliceIdentity": "stars",
+        "commonFolders": [
+          "domain"
+        ],
+        "siblings": "deny",
+        "parentMayImportChild": false,
+        "message": "Inner wall (atlasgrid): import universe common, not a sibling feature."
+      },
+      "message": "Universe wall (atlasgrid): do not import another universe."
+    },
+    {
+      "from": "Presentation",
+      "to": "Application",
+      "allowed": false,
+      "peerIsolation": true,
+      "sliceFolders": [
+        "features"
+      ],
+      "sharedRoots": [
+        "components/ui",
+        "lib/shared"
+      ],
+      "childSlices": {
+        "sliceFolders": [
+          "lib/features/*/*",
+          "components/features/*/*",
+          "lib/repositories/features/*/*"
+        ],
+        "sliceIdentity": "stars",
+        "commonFolders": [
+          "domain"
+        ],
+        "siblings": "deny",
+        "parentMayImportChild": false
+      },
+      "message": "Universe wall (atlasgrid): do not import another universe."
+    },
+    {
+      "from": "Presentation",
+      "to": "Persistence",
+      "allowed": false,
+      "peerIsolation": true,
+      "sliceFolders": [
+        "features"
+      ],
+      "sharedRoots": [
+        "components/ui",
+        "lib/shared"
+      ],
+      "childSlices": {
+        "sliceFolders": [
+          "lib/features/*/*",
+          "components/features/*/*",
+          "lib/repositories/features/*/*"
+        ],
+        "sliceIdentity": "stars",
+        "commonFolders": [
+          "domain"
+        ],
+        "siblings": "deny",
+        "parentMayImportChild": false
+      },
+      "message": "Universe wall (atlasgrid): do not import another universe."
+    },
+    {
+      "from": "Application",
+      "to": "Presentation",
+      "allowed": false,
+      "peerIsolation": true,
+      "sliceFolders": [
+        "features"
+      ],
+      "sharedRoots": [
+        "components/ui",
+        "lib/shared"
+      ],
+      "childSlices": {
+        "sliceFolders": [
+          "lib/features/*/*",
+          "components/features/*/*",
+          "lib/repositories/features/*/*"
+        ],
+        "sliceIdentity": "stars",
+        "commonFolders": [
+          "domain"
+        ],
+        "siblings": "deny",
+        "parentMayImportChild": false
+      },
+      "message": "Universe wall (atlasgrid): do not import another universe."
+    },
+    {
+      "from": "Application",
+      "to": "Application",
+      "allowed": false,
+      "peerIsolation": true,
+      "sliceFolders": [
+        "features"
+      ],
+      "sharedRoots": [
+        "components/ui",
+        "lib/shared"
+      ],
+      "childSlices": {
+        "sliceFolders": [
+          "lib/features/*/*",
+          "components/features/*/*",
+          "lib/repositories/features/*/*"
+        ],
+        "sliceIdentity": "stars",
+        "commonFolders": [
+          "domain"
+        ],
+        "siblings": "deny",
+        "parentMayImportChild": false,
+        "message": "Inner wall (atlasgrid): import universe common, not a sibling feature."
+      },
+      "message": "Universe wall (atlasgrid): do not import another universe."
+    },
+    {
+      "from": "Application",
+      "to": "Persistence",
+      "allowed": false,
+      "peerIsolation": true,
+      "sliceFolders": [
+        "features"
+      ],
+      "sharedRoots": [
+        "components/ui",
+        "lib/shared"
+      ],
+      "childSlices": {
+        "sliceFolders": [
+          "lib/features/*/*",
+          "components/features/*/*",
+          "lib/repositories/features/*/*"
+        ],
+        "sliceIdentity": "stars",
+        "commonFolders": [
+          "domain"
+        ],
+        "siblings": "deny",
+        "parentMayImportChild": false
+      },
+      "message": "Universe wall (atlasgrid): do not import another universe."
+    },
+    {
+      "from": "Persistence",
+      "to": "Presentation",
+      "allowed": false,
+      "peerIsolation": true,
+      "sliceFolders": [
+        "features"
+      ],
+      "sharedRoots": [
+        "components/ui",
+        "lib/shared"
+      ],
+      "childSlices": {
+        "sliceFolders": [
+          "lib/features/*/*",
+          "components/features/*/*",
+          "lib/repositories/features/*/*"
+        ],
+        "sliceIdentity": "stars",
+        "commonFolders": [
+          "domain"
+        ],
+        "siblings": "deny",
+        "parentMayImportChild": false
+      },
+      "message": "Universe wall (atlasgrid): do not import another universe."
+    },
+    {
+      "from": "Persistence",
+      "to": "Application",
+      "allowed": false,
+      "peerIsolation": true,
+      "sliceFolders": [
+        "features"
+      ],
+      "sharedRoots": [
+        "components/ui",
+        "lib/shared"
+      ],
+      "childSlices": {
+        "sliceFolders": [
+          "lib/features/*/*",
+          "components/features/*/*",
+          "lib/repositories/features/*/*"
+        ],
+        "sliceIdentity": "stars",
+        "commonFolders": [
+          "domain"
+        ],
+        "siblings": "deny",
+        "parentMayImportChild": false
+      },
+      "message": "Universe wall (atlasgrid): do not import another universe."
+    },
+    {
+      "from": "Persistence",
+      "to": "Persistence",
+      "allowed": false,
+      "peerIsolation": true,
+      "sliceFolders": [
+        "features"
+      ],
+      "sharedRoots": [
+        "components/ui",
+        "lib/shared"
+      ],
+      "childSlices": {
+        "sliceFolders": [
+          "lib/features/*/*",
+          "components/features/*/*",
+          "lib/repositories/features/*/*"
+        ],
+        "sliceIdentity": "stars",
+        "commonFolders": [
+          "domain"
+        ],
+        "siblings": "deny",
+        "parentMayImportChild": false
+      },
+      "message": "Universe wall (atlasgrid): do not import another universe."
+    }
+  ],
+  "exclude": [
+    "src/lib/features/projects/scm/scm-uses-d2d.ts",
+    "src/components/features/projects/rfi/rfi-uses-d2d.tsx",
+    "src/lib/compliance/uses-management.ts",
+    "src/lib/shared/composition/register-all.ts",
+    "src/lib/features/projects/rfi/rfi-deps.ts"
+  ]
+}

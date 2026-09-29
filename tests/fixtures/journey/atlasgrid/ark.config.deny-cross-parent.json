@@ -161,6 +161,8 @@
   "exclude": [
     "src/lib/features/projects/scm/scm-uses-d2d.ts",
     "src/components/features/projects/rfi/rfi-uses-d2d.tsx",
-    "src/lib/compliance/uses-management.ts"
+    "src/lib/compliance/uses-management.ts",
+    "src/lib/shared/composition/register-all.ts",
+    "src/lib/features/projects/rfi/rfi-deps.ts"
   ]
 }

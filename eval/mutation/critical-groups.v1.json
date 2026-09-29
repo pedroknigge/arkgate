@@ -4,52 +4,52 @@
   "groups": [
     {
       "id": "config-loading",
-      "note": "4.8.4 pins (467–473 version parse, 493–551 walk/load/parse) drifted onto validateLayerOwners and JSDoc after LO01 owners + trustBoundary. Retargeted to the same migrateArkConfig / load / JSON.parse decisions. #297 added sharedImportsSlice and shifted these pins by one. #308 sliceIdentity schema shifted them by seven. #326 childSlices schema shifted the same decisions by 17 lines. #326 PR2 deny-cross-parent schema description shifted them by five. #326 PR3 siblings object schema plus validateChildSliceSiblings shifted the same decisions by 89 lines. #326 PR4 childSlices.allowedCrossSlice schema plus validateChildSliceAllowedCrossSlice shifted the same decisions by 94 lines (755–758, 760–761, 781–782, 787–788, 797–799, 810, 817, 826–831). #326 PR5 sliceAliases schema plus validateChildSliceAliases shifted the same decisions to 1023–1026, 1028–1029, 1049–1050, 1055–1056, 1065–1067, 1078, 1085, 1094–1100. The load pin includes the new call. JSON.parse moved to 1111 because that call sits above it. Skip the equivalent typeof guard (one line after the unversioned branch).",
+      "note": "4.8.4 pins (467–473 version parse, 493–551 walk/load/parse) drifted onto validateLayerOwners and JSDoc after LO01 owners + trustBoundary. Retargeted to the same migrateArkConfig / load / JSON.parse decisions. #297 added sharedImportsSlice and shifted these pins by one. #308 sliceIdentity schema shifted them by seven. #326 childSlices schema shifted the same decisions by 17 lines. #326 PR2 deny-cross-parent schema description shifted them by five. #326 PR3 siblings object schema plus validateChildSliceSiblings shifted the same decisions by 89 lines. #326 PR4 childSlices.allowedCrossSlice schema plus validateChildSliceAllowedCrossSlice shifted the same decisions by 94 lines (755–758, 760–761, 781–782, 787–788, 797–799, 810, 817, 826–831). #326 PR5 sliceAliases schema plus validateChildSliceAliases shifted the same decisions to 1023–1026, 1028–1029, 1049–1050, 1055–1056, 1065–1067, 1078, 1085, 1094–1100. The load pin includes the new call. JSON.parse moved to 1111 because that call sits above it. Skip the equivalent typeof guard (one line after the unversioned branch). The slice-wall split moved the childSlices / sharedImportsSlice schema and validators to configContractSlices.ts, so the same decisions sit at 557–560, 562–563, 583–584, 589–590, 599–601, 612, 619, 628–632 (one validateSliceContract call replaces three), and JSON.parse at 643.",
       "targets": [
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 1023,
-          "endLine": 1026
+          "startLine": 557,
+          "endLine": 560
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 1028,
-          "endLine": 1029
+          "startLine": 562,
+          "endLine": 563
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 1049,
-          "endLine": 1050
+          "startLine": 583,
+          "endLine": 584
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 1055,
-          "endLine": 1056
+          "startLine": 589,
+          "endLine": 590
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 1065,
-          "endLine": 1067
+          "startLine": 599,
+          "endLine": 601
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 1078,
-          "endLine": 1078
+          "startLine": 612,
+          "endLine": 612
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 1085,
-          "endLine": 1085
+          "startLine": 619,
+          "endLine": 619
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 1094,
-          "endLine": 1100
+          "startLine": 628,
+          "endLine": 632
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 1111,
-          "endLine": 1111
+          "startLine": 643,
+          "endLine": 643
         }
       ]
     },
@@ -65,16 +65,17 @@
     },
     {
       "id": "host-capabilities",
+      "note": "The old 10-92 pin started inside the host-support import and stopped mid-return. The hard-write merge fix inserted hostHookFileMergeable above HOST_ENFORCEMENT_SUPPORT and a merge guard into validateHardWriteRequest; the pin now covers hostHookFileMergeable through the end of validateHardWriteRequest (32-133). The pinned-npx prefix (npxArkgatePrefixLength import plus one line in arkMcpInvocation) moved the write-path-capabilities pin from 39-176 to 40-178 on the same code.",
       "targets": [
         {
           "file": "bin/lib/enforcement-profiles.mjs",
-          "startLine": 10,
-          "endLine": 92
+          "startLine": 32,
+          "endLine": 133
         },
         {
           "file": "bin/lib/write-path-capabilities.mjs",
-          "startLine": 39,
-          "endLine": 176
+          "startLine": 40,
+          "endLine": 178
         },
         {
           "file": "bin/lib/write-path-detect.mjs",
@@ -106,18 +107,19 @@
     },
     {
       "id": "resolved-candidate-facts",
+      "note": "resolvedCompilerInputPaths body after its TypeScript-API guard (realpath + candidate collection) through resolveRelativeFallback and resolveDependency (unresolved / resolved-project / resolved-external). The readConfigFile guard line stays outside the pin. The arkorder/arkrun receiver-trace merges shifted the same code to 739-789. The memory pass (lazy source reads, path reuse, resolution memo) shifted it to 786-839. The ArkRun effective-intent-prefix import shifted it to 787-840.",
       "targets": [
         {
           "file": "bin/lib/resolved-candidate-facts.mjs",
-          "startLine": 736,
-          "endLine": 786
+          "startLine": 787,
+          "endLine": 840
         }
       ]
     },
     {
       "id": "managed-upgrade",
       "optional": true,
-      "note": "4.1.0: unit-tested S4 force-preserve; mutation NoCoverage residual on toml-section branch \u2014 optional for group gate, still pinned for Z08 causal.",
+      "note": "4.1.0: unit-tested S4 force-preserve; mutation NoCoverage residual on toml-section branch — optional for group gate, still pinned for Z08 causal.",
       "targets": [
         {
           "file": "bin/lib/managed-upgrade.mjs",
@@ -149,23 +151,23 @@
     },
     {
       "id": "peer-isolation-fail-closed",
-      "note": "DF04: peerIsolationDecision pure fail-closed core (missing paths/slices/folders, declared shared roots, declared cross-slice edges, shared-imports-slice). peerIsolationMustDeny is its boolean face. #297 shifted the function. Slice-id JSDoc and #308 sliceIdentity helpers shifted it again; retargeted to the same body. #326 inserted SliceVerdict types above the same function. #326 PR2 widened sharedImportsSlice and SliceReasonId above the same function (818–845). #326 PR3 inserted the siblings object type above the same function (829–856). #326 PR4 inserted the child allowedCrossSlice field above the same function (834–861). #326 PR5 inserted the SliceAlias type above the same function (844–871). The pin does not cover the child wall, the alias resolver, or the laundering post-pass.",
+      "note": "DF04: peerIsolationDecision pure fail-closed core (missing paths/slices/folders, declared shared roots, declared cross-slice edges, shared-imports-slice). peerIsolationMustDeny is its boolean face. #297 shifted the function. Slice-id JSDoc and #308 sliceIdentity helpers shifted it again; retargeted to the same body. #326 inserted SliceVerdict types above the same function. #326 PR2 widened sharedImportsSlice and SliceReasonId above the same function (818–845). #326 PR3 inserted the siblings object type above the same function (829–856). #326 PR4 inserted the child allowedCrossSlice field above the same function (834–861). #326 PR5 inserted the SliceAlias type above the same function (844–871). The pin does not cover the child wall, the alias resolver, or the laundering post-pass. The #335 sharedImportsSlice mode/stop helpers and the #336 ratchet field were inserted above the same function (895–922). The stars-identity JSDoc correction above it shifted it to 897–924. The memory pass cached parsed sliceFolders entries above the same function (923–950). The 4.8.23 stars-id compatibility (legacyStarsSliceIdForPath binding) shifted it to 950-977.",
       "targets": [
         {
           "file": "src/domain/layerMatch.ts",
-          "startLine": 844,
-          "endLine": 871
+          "startLine": 950,
+          "endLine": 977
         }
       ]
     },
     {
       "id": "policy-delta-ack-match",
-      "note": "DF04: policyDeltaAcknowledgementMatches hash + finding-id set equality. AP02 (#264) inserted adrPath JSDoc above the helper. #297 inserted the sharedImportsSlice compare. #308 inserted the sliceIdentity compare, so the helper moved again. #326 compareChildSlices shifted the same function by 93 lines (1077–1106). #326 PR3 sibling enforce-list compare shifted the same function to 1129–1158. #326 PR4 child allowance widening compare shifted the same function to 1207–1236. #326 PR5 compareSliceAliases shifted the same function to 1250–1279. Retargeted to the same body.",
+      "note": "DF04: policyDeltaAcknowledgementMatches hash + finding-id set equality. AP02 (#264) inserted adrPath JSDoc above the helper. #297 inserted the sharedImportsSlice compare. #308 inserted the sliceIdentity compare, so the helper moved again. #326 compareChildSlices shifted the same function by 93 lines (1077–1106). #326 PR3 sibling enforce-list compare shifted the same function to 1129–1158. #326 PR4 child allowance widening compare shifted the same function to 1207–1236. #326 PR5 compareSliceAliases shifted the same function to 1250–1279. Retargeted to the same body. #335 stopAt and #336 ratchet compares shifted the same function to 1298–1327.",
       "targets": [
         {
           "file": "src/domain/policyDelta.ts",
-          "startLine": 1250,
-          "endLine": 1279
+          "startLine": 1298,
+          "endLine": 1327
         }
       ]
     },
@@ -175,8 +177,8 @@
       "targets": [
         {
           "file": "src/domain/invariantCoverage.ts",
-          "startLine": 844,
-          "endLine": 885
+          "startLine": 893,
+          "endLine": 942
         }
       ]
     },
@@ -186,23 +188,24 @@
       "targets": [
         {
           "file": "src/domain/invariantCoverage.ts",
-          "startLine": 228,
-          "endLine": 247
+          "startLine": 234,
+          "endLine": 253
         },
         {
           "file": "src/domain/invariantCoverage.ts",
-          "startLine": 711,
-          "endLine": 715
+          "startLine": 754,
+          "endLine": 758
         }
       ]
     },
     {
       "id": "workflow-failure-boundaries",
+      "note": "runtimeIds replaced the module-level workflow sequence above Saga, shifting the same body two lines up (186-236).",
       "targets": [
         {
           "file": "src/kernel/workflow/Saga.ts",
-          "startLine": 188,
-          "endLine": 238
+          "startLine": 186,
+          "endLine": 236
         }
       ]
     }

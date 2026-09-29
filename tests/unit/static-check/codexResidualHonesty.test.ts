@@ -423,8 +423,12 @@ describe('install --tools codex honesty + SKILL.md catalog', () => {
       }
     );
     expect(out).toMatch(/Codex write path \(honest\)/i);
-    expect(out).toMatch(/not a hard boundary/i);
-    expect(out).toMatch(/Not equivalent to Claude\/Grok/i);
+    // Same claim as the host honesty table (docs/ai-gates.md): complete local apply_patch
+    // is a hard PreToolUse boundary once trusted + runtime-observed.
+    expect(out).not.toMatch(/not a hard boundary/i);
+    expect(out).toMatch(/complete local apply_patch/i);
+    expect(out).toMatch(/runtime-observed/i);
+    expect(out).toMatch(/reinjection is not guaranteed/i);
     expect(out).toMatch(/strict-merge/i);
     expect(fs.existsSync(path.join(root, '.agents/skills/ark-explore/SKILL.md'))).toBe(true);
     expect(fs.existsSync(path.join(root, '.codex/prompts/ark-explore.md'))).toBe(false);

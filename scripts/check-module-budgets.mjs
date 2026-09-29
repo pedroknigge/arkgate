@@ -93,6 +93,8 @@ const BUDGETS = [
   { path: 'src/domain/deepeningCoach.ts', max: 320 },
   { path: 'src/domain/teamParliament.ts', max: 540 },
   { path: 'bin/lib/team-parliament-io.mjs', max: 420 },
+  // Diff-scope git plumbing split out of team-parliament-io (root-relative, -z, fail-closed).
+  { path: 'bin/lib/git-change-scope.mjs', max: 140 },
   // Tooling assembler for hot-path git heuristic + doctor print.
   { path: 'bin/lib/deep-module-coach.mjs', max: 220 },
   // X04 R1/R2: physicalCohesion sensor + proposed reshape pilot (ADR 0010).

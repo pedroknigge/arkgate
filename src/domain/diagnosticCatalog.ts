@@ -109,6 +109,14 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
     'Move the reference to an allowed layer or introduce a port/event boundary, then re-run the snippet gate.'
   ),
   entry(
+    'SHARED_IMPORTS_SLICE',
+    'layer',
+    'A shared root imports a slice',
+    'A declared shared root imports a slice directly. That hop is allowed while sharedImportsSlice is unset or "deny-cross-parent", so this is advisory: the universe wall is direct-only.',
+    'Move the code the shared root needs into the shared root, or invert the dependency. Set sharedImportsSlice: "deny" to make these edges errors. With "deny-cross-parent", a slice that reaches another universe through a shared root is reported as LAYER_IMPORT_VIOLATION with reasonId CROSS_PARENT_VIA_SHARED. This warning does not fail the check.',
+    { oftenAdvisory: true }
+  ),
+  entry(
     'CIRCULAR_DEPENDENCY',
     'layer',
     'Dependency cycle',
@@ -237,6 +245,14 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
     'Raise coverage.maxFiles in ark.config.json (this cap also bounds structural-hint preload; --doctor names the coupling) so hinted/governed counts match, then re-run with --strict-config. An enforced hint sensor that cannot see its scope fails strict.'
   ),
   entry(
+    'ARKRULE_FILE_UNREFERENCED',
+    'arkrules',
+    'ArkRules file not referenced',
+    'A JSON file under arkrules/ is not referenced by the arkRules map in ark.config.json (or no map exists), so none of its rules are enforced or reported. Drift looks like governance until someone notices.',
+    'Reference the file from arkRules ("<Layer>": "arkrules/<file>.json"), or delete it. Advisory only: it never fails the check.',
+    { oftenAdvisory: true }
+  ),
+  entry(
     'INVARIANT_CATALOG_EMPTY',
     'arkrules',
     'Domain invariant catalog is empty',
@@ -279,14 +295,14 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
     'ARKRUN_MISSING_ROOT',
     'arkrun',
     'No kernel factory in composition roots',
-    'The ArkRun extra is on but no createArkKernel / createStrictArkKernel / createArkKernelFromConfig / createStrictArkKernelFromConfig factory was found in arkRun.compositionRoots, so agents can skip the kernel while the write gate stays green.',
+    'The ArkRun extra is on but no kernel factory (createArkKernel / createStrictArkKernel / createLenientArkKernel, their *FromConfig variants, or ArkModule.forRoot / forRootAsync imported from arkgate/nestjs) was found in arkRun.compositionRoots, so agents can skip the kernel while the write gate stays green.',
     'Import createStrictArkKernel from arkgate/runtime (same npm package; @arkgate/runtime is deprecated) and call it in a composition root listed in arkRun.compositionRoots, then preflight again. Never mechanical-safe — factory placement is a design decision.'
   ),
   entry(
     'ARKRUN_KERNEL_IN_DOMAIN',
     'arkrun',
     'Domain-role layer imports the kernel',
-    'A Domain-role layer imports arkgate/runtime, @arkgate/runtime, or kernel types. Domain stays kernel-free; composition roots and adapters own the factory.',
+    'A Domain-role layer imports arkgate/runtime, arkgate/nestjs, @arkgate/runtime, or kernel types. Domain stays kernel-free; composition roots and adapters own the factory.',
     'Move the kernel import out of the Domain-role layer into a composition root or adapter. Import from arkgate/runtime (same npm package; @arkgate/runtime is deprecated), then preflight again. Never mechanical-safe.'
   ),
   entry(
@@ -300,21 +316,21 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
     'ARKRUN_UNDECLARED_EMIT',
     'arkrun',
     'Emit name not in raises/sends',
-    'A publisher / publish / raise / send call-site literal is not listed in the file’s raises or sends declaration.',
+    'A publisher / publish / raise / send call on a receiver traced to the kernel names an intent (string literal or same-file define/defineIntent binding) that is not listed in the file’s raises or sends declaration.',
     'Add the existing call-site name to raises or sends on the managed component, then preflight again. Mechanical-safe only when that literal already exists and the edit is the declaration list; inventing a new emit stays judgment.'
   ),
   entry(
     'ARKRUN_UNDECLARED_HANDLE',
     'arkrun',
     'Handle name not in reactsTo',
-    'A subscribe / registerHandler call-site literal is not listed in the file’s reactsTo declaration.',
+    'A subscribe / registerHandler call on a receiver traced to the kernel names an intent (string literal or same-file define/defineIntent binding) that is not listed in the file’s reactsTo declaration.',
     'Add the existing call-site name to reactsTo on the managed component, then preflight again. Mechanical-safe only when that literal already exists and the edit is the declaration list; inventing a new handle stays judgment.'
   ),
   entry(
     'ARKRUN_UNDECLARED_DEPEND',
     'arkrun',
     'Depend name not in uses',
-    'A resolve / resolveSingleton call-site literal is not listed in the file’s uses declaration.',
+    'A resolve / resolveSingleton call on a receiver traced to the kernel names a component that is not listed in the file’s uses declaration.',
     'Add the existing call-site name to uses on the managed component, then preflight again. Mechanical-safe only when that literal already exists and the edit is the declaration list; inventing a new depend stays judgment.'
   ),
   entry(
@@ -395,6 +411,13 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
     'release() already froze the big choice. A later release() with a different value does not land. First freeze is release(); later change is proposeRelease then apply.',
     'Change the choice with proposeRelease then apply. release() is only the first freeze. Never mechanical-safe.'
   ),
+  entry(
+    'ARKORDER_STALE_PROPOSAL',
+    'arkorder',
+    'Proposal is not bound to the current Release',
+    'apply() got a ProposeResult computed against another Release (another apply landed first), one missing its base binding, or one whose reviewed blast radius is not the transition that would commit. The binding is data, not a capability: a proposal that states the current base and the exact transition applies whoever built it.',
+    'Run proposeRelease again against the current Release, review the new blast radius, then apply that proposal. Never mechanical-safe.'
+  ),
 
   // ── atomic preflight / change set ────────────────────────────────────────
   entry(
@@ -468,6 +491,13 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
     'Use resolved-candidate facts / ark_prepare_change with a complete batch, or fall back to ark-check on disk. Do not treat missing preflight as green.'
   ),
   entry(
+    'WRITE_GATE_UNAVAILABLE',
+    'preflight',
+    'Write gate could not run',
+    'The write gate could not load its own inputs (ark.config.json missing, unreadable, or invalid; a referenced ArkRules file missing or invalid; or the built library missing), so it cannot judge this governed source write (existing files included), or a write would leave ark.config.json or a referenced ArkRules file unloadable. No checker, no write: the hook blocks instead of letting the write through unchecked.',
+    'Fix the reported input (repair ark.config.json or the ArkRules file, or run `npm run build` / reinstall arkgate from npm), then retry the same write. Do not remove the hook to get past it.'
+  ),
+  entry(
     'DESIGN_SMELL_REGRESSION',
     'preflight',
     'Design smell regression on base-relative ratchet',
@@ -488,7 +518,7 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
     'analysis',
     'Lexical evidence incomplete',
     'This check only saw one file, so it cannot fully prove how the import resolves. The result is provisional — `ark-check` on the project is the authority.',
-    'Run `npx arkgate-check --root . --config ark.config.json` to confirm. Do not call ark_prepare_change from a hook deny.'
+    'For a complete verdict, run `npx arkgate-check --root . --config ark.config.json` (or ark_prepare_change over MCP with the full candidate batch). Read lexicalValid for the one-file result.'
   ),
   entry(
     'ANALYSIS_COVERS_NO_FILES',
@@ -687,9 +717,9 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
   entry(
     'CONFIG_CHILD_SLICES_VERSION',
     'config',
-    'childSlices needs a newer arkgate',
-    'The rule schema sets additionalProperties to false. arkgate 4.8.22 and older reject a config that contains childSlices instead of ignoring the key.',
-    'Pin arkgate newer than 4.8.22 before shipping a config that sets childSlices. This warning does not fail the check.',
+    'Config needs a newer arkgate than a pinned copy',
+    'ark.config.json uses a slice key (childSlices, sharedImportsSlice "deny-cross-parent" or its object form, sliceIdentity, sharedImportsSlice, childSlices.message, siblings.ratchet) that an arkgate pinned in this repo rejects at config load. Emitted only with evidence of that pin: an exact package.json dependency, the installed node_modules/arkgate, package-lock.json, a scripts/*hook* or host hook command, or a CI workflow. Silent otherwise.',
+    'Bump the named file to the version the finding gives (or newer), then run Ark again. This warning does not fail the check.',
     { oftenAdvisory: true }
   ),
   entry(
@@ -706,6 +736,23 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
     'Child slice allowance cannot cross the universe wall',
     'childSlices.allowedCrossSlice names a pattern that can match two universes. That list clears only a sibling crossing inside one universe. The universe wall still denies the edge.',
     'Narrow the pattern so both sides share one universe prefix (features/projects/* to features/projects/d2d-item), or remove the entry. This warning does not fail the check.',
+    { oftenAdvisory: true }
+  ),
+
+  entry(
+    'CONFIG_CHILD_SLICES_INERT',
+    'config',
+    'childSlices on a rule that cannot run it',
+    'A rule sets childSlices without peerIsolation: true and allowed: false. The child wall runs only inside a universe wall, so on this rule childSlices enforces nothing. Config load still accepts it (arkgate 4.8.23 did too).',
+    'Add "peerIsolation": true and "allowed": false to the same rule so the child wall runs, or remove childSlices. This warning does not fail the check.',
+    { oftenAdvisory: true }
+  ),
+  entry(
+    'CONFIG_SLICE_LEGACY_STARS_ID',
+    'config',
+    'Slice id written in the 4.8.23 stars form',
+    'Under sliceIdentity "stars", a sliceAliases target or an allowedCrossSlice entry names the 4.8.23 stars id, which dropped a star binding before the last literal (modules/*/api/* bound api/v1). The id now keeps that binding (orders/api/v1). For one release the entry keeps its 4.8.23 meaning, so verdicts do not change.',
+    'Rewrite the entry with the new id the warning names (for example orders/api/v1/x instead of api/v1/x). A sliceAliases target that maps to more than one universe shape is rejected at config load. This warning does not fail the check.',
     { oftenAdvisory: true }
   ),
 
@@ -818,7 +865,10 @@ export type SliceReasonHint = {
   ruleId: 'LAYER_IMPORT_VIOLATION';
   title: string;
   why: string;
+  /** Action for the finding in front of the reader. Same on every surface. */
   fix: string;
+  /** Appended only when the finding is advisory (`failsStrict: false`). */
+  advisoryNote?: string;
 };
 
 export const SLICE_REASON_HINTS: readonly SliceReasonHint[] = Object.freeze([
@@ -834,14 +884,16 @@ export const SLICE_REASON_HINTS: readonly SliceReasonHint[] = Object.freeze([
     ruleId: 'LAYER_IMPORT_VIOLATION',
     title: 'Cross-sibling slice',
     why: 'This import crosses two feature slices inside one universe.',
-    fix: 'Import universe-common code, or move the shared piece into the feature that owns it. An enforce list makes those importer subtrees errors. Other sibling crossings stay warnings, and a new one past the baseline still fails.',
+    fix: 'Import universe-common code, or move the shared piece into the feature that owns it.',
+    advisoryNote:
+      'This crossing is a warning (siblings advisory). With a baseline in use, a new one fails only when the baseline already records an advisory crossing of this rule and the count grows, or when siblings.ratchet is true; ratchet false measures only.',
   }),
   Object.freeze({
     reasonId: 'CROSS_PARENT_VIA_SHARED',
     ruleId: 'LAYER_IMPORT_VIOLATION',
     title: 'Cross-universe through a shared root',
     why: 'A slice reaches another universe only through a shared root. ark-check and CI report this path. The write hook and ESLint see one edge at a time and do not block it.',
-    fix: 'Stop the shared root from importing the other universe, or move that import into the universe that owns it. A shared hop that stays inside one universe is allowed.',
+    fix: 'Stop the shared root from importing the other universe, or move that import into the universe that owns it. A shared hop that stays inside one universe is allowed. If the shared hop is a composition root (bootstrap, DI registrations), list it in sharedImportsSlice.stopAt; a path through a stop is not a crossing.',
   }),
 ]);
 

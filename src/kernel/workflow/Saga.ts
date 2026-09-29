@@ -14,12 +14,10 @@ import type {
   WorkflowStep,
   WorkflowStore,
 } from './types';
-
-let workflowSequence = 0;
+import { nextRuntimeId } from '../runtimeIds';
 
 function createWorkflowId(prefix: string): string {
-  workflowSequence += 1;
-  return `${prefix}-${Date.now()}-${workflowSequence}`;
+  return nextRuntimeId(prefix);
 }
 
 function errorMessage(error: unknown): string {

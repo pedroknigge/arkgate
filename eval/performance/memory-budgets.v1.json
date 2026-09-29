@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "method": "Regression guard, not a benchmark claim. Generous peak-RSS ceilings per fresh child process and a post-GC heap-growth ceiling for one long-lived MCP server, measured by scripts/memory-bench.mjs. Ceilings sit well above the recorded values so runner noise cannot fail them, and well below the pre-fix behavior they guard against.",
+  "runner": {
+    "measurement": "peak RSS from process.resourceUsage().maxRSS inside each child (preload probe); MCP heap is process.memoryUsage().heapUsed after two forced GCs, sampled after the warm-up calls and after the last call"
+  },
+  "scenarios": {
+    "check": {
+      "maxPeakRssBytes": 471859200,
+      "rationale": "ark-check --json --no-cache over the fixture. 450 MiB ceiling."
+    },
+    "hookWrite": {
+      "maxPeakRssBytes": 209715200,
+      "rationale": "One-line Write through the PreToolUse hook. It must not walk or parse the tree: 200 MiB ceiling (loading TypeScript is most of the floor)."
+    },
+    "hookPatch": {
+      "maxPeakRssBytes": 524288000,
+      "rationale": "Complete ApplyPatch (atomic base/candidate preflight over the tree). 500 MiB ceiling."
+    },
+    "mcp": {
+      "maxPeakRssBytes": 734003200,
+      "maxHeapGrowthBytes": 16777216,
+      "rationale": "One long-lived MCP server over repeated validate_code / ark_prepare_write / ark_prepare_change / ark_check calls. Post-GC heap may not grow more than 16 MiB between the end of warm-up and the last call (a leak or an unbounded cache exceeds that); 700 MiB peak RSS ceiling."
+    }
+  }
+}

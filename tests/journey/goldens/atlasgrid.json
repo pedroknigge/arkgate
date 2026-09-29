@@ -337,7 +337,7 @@
       "owner": "#326 PR5",
       "status": "pass",
       "want": {
-        "badTargetSnippet": "child of an existing universe",
+        "badTargetSnippet": "child of a universe shape",
         "commonFindings": 0,
         "crossParentCount": 6,
         "crossParentReason": "CROSS_PARENT_SLICE",
@@ -399,6 +399,82 @@
         "layer": "Persistence",
         "moveCount": 1,
         "pilotSource": "flat-parent"
+      }
+    },
+    {
+      "expect": "pass",
+      "got": {
+        "count": 2,
+        "fromStopFile": 0,
+        "kept": 2,
+        "rootWarnings": 2
+      },
+      "id": "335-stop-at",
+      "met": true,
+      "note": "Owned by #335. rfi-deps.ts reaches management and operations only through the composition root lib/shared/composition/register-all.ts. With sharedImportsSlice { mode: \"deny-cross-parent\", stopAt } that path is not a crossing. The two laundering paths of pr2 stay, each with its shared hop in via. The direct shared-root hop from the composition root stays a SHARED_IMPORTS_SLICE warning.",
+      "owner": "#335",
+      "status": "pass",
+      "want": {
+        "count": 2,
+        "fromStopFile": 0,
+        "reasonId": "CROSS_PARENT_VIA_SHARED",
+        "rootWarnings": 2
+      }
+    },
+    {
+      "expect": "pass",
+      "got": {
+        "advisoryWarnings": 2,
+        "errors": 0,
+        "exitCode": 0,
+        "ok": true
+      },
+      "id": "336-legacy-baseline",
+      "met": true,
+      "note": "Owned by #336. baseline.legacy.json freezes every non-sibling finding of the subtree wall and no advisory sibling. Advisory is advisory on day 1: the two advisory crossings stay warnings and the check passes.",
+      "owner": "#336",
+      "status": "pass",
+      "want": {
+        "advisoryWarnings": 2,
+        "errors": 0,
+        "ok": true
+      }
+    },
+    {
+      "expect": "pass",
+      "got": {
+        "crossParent": 5,
+        "crossParentWithUniverseText": 5,
+        "defaultRowPrefix": true,
+        "innerRows": 4,
+        "innerWithInnerText": 3,
+        "innerWithUniverseText": 0
+      },
+      "id": "337-wall-messages",
+      "met": true,
+      "note": "Owned by #337. Every rule sets a universe message; Presentation and Application also set childSlices.message. CROSS_PARENT_SLICE rows start with the universe text. Sibling and common-to-child rows never contain it: they use the inner text, or the ArkGate default where the rule has no inner text (Persistence).",
+      "owner": "#337",
+      "status": "pass",
+      "want": {
+        "crossParent": 5,
+        "crossParentWithUniverseText": 5,
+        "innerRows": 4,
+        "innerWithUniverseText": 0
+      }
+    },
+    {
+      "expect": "pass",
+      "got": {
+        "childSteps": 6,
+        "versionWarnings": 0
+      },
+      "id": "338-version-silent",
+      "met": true,
+      "note": "Owned by #338. The fixture pins no older arkgate (the installed copy is the candidate), so no childSlices step warns CONFIG_CHILD_SLICES_VERSION.",
+      "owner": "#338",
+      "status": "pass",
+      "want": {
+        "versionWarnings": 0
       }
     }
   ],
@@ -596,20 +672,6 @@
           }
         ],
         "warnings": [
-          {
-            "count": 1,
-            "edges": [
-              {
-                "file": null,
-                "target": null,
-                "toSlice": null
-              }
-            ],
-            "fromLayer": null,
-            "ruleId": "CONFIG_CHILD_SLICES_VERSION",
-            "severity": "warning",
-            "toLayer": null
-          },
           {
             "count": 3,
             "edges": [
@@ -904,20 +966,6 @@
         ],
         "warnings": [
           {
-            "count": 1,
-            "edges": [
-              {
-                "file": null,
-                "target": null,
-                "toSlice": null
-              }
-            ],
-            "fromLayer": null,
-            "ruleId": "CONFIG_CHILD_SLICES_VERSION",
-            "severity": "warning",
-            "toLayer": null
-          },
-          {
             "count": 3,
             "edges": [
               {
@@ -1051,20 +1099,6 @@
           }
         ],
         "warnings": [
-          {
-            "count": 1,
-            "edges": [
-              {
-                "file": null,
-                "target": null,
-                "toSlice": null
-              }
-            ],
-            "fromLayer": null,
-            "ruleId": "CONFIG_CHILD_SLICES_VERSION",
-            "severity": "warning",
-            "toLayer": null
-          },
           {
             "count": 1,
             "edges": [
@@ -1230,20 +1264,6 @@
         ],
         "warnings": [
           {
-            "count": 1,
-            "edges": [
-              {
-                "file": null,
-                "target": null,
-                "toSlice": null
-              }
-            ],
-            "fromLayer": null,
-            "ruleId": "CONFIG_CHILD_SLICES_VERSION",
-            "severity": "warning",
-            "toLayer": null
-          },
-          {
             "count": 3,
             "edges": [
               {
@@ -1367,7 +1387,7 @@
       "filesDiff": {},
       "output": {
         "configRejected": true,
-        "message": "Invalid ArkGate config (<project>/ark.config.aliases-target.json):\n- $.rules[0].childSlices.sliceAliases[0].to: must be a child of an existing universe (the universe id this rule already names, plus one child segment). A bare name, a universe id alone, an unknown universe, and a wildcard are rejected.\n- $.rules[1].childSlices.sliceAliases[0].to: must be a child of an existing universe (the universe id this rule already names, plus one child segment). A bare name, a universe id alone, an unknown universe, and a wildcard are rejected.\n- $.rules[2].childSlices.sliceAliases[0].to: must be a child of an existing universe (the universe id this rule already names, plus one child segment). A bare name, a universe id alone, an unknown universe, and a wildcard are rejected.\n- $.rules[3].childSlices.sliceAliases[0].to: must be a child of an existing universe (the universe id this rule already names, plus one child segment). A bare name, a universe id alone, an unknown universe, and a wildcard are rejected.\n- $.rules[4].childSlices.sliceAliases[0].to: must be a child of an existing universe (the universe id this rule already names, plus one child segment). A bare name, a universe id alone, an unknown universe, and a wildcard are rejected.\n- $.rules[5].childSlices.sliceAliases[0].to: must be a child of an existing universe (the universe id this rule already names, plus one child segment). A bare name, a universe id alone, an unknown universe, and a wildcard are rejected.\n- $.rules[6].childSlices.sliceAliases[0].to: must be a child of an existing universe (the universe id this rule already names, plus one child segment). A bare name, a universe id alone, an unknown universe, and a wildcard are rejected.\n- $.rules[7].childSlices.sliceAliases[0].to: must be a child of an existing universe (the universe id this rule already names, plus one child segment). A bare name, a universe id alone, an unknown universe, and a wildcard are rejected.\n- $.rules[8].childSlices.sliceAliases[0].to: must be a child of an existing universe (the universe id this rule already names, plus one child segment). A bare name, a universe id alone, an unknown universe, and a wildcard are rejected."
+        "message": "Invalid ArkGate config (<project>/ark.config.aliases-target.json):\n- $.rules[0].childSlices.sliceAliases[0].to: must be a child of a universe shape this rule names (its universe sliceFolders shape plus one child segment). A bare name, a universe id alone, a target outside every universe shape, and a wildcard are rejected. Config load checks the shape only; doctor reports a target universe no file belongs to.\n- $.rules[1].childSlices.sliceAliases[0].to: must be a child of a universe shape this rule names (its universe sliceFolders shape plus one child segment). A bare name, a universe id alone, a target outside every universe shape, and a wildcard are rejected. Config load checks the shape only; doctor reports a target universe no file belongs to.\n- $.rules[2].childSlices.sliceAliases[0].to: must be a child of a universe shape this rule names (its universe sliceFolders shape plus one child segment). A bare name, a universe id alone, a target outside every universe shape, and a wildcard are rejected. Config load checks the shape only; doctor reports a target universe no file belongs to.\n- $.rules[3].childSlices.sliceAliases[0].to: must be a child of a universe shape this rule names (its universe sliceFolders shape plus one child segment). A bare name, a universe id alone, a target outside every universe shape, and a wildcard are rejected. Config load checks the shape only; doctor reports a target universe no file belongs to.\n- $.rules[4].childSlices.sliceAliases[0].to: must be a child of a universe shape this rule names (its universe sliceFolders shape plus one child segment). A bare name, a universe id alone, a target outside every universe shape, and a wildcard are rejected. Config load checks the shape only; doctor reports a target universe no file belongs to.\n- $.rules[5].childSlices.sliceAliases[0].to: must be a child of a universe shape this rule names (its universe sliceFolders shape plus one child segment). A bare name, a universe id alone, a target outside every universe shape, and a wildcard are rejected. Config load checks the shape only; doctor reports a target universe no file belongs to.\n- $.rules[6].childSlices.sliceAliases[0].to: must be a child of a universe shape this rule names (its universe sliceFolders shape plus one child segment). A bare name, a universe id alone, a target outside every universe shape, and a wildcard are rejected. Config load checks the shape only; doctor reports a target universe no file belongs to.\n- $.rules[7].childSlices.sliceAliases[0].to: must be a child of a universe shape this rule names (its universe sliceFolders shape plus one child segment). A bare name, a universe id alone, a target outside every universe shape, and a wildcard are rejected. Config load checks the shape only; doctor reports a target universe no file belongs to.\n- $.rules[8].childSlices.sliceAliases[0].to: must be a child of a universe shape this rule names (its universe sliceFolders shape plus one child segment). A bare name, a universe id alone, a target outside every universe shape, and a wildcard are rejected. Config load checks the shape only; doctor reports a target universe no file belongs to."
       }
     },
     {
@@ -1453,20 +1473,6 @@
           }
         ],
         "warnings": [
-          {
-            "count": 1,
-            "edges": [
-              {
-                "file": null,
-                "target": null,
-                "toSlice": null
-              }
-            ],
-            "fromLayer": null,
-            "ruleId": "CONFIG_CHILD_SLICES_VERSION",
-            "severity": "warning",
-            "toLayer": null
-          },
           {
             "count": 3,
             "edges": [
@@ -1580,6 +1586,370 @@
             }
           ]
         }
+      }
+    },
+    {
+      "command": "ark-check --json --no-cache --config ark.config.stop-at.json",
+      "exitCode": 1,
+      "filesDiff": {},
+      "output": {
+        "completeness": "complete",
+        "ok": false,
+        "valid": false,
+        "violations": [
+          {
+            "file": "src/components/features/management/eos/eos-screen.tsx",
+            "reasonId": null,
+            "ruleId": "LAYER_IMPORT_VIOLATION",
+            "severity": "error",
+            "target": "src/lib/features/external/portal/portal-client.ts"
+          },
+          {
+            "file": "src/components/features/projects/rfi/rfi-screen.tsx",
+            "reasonId": "CROSS_PARENT_VIA_SHARED",
+            "ruleId": "LAYER_IMPORT_VIOLATION",
+            "severity": "error",
+            "target": "src/components/features/management/eos/eos-screen.tsx",
+            "via": [
+              "src/components/ui/dialog.tsx"
+            ]
+          },
+          {
+            "file": "src/lib/features/external/vendors/vendor-sync.ts",
+            "reasonId": null,
+            "ruleId": "LAYER_IMPORT_VIOLATION",
+            "severity": "error",
+            "target": "src/lib/repositories/features/operations/fleet/fleet-repository.ts"
+          },
+          {
+            "file": "src/lib/features/management/budget/budget-lines.ts",
+            "reasonId": null,
+            "ruleId": "LAYER_IMPORT_VIOLATION",
+            "severity": "error",
+            "target": "src/lib/features/projects/d2d-item/d2d-item.ts"
+          },
+          {
+            "file": "src/lib/features/management/eos/eos-summary.ts",
+            "reasonId": "CROSS_PARENT_VIA_SHARED",
+            "ruleId": "LAYER_IMPORT_VIOLATION",
+            "severity": "error",
+            "target": "src/lib/features/operations/dispatch/dispatch-board.ts",
+            "via": [
+              "src/lib/shared/format.ts"
+            ]
+          },
+          {
+            "file": "src/lib/features/projects/rfi/load-rfi.ts",
+            "reasonId": null,
+            "ruleId": "LAYER_IMPORT_VIOLATION",
+            "severity": "error",
+            "target": "src/lib/features/management/eos/eos-summary.ts"
+          },
+          {
+            "file": "src/lib/repositories/features/operations/dispatch/dispatch-repository.ts",
+            "reasonId": null,
+            "ruleId": "LAYER_IMPORT_VIOLATION",
+            "severity": "error",
+            "target": "src/lib/features/projects/scm/scm-board.ts"
+          }
+        ],
+        "warnings": [
+          {
+            "count": 5,
+            "edges": [
+              {
+                "file": "src/lib/shared/composition/register-all.ts",
+                "target": "src/lib/features/management/eos/eos-summary.ts",
+                "toSlice": "features/management"
+              },
+              {
+                "file": "src/lib/shared/composition/register-all.ts",
+                "target": "src/lib/features/operations/dispatch/dispatch-board.ts",
+                "toSlice": "features/operations"
+              },
+              {
+                "file": "src/lib/shared/format.ts",
+                "target": "src/lib/features/operations/dispatch/dispatch-board.ts",
+                "toSlice": "features/operations"
+              },
+              {
+                "file": "src/lib/shared/ids.ts",
+                "target": "src/lib/features/external/portal/portal-client.ts",
+                "toSlice": "features/external"
+              },
+              {
+                "file": "src/lib/shared/labels.ts",
+                "target": "src/lib/features/projects/scm/scm-board.ts",
+                "toSlice": "features/projects"
+              }
+            ],
+            "fromLayer": "Application",
+            "ruleId": "SHARED_IMPORTS_SLICE",
+            "severity": "warning",
+            "toLayer": "Application"
+          },
+          {
+            "count": 1,
+            "edges": [
+              {
+                "file": "src/lib/shared/clock.ts",
+                "target": "src/lib/repositories/features/management/people/people-repository.ts",
+                "toSlice": "features/management"
+              }
+            ],
+            "fromLayer": "Application",
+            "ruleId": "SHARED_IMPORTS_SLICE",
+            "severity": "warning",
+            "toLayer": "Persistence"
+          },
+          {
+            "count": 2,
+            "edges": [
+              {
+                "file": "src/components/ui/button.tsx",
+                "target": "src/components/features/projects/rfi/rfi-status.tsx",
+                "toSlice": "features/projects"
+              },
+              {
+                "file": "src/components/ui/dialog.tsx",
+                "target": "src/components/features/management/eos/eos-screen.tsx",
+                "toSlice": "features/management"
+              }
+            ],
+            "fromLayer": "Presentation",
+            "ruleId": "SHARED_IMPORTS_SLICE",
+            "severity": "warning",
+            "toLayer": "Presentation"
+          }
+        ]
+      }
+    },
+    {
+      "command": "ark-check --json --no-cache --config ark.config.subtree.json --baseline baseline.legacy.json",
+      "exitCode": 0,
+      "filesDiff": {},
+      "output": {
+        "completeness": "complete",
+        "ok": true,
+        "valid": true,
+        "violations": [
+          {
+            "file": "src/components/features/operations/dispatch/dispatch-screen.tsx",
+            "reasonId": "CROSS_SIBLING_SLICE",
+            "ruleId": "LAYER_IMPORT_VIOLATION",
+            "severity": "warning",
+            "target": "src/components/features/operations/fleet/fleet-screen.tsx"
+          },
+          {
+            "file": "src/lib/repositories/features/management/eos/eos-repository.ts",
+            "reasonId": "CROSS_SIBLING_SLICE",
+            "ruleId": "LAYER_IMPORT_VIOLATION",
+            "severity": "warning",
+            "target": "src/lib/repositories/features/management/people/people-repository.ts"
+          }
+        ],
+        "warnings": [
+          {
+            "count": 3,
+            "edges": [
+              {
+                "file": "src/lib/shared/format.ts",
+                "target": "src/lib/features/operations/dispatch/dispatch-board.ts",
+                "toSlice": "features/operations"
+              },
+              {
+                "file": "src/lib/shared/ids.ts",
+                "target": "src/lib/features/external/portal/portal-client.ts",
+                "toSlice": "features/external"
+              },
+              {
+                "file": "src/lib/shared/labels.ts",
+                "target": "src/lib/features/projects/scm/scm-board.ts",
+                "toSlice": "features/projects"
+              }
+            ],
+            "fromLayer": "Application",
+            "ruleId": "SHARED_IMPORTS_SLICE",
+            "severity": "warning",
+            "toLayer": "Application"
+          },
+          {
+            "count": 1,
+            "edges": [
+              {
+                "file": "src/lib/shared/clock.ts",
+                "target": "src/lib/repositories/features/management/people/people-repository.ts",
+                "toSlice": "features/management"
+              }
+            ],
+            "fromLayer": "Application",
+            "ruleId": "SHARED_IMPORTS_SLICE",
+            "severity": "warning",
+            "toLayer": "Persistence"
+          },
+          {
+            "count": 2,
+            "edges": [
+              {
+                "file": "src/components/ui/button.tsx",
+                "target": "src/components/features/projects/rfi/rfi-status.tsx",
+                "toSlice": "features/projects"
+              },
+              {
+                "file": "src/components/ui/dialog.tsx",
+                "target": "src/components/features/management/eos/eos-screen.tsx",
+                "toSlice": "features/management"
+              }
+            ],
+            "fromLayer": "Presentation",
+            "ruleId": "SHARED_IMPORTS_SLICE",
+            "severity": "warning",
+            "toLayer": "Presentation"
+          }
+        ]
+      }
+    },
+    {
+      "command": "ark-check --json --no-cache --config ark.config.wall-messages.json",
+      "exitCode": 1,
+      "filesDiff": {},
+      "output": {
+        "completeness": "complete",
+        "ok": false,
+        "valid": false,
+        "violations": [
+          {
+            "file": "src/components/features/management/eos/eos-screen.tsx",
+            "message": "Universe wall (atlasgrid): do not import another universe. (cross-parent slice features/management → features/external. The child wall cannot allow another universe.)",
+            "reasonId": "CROSS_PARENT_SLICE",
+            "ruleId": "LAYER_IMPORT_VIOLATION",
+            "severity": "error",
+            "target": "src/lib/features/external/portal/portal-client.ts"
+          },
+          {
+            "file": "src/components/features/operations/dispatch/dispatch-screen.tsx",
+            "message": "Inner wall (atlasgrid): import universe common, not a sibling feature. (cross-sibling slice features/operations/dispatch → features/operations/fleet inside features/operations.)",
+            "reasonId": "CROSS_SIBLING_SLICE",
+            "ruleId": "LAYER_IMPORT_VIOLATION",
+            "severity": "error",
+            "target": "src/components/features/operations/fleet/fleet-screen.tsx"
+          },
+          {
+            "file": "src/lib/features/external/vendors/vendor-sync.ts",
+            "message": "Universe wall (atlasgrid): do not import another universe. (cross-parent slice features/external → features/operations. The child wall cannot allow another universe.)",
+            "reasonId": "CROSS_PARENT_SLICE",
+            "ruleId": "LAYER_IMPORT_VIOLATION",
+            "severity": "error",
+            "target": "src/lib/repositories/features/operations/fleet/fleet-repository.ts"
+          },
+          {
+            "file": "src/lib/features/management/budget/budget-lines.ts",
+            "message": "Universe wall (atlasgrid): do not import another universe. (cross-parent slice features/management → features/projects. The child wall cannot allow another universe.)",
+            "reasonId": "CROSS_PARENT_SLICE",
+            "ruleId": "LAYER_IMPORT_VIOLATION",
+            "severity": "error",
+            "target": "src/lib/features/projects/d2d-item/d2d-item.ts"
+          },
+          {
+            "file": "src/lib/features/projects/domain/project-codes.ts",
+            "message": "Inner wall (atlasgrid): import universe common, not a sibling feature. (universe common imports child features/projects/rfi. parentMayImportChild is off.)",
+            "reasonId": null,
+            "ruleId": "LAYER_IMPORT_VIOLATION",
+            "severity": "error",
+            "target": "src/lib/features/projects/rfi/rfi-intake.ts"
+          },
+          {
+            "file": "src/lib/features/projects/rfi/load-rfi.ts",
+            "message": "Universe wall (atlasgrid): do not import another universe. (cross-parent slice features/projects → features/management. The child wall cannot allow another universe.)",
+            "reasonId": "CROSS_PARENT_SLICE",
+            "ruleId": "LAYER_IMPORT_VIOLATION",
+            "severity": "error",
+            "target": "src/lib/features/management/eos/eos-summary.ts"
+          },
+          {
+            "file": "src/lib/features/projects/rfi/load-rfi.ts",
+            "message": "Inner wall (atlasgrid): import universe common, not a sibling feature. (cross-sibling slice features/projects/rfi → features/projects/scm inside features/projects.)",
+            "reasonId": "CROSS_SIBLING_SLICE",
+            "ruleId": "LAYER_IMPORT_VIOLATION",
+            "severity": "error",
+            "target": "src/lib/features/projects/scm/scm-board.ts"
+          },
+          {
+            "file": "src/lib/repositories/features/management/eos/eos-repository.ts",
+            "message": "Persistence must not import another slice of Persistence (src/lib/repositories/features/management/eos/eos-repository.ts → src/lib/repositories/features/management/people/people-repository.ts): cross-sibling slice features/management/eos → features/management/people inside features/management.",
+            "reasonId": "CROSS_SIBLING_SLICE",
+            "ruleId": "LAYER_IMPORT_VIOLATION",
+            "severity": "error",
+            "target": "src/lib/repositories/features/management/people/people-repository.ts"
+          },
+          {
+            "file": "src/lib/repositories/features/operations/dispatch/dispatch-repository.ts",
+            "message": "Universe wall (atlasgrid): do not import another universe. (cross-parent slice features/operations → features/projects. The child wall cannot allow another universe.)",
+            "reasonId": "CROSS_PARENT_SLICE",
+            "ruleId": "LAYER_IMPORT_VIOLATION",
+            "severity": "error",
+            "target": "src/lib/features/projects/scm/scm-board.ts"
+          }
+        ],
+        "warnings": [
+          {
+            "count": 3,
+            "edges": [
+              {
+                "file": "src/lib/shared/format.ts",
+                "target": "src/lib/features/operations/dispatch/dispatch-board.ts",
+                "toSlice": "features/operations"
+              },
+              {
+                "file": "src/lib/shared/ids.ts",
+                "target": "src/lib/features/external/portal/portal-client.ts",
+                "toSlice": "features/external"
+              },
+              {
+                "file": "src/lib/shared/labels.ts",
+                "target": "src/lib/features/projects/scm/scm-board.ts",
+                "toSlice": "features/projects"
+              }
+            ],
+            "fromLayer": "Application",
+            "ruleId": "SHARED_IMPORTS_SLICE",
+            "severity": "warning",
+            "toLayer": "Application"
+          },
+          {
+            "count": 1,
+            "edges": [
+              {
+                "file": "src/lib/shared/clock.ts",
+                "target": "src/lib/repositories/features/management/people/people-repository.ts",
+                "toSlice": "features/management"
+              }
+            ],
+            "fromLayer": "Application",
+            "ruleId": "SHARED_IMPORTS_SLICE",
+            "severity": "warning",
+            "toLayer": "Persistence"
+          },
+          {
+            "count": 2,
+            "edges": [
+              {
+                "file": "src/components/ui/button.tsx",
+                "target": "src/components/features/projects/rfi/rfi-status.tsx",
+                "toSlice": "features/projects"
+              },
+              {
+                "file": "src/components/ui/dialog.tsx",
+                "target": "src/components/features/management/eos/eos-screen.tsx",
+                "toSlice": "features/management"
+              }
+            ],
+            "fromLayer": "Presentation",
+            "ruleId": "SHARED_IMPORTS_SLICE",
+            "severity": "warning",
+            "toLayer": "Presentation"
+          }
+        ]
       }
     }
   ]

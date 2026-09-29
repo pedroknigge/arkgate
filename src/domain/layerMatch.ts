@@ -20,7 +20,8 @@ export type LayerConfig = {
  * - `path` (default, also the absent value): every literal and every star
  *   binding. `lib/features` plus two stars → `lib/features/projects/rfi`.
  *   Byte-identical to the ids baselines and `allowedCrossSlice` already use.
- * - `stars`: last literal segment plus the star bindings.
+ * - `stars`: last literal segment plus every star binding (a star before the
+ *   last literal is kept too: `modules` / `*` / `api` / `*` → `orders/api/v1`).
  *   `lib/features` plus two stars, and `lib/repositories/features` plus two
  *   stars, both → `features/projects/rfi`.
  *   Prefix stripping stays inside `bindAnchoredSlice`. Bare names are unchanged.
@@ -56,15 +57,16 @@ export type EdgeRule = {
    * also when the key is absent) the slice id includes the literal prefix
    * plus the directories the stars bind (`lib/features/projects/rfi`), so
    * parallel trees get different ids. With `"stars"` it is the last literal
-   * plus the star bindings, so the same feature has one id across parallel
+   * plus every star binding, so the same feature has one id across parallel
    * trees.
    * When omitted, inferred from the layer's glob patterns (segment before a wildcard).
    */
   sliceFolders?: string[];
   /**
    * How a starred `sliceFolders` prefix is named. Absent and `"path"` keep
-   * today's ids. `"stars"` is the last literal plus the star bindings, so the
-   * same feature has one id across parallel trees.
+   * today's ids. `"stars"` is the last literal plus every star binding, in
+   * path order (`modules` / `*` / `api` / `*` binds `orders/api/v1`), so the same feature
+   * has one id across parallel trees.
    */
   sliceIdentity?: SliceIdentity;
   /**
@@ -98,9 +100,12 @@ export type EdgeRule = {
    * `"deny"`: a shared root may not import a slice. `"deny-cross-parent"` leaves
    * that hop allowed; a whole-graph pass then reports a slice that reaches
    * another universe only through shared. Absent keeps the hop allowed.
-   * `allowedCrossSlice` does not excuse `"deny"`.
+   * `allowedCrossSlice` does not excuse `"deny"`. The object form
+   * `{ mode: "deny-cross-parent", stopAt }` names composition roots the walk
+   * never starts at or passes through. Read it through
+   * {@link sharedImportsSliceMode} / {@link sharedImportsSliceStopAt}.
    */
-  sharedImportsSlice?: 'deny' | 'deny-cross-parent';
+  sharedImportsSlice?: SharedImportsSliceSetting;
   /**
    * Optional inner wall under this rule's universe wall. Absent: the universe
    * wall is the whole decision and check output stays byte-identical.
@@ -134,6 +139,8 @@ export type ChildSlices = {
   commonFolders?: string[];
   siblings?: ChildSliceSiblings;
   parentMayImportChild?: boolean;
+  /** Text for inner-wall findings (sibling, common → child). Absent: ArkGate default, never the rule message. */
+  message?: string;
   /** Directed child allowances. `*` matches one whole segment. Never a universe excuse. */
   allowedCrossSlice?: CrossSliceEdge[];
   /** Unclassified files governed as this child. Debt, not a destination. */
@@ -150,15 +157,41 @@ export type ChildSliceSiblingsMode = 'deny' | 'advisory';
 export type ChildSliceSiblingsEnforce = {
   default: ChildSliceSiblingsMode;
   enforce?: string[];
+  /**
+   * Anti-growth for advisory crossings against a baseline. Absent: on only when
+   * the baseline already records an advisory crossing of this rule. `true`:
+   * always when a baseline is in use. `false`: measure only.
+   */
+  ratchet?: boolean;
 };
 
 export type ChildSliceSiblings = ChildSliceSiblingsMode | ChildSliceSiblingsEnforce;
 
-/**
- * Last published arkgate that rejects `childSlices`. The rule schema sets
- * `additionalProperties: false`, so 4.8.22 and older refuse the whole config.
- */
-export const CHILD_SLICES_REJECTED_THROUGH = '4.8.22';
+/** `sharedImportsSlice` string modes. */
+export type SharedImportsSliceMode = 'deny' | 'deny-cross-parent';
+
+/** String mode, or the object form that carries composition-root stops. */
+export type SharedImportsSliceSetting =
+  | SharedImportsSliceMode
+  | { mode: 'deny-cross-parent'; stopAt: string[] };
+
+/** The mode of a `sharedImportsSlice` value. Never compare the raw value to a string. */
+export function sharedImportsSliceMode(setting: unknown): SharedImportsSliceMode | undefined {
+  if (setting === 'deny' || setting === 'deny-cross-parent') return setting;
+  if (setting !== null && typeof setting === 'object') {
+    const mode = (setting as { mode?: unknown }).mode;
+    if (mode === 'deny-cross-parent') return mode;
+  }
+  return undefined;
+}
+
+/** Composition roots the deny-cross-parent walk stops at. Empty for the string forms. */
+export function sharedImportsSliceStopAt(setting: unknown): readonly string[] {
+  if (setting === null || typeof setting !== 'object') return [];
+  const stopAt = (setting as { stopAt?: unknown }).stopAt;
+  if (!Array.isArray(stopAt)) return [];
+  return stopAt.filter((entry): entry is string => typeof entry === 'string' && entry.length > 0);
+}
 
 /** A directed slice-to-slice edge the repo declares on purpose (peerIsolation). */
 export type CrossSliceEdge = {
@@ -407,7 +440,7 @@ export function layerForRelativePath(
  * With `sliceIdentity` `"path"` (the default) the slice id includes the
  * literal prefix plus the star bindings (`lib/features/projects/rfi`), so
  * parallel trees get different ids. With `"stars"` it is the last literal
- * plus those star bindings. A star never binds the filename; a file directly
+ * plus every star binding, including one before the last literal. A star never binds the filename; a file directly
  * under the last bound directory keeps that directory as its slice.
  */
 export function sliceIdForPath(
@@ -415,8 +448,31 @@ export function sliceIdForPath(
   sliceFolders: string[] | undefined,
   sliceIdentity?: SliceIdentity
 ): string | undefined {
+  return sliceIdWithBinding(relPath, sliceFolders, sliceIdentity === 'stars' ? 'stars' : 'path');
+}
+
+/**
+ * The 4.8.23 `stars` id: bound segments from the last literal on, so a star
+ * before the last literal was dropped (`modules` / `*` / `api` / `*` bound `api/v1`).
+ * Kept for one release so config written against that id keeps its verdict.
+ */
+export function legacyStarsSliceIdForPath(
+  relPath: string,
+  sliceFolders: readonly string[] | undefined
+): string | undefined {
+  return sliceIdWithBinding(relPath, sliceFolders ? [...sliceFolders] : undefined, LEGACY_STARS);
+}
+
+/** Internal binding mode for {@link legacyStarsSliceIdForPath}; never a config value. */
+const LEGACY_STARS = 'stars-4.8.23';
+type SliceBinding = SliceIdentity | typeof LEGACY_STARS;
+
+function sliceIdWithBinding(
+  relPath: string,
+  sliceFolders: string[] | undefined,
+  identity: SliceBinding
+): string | undefined {
   if (!sliceFolders?.length) return undefined;
-  const identity: SliceIdentity = sliceIdentity === 'stars' ? 'stars' : 'path';
   const parts = String(relPath)
     .split(/[/\\]/)
     .filter(Boolean);
@@ -424,16 +480,39 @@ export function sliceIdForPath(
   const bare = new Set<string>();
   for (const raw of sliceFolders) {
     if (typeof raw !== 'string' || raw.length === 0) continue;
-    if (isAnchoredSliceEntry(raw)) {
-      const anchored = anchoredSliceId(parts, raw, identity);
+    const entry = parsedSliceFolder(raw);
+    if (entry.anchored) {
+      const anchored = anchoredSliceIdFromPattern(parts, entry.anchored, identity);
       if (anchored) return anchored;
       continue;
     }
-    if (!raw.includes('/') && !raw.includes('\\') && !raw.includes('*')) {
-      bare.add(raw.toLowerCase());
-    }
+    if (entry.bare !== undefined) bare.add(entry.bare);
   }
   return bareSliceId(parts, bare);
+}
+
+/** One declared `sliceFolders` entry, parsed once (the entry set is config-sized). */
+type ParsedSliceFolder = { anchored?: string[]; bare?: string };
+const parsedSliceFolders = new Map<string, ParsedSliceFolder>();
+
+/**
+ * `sliceIdForPath` runs for every edge endpoint under every peerIsolation rule.
+ * Re-splitting the same declared entries per call dominated the allocation of
+ * a large-repo analysis; the parse depends only on the entry text.
+ */
+function parsedSliceFolder(raw: string): ParsedSliceFolder {
+  const cached = parsedSliceFolders.get(raw);
+  if (cached) return cached;
+  let parsed: ParsedSliceFolder = {};
+  if (isAnchoredSliceEntry(raw)) {
+    parsed = { anchored: anchoredSlicePattern(raw) };
+  } else if (!raw.includes('/') && !raw.includes('\\') && !raw.includes('*')) {
+    parsed = { bare: raw.toLowerCase() };
+  }
+  // Bounded: entries come from contracts, but a long-lived process may see many.
+  if (parsedSliceFolders.size >= 1024) parsedSliceFolders.clear();
+  parsedSliceFolders.set(raw, parsed);
+  return parsed;
 }
 
 /** A starred prefix with a real leading directory, not a bare name and not `*`. */
@@ -444,15 +523,18 @@ function isAnchoredSliceEntry(entry: string): boolean {
   return segments.some((part) => part === '*');
 }
 
-function anchoredSliceId(
-  parts: string[],
-  raw: string,
-  identity: SliceIdentity
-): string | undefined {
-  const pattern = raw
+function anchoredSlicePattern(raw: string): string[] {
+  return raw
     .split(/[/\\]/)
     .filter((part) => part.length > 0)
     .map((part) => part.toLowerCase());
+}
+
+function anchoredSliceIdFromPattern(
+  parts: string[],
+  pattern: readonly string[],
+  identity: SliceBinding
+): string | undefined {
   const offsets = anchorOffsets(parts, pattern[0] ?? '');
   for (const offset of offsets) {
     const id = bindAnchoredSlice(parts, pattern, offset, identity);
@@ -471,16 +553,19 @@ function anchoredSliceId(
  *
  * `path` returns every bound segment (literal prefix plus star bindings), so
  * a parallel tree (`components` / `features` / `*` / `*`) gets a different
- * id. `stars` drops the literal prefix before the last literal and keeps
- * that literal plus the star bindings.
+ * id. `stars` drops only the literals before the last literal. It keeps that
+ * literal and every star binding, including a star before it: `modules` /
+ * `*` / `api` / `*` binds `orders/api/v1`, never a bare `api/v1` that two
+ * modules would share.
  */
 function bindAnchoredSlice(
   parts: string[],
-  pattern: string[],
+  pattern: readonly string[],
   offset: number,
-  identity: SliceIdentity = 'path'
+  identity: SliceBinding = 'path'
 ): string | undefined {
   const bound: string[] = [];
+  const fromStar: boolean[] = [];
   let lastLiteralAt = -1;
   let index = offset;
   for (let pi = 0; pi < pattern.length; pi += 1) {
@@ -493,21 +578,45 @@ function bindAnchoredSlice(
         break;
       }
       bound.push(parts[index].toLowerCase());
+      fromStar.push(true);
       index += 1;
       continue;
     }
     if (segment === '**' || index >= parts.length) return undefined;
     if (parts[index].toLowerCase() !== segment) return undefined;
     bound.push(parts[index].toLowerCase());
+    fromStar.push(false);
     lastLiteralAt = bound.length - 1;
     index += 1;
   }
   if (bound.length === 0) return undefined;
-  if (identity === 'stars') {
+  if (identity === LEGACY_STARS) {
     if (lastLiteralAt < 0) return undefined;
     return bound.slice(lastLiteralAt).join('/');
   }
+  if (identity === 'stars') {
+    if (lastLiteralAt < 0) return undefined;
+    return bound.filter((_, at) => at >= lastLiteralAt || fromStar[at]).join('/');
+  }
   return bound.join('/');
+}
+
+/**
+ * Indexes of the pattern segments a `stars` id keeps: every `*`, the last
+ * literal, and everything after it. Literals before the last literal drop.
+ * Returns null when the pattern has no literal.
+ */
+export function starsKeptSegmentIndexes(segments: readonly string[]): number[] | null {
+  let lastLiteral = -1;
+  for (let at = 0; at < segments.length; at += 1) {
+    if (segments[at] !== '*') lastLiteral = at;
+  }
+  if (lastLiteral < 0) return null;
+  const kept: number[] = [];
+  for (let at = 0; at < segments.length; at += 1) {
+    if (at >= lastLiteral || segments[at] === '*') kept.push(at);
+  }
+  return kept;
 }
 
 /** Two starred prefixes that bind as the same id under `sliceIdentity: "stars"`. */
@@ -560,23 +669,20 @@ export function sliceIdentityCollisions(
   return out;
 }
 
-/** Last literal plus the stars that follow it. `**` never forms a stem. */
+/**
+ * The segments a `stars` id keeps: every star, the last literal, and the stars
+ * after it. Literals before the last literal drop. `**` never forms a stem.
+ */
 function starsIdentityStem(raw: string): string | undefined {
   if (!isAnchoredSliceEntry(raw)) return undefined;
   const segments = raw
     .split(/[/\\]/)
     .filter((part) => part.length > 0)
     .map((part) => part.toLowerCase());
-  let lastLiteral = -1;
-  for (let i = 0; i < segments.length; i += 1) {
-    const part = segments[i] ?? '';
-    if (part === '**') return undefined;
-    if (part !== '*') lastLiteral = i;
-  }
-  if (lastLiteral < 0) return undefined;
-  const tail = segments.slice(lastLiteral);
-  if (tail.some((part, index) => index > 0 && part !== '*')) return undefined;
-  return tail.join('/');
+  if (segments.some((part) => part === '**')) return undefined;
+  const kept = starsKeptSegmentIndexes(segments);
+  if (!kept) return undefined;
+  return kept.map((at) => segments[at]).join('/');
 }
 
 function formatSliceIdentityCollision(
@@ -823,7 +929,7 @@ export type PeerIsolationInput = {
   /** The rule declares this directed slice→slice edge. */
   crossSliceAllowed?: boolean;
   /** `"deny"` blocks a shared root importing a slice. `"deny-cross-parent"` does not. */
-  sharedImportsSlice?: 'deny' | 'deny-cross-parent';
+  sharedImportsSlice?: SharedImportsSliceMode;
 };
 
 /**
@@ -895,6 +1001,13 @@ export type SliceAliasMove = {
   to: string;
   destination: string;
   files: string[];
+  /**
+   * Present when no scanned file outside the aliases resolves to the target's
+   * universe id: most likely a typo. Config load checks only the shape.
+   */
+  unknownUniverse?: true;
+  /** One sentence for doctor when `unknownUniverse` is set. */
+  advisory?: string;
 };
 
 export type SliceAliasReport = {
@@ -908,14 +1021,34 @@ function aliasGlobPattern(glob: string): string {
   return trimTrailingSlashes(glob.trim().replace(/\\/g, '/')).toLowerCase();
 }
 
-/** Existing path glob matcher. Also accepts a leading src/ or app/. */
+/** Existing path glob matcher. Also accepts a leading src/ or app/, and a plain folder covers its subtree. */
 function aliasGlobMatches(glob: string, relPath: string): boolean {
   const pattern = aliasGlobPattern(glob);
   if (!pattern || pattern === '*' || pattern === '**') return false;
   const file = String(relPath).replace(/\\/g, '/').replace(/^\/+/, '').toLowerCase();
   const rooted = stripSrcOrApp(file);
   const re = globToRegExp(pattern);
-  return re.test(file) || (rooted !== file && re.test(rooted));
+  // A folder form (no wildcard in the last segment) also covers its subtree,
+  // as sharedRoots does: `lib/compliance` matches `lib/compliance/x.ts`.
+  const last = pattern.split('/').pop() ?? '';
+  const under = last.includes('*') ? null : globToRegExp(`${pattern}/**`);
+  const hit = (candidate: string): boolean => re.test(candidate) || (under !== null && under.test(candidate));
+  return hit(file) || (rooted !== file && hit(rooted));
+}
+
+/**
+ * Does `relPath` match a `sharedImportsSlice.stopAt` entry? An entry matches
+ * the way a shared root does (anchored, optional leading src/ or app/, a plain
+ * folder covers its subtree) or the way an alias glob does (`kernel/registrations/**`
+ * against `src/kernel/registrations/x.ts`). A blanket `*` / `**` never matches.
+ */
+export function pathMatchesSharedWalkStop(
+  relPath: string | undefined,
+  stopAt: readonly string[] | undefined
+): boolean {
+  if (!relPath || !stopAt?.length) return false;
+  if (pathUnderSharedRoot(relPath, [...stopAt])) return true;
+  return stopAt.some((glob) => typeof glob === 'string' && aliasGlobMatches(glob, relPath));
 }
 
 function splitAliasTarget(to: string): { universeId: string; childId: string } | null {
@@ -926,13 +1059,17 @@ function splitAliasTarget(to: string): { universeId: string; childId: string } |
   return { universeId: parts.slice(0, -1).join('/'), childId: parts.join('/') };
 }
 
-function firstSliceAlias(relPath: string, rule: EdgeRule): { universeId: string; childId: string } | null {
+function firstSliceAliasEntry(relPath: string, rule: EdgeRule): SliceAlias | null {
   for (const alias of rule.childSlices?.sliceAliases ?? []) {
     if (!alias || typeof alias.from !== 'string' || typeof alias.to !== 'string') continue;
-    if (!aliasGlobMatches(alias.from, relPath)) continue;
-    return splitAliasTarget(alias.to);
+    if (aliasGlobMatches(alias.from, relPath)) return alias;
   }
   return null;
+}
+
+function firstSliceAlias(relPath: string, rule: EdgeRule): { universeId: string; childId: string } | null {
+  const alias = firstSliceAliasEntry(relPath, rule);
+  return alias ? splitAliasTarget(alias.to) : null;
 }
 
 /**
@@ -955,6 +1092,149 @@ export function resolveGovernedSlice(
   return alias ? { universeId: alias.universeId, childId: alias.childId } : {};
 }
 
+type StarsUniverseShape = { literals: (string | null)[]; legacy: (string | null)[] };
+
+/** Universe shapes of a stars rule, with the 4.8.23 id shape beside each new one. */
+function starsUniverseShapes(folders: readonly string[] | undefined): StarsUniverseShape[] {
+  const shapes: StarsUniverseShape[] = [];
+  for (const raw of folders ?? []) {
+    if (typeof raw !== 'string' || raw.length === 0) continue;
+    const segments = raw.split(/[/\\]/).filter(Boolean).map((part) => part.toLowerCase());
+    if (segments.length === 1 && segments[0] && !segments[0].includes('*')) {
+      shapes.push({ literals: [segments[0], null], legacy: [segments[0], null] });
+      continue;
+    }
+    if (segments.some((part) => part === '**' || (part.includes('*') && part !== '*'))) continue;
+    const kept = starsKeptSegmentIndexes(segments);
+    if (!kept || !segments.includes('*')) continue;
+    const star = (part: string): string | null => (part === '*' ? null : part);
+    const lastLiteral = kept.find((at) => segments[at] !== '*') ?? 0;
+    shapes.push({
+      literals: kept.map((at) => star(segments[at] ?? '')),
+      legacy: segments.slice(lastLiteral).map(star),
+    });
+  }
+  return shapes;
+}
+
+function literalsMatch(shape: readonly (string | null)[], parts: readonly string[]): boolean {
+  return (
+    shape.length === parts.length &&
+    shape.every((literal, at) => literal === null || parts[at] === '*' || literal === parts[at])
+  );
+}
+
+/**
+ * New-id shapes (`*` for a star) that a 4.8.23 stars id maps to. Empty when the id is
+ * already a new id or no shape takes it. Config load rejects more than one.
+ */
+export function legacyStarsIdTargets(
+  folders: readonly string[] | undefined,
+  id: string
+): string[] {
+  const parts = id.split('/').filter(Boolean).map((part) => part.toLowerCase());
+  const shapes = starsUniverseShapes(folders);
+  if (parts.length === 0 || shapes.some((shape) => literalsMatch(shape.literals, parts))) return [];
+  const targets = new Set<string>();
+  for (const shape of shapes) {
+    if (shape.legacy.length === shape.literals.length) continue;
+    if (literalsMatch(shape.legacy, parts)) {
+      const tail = [...parts];
+      // Fill the kept literals and trailing stars from the legacy id; pre-literal stars stay `*`.
+      const lead = shape.literals.length - shape.legacy.length;
+      targets.add([...shape.literals.slice(0, lead).map(() => '*'), ...tail].join('/'));
+    }
+  }
+  return [...targets].sort();
+}
+
+/** The legacy universe id when this alias target is a 4.8.23 stars child id. */
+function legacyAliasUniverse(rule: EdgeRule, to: string): string | undefined {
+  if (rule.sliceIdentity !== 'stars') return undefined;
+  const target = splitAliasTarget(to);
+  if (!target) return undefined;
+  return legacyStarsIdTargets(rule.sliceFolders, target.universeId).length === 1
+    ? target.universeId
+    : undefined;
+}
+
+type PairPlace = GovernedSlice & {
+  /** 4.8.23 stars universe id (stars rules only; for comparisons, never reported). */
+  legacyUniverse?: string;
+  legacyChild?: string;
+  /** Set when the place came from a sliceAliases target written as a 4.8.23 stars id. */
+  legacyAlias?: true;
+};
+
+function placeForPair(relPath: string | undefined, rule: EdgeRule, folders: readonly string[]): PairPlace {
+  const place: PairPlace = resolveGovernedSlice(relPath, rule, folders);
+  if (!relPath || rule.sliceIdentity !== 'stars') return place;
+  if (place.universeId) {
+    const alias = firstSliceAliasEntry(relPath, rule);
+    const fromFolders = sliceIdForPath(relPath, [...folders], rule.sliceIdentity);
+    if (!fromFolders && alias && legacyAliasUniverse(rule, alias.to) !== undefined) {
+      return { ...place, legacyAlias: true, legacyUniverse: place.universeId, legacyChild: place.childId };
+    }
+    const legacyUniverse = legacyStarsSliceIdForPath(relPath, folders);
+    const child = rule.childSlices;
+    const legacyChild =
+      child?.sliceIdentity === 'stars' ? legacyStarsSliceIdForPath(relPath, child.sliceFolders) : undefined;
+    return {
+      ...place,
+      ...(legacyUniverse ? { legacyUniverse } : {}),
+      ...(legacyChild && place.childId ? { legacyChild } : {}),
+    };
+  }
+  return place;
+}
+
+/**
+ * Both endpoints of one edge under a peerIsolation rule, with the one-release 4.8.23
+ * `stars` compatibility: a `sliceAliases` target written as a 4.8.23 stars id joins
+ * the universe of the other endpoint whose 4.8.23 id it names, and an
+ * `allowedCrossSlice` entry written against 4.8.23 ids still clears the edge it cleared
+ * then. ark-check warns CONFIG_SLICE_LEGACY_STARS_ID for both.
+ */
+export function resolveGovernedSlicePair(
+  rule: EdgeRule,
+  folders: readonly string[],
+  fromPath: string | undefined,
+  toPath: string | undefined
+): { from: GovernedSlice; to: GovernedSlice; crossSliceAllowed: boolean; legacyChildAllowed: boolean } {
+  const from = placeForPair(fromPath, rule, folders);
+  const to = placeForPair(toPath, rule, folders);
+  const legacyFrom = from.legacyUniverse;
+  const legacyTo = to.legacyUniverse;
+  const adopt = (alias: PairPlace, other: PairPlace): PairPlace => {
+    if (!alias.legacyAlias || other.legacyAlias || !other.universeId) return alias;
+    if (other.legacyUniverse?.toLowerCase() !== alias.universeId?.toLowerCase()) return alias;
+    const childSegment = alias.childId?.split('/').pop();
+    return {
+      ...alias,
+      universeId: other.universeId,
+      ...(childSegment ? { childId: `${other.universeId}/${childSegment}` } : {}),
+    };
+  };
+  const fromPlace = adopt(from, to);
+  const toPlace = adopt(to, from);
+  const crossSliceAllowed =
+    crossSliceEdgeAllowed(rule.allowedCrossSlice, fromPlace.universeId, toPlace.universeId) ||
+    (rule.sliceIdentity === 'stars' &&
+      (legacyFrom !== fromPlace.universeId || legacyTo !== toPlace.universeId) &&
+      crossSliceEdgeAllowed(rule.allowedCrossSlice, legacyFrom, legacyTo));
+  const legacyChildAllowed =
+    rule.childSlices?.sliceIdentity === 'stars' &&
+    from.legacyChild !== undefined &&
+    to.legacyChild !== undefined &&
+    from.legacyChild !== to.legacyChild &&
+    childCrossSliceAllowed(rule.childSlices.allowedCrossSlice, from.legacyChild, to.legacyChild);
+  const strip = (place: PairPlace): GovernedSlice => ({
+    ...(place.universeId ? { universeId: place.universeId } : {}),
+    ...(place.childId ? { childId: place.childId } : {}),
+  });
+  return { from: strip(fromPlace), to: strip(toPlace), crossSliceAllowed, legacyChildAllowed };
+}
+
 function childPatternDirectory(
   pattern: string,
   childId: string,
@@ -965,18 +1245,15 @@ function childPatternDirectory(
   if (segments.length === 0 || idParts.length === 0) return null;
   if (segments.some((part) => part === '**' || (part.includes('*') && part !== '*'))) return null;
   if (identity === 'stars') {
-    let lastLiteral = -1;
-    for (let index = 0; index < segments.length; index += 1) {
-      if (segments[index] !== '*') lastLiteral = index;
+    const kept = starsKeptSegmentIndexes(segments);
+    if (!kept || kept.length !== idParts.length) return null;
+    const dir = [...segments];
+    for (let index = 0; index < kept.length; index += 1) {
+      const at = kept[index] ?? 0;
+      if (segments[at] !== '*' && segments[at] !== idParts[index]) return null;
+      dir[at] = idParts[index] ?? '';
     }
-    if (lastLiteral < 0) return null;
-    const tail = segments.slice(lastLiteral);
-    if (tail.length !== idParts.length) return null;
-    for (let index = 0; index < tail.length; index += 1) {
-      if (tail[index] === '*') continue;
-      if (tail[index] !== idParts[index]) return null;
-    }
-    return [...segments.slice(0, lastLiteral), ...idParts].join('/');
+    return dir.join('/');
   }
   if (segments.length !== idParts.length) return null;
   for (let index = 0; index < segments.length; index += 1) {
@@ -1049,9 +1326,45 @@ export function sliceAliasReport(
       }
     }
   }
-  const listed = [...moves.values()].map((move) => ({ ...move, files: [...move.files].sort() }));
+  const universes = knownUniverseIds(rules, files);
+  const listed = [...moves.values()].map((move) => {
+    const target = splitAliasTarget(move.to);
+    const unknown = universes !== null && target !== null && !universes.has(target.universeId);
+    return {
+      ...move,
+      files: [...move.files].sort(),
+      ...(unknown
+        ? {
+            unknownUniverse: true as const,
+            advisory: `alias target ${move.to} names universe ${target.universeId}, which no file belongs to. Check for a typo.`,
+          }
+        : {}),
+    };
+  });
   listed.sort((left, right) => left.from.localeCompare(right.from) || left.to.localeCompare(right.to));
   return { notAScore: true, finished: false, debt: SLICE_ALIAS_DEBT, moves: listed };
+}
+
+/**
+ * Universe ids that real (non-aliased) files resolve to, across rules that set
+ * sliceAliases. Null when a rule has no explicit sliceFolders (the universe
+ * would come from layer patterns this report does not see): no claim then.
+ */
+function knownUniverseIds(
+  rules: readonly EdgeRule[] | undefined,
+  files: readonly string[]
+): Set<string> | null {
+  const ids = new Set<string>();
+  for (const rule of rules ?? []) {
+    if (!rule?.childSlices?.sliceAliases?.length) continue;
+    if (!rule.sliceFolders?.length) return null;
+    for (const file of files) {
+      if (typeof file !== 'string') continue;
+      const id = sliceIdForPath(file, rule.sliceFolders, rule.sliceIdentity);
+      if (id) ids.add(id.toLowerCase());
+    }
+  }
+  return ids;
 }
 
 /**
@@ -1108,25 +1421,19 @@ export function universePairLabel(sliceId: string | undefined): string | undefin
   return parts.length > 0 ? parts[parts.length - 1] : undefined;
 }
 
-function directorySegments(relPath: string): string[] {
-  const parts = String(relPath).split(/[/\\]/).filter(Boolean);
-  return parts.slice(0, -1);
-}
-
-function pathHasCommonFolder(relPath: string, commonFolders: string[] | undefined): boolean {
-  if (!commonFolders?.length) return false;
-  const names = new Set<string>();
-  for (const raw of commonFolders) {
-    if (typeof raw === 'string' && raw.length > 0) names.add(raw.toLowerCase());
-  }
-  if (names.size === 0) return false;
-  return directorySegments(relPath).some((part) => names.has(part.toLowerCase()));
+function isCommonFolderName(segment: string | undefined, commonFolders: string[] | undefined): boolean {
+  if (!segment || !commonFolders?.length) return false;
+  const want = segment.toLowerCase();
+  return commonFolders.some((raw) => typeof raw === 'string' && raw.length > 0 && raw.toLowerCase() === want);
 }
 
 /**
- * Child id for one path. A common folder and a flat file (the starred id does
- * not grow past the universe id) are universe common. A child id that does not
- * extend the universe id is not used; the caller warns.
+ * Child id for one path. A flat file (the starred id does not grow past the
+ * universe id) is universe common. So is a `commonFolders` directory, but only
+ * at the child position: the segment directly under the universe id
+ * (`features/projects/domain/**`). A folder of the same name inside a child
+ * (`features/projects/rfi/domain/**`) belongs to that child. A child id that
+ * does not extend the universe id is not used; the caller warns.
  */
 export function resolveChildSliceId(
   relPath: string | undefined,
@@ -1134,14 +1441,15 @@ export function resolveChildSliceId(
   child: ChildSlices | undefined
 ): { childId?: string; mismatched?: { childId: string; universeId: string } } {
   if (!relPath || !child?.sliceFolders?.length) return {};
-  if (pathHasCommonFolder(relPath, child.commonFolders)) return {};
   const raw = sliceIdForPath(relPath, child.sliceFolders, child.sliceIdentity);
   if (!raw || !universeId) return {};
   const childKey = raw.toLowerCase();
   const universeKey = universeId.toLowerCase();
   if (childKey === universeKey) return {};
-  if (childKey.startsWith(`${universeKey}/`)) return { childId: raw };
-  return { mismatched: { childId: raw, universeId } };
+  if (!childKey.startsWith(`${universeKey}/`)) return { mismatched: { childId: raw, universeId } };
+  const firstChildSegment = childKey.slice(universeKey.length + 1).split('/')[0];
+  if (isCommonFolderName(firstChildSegment, child.commonFolders)) return {};
+  return { childId: raw };
 }
 
 function siblingEntryKey(entry: string): string {
@@ -1284,6 +1592,8 @@ export function evaluateNestedSliceWall(input: {
   fromShared?: boolean;
   toShared?: boolean;
   crossSliceAllowed?: boolean;
+  /** A childSlices.allowedCrossSlice entry written against 4.8.23 stars ids clears this edge. */
+  legacyChildAllowed?: boolean;
   folderCount: number;
 }): SliceVerdict {
   const universe = peerIsolationDecision({
@@ -1295,7 +1605,7 @@ export function evaluateNestedSliceWall(input: {
     fromShared: input.fromShared,
     toShared: input.toShared,
     crossSliceAllowed: input.crossSliceAllowed,
-    sharedImportsSlice: input.rule.sharedImportsSlice,
+    sharedImportsSlice: sharedImportsSliceMode(input.rule.sharedImportsSlice),
   });
   if (universe.denied) {
     const crossParent = Boolean(input.rule.childSlices) && universe.reason === 'cross-slice';
@@ -1335,7 +1645,7 @@ export function evaluateNestedSliceWall(input: {
     toUniverse: input.toSlice,
   };
   if (fromChild && toChild && fromChild !== toChild) {
-    if (childCrossSliceAllowed(child.allowedCrossSlice, fromChild, toChild)) {
+    if (input.legacyChildAllowed || childCrossSliceAllowed(child.allowedCrossSlice, fromChild, toChild)) {
       return allowSameUniverse;
     }
     const advisory = siblingCrossingAdvisory(child.siblings, input.fromPath, fromChild);
@@ -1360,10 +1670,29 @@ export function evaluateNestedSliceWall(input: {
   return allowSameUniverse;
 }
 
+/** Did the child (inner) wall produce this finding, not the universe wall? */
+export function isChildWallCrossing(verdict: SliceVerdict | undefined): boolean {
+  return verdict?.crossing === 'cross-sibling' || verdict?.crossing === 'parent-imports-child';
+}
+
+/**
+ * The consumer text for one slice finding. `rule.message` is the universe-wall
+ * text. `childSlices.message` is the inner-wall text. An inner-wall finding
+ * never falls back to the rule message; undefined means "use ArkGate's default".
+ */
+export function sliceConsumerMessage(
+  rule: { message?: string; childSlices?: { message?: string } } | undefined,
+  verdict: SliceVerdict | undefined
+): string | undefined {
+  return isChildWallCrossing(verdict) ? rule?.childSlices?.message : rule?.message;
+}
+
 /**
  * Finding message. Import sites always append the explanation. Intent sites
  * keep today's wording when there is no reasonId: a plain cross-slice deny
  * does not gain a clause, and any other universe-wall reason does.
+ * `ruleMessage` is only used for universe-wall findings; an inner-wall finding
+ * uses `childMessage` or ArkGate's default text.
  */
 export function composeSliceDenialMessage(input: {
   surface: 'import' | 'intent';
@@ -1374,23 +1703,28 @@ export function composeSliceDenialMessage(input: {
   fromPath?: string;
   toPath?: string;
   ruleMessage?: string;
+  /** Inner-wall text (`childSlices.message`). */
+  childMessage?: string;
   defaultMessage?: string;
 }): string {
   const explanation = input.verdict.explanation;
+  const inner = isChildWallCrossing(input.verdict);
+  const consumer = inner ? input.childMessage : input.ruleMessage;
   if (input.surface === 'intent') {
     const defaultMessage =
       input.defaultMessage ?? `${input.fromLayer} must not reference ${input.toLayer} intent.`;
+    if (inner && explanation) return `${input.childMessage ?? defaultMessage} ${explanation}`;
     if (input.verdict.reasonId && explanation) return `${defaultMessage} ${explanation}`;
     if (explanation && input.verdict.peerIsolationReason !== 'cross-slice') {
       return `${defaultMessage} ${explanation}`;
     }
-    if (input.ruleMessage) {
-      return explanation ? `${input.ruleMessage} (${explanation})` : input.ruleMessage;
+    if (consumer) {
+      return explanation ? `${consumer} (${explanation})` : consumer;
     }
     return defaultMessage;
   }
-  if (input.ruleMessage) {
-    return explanation ? `${input.ruleMessage} (${explanation})` : input.ruleMessage;
+  if (consumer) {
+    return explanation ? `${consumer} (${explanation})` : consumer;
   }
   if (explanation) {
     const kind = input.kind ?? 'import';
@@ -1472,11 +1806,56 @@ export function sliceCountReport(
   };
 }
 
+export type SharedWalkHub = { file: string; count: number; share: number };
+
+export type SharedWalkHubReport = {
+  notAScore: true;
+  total: number;
+  hubs: SharedWalkHub[];
+  nextAction: string;
+};
+
+/**
+ * Doctor advisory: a shared file that sits on many CROSS_PARENT_VIA_SHARED
+ * paths is often a composition root. Null below `minFindings` findings or when
+ * no file reaches `minShare` of them. Not a finding and not in the baseline.
+ */
+export function crossParentViaSharedHubs(
+  violations: readonly { reasonId?: unknown; via?: unknown }[] | undefined,
+  options?: { minFindings?: number; minShare?: number }
+): SharedWalkHubReport | null {
+  const minFindings = options?.minFindings ?? 10;
+  const minShare = options?.minShare ?? 0.5;
+  let total = 0;
+  const counts = new Map<string, number>();
+  for (const row of violations ?? []) {
+    if (row?.reasonId !== 'CROSS_PARENT_VIA_SHARED') continue;
+    total += 1;
+    if (!Array.isArray(row.via)) continue;
+    const once = new Set(row.via.filter((file): file is string => typeof file === 'string'));
+    for (const file of once) counts.set(file, (counts.get(file) ?? 0) + 1);
+  }
+  if (total < minFindings) return null;
+  const hubs = [...counts.entries()]
+    .map(([file, count]) => ({ file, count, share: Math.round((count / total) * 100) / 100 }))
+    .filter((hub) => hub.count / total >= minShare)
+    .sort((left, right) => right.count - left.count || left.file.localeCompare(right.file));
+  if (hubs.length === 0) return null;
+  const first = hubs[0]?.file ?? '';
+  return {
+    notAScore: true,
+    total,
+    hubs,
+    nextAction: `If ${first} is a composition root, add it to sharedImportsSlice.stopAt. Otherwise these findings are real.`,
+  };
+}
+
 export type ChildSliceConfigFinding = {
   ruleId:
-    | 'CONFIG_CHILD_SLICES_VERSION'
     | 'CONFIG_CHILD_SLICE_EXTENDS'
-    | 'CONFIG_CHILD_SLICE_CROSS_UNIVERSE';
+    | 'CONFIG_CHILD_SLICE_CROSS_UNIVERSE'
+    | 'CONFIG_CHILD_SLICES_INERT'
+    | 'CONFIG_SLICE_LEGACY_STARS_ID';
   message: string;
   failsStrict: false;
   path?: string;
@@ -1485,28 +1864,30 @@ export type ChildSliceConfigFinding = {
 };
 
 /**
- * One version warning when any rule sets childSlices, plus one warning per
- * directed rule when a path's child id does not extend its universe id.
+ * One warning per directed rule when a path's child id does not extend its
+ * universe id, and one per child allowance that spans universes. The version
+ * floor lives in configVersionFloor.ts and needs pin evidence (#338).
  */
 export function childSliceConfigFindings(
   rules: readonly EdgeRule[] | undefined,
   files: readonly string[]
 ): ChildSliceConfigFinding[] {
   const out: ChildSliceConfigFinding[] = [];
-  let versionWarned = false;
   const seenMismatch = new Set<string>();
   const seenSpan = new Set<string>();
   for (const rule of rules ?? []) {
+    if (rule?.peerIsolation && rule.allowed === false) out.push(...legacyStarsIdFindings(rule, files));
     if (!rule?.childSlices) continue;
-    if (!versionWarned) {
-      versionWarned = true;
+    if (!rule.peerIsolation || rule.allowed !== false) {
       out.push({
-        ruleId: 'CONFIG_CHILD_SLICES_VERSION',
+        ruleId: 'CONFIG_CHILD_SLICES_INERT',
         failsStrict: false,
-        message: `childSlices needs an arkgate newer than ${CHILD_SLICES_REJECTED_THROUGH}. Version ${CHILD_SLICES_REJECTED_THROUGH} and older reject the key because the rule schema sets additionalProperties: false.`,
+        fromLayer: rule.from,
+        toLayer: rule.to,
+        message: `${rule.from} → ${rule.to}: childSlices is inert on this rule and enforces nothing. The child wall runs only inside a universe wall. Add "peerIsolation": true and "allowed": false to the same rule, or remove childSlices.`,
       });
+      continue;
     }
-    if (!rule.peerIsolation) continue;
     for (const file of files) {
       const universeId = sliceIdForPath(file, rule.sliceFolders, rule.sliceIdentity);
       const resolved = resolveChildSliceId(file, universeId, rule.childSlices);
@@ -1541,30 +1922,250 @@ export function childSliceConfigFindings(
   return out;
 }
 
+/** Observed new ids per 4.8.23 stars id, from real files (for the warning text). */
+function observedIdsByLegacy(
+  folders: readonly string[] | undefined,
+  files: readonly string[]
+): Map<string, Set<string>> {
+  const byLegacy = new Map<string, Set<string>>();
+  if (!folders?.length) return byLegacy;
+  for (const file of files) {
+    if (typeof file !== 'string') continue;
+    const id = sliceIdForPath(file, [...folders], 'stars');
+    const legacy = legacyStarsSliceIdForPath(file, folders);
+    if (!id || !legacy || id === legacy) continue;
+    const set = byLegacy.get(legacy) ?? new Set<string>();
+    set.add(id);
+    byLegacy.set(legacy, set);
+  }
+  return byLegacy;
+}
+
+function newIdHint(
+  legacyId: string,
+  shapes: readonly string[],
+  observed: Map<string, Set<string>>,
+  childSegment?: string
+): string {
+  const suffix = childSegment ? `/${childSegment}` : '';
+  const shape = `${shapes[0] ?? legacyId}${suffix}`;
+  const seen = [...(observed.get(legacyId.toLowerCase()) ?? [])].sort().map((id) => `${id}${suffix}`);
+  if (seen.length === 1) return `${seen[0]}`;
+  if (seen.length > 1) return `${shape} (one entry per module: ${seen.join(', ')})`;
+  return shape;
+}
+
 /**
- * Advisory sibling crossings above the recorded baseline count become blocking.
- * The key is the existing baseline identity (ruleId, file, layers, target) —
- * reasonId is not part of it. No baseline means there is no recorded count,
- * so advisory stays non-blocking. Recorded crossings stay advisory.
+ * CONFIG_SLICE_LEGACY_STARS_ID: under sliceIdentity "stars", a sliceAliases target or an
+ * allowedCrossSlice entry written against the 4.8.23 stars id (star bindings before the
+ * last literal dropped). It keeps its 4.8.23 verdict for one release; the warning names
+ * the new id.
+ */
+function legacyStarsIdFindings(rule: EdgeRule, files: readonly string[]): ChildSliceConfigFinding[] {
+  const out: ChildSliceConfigFinding[] = [];
+  const push = (message: string) =>
+    out.push({
+      ruleId: 'CONFIG_SLICE_LEGACY_STARS_ID',
+      failsStrict: false,
+      fromLayer: rule.from,
+      toLayer: rule.to,
+      message: `${rule.from} → ${rule.to}: ${message} It keeps its 4.8.23 meaning for this release only.`,
+    });
+  const child = rule.childSlices;
+  if (rule.sliceIdentity === 'stars') {
+    const observed = observedIdsByLegacy(rule.sliceFolders, files);
+    for (const alias of child?.sliceAliases ?? []) {
+      if (!alias || typeof alias.to !== 'string') continue;
+      const target = splitAliasTarget(alias.to);
+      if (!target || legacyAliasUniverse(rule, alias.to) === undefined) continue;
+      const shapes = legacyStarsIdTargets(rule.sliceFolders, target.universeId);
+      const segment = target.childId.split('/').pop();
+      push(
+        `sliceAliases to "${alias.to}" is a 4.8.23 stars id (the star before the last literal was dropped). The id is now ${newIdHint(target.universeId, shapes, observed, segment)}; write that instead.`
+      );
+    }
+    for (const edge of rule.allowedCrossSlice ?? []) {
+      if (!edge || typeof edge.from !== 'string' || typeof edge.to !== 'string') continue;
+      const legacySides = [edge.from, edge.to].filter(
+        (id) => id.includes('/') && legacyStarsIdTargets(rule.sliceFolders, id).length > 0
+      );
+      if (legacySides.length === 0) continue;
+      const rename = (id: string) =>
+        legacySides.includes(id)
+          ? newIdHint(id, legacyStarsIdTargets(rule.sliceFolders, id), observed)
+          : id;
+      push(
+        `allowedCrossSlice ${edge.from} → ${edge.to} names a 4.8.23 stars id. The ids are now ${rename(edge.from)} → ${rename(edge.to)}; write those instead.`
+      );
+    }
+  }
+  if (child?.sliceIdentity === 'stars') {
+    const observed = observedIdsByLegacy(child.sliceFolders, files);
+    for (const edge of child.allowedCrossSlice ?? []) {
+      if (!edge || typeof edge.from !== 'string' || typeof edge.to !== 'string') continue;
+      const legacySides = [edge.from, edge.to].filter(
+        (id) => legacyStarsIdTargets(child.sliceFolders, id).length > 0
+      );
+      if (legacySides.length === 0) continue;
+      const rename = (id: string) =>
+        legacySides.includes(id)
+          ? newIdHint(id, legacyStarsIdTargets(child.sliceFolders, id), observed)
+          : id;
+      push(
+        `childSlices.allowedCrossSlice ${edge.from} → ${edge.to} names a 4.8.23 stars id. The ids are now ${rename(edge.from)} → ${rename(edge.to)}; write those instead.`
+      );
+    }
+  }
+  return out;
+}
+
+/** How the anti-growth ratchet treats advisory sibling crossings for one rule. */
+export type SiblingRatchetMode = 'auto' | 'always' | 'never';
+
+/** `ratchet: true` → always, `ratchet: false` → never, anything else → auto. */
+export function siblingRatchetMode(siblings: unknown): SiblingRatchetMode {
+  if (siblings !== null && typeof siblings === 'object') {
+    const ratchet = (siblings as { ratchet?: unknown }).ratchet;
+    if (ratchet === true) return 'always';
+    if (ratchet === false) return 'never';
+  }
+  return 'auto';
+}
+
+type RatchetRule = {
+  from?: string;
+  to?: string;
+  allowed?: boolean;
+  peerIsolation?: boolean;
+  childSlices?: { siblings?: unknown } | null;
+};
+
+/**
+ * How many advisory sibling crossings of one rule the baseline records. A key
+ * still present counts when its current row is in the group. A stale key (the
+ * crossing was removed) counts when the rule still classifies that edge as an
+ * advisory sibling crossing, so replacing a recorded crossing neither disarms
+ * the ratchet nor looks like growth.
+ */
+function recordedAdvisorySiblingCount(input: {
+  rule: EdgeRule | undefined;
+  ruleIds: ReadonlySet<string>;
+  groupKeys: ReadonlySet<string>;
+  currentKeys: ReadonlySet<string>;
+  recordedKeys: ReadonlySet<string>;
+  layers?: LayerConfig[];
+}): number {
+  const { rule } = input;
+  let recorded = 0;
+  for (const key of input.recordedKeys) {
+    if (input.groupKeys.has(key)) {
+      recorded += 1;
+      continue;
+    }
+    if (!rule || input.currentKeys.has(key)) continue;
+    const parts = key.split('|');
+    if (parts.length !== 5) continue;
+    const [ruleId = '', file = '', fromLayer = '', toLayer = '', rawTarget = ''] = parts;
+    if (!input.ruleIds.has(ruleId) || fromLayer !== rule.from || toLayer !== rule.to) continue;
+    const target = rawTarget.replace(/#\d+$/, '');
+    if (!file || !target) continue;
+    const verdict = findDeniedEdgeDecision([rule], fromLayer, toLayer, {
+      fromPath: file,
+      toPath: target,
+      layers: input.layers,
+    })?.sliceVerdict;
+    if (verdict?.reasonId === 'CROSS_SIBLING_SLICE' && verdict.decision === 'advisory') recorded += 1;
+  }
+  return recorded;
+}
+
+/**
+ * Advisory sibling crossings past the recorded baseline become blocking, per
+ * directed rule. Only advisory (`failsStrict: false`) crossings count; an
+ * enforced crossing never switches the ratchet on. For each rule:
+ *
+ * - `ratchet` absent (every string form too): on only when the baseline
+ *   records at least one advisory sibling crossing of that rule (a key still
+ *   present, or a stale key that the rule still classifies as one), and only
+ *   when that rule's current advisory count grew past the recorded count.
+ *   Swapping a recorded crossing for a new one keeps the count and stays a
+ *   warning. An empty baseline, or one frozen before the child wall, promotes
+ *   nothing.
+ * - `ratchet: true`: any unrecorded advisory crossing of the rule is promoted.
+ * - `ratchet: false`: never promoted.
+ *
+ * The key is the existing baseline identity (ruleId, file, layers, target);
+ * reasonId is not part of it. Recorded crossings stay advisory. Callers run
+ * this only when a baseline (or an `--against` base) is in use.
  */
 export function applyAdvisorySiblingRatchet<
-  T extends { reasonId?: string; failsStrict?: boolean; severity?: string },
->(violations: readonly T[], occurrenceKeys: readonly string[], recordedKeys: ReadonlySet<string>): T[] {
-  const indexes: number[] = [];
+  T extends {
+    ruleId?: string;
+    reasonId?: string;
+    failsStrict?: boolean;
+    severity?: string;
+    fromLayer?: string;
+    toLayer?: string;
+    message?: string;
+  },
+>(
+  violations: readonly T[],
+  occurrenceKeys: readonly string[],
+  recordedKeys: ReadonlySet<string>,
+  options?: { rules?: readonly RatchetRule[] | null; layers?: LayerConfig[] }
+): T[] {
+  const groups = new Map<string, number[]>();
   for (let index = 0; index < violations.length; index += 1) {
-    if (violations[index]?.reasonId === 'CROSS_SIBLING_SLICE') indexes.push(index);
+    const row = violations[index];
+    if (row?.reasonId !== 'CROSS_SIBLING_SLICE' || row.failsStrict !== false) continue;
+    const key = `${row.fromLayer ?? ''}\0${row.toLayer ?? ''}`;
+    const list = groups.get(key);
+    if (list) list.push(index);
+    else groups.set(key, [index]);
   }
-  if (indexes.length === 0) return [...violations];
-  let recorded = 0;
-  for (const index of indexes) {
-    if (recordedKeys.has(occurrenceKeys[index] ?? '')) recorded += 1;
+  if (groups.size === 0) return [...violations];
+  const currentKeys = new Set(occurrenceKeys);
+  const promote = new Set<number>();
+  for (const indexes of groups.values()) {
+    const first = violations[indexes[0] ?? 0];
+    const rule = (options?.rules ?? []).find(
+      (candidate) =>
+        candidate &&
+        candidate.from === first?.fromLayer &&
+        candidate.to === first?.toLayer &&
+        candidate.allowed === false &&
+        candidate.peerIsolation === true &&
+        candidate.childSlices != null
+    );
+    const mode = siblingRatchetMode(rule?.childSlices?.siblings);
+    if (mode === 'never') continue;
+    if (mode === 'auto') {
+      const recorded = recordedAdvisorySiblingCount({
+        rule: rule as EdgeRule | undefined,
+        ruleIds: new Set(indexes.map((index) => String(violations[index]?.ruleId ?? ''))),
+        groupKeys: new Set(indexes.map((index) => occurrenceKeys[index] ?? '')),
+        currentKeys,
+        recordedKeys,
+        layers: options?.layers,
+      });
+      if (recorded === 0 || indexes.length <= recorded) continue;
+    }
+    for (const index of indexes) {
+      if (!recordedKeys.has(occurrenceKeys[index] ?? '')) promote.add(index);
+    }
   }
-  if (indexes.length <= recorded) return [...violations];
+  if (promote.size === 0) return [...violations];
   return violations.map((violation, index) => {
-    if (violation.reasonId !== 'CROSS_SIBLING_SLICE') return violation;
-    if (recordedKeys.has(occurrenceKeys[index] ?? '')) return violation;
-    if (violation.failsStrict !== false) return violation;
-    return { ...violation, failsStrict: true, severity: 'error' };
+    if (!promote.has(index)) return violation;
+    const from = violation.fromLayer ?? '?';
+    const to = violation.toLayer ?? '?';
+    const why = `New advisory sibling crossing past the recorded baseline for ${from} → ${to}. Set childSlices.siblings.ratchet: false to measure only.`;
+    return {
+      ...violation,
+      failsStrict: true,
+      severity: 'error',
+      ...(typeof violation.message === 'string' ? { message: `${violation.message} ${why}` } : {}),
+    };
   });
 }
 
@@ -1623,8 +2224,9 @@ export function findDeniedEdgeDecision(
       const fromPath = options?.fromPath;
       const toPath = options?.toPath;
       const folders = resolveSliceFolders(rule, from, options?.layers);
-      const fromPlace = resolveGovernedSlice(fromPath, rule, folders);
-      const toPlace = resolveGovernedSlice(toPath, rule, folders);
+      const pair = resolveGovernedSlicePair(rule, folders, fromPath, toPath);
+      const fromPlace = pair.from;
+      const toPlace = pair.to;
       const fromSlice = fromPlace.universeId;
       const toSlice = toPlace.universeId;
       const verdict = evaluateNestedSliceWall({
@@ -1638,7 +2240,8 @@ export function findDeniedEdgeDecision(
         toChild: toPlace.childId,
         fromShared: !fromSlice && pathUnderSharedRoot(fromPath, rule.sharedRoots),
         toShared: !toSlice && pathUnderSharedRoot(toPath, rule.sharedRoots),
-        crossSliceAllowed: crossSliceEdgeAllowed(rule.allowedCrossSlice, fromSlice, toSlice),
+        crossSliceAllowed: pair.crossSliceAllowed,
+        legacyChildAllowed: pair.legacyChildAllowed,
       });
       if (verdict.decision !== 'allow') {
         return {
@@ -1683,7 +2286,7 @@ export function findSharedImportsSliceBridge(
   for (const rule of rules ?? []) {
     if (rule.from !== from || rule.to !== to) continue;
     if (rule.allowed !== false || !rule.peerIsolation) continue;
-    if (rule.sharedImportsSlice === 'deny') continue;
+    if (sharedImportsSliceMode(rule.sharedImportsSlice) === 'deny') continue;
     const folders = resolveSliceFolders(rule, from, options?.layers);
     const fromSlice = resolveGovernedSlice(fromPath, rule, folders).universeId;
     const toSlice = resolveGovernedSlice(toPath, rule, folders).universeId;

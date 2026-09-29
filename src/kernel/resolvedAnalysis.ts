@@ -395,6 +395,7 @@ function contentViolations(
           toLayer,
           fromPath: reference.file,
           ruleMessage: decision.rule.message,
+          childMessage: decision.rule.childSlices?.message,
           defaultMessage,
         })
       : (decision.rule.message ?? defaultMessage);
@@ -423,6 +424,8 @@ export function analyzeCanonicalResolvedProject(
     adopted?: boolean;
     invariantTestsPathPresent?: boolean;
     coverageRootsPresent?: boolean;
+    arkgatePins?: AnalyzeResolvedProjectInput['arkgatePins'];
+    runningArkgateVersion?: string;
   }
 ): ResolvedAnalysisResult {
   const { facts } = input;
@@ -483,6 +486,8 @@ export function analyzeCanonicalResolvedProject(
     config: input.contract.config,
     rules: input.contract.config.rules,
     files: files.map((file) => file.path),
+    arkgatePins: input.arkgatePins,
+    runningArkgateVersion: input.runningArkgateVersion,
   });
   const safety = evaluateSafety(input, facts);
   const arkRules = input.contract.arkRules ?? emptyEffectiveArkRules();
@@ -655,6 +660,8 @@ export function analyzeCanonicalResolvedProject(
     xiFieldWrites: facts.arkOrderXiFieldWrites,
     ingestWritesXi: facts.arkOrderIngestWritesXi,
     releaseKeyCounts: facts.arkOrderReleaseKeyCounts,
+    xiTtlKeys: facts.arkOrderXiTtlKeys,
+    budgetLeaks: facts.arkOrderBudgetLeaks,
     dependencies: facts.dependencies,
     layerForFile: (path) =>
       layerByFile.get(path) ?? layerForRelativePath(path, input.contract.config.layers),
@@ -787,5 +794,7 @@ export function analyzeResolvedProject(input: AnalyzeResolvedProjectInput): Reso
     adopted: input.adopted,
     invariantTestsPathPresent: input.invariantTestsPathPresent,
     coverageRootsPresent: input.coverageRootsPresent,
+    arkgatePins: input.arkgatePins,
+    runningArkgateVersion: input.runningArkgateVersion,
   });
 }

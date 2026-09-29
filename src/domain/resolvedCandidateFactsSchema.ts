@@ -251,6 +251,7 @@ export const RESOLVED_CANDIDATE_FACTS_SCHEMA = {
           hasPublicConstructor: { type: 'boolean' },
           hasStaticFactory: { type: 'boolean' },
           dataOnly: { type: 'boolean' },
+          truncatedUntil: { type: 'integer', minimum: 0 },
           mutatingMethods: {
             type: 'array',
             items: {
@@ -412,6 +413,32 @@ export const RESOLVED_CANDIDATE_FACTS_SCHEMA = {
           file: projectPathSchema,
           line: lineSchema,
           keyCount: { type: 'integer', minimum: 1 },
+        },
+      },
+    },
+    arkOrderXiTtlKeys: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['file', 'line', 'key'],
+        properties: {
+          file: projectPathSchema,
+          line: lineSchema,
+          key: textSchema,
+        },
+      },
+    },
+    arkOrderBudgetLeaks: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['file', 'line', 'kind'],
+        properties: {
+          file: projectPathSchema,
+          line: lineSchema,
+          kind: textSchema,
         },
       },
     },

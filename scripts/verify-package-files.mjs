@@ -37,6 +37,49 @@ const REQUIRE_LISTED = [
   'CHANGELOG.md',
 ];
 
+/**
+ * Code entries ship ESM and CJS declarations, and each `require` branch names its `.d.cts`.
+ * Through 4.8.23 files[] dropped `*.d.cts` and one ESM `types` served both conditions, so a
+ * CommonJS TypeScript consumer got TS1471 / TS1479 although runtime `require()` worked.
+ */
+export function collectDualTypesErrors(pkg, files, repo = REPO) {
+  const errors = [];
+  if (files.some((entry) => entry.startsWith('!') && /\.d\.cts/.test(entry))) {
+    errors.push('package.json files[] excludes *.d.cts: CommonJS consumers lose their declarations');
+  }
+  const distBuilt = fs.existsSync(path.join(repo, 'dist'));
+  const typesVersions = pkg.typesVersions?.['*'] ?? {};
+  for (const [key, target] of Object.entries(pkg.exports ?? {})) {
+    if (!target || typeof target !== 'object' || !('require' in target || 'import' in target)) continue;
+    const esm = target.import;
+    const cjs = target.require;
+    if (typeof esm !== 'object' || typeof cjs !== 'object') {
+      errors.push(`exports["${key}"] must nest { types, default } under both import and require`);
+      continue;
+    }
+    if (!String(esm.types ?? '').endsWith('.d.ts') || !String(esm.default ?? '').endsWith('.js')) {
+      errors.push(`exports["${key}"].import must be { types: *.d.ts, default: *.js }`);
+    }
+    if (!String(cjs.types ?? '').endsWith('.d.cts') || !String(cjs.default ?? '').endsWith('.cjs')) {
+      errors.push(`exports["${key}"].require must be { types: *.d.cts, default: *.cjs }`);
+    }
+    if (distBuilt) {
+      for (const file of [esm.types, esm.default, cjs.types, cjs.default]) {
+        if (typeof file === 'string' && !fs.existsSync(path.join(repo, file))) {
+          errors.push(`exports["${key}"] names ${file}, which the build did not emit`);
+        }
+      }
+    }
+    if (key !== '.') {
+      const mapped = typesVersions[key.replace(/^\.\//, '')];
+      if (!Array.isArray(mapped) || mapped[0] !== esm.types) {
+        errors.push(`typesVersions["*"]["${key.replace(/^\.\//, '')}"] must map to ${esm.types} (moduleResolution node10)`);
+      }
+    }
+  }
+  return errors;
+}
+
 function main() {
   const asJson = process.argv.includes('--json');
   const pkg = JSON.parse(fs.readFileSync(path.join(REPO, 'package.json'), 'utf8'));
@@ -93,6 +136,8 @@ function main() {
     }
   }
 
+  errors.push(...collectDualTypesErrors(pkg, files));
+
   // Threat-model doc should exist for Q9 documentation surface
   if (!fs.existsSync(path.join(REPO, 'docs', 'threat-model.md'))) {
     errors.push('docs/threat-model.md missing');
@@ -127,4 +172,6 @@ function main() {
   process.exitCode = ok ? 0 : 1;
 }
 
-main();
+if (process.argv[1] && fs.realpathSync(path.resolve(process.argv[1])) === fs.realpathSync(fileURLToPath(import.meta.url))) {
+  main();
+}
