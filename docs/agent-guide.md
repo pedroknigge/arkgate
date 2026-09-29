@@ -1324,7 +1324,9 @@ not replace your web framework, HTTP clients, or job scheduler.
 The strongest place to constrain an AI agent is the moment it writes a file, not after.
 `arkgate-mcp` / `ark-mcp` exposes ArkGate over MCP (JSON-RPC over stdio; it prefers a usable
 project TypeScript API, then exact `typescript-ark-host@6.0.3`) so a host can gate
-the write path:
+the write path. `arkgate mcp` / `ark mcp` starts the same server; that is the form
+`npx arkgate@<version> mcp --root . --config ark.config.json` and the MCP Registry use, since npx
+runs the bin named after the package:
 
 For a complete multi-file candidate, use `ark preflight --changes changes.json --json` or MCP
 `ark_prepare_change`. Add `--change-map map.json` (or MCP `changeMap`) only for an explicit schema

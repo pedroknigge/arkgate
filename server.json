@@ -19,7 +19,7 @@
       "packageArguments": [
         {
           "type": "positional",
-          "value": "arkgate-mcp"
+          "value": "mcp"
         },
         {
           "type": "named",
