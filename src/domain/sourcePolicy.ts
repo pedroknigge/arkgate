@@ -26,6 +26,49 @@ export type IntentLayerPrefixes = {
   intentPrefixes?: readonly string[];
 };
 
+/**
+ * Runtime intent prefixes for one config layer: its declared `intentPrefixes`,
+ * else the built-in prefixes when the layer uses a canonical 11-layer name
+ * (`DomainModel` → `Domain.`, …; the same table the static gate falls back to),
+ * else none. Keeps `ark init` configs, which name canonical layers without
+ * declaring prefixes, resolvable by the ArkRun kernel.
+ */
+export function effectiveIntentPrefixes(layer: {
+  name: string;
+  intentPrefixes?: readonly string[];
+}): readonly string[] {
+  const declared = (layer.intentPrefixes ?? []).filter((prefix) => prefix.trim().length > 0);
+  if (declared.length > 0) return declared;
+  return DEFAULT_INTENT_PREFIXES.find((entry) => entry.layer === layer.name)?.prefixes ?? [];
+}
+
+export type LayerFlowConfigShape = {
+  layers: readonly { name: string; intentPrefixes?: readonly string[] }[];
+  rules?: readonly { from: string; to: string; allowed?: boolean; peerIsolation?: boolean }[];
+};
+
+/**
+ * Layers named by an `allowed: false` (non-peerIsolation) rule that no intent can map to at runtime
+ * (no declared `intentPrefixes` and not a canonical layer name). Hard observed
+ * layer flow can never fire for such a rule. Sorted, unique.
+ */
+export function unresolvableLayerFlowLayers(config: LayerFlowConfigShape): string[] {
+  const resolvable = new Set(
+    config.layers
+      .filter((layer) => effectiveIntentPrefixes(layer).length > 0)
+      .map((layer) => layer.name)
+  );
+  const missing = new Set<string>();
+  for (const rule of config.rules ?? []) {
+    // peerIsolation walls are file-path slice rules; runtime flow never evaluates them.
+    if (rule.allowed !== false || rule.peerIsolation === true) continue;
+    for (const name of [rule.from, rule.to]) {
+      if (!resolvable.has(name)) missing.add(name);
+    }
+  }
+  return [...missing].sort();
+}
+
 /** Longest matching prefix wins; declaration order resolves an identical-prefix tie. */
 export function resolveIntentLayer(
   intent: string,

@@ -8,6 +8,7 @@ import {
   InMemoryEventBuffer,
   ObservedLayerFlowViolationError,
   createArkKernelFromConfig,
+  createLenientArkKernel,
   createLenientArkKernelFromConfig,
   createStrictArkKernel,
   createStrictArkKernelFromConfig,
@@ -36,10 +37,10 @@ describe('default event buffer is bounded and settled by local delivery', () => 
     ark.eventBus.subscribe(OrderPlaced, () => {
       handled += 1;
     });
-    for (let i = 0; i < 500; i += 1) {
+    for (let i = 0; i < 5000; i += 1) {
       await ark.eventBus.publish(OrderPlaced, { id: String(i) }, { source });
     }
-    expect(handled).toBe(500);
+    expect(handled).toBe(5000);
     const all = await ark.eventBuffer.list();
     expect(all.length).toBeLessThanOrEqual(10);
     expect(await ark.eventBuffer.list('pending')).toHaveLength(0);
@@ -134,6 +135,33 @@ describe('InMemoryEventBuffer maxRecords', () => {
     expect(buffer.evictedPending).toBe(1);
   });
 
+  it('does not count in-flight records evicted and settled later as lost', async () => {
+    const buffer = new InMemoryEventBuffer({ maxRecords: 2 });
+    const event = (i: number) =>
+      ({ intent: 'Domain.X', payload: i, metadata: { source: 'S' } }) as unknown as DomainEvent;
+    const ids: string[] = [];
+    for (let i = 0; i < 6; i += 1) ids.push((await buffer.enqueue(event(i))).id);
+    expect(buffer.evictedPending).toBe(4);
+    await buffer.markDispatched(ids[0]!);
+    await buffer.markFailed(ids[1]!, new Error('handler'));
+    expect(buffer.evictedPending).toBe(2);
+    await buffer.markDispatched(ids[0]!);
+    expect(buffer.evictedPending).toBe(2);
+  });
+
+  it('reports no evicted-pending loss for a fire-and-forget burst in the default kernel', async () => {
+    const ark = createLenientArkKernel({ requireKnownSource: false, maxHistorySize: 10 });
+    const Beat = ark.registry.define('Domain.Beat');
+    ark.eventBus.subscribe(Beat, async () => {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    });
+    for (let i = 0; i < 100; i += 1) await ark.send(Beat, { i });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    const buffer = ark.eventBuffer as InMemoryEventBuffer;
+    expect(await buffer.list('pending')).toHaveLength(0);
+    expect(buffer.evictedPending).toBe(0);
+  });
+
   it('stays unbounded by default when constructed directly', async () => {
     const buffer = new InMemoryEventBuffer();
     for (let i = 0; i < 1500; i += 1) {
@@ -143,64 +171,96 @@ describe('InMemoryEventBuffer maxRecords', () => {
   });
 });
 
-describe('kernel from config: hard layer flow needs intentPrefixes', () => {
-  const rules = [
-    { from: 'DomainModel', to: 'ApplicationOrchestration', allowed: false },
-  ];
-  const noPrefixes: ArkKernelConfig = {
+describe('kernel from config: hard layer flow resolves layers', () => {
+  const canonicalNoPrefixes: ArkKernelConfig = {
     include: ['src'],
     layers: [
       { name: 'DomainModel', patterns: ['src/domain/**'] },
       { name: 'ApplicationOrchestration', patterns: ['src/application/**'] },
     ],
-    rules,
+    rules: [{ from: 'DomainModel', to: 'ApplicationOrchestration', allowed: false }],
   };
-  const withPrefixes: ArkKernelConfig = {
+  const customNoPrefixes: ArkKernelConfig = {
     include: ['src'],
     layers: [
-      { name: 'DomainModel', patterns: ['src/domain/**'], intentPrefixes: ['Domain.'] },
-      {
-        name: 'ApplicationOrchestration',
-        patterns: ['src/application/**'],
-        intentPrefixes: ['Application.'],
-      },
+      { name: 'Features', patterns: ['src/features/**'] },
+      { name: 'App', patterns: ['src/app/**'] },
     ],
-    rules,
+    rules: [{ from: 'Features', to: 'App', allowed: false }],
   };
 
-  it('throws ArkKernelConfigError instead of silently enforcing nothing', () => {
-    expect(() => createStrictArkKernelFromConfig(noPrefixes)).toThrow(ArkKernelConfigError);
-    expect(() => createArkKernelFromConfig(noPrefixes)).toThrow(ArkKernelConfigError);
-    try {
-      createStrictArkKernelFromConfig(noPrefixes);
-    } catch (error) {
-      expect((error as ArkKernelConfigError).code).toBe('ARKRUN_LAYER_FLOW_UNRESOLVABLE');
-      expect((error as ArkKernelConfigError).layers).toEqual([
-        'ApplicationOrchestration',
-        'DomainModel',
-      ]);
-    }
-  });
-
-  it('builds when the caller explicitly opts out of hard mode', () => {
-    expect(() =>
-      createStrictArkKernelFromConfig(noPrefixes, { enforceObservedLayerFlow: 'off' })
-    ).not.toThrow();
-    expect(() =>
-      createStrictArkKernelFromConfig(noPrefixes, { enforceObservedLayerFlow: 'soft' })
-    ).not.toThrow();
-    expect(() => createLenientArkKernelFromConfig(noPrefixes)).not.toThrow();
-  });
-
-  it('rejects the forbidden flow when prefixes are declared', async () => {
-    const ark = createStrictArkKernelFromConfig(withPrefixes, {
-      strictEventContracts: false,
-    });
+  async function billedFromDomain(ark: ArkKernel) {
     const Billed = ark.registry.define('Application.Billed');
     ark.registry.define('Domain.Order.Handle', { produces: ['Application.Billed'] });
+    return ark.send(Billed, {}, { source: 'Domain.Order.Handle', ephemeral: false });
+  }
+
+  it('gives canonical layer names their built-in prefixes and enforces hard flow', async () => {
+    const strict = createStrictArkKernelFromConfig(canonicalNoPrefixes, {
+      strictEventContracts: false,
+    });
+    await expect(billedFromDomain(strict)).rejects.toBeInstanceOf(
+      ObservedLayerFlowViolationError
+    );
+    const byDefault = createArkKernelFromConfig(canonicalNoPrefixes, {
+      strictEventContracts: false,
+    });
+    await expect(billedFromDomain(byDefault)).rejects.toBeInstanceOf(
+      ObservedLayerFlowViolationError
+    );
+    expect(await strict.auditTrail.query({ type: 'layer.observedFlowUnresolvable' })).toEqual([]);
+  });
+
+  it('builds with implied hard mode and records unresolvable custom layers', async () => {
+    const ark = createStrictArkKernelFromConfig(customNoPrefixes);
+    await flush();
+    const notices = await ark.auditTrail.query({ type: 'layer.observedFlowUnresolvable' });
+    expect(notices).toHaveLength(1);
+    expect((notices[0]?.details as { layers: string[] }).layers).toEqual(['App', 'Features']);
+    expect(() => createArkKernelFromConfig(customNoPrefixes)).not.toThrow();
+  });
+
+  it('throws ArkKernelConfigError when hard is passed explicitly', () => {
+    expect(() =>
+      createStrictArkKernelFromConfig(customNoPrefixes, { enforceObservedLayerFlow: 'hard' })
+    ).toThrow(ArkKernelConfigError);
+    try {
+      createArkKernelFromConfig(customNoPrefixes, { enforceObservedLayerFlow: 'hard' });
+    } catch (error) {
+      expect((error as ArkKernelConfigError).code).toBe('ARKRUN_LAYER_FLOW_UNRESOLVABLE');
+      expect((error as ArkKernelConfigError).layers).toEqual(['App', 'Features']);
+    }
+    expect(() =>
+      createStrictArkKernelFromConfig(canonicalNoPrefixes, { enforceObservedLayerFlow: 'hard' })
+    ).not.toThrow();
+    expect(() =>
+      createStrictArkKernelFromConfig(customNoPrefixes, { enforceObservedLayerFlow: 'soft' })
+    ).not.toThrow();
+    expect(() => createLenientArkKernelFromConfig(customNoPrefixes)).not.toThrow();
+  });
+
+  it('does not reject same-layer flows for peerIsolation slice walls (names cannot place a slice)', async () => {
+    const ark = createStrictArkKernelFromConfig(
+      {
+        ...canonicalNoPrefixes,
+        rules: [
+          ...canonicalNoPrefixes.rules!,
+          {
+            from: 'DomainModel',
+            to: 'DomainModel',
+            allowed: false,
+            peerIsolation: true,
+            sliceFolders: ['contexts'],
+          },
+        ],
+      },
+      { strictEventContracts: false }
+    );
+    const Placed = ark.registry.define('Domain.Order.Placed');
+    ark.registry.define('Domain.Order.Handle', { produces: ['Domain.Order.Placed'] });
     await expect(
-      ark.send(Billed, {}, { source: 'Domain.Order.Handle', ephemeral: false })
-    ).rejects.toBeInstanceOf(ObservedLayerFlowViolationError);
+      ark.send(Placed, {}, { source: 'Domain.Order.Handle', ephemeral: false })
+    ).resolves.toBeDefined();
   });
 });
 

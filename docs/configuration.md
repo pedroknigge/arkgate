@@ -145,10 +145,13 @@ Top-level fields:
   Kernel factories in a root: `createArkKernel` / `createStrictArkKernel` /
   `createLenientArkKernel`, their `*FromConfig` variants, or `ArkModule.forRoot()` /
   `forRootAsync()` imported from `arkgate/nestjs`. Undeclared-* sensors count only calls
-  whose receiver is traced to the kernel (factory-bound local, import from a root module,
-  a binding typed `ArkKernel` / `EventBus` / publisher from `arkgate/runtime` or
-  `arkgate/nestjs`, its `.eventBus`, a `publisher(..)` result) — `res.send` or
-  `require.resolve` never count. Call names are a string literal or a same-file
+  whose receiver is traced to the kernel (factory-bound local, import from a root module —
+  resolved through tsconfig `paths` and barrels that re-export it — a plain alias
+  `const kernel = ark`, a `typeof ark` binding, a binding typed `ArkKernel` / `EventBus` /
+  publisher from `arkgate/runtime` or `arkgate/nestjs`, its `.eventBus`, a `publisher(..)`
+  result), or whose receiver cannot be traced but whose literal name is a kernel-valid
+  intent (`Domain.…`, `Application.…`) — `res.send('ok')` or `require.resolve('pkg')` never
+  count. Call names are a string literal or a same-file
   `define(..)` / `defineIntent(..)` creator (or string constant); anything else in
   `enforced` mode reports `ARKRUN_INTERACTION_NAME_INCOMPLETE` (partial). See
   [diagnostics](diagnostics.md#ARKRUN_MISSING_ROOT).
@@ -241,10 +244,17 @@ That sentence is product copy. Not “Rich domain model, business rules, and dom
 
 - `intentPrefixes`, `forbiddenGlobals`, `mayImportInfrastructure`, `optional`
   — `intentPrefixes` is how the ArkRun kernel maps an intent name to a layer at runtime.
-  `createStrictArkKernelFromConfig` / `createArkKernelFromConfig` (hard observed-layer-flow)
-  throw `ArkKernelConfigError` (`ARKRUN_LAYER_FLOW_UNRESOLVABLE`) when a layer named in an
-  `allowed: false` rule has no `intentPrefixes`, instead of silently enforcing nothing. Add
-  the prefixes, or pass `enforceObservedLayerFlow: 'soft' | 'off'` explicitly.
+  A layer with a canonical 11-layer name (`DomainModel`, `ApplicationOrchestration`,
+  `PersistenceAdapters`, … — what `ark init` writes) and no `intentPrefixes` gets the
+  built-in prefixes (`Domain.`, `Application.`, `Adapter.Persistence.`, …), so default configs
+  enforce hard observed-layer-flow as-is. A custom-named layer in an `allowed: false` rule
+  with no `intentPrefixes` cannot map any intent: `createStrictArkKernelFromConfig` /
+  `createArkKernelFromConfig` still build (strict default) and record one
+  `layer.observedFlowUnresolvable` audit record (`ARKRUN_LAYER_FLOW_UNRESOLVABLE`), and
+  `ark doctor` lists those layers when the `arkRun` extra is on. Passing
+  `enforceObservedLayerFlow: 'hard'` explicitly throws `ArkKernelConfigError` instead.
+  `peerIsolation` rules are file-path slice walls; runtime flow (producer/intent names only)
+  does not evaluate them.
 - `reserved` / `allowEmpty` — future houses whose globs match nothing yet. `--strict-config` does not fail; `CONFIG_LAYER_PATTERN_NO_MATCHES` (typo warning) is skipped. A typo warning fires only when the glob is not reserved.
 - `capabilities: { deny: [...] }` — opt-in effect walls over the seven capability ids
   (`network`, `filesystem`, `clock`, `randomness`, `environment`, `process`, `persistence`);

@@ -1006,9 +1006,12 @@ reaches history, outbox, or subscribers. Use `'soft'` to record `layer.observedV
 trace/audit records without blocking, or `'off'` to disable. Agents should name the event's
 `source` honestly: it is checked against the layer matrix, not just the intent name.
 Kernels built from `ark.config.json` map intents to layers through `layers[].intentPrefixes`;
-`createStrictArkKernelFromConfig` throws `ArkKernelConfigError`
-(`ARKRUN_LAYER_FLOW_UNRESOLVABLE`) when a deny-rule layer has none, rather than enforcing
-nothing while labelled strict.
+canonical layer names (`DomainModel`, `ApplicationOrchestration`, … as `ark init` writes them)
+without prefixes get the built-in ones. A custom-named deny-rule layer with no prefixes is
+recorded once as a `layer.observedFlowUnresolvable` audit record
+(`ARKRUN_LAYER_FLOW_UNRESOLVABLE`) and listed by `ark doctor`; pass
+`enforceObservedLayerFlow: 'hard'` explicitly to make it throw `ArkKernelConfigError`.
+`peerIsolation` slice walls are not evaluated at runtime (names cannot place a slice).
 
 Strict kernels also require published events to have a registered source intent
 and a matching event contract:

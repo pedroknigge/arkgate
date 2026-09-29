@@ -111,11 +111,13 @@ export class ObservedLayerFlowViolationError extends Error {
 }
 
 /**
- * A kernel built from an `ark.config.json` asked for hard observed-layer-flow
- * enforcement, but some rule-bearing layers declare no `intentPrefixes`, so the
- * kernel could never map an intent to those layers and the rule would be a
- * silent no-op. Add `intentPrefixes`, or pass `enforceObservedLayerFlow:
- * 'soft' | 'off'` explicitly.
+ * A kernel built from an `ark.config.json` was explicitly asked for hard
+ * observed-layer-flow enforcement (`enforceObservedLayerFlow: 'hard'`), but some
+ * deny-rule layers declare no `intentPrefixes` and are not canonical 11-layer
+ * names (which get built-in prefixes), so no intent maps to them and the rule
+ * would be a silent no-op. With the strict default (hard implied, not passed),
+ * the kernel builds and records a `layer.observedFlowUnresolvable` audit record
+ * instead. Fix: add `intentPrefixes`, or pass `'soft' | 'off'`.
  */
 export class ArkKernelConfigError extends Error {
   readonly code: 'ARKRUN_LAYER_FLOW_UNRESOLVABLE';
@@ -125,7 +127,7 @@ export class ArkKernelConfigError extends Error {
     super(
       `Hard observed-layer-flow enforcement cannot resolve layer(s) ${layers
         .map((layer) => `"${layer}"`)
-        .join(', ')}: they appear in a deny rule but declare no intentPrefixes, so no intent maps to them and the rule would never fire. ` +
+        .join(', ')}: they appear in a deny rule but declare no intentPrefixes (and are not canonical 11-layer names), so no intent maps to them and the rule would never fire. ` +
         "Add intentPrefixes to those layers in ark.config.json, or pass enforceObservedLayerFlow: 'soft' | 'off' explicitly."
     );
     this.name = 'ArkKernelConfigError';

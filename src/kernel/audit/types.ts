@@ -9,6 +9,7 @@ export type AuditRecordType =
   | 'policy.softViolation'
   | 'policy.hardViolation'
   | 'layer.observedViolation'
+  | 'layer.observedFlowUnresolvable'
   | 'handler.error'
   | 'hook.error'
   | 'workflow.started'

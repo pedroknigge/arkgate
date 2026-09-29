@@ -8,6 +8,7 @@ import {
   classifyArkRunInspectorStoreDurability,
 } from '../../domain/arkRunInspector';
 import { buildDependencyInformationPackage } from '../../domain/arkRunInformationPackage';
+import { unresolvableLayerFlowLayers } from '../../domain/sourcePolicy';
 import { ARK_RUN_EPHEMERAL_DEFAULT } from '../../domain/arkRunTransport';
 import { createAuditTrail } from '../audit';
 import { ArkKernelConfigError, EventBusImpl } from '../event-bus';
@@ -269,42 +270,55 @@ export function createStrictArkKernel(
   });
 }
 
-/**
- * Layers named by a deny rule that declare no `intentPrefixes`. Runtime
- * observed-layer-flow maps intents to layers by prefix only, so such a rule can
- * never fire at runtime.
- */
-function unresolvableDenyRuleLayers(config: ArkKernelConfig): string[] {
-  const withPrefixes = new Set(
-    config.layers
-      .filter((layer) => (layer.intentPrefixes ?? []).some((p) => p.trim().length > 0))
-      .map((layer) => layer.name)
-  );
-  const missing = new Set<string>();
-  for (const rule of config.rules ?? []) {
-    if (rule.allowed !== false) continue;
-    for (const name of [rule.from, rule.to]) {
-      if (!withPrefixes.has(name)) missing.add(name);
-    }
-  }
-  return [...missing].sort();
-}
+type ConfigKernelPlan = {
+  options: CreateArkKernelOptions;
+  /** Deny-rule layers no intent maps to; non-empty only under implied hard mode. */
+  unresolvable: string[];
+};
 
-function createOptionsFromConfig(
+function planKernelFromConfig(
   config: ArkKernelConfig,
   options: CreateArkKernelFromConfigOptions,
   defaultFlowMode: ObservedLayerFlowMode
-): CreateArkKernelOptions {
+): ConfigKernelPlan {
   const { profileName, ...kernelOptions } = options;
-  // Fail closed: a kernel labelled hard must not silently enforce nothing.
-  if ((options.enforceObservedLayerFlow ?? defaultFlowMode) === 'hard') {
-    const missing = unresolvableDenyRuleLayers(config);
-    if (missing.length > 0) throw new ArkKernelConfigError(missing);
-  }
+  const explicitMode = options.enforceObservedLayerFlow;
+  const missing =
+    (explicitMode ?? defaultFlowMode) === 'hard' ? unresolvableLayerFlowLayers(config) : [];
+  // Explicit `enforceObservedLayerFlow: 'hard'` fails closed: the caller asked for
+  // teeth the config cannot provide.
+  if (explicitMode === 'hard' && missing.length > 0) throw new ArkKernelConfigError(missing);
   return {
-    ...kernelOptions,
-    profile: createArchitectureProfileFromArkConfig(config, { name: profileName }),
+    options: {
+      ...kernelOptions,
+      profile: createArchitectureProfileFromArkConfig(config, { name: profileName }),
+    },
+    unresolvable: missing,
   };
+}
+
+/**
+ * Implied hard mode (strict default) with unresolvable deny-rule layers: the
+ * kernel still builds (the configs `ark init` presets write must not crash at
+ * startup), enforces every resolvable layer, and records the gap once as a
+ * `layer.observedFlowUnresolvable` audit record so it is never silent.
+ */
+function withUnresolvableNotice(kernel: ArkKernel, unresolvable: string[]): ArkKernel {
+  if (unresolvable.length === 0) return kernel;
+  void Promise.resolve()
+    .then(() =>
+      kernel.auditTrail.record({
+        type: 'layer.observedFlowUnresolvable',
+        subject: unresolvable.join(','),
+        details: {
+          code: 'ARKRUN_LAYER_FLOW_UNRESOLVABLE',
+          layers: unresolvable,
+          message: new ArkKernelConfigError(unresolvable).message,
+        },
+      })
+    )
+    .catch(() => undefined);
+  return kernel;
 }
 
 export function createArkKernelFromConfig(
@@ -312,29 +326,33 @@ export function createArkKernelFromConfig(
   options: CreateArkKernelFromConfigOptions = {}
 ): ArkKernel {
   const strict = options.strict ?? true;
-  return createArkKernel(
-    createOptionsFromConfig(config, options, strict ? 'hard' : 'off')
-  );
+  const plan = planKernelFromConfig(config, options, strict ? 'hard' : 'off');
+  return withUnresolvableNotice(createArkKernel(plan.options), plan.unresolvable);
 }
 
 /**
  * Strict kernel whose runtime layer profile comes from `ark.config.json`.
- * Hard observed-layer-flow needs `intentPrefixes` on every layer a deny rule
- * names; otherwise this throws `ArkKernelConfigError`
- * (`ARKRUN_LAYER_FLOW_UNRESOLVABLE`) instead of enforcing nothing.
+ * Hard observed-layer-flow needs every layer a deny rule names to resolve an
+ * intent: declared `intentPrefixes`, or a canonical 11-layer name (`DomainModel`,
+ * `ApplicationOrchestration`, … — what `ark init` writes) which gets the built-in
+ * prefixes. A custom-named deny layer without prefixes is recorded as a
+ * `layer.observedFlowUnresolvable` audit record (`ARKRUN_LAYER_FLOW_UNRESOLVABLE`);
+ * passing `enforceObservedLayerFlow: 'hard'` explicitly throws `ArkKernelConfigError`
+ * instead.
  */
 export function createStrictArkKernelFromConfig(
   config: ArkKernelConfig,
   options: CreateArkKernelFromConfigOptions = {}
 ): ArkKernel {
-  return createStrictArkKernel(createOptionsFromConfig(config, options, 'hard'));
+  const plan = planKernelFromConfig(config, options, 'hard');
+  return withUnresolvableNotice(createStrictArkKernel(plan.options), plan.unresolvable);
 }
 
 export function createLenientArkKernelFromConfig(
   config: ArkKernelConfig,
   options: CreateArkKernelFromConfigOptions = {}
 ): ArkKernel {
-  return createLenientArkKernel(createOptionsFromConfig(config, options, 'off'));
+  return createLenientArkKernel(planKernelFromConfig(config, options, 'off').options);
 }
 
 export function createLenientArkKernel(

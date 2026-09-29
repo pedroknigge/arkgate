@@ -57,6 +57,7 @@ export function attachExtraDoctorSections(rulesUnderContract, config, classifica
     findings,
     classification,
     arkRules: arkRulesMerge,
+    layerFlow: { layers: config?.layers, rules: config?.rules },
   });
   const arkOrder = summarizeArkOrderSection({
     arkOrder: config?.arkOrder,

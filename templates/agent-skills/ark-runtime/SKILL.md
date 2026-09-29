@@ -126,8 +126,9 @@ the same files or weaken the gate.
    - In-memory stores lose state on restart — **not** production durability. Note bounded history
      (`maxHistorySize` 1000 — history, trace, audit, and the default event buffer) if the
      hand-rolled version retained everything.
-   - `createStrictArkKernelFromConfig` needs `layers[].intentPrefixes` on every deny-rule layer
-     (else `ArkKernelConfigError`). Enforced declarations accept a literal or a same-file
+   - `createStrictArkKernelFromConfig` maps intents by `layers[].intentPrefixes` (canonical
+     layer names get built-in ones); a custom deny-rule layer without prefixes is audited as
+     `layer.observedFlowUnresolvable` (explicit `'hard'` throws `ArkKernelConfigError`). Enforced declarations accept a literal or a same-file
      `define(..)` creator as the call name.
 6. **Delete the hand-rolled version** once call sites are moved — the point is
    less code, not a second parallel system. Deleting code is a destructive move:
