@@ -2,17 +2,21 @@
  * Pure ArkOrder tier-1 sensors (ADR 0027 / 0029). Absence of arkOrder emits nothing.
  */
 import {
+  extractArkOrderBudgetLeaksFromSource,
   extractArkOrderGenericUpdatesFromSource,
   extractArkOrderIngestWritesXiFromSource,
   extractArkOrderPlaneCallsFromSource,
   extractArkOrderReleaseKeyCountsFromSource,
   extractArkOrderXiFieldWritesFromSource,
+  extractArkOrderXiTtlKeysFromSource,
   isArkOrderModuleSpecifier,
+  type ResolvedArkOrderBudgetLeakFact,
   type ResolvedArkOrderGenericUpdateFact,
   type ResolvedArkOrderIngestWriteFact,
   type ResolvedArkOrderPlaneCallFact,
   type ResolvedArkOrderRootHitFact,
   type ResolvedArkOrderXiFieldWriteFact,
+  type ResolvedArkOrderXiTtlFact,
 } from './arkOrderFacts';
 import type { ArkConfigArkOrder, ArkConfigLayer } from './configTypes';
 import {
@@ -160,6 +164,8 @@ export type EvaluateArkOrderSensorsInput = {
   xiFieldWrites?: readonly ResolvedArkOrderXiFieldWriteFact[];
   ingestWritesXi?: readonly ResolvedArkOrderIngestWriteFact[];
   releaseKeyCounts?: readonly { file: string; line: number; keyCount: number }[];
+  xiTtlKeys?: readonly ResolvedArkOrderXiTtlFact[];
+  budgetLeaks?: readonly ResolvedArkOrderBudgetLeakFact[];
   dependencies: readonly ResolvedDependencyFact[];
   layerForFile: (path: string) => string | null | undefined;
   classification?: ExtraMergeTeethClassification;
@@ -340,6 +346,34 @@ export function evaluateArkOrderSensors(
     );
   }
 
+  for (const ttl of input.xiTtlKeys ?? []) {
+    findings.push(
+      finding(
+        extra,
+        'arkorder-xi-ttl',
+        ttl.file,
+        ttl.line,
+        `ξ key ${JSON.stringify(ttl.key)} is a freshness field; freshness belongs on σ (freshUntil), never on ξ.`,
+        { target: ttl.key },
+        teethAllowed
+      )
+    );
+  }
+
+  for (const leak of input.budgetLeaks ?? []) {
+    findings.push(
+      finding(
+        extra,
+        'arkorder-information-budget',
+        leak.file,
+        leak.line,
+        `Projection allowedKinds lists ${JSON.stringify(leak.kind)}, which informationBudget.cannotObserve denies.`,
+        { target: leak.kind },
+        teethAllowed
+      )
+    );
+  }
+
   const managed = new Set(extra.managedLayers);
   for (const write of xiKeys.length === 0 ? [] : input.xiFieldWrites ?? []) {
     const fromLayer = input.layerForFile(write.file);
@@ -387,6 +421,8 @@ export function evaluateArkOrderEditorSensors(input: {
     xiFieldWrites: extractArkOrderXiFieldWritesFromSource(input.file, input.source, xiKeys),
     ingestWritesXi: extractArkOrderIngestWritesXiFromSource(input.file, input.source),
     releaseKeyCounts: extractArkOrderReleaseKeyCountsFromSource(input.file, input.source),
+    xiTtlKeys: extractArkOrderXiTtlKeysFromSource(input.file, input.source),
+    budgetLeaks: extractArkOrderBudgetLeaksFromSource(input.file, input.source),
     dependencies: [],
     layerForFile: () => input.fromLayer,
   }).findings.filter(
@@ -395,6 +431,8 @@ export function evaluateArkOrderEditorSensors(input: {
       item.sensor === 'arkorder-kernel-in-domain' ||
       item.sensor === 'arkorder-xi-field-write' ||
       item.sensor === 'arkorder-ingest-writes-xi' ||
-      item.sensor === 'arkorder-too-many-params'
+      item.sensor === 'arkorder-too-many-params' ||
+      item.sensor === 'arkorder-xi-ttl' ||
+      item.sensor === 'arkorder-information-budget'
   );
 }

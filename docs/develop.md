@@ -214,7 +214,8 @@ stays plane-free. Empty `planeRoots` in `enforced` mode fails closed
 (`ARKORDER_MISSING_PLANE`). In-memory. Not durable. Does not replace ArkRun.
 
 First freeze is `release()`. Later pattern change is `proposeRelease` then
-`apply` (`ARKORDER_UNVALVED_RELEASE`). `refreshSigma`; ingest residual
+`apply` (`ARKORDER_UNVALVED_RELEASE`); `apply` only takes a proposal computed against the
+current Release (`ARKORDER_STALE_PROPOSAL`). `refreshSigma`; ingest residual
 `absorb | escalate_up | hold` + `reasonCode`; capacity pack as data;
 `createMemoryReleaseStore`; `ingestTravelAction`; ArkRun `decisionTape`.
 

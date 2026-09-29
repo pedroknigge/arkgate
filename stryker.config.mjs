@@ -35,7 +35,7 @@ const config = {
     // 4.8.4 pinned 74-114 (the whole function). classifiedFileCount + JSDoc
     // growth moved the greenfield exemption and refuse return past 114.
     'bin/lib/analysis-completeness.mjs:81-141',
-    'bin/lib/resolved-candidate-facts.mjs:736-786',
+    'bin/lib/resolved-candidate-facts.mjs:738-788',
     // managed-upgrade force-preserve covered by fieldGapS4 unit tests; not in critical
     // mutation groups for 4.1.0 (NoCoverage noise on toml-section branch residual).
     'bin/lib/resident-hook.mjs:115-162',

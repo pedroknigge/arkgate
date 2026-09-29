@@ -288,6 +288,28 @@ export async function saveOrder(tx, cmd) {
     ).toBe(true);
   });
 
+  it('treats an inline or renamed Prisma client as a persistence write (shared hint with ArkOrder)', () => {
+    const inline = `
+import { PrismaClient } from '@prisma/client';
+export async function saveOrder(cmd) {
+  await new PrismaClient().order.update({ where: { id: cmd.id }, data: cmd });
+}
+`;
+    const renamed = `
+import { PrismaClient } from '@prisma/client';
+const orm = new PrismaClient();
+export async function saveOrder(cmd) {
+  await orm.order.create({ data: cmd });
+}
+`;
+    expect(deriveArkRuleFileHints('src/application/save-order.ts', inline)?.persistenceWrite).toBe(
+      true
+    );
+    expect(
+      deriveArkRuleFileHints('src/application/save-order.ts', renamed)?.persistenceWrite
+    ).toBe(true);
+  });
+
   it('does not treat repo.update() with a drizzle eq import as a persistence write (WRITEAGG-001)', () => {
     const repoUpdate = `
 import { eq } from 'drizzle-orm';

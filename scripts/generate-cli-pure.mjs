@@ -30,6 +30,8 @@
  *   src/domain/arkRunSensors.ts → bin/lib/ark-run-sensors.mjs
  *   src/domain/arkRunDoctor.ts → bin/lib/ark-run-doctor.mjs
  *   src/domain/arkOrderDoctor.ts → bin/lib/ark-order-doctor.mjs
+ *   src/domain/stableHash.ts → bin/lib/stable-hash.mjs
+ *   src/domain/persistenceWriteHint.ts → bin/lib/persistence-write-hint.mjs
  *   src/domain/literalPathDrift.ts → bin/lib/literal-path-drift.mjs
  *
  * Layer match remains scripts/generate-layer-match.mjs (R1).
@@ -140,6 +142,16 @@ const MODULES = [
     canonical: 'src/domain/arkOrderSensors.ts',
     derived: 'bin/lib/ark-order-sensors.mjs',
     label: 'ArkOrder tier-1 sensors (ADR 0029)',
+  },
+  {
+    canonical: 'src/domain/stableHash.ts',
+    derived: 'bin/lib/stable-hash.mjs',
+    label: 'portable FNV-1a hash + stable serialize (identity only)',
+  },
+  {
+    canonical: 'src/domain/persistenceWriteHint.ts',
+    derived: 'bin/lib/persistence-write-hint.mjs',
+    label: 'persistence driver import + receiver-bound write evidence (ArkRules / ArkOrder)',
   },
   {
     canonical: 'src/domain/arkOrderInvariants.ts',
@@ -292,9 +304,12 @@ function buildCanonicalImportRewriteMap() {
  * Rewrite relative Domain imports to sibling generated .mjs paths so the
  * zero-build CLI can resolve multi-file pure modules without a bundler.
  */
-function rewriteRelativeDomainImports(transpiledSource, importRewriteMap) {
+function rewriteRelativeDomainImports(transpiledSource, importRewriteMap, canonicalRel) {
+  // Fail closed: a relative import with no generated sibling would ship an
+  // unloadable bin/lib module (ERR_MODULE_NOT_FOUND). Covers static
+  // `import … from`, `export … from`, bare side-effect imports, and import().
   return transpiledSource.replace(
-    /(from\s+['"])(\.\/[^'"]+)(['"])/g,
+    /((?:\bfrom|\bimport)\s*\(?\s*['"])(\.{1,2}\/[^'"]+)(['"])/g,
     (full, pre, spec, post) => {
       const bare = spec
         .replace(/^\.\//, '')
@@ -302,7 +317,13 @@ function rewriteRelativeDomainImports(transpiledSource, importRewriteMap) {
         .replace(/\.ts$/i, '')
         .replace(/\.mjs$/i, '');
       const derivedBase = importRewriteMap.get(bare);
-      if (!derivedBase) return full;
+      if (!derivedBase) {
+        throw new Error(
+          `generate-cli-pure: unmapped relative import '${spec}' in ${canonicalRel}; ` +
+            'add its canonical Domain module to MODULES (with a derived bin/lib path) ' +
+            'or inline the helper so the shipped CLI module can load.'
+        );
+      }
       return `${pre}./${derivedBase}${post}`;
     }
   );
@@ -327,7 +348,7 @@ function transpileCanonicalSource(canonicalRel, canonicalTs, importRewriteMap) {
   }
 
   const stripped = stripLeadingBlockComment(outputText).trimEnd() + '\n';
-  return rewriteRelativeDomainImports(stripped, importRewriteMap);
+  return rewriteRelativeDomainImports(stripped, importRewriteMap, canonicalRel);
 }
 
 function buildDerivedSource(canonicalRel, derivedRel, transpiledSource) {

@@ -40,6 +40,33 @@ const CASES = [
     tree: 'trees/too-many-params',
     expected: ['ARKORDER_TOO_MANY_PARAMS'],
   },
+  {
+    // README one-liner: `new PrismaClient().billing.update({ data: { plan } })`.
+    id: 'xi-field-write-inline-client',
+    tree: 'trees/xi-field-write-inline-client',
+    expected: ['ARKORDER_XI_FIELD_WRITE'],
+  },
+  {
+    id: 'xi-field-write-renamed-client',
+    tree: 'trees/xi-field-write-renamed-client',
+    expected: ['ARKORDER_XI_FIELD_WRITE'],
+  },
+  {
+    // Map.set in the plane root stays silent; (billingPlane as T).update elsewhere denies.
+    id: 'generic-update-named-plane',
+    tree: 'trees/generic-update-named-plane',
+    expected: ['ARKORDER_GENERIC_UPDATE'],
+  },
+  {
+    id: 'xi-ttl',
+    tree: 'trees/xi-ttl',
+    expected: ['ARKORDER_XI_TTL'],
+  },
+  {
+    id: 'information-budget',
+    tree: 'trees/information-budget',
+    expected: ['ARKORDER_INFORMATION_BUDGET'],
+  },
 ] as const;
 
 function readJson(relativePath: string): Record<string, unknown> {
@@ -185,6 +212,46 @@ export function ScheduleMilestoneTrialView(): void {
     const enforced = await analyzeRoot(enforcedRoot, configFor('enforced'));
     expect(orderIds(enforced.ir.violations)).toContain('ARKORDER_GENERIC_UPDATE');
     expect(enforced.valid).toBe(false);
+  });
+
+  it('precision: residual bindings, repo writes, σ freshness, and lock leases stay silent', async () => {
+    const writeQuiet = (root: string) => {
+      fs.writeFileSync(
+        path.join(root, 'src/main.ts'),
+        `import { createOrderPlane } from 'arkgate/order';
+
+export function boot(): void {
+  const plane = createOrderPlane({
+    projector: () => ({ allowedKinds: ['InvoicePosted'], invalidated: [] }),
+  });
+  plane.release({ plan: 'free' }, { freshUntil: 1500 });
+  const currentResidual = plane.ingest({ kind: 'InvoicePosted' });
+  const patternResult = plane.ingest({ kind: 'InvoicePosted' });
+  const lock = { release(_: object): void {} };
+  lock.release({ ttl: 5 });
+  void currentResidual;
+  void patternResult;
+}
+`
+      );
+      const dir = path.join(root, 'src/application');
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(
+        path.join(dir, 'save.ts'),
+        `import { PrismaClient } from '@prisma/client';
+
+export async function savePlan(repo: { update(x: object): Promise<void> }): Promise<void> {
+  void PrismaClient;
+  await repo.update({ plan: 'pro' });
+}
+`
+      );
+    };
+    const enforcedRoot = copyTree('trees/unvalved-release');
+    writeQuiet(enforcedRoot);
+    const enforced = await analyzeRoot(enforcedRoot, configFor('enforced'));
+    expect(orderIds(enforced.ir.violations)).toEqual([]);
+    expect(enforced.valid).toBe(true);
   });
 
   it('unvalved second freeze is runtime fail-closed, not a lexical skip (LV02)', async () => {

@@ -133,12 +133,14 @@ describe('createOrderPlane (Haken slaving)', () => {
 
   it('apply of a no-op proposal fails empty blast (LV02)', () => {
     const p = plane();
-    p.release({ plan: 'pro', cycle: 'monthly', tenancy: 'team' });
+    const base = p.release({ plan: 'pro', cycle: 'monthly', tenancy: 'team' });
     try {
       p.apply({
         nextXi: { plan: 'pro', cycle: 'monthly', tenancy: 'team' },
         blastRadius: ['SeatAdded'],
         invalidations: [],
+        baseXiHash: base.xiHash,
+        baseVersion: base.version,
       });
       throw new Error('expected empty blast');
     } catch (error) {
@@ -171,14 +173,29 @@ describe('createOrderPlane (Haken slaving)', () => {
       informationBudget: { cannotObserve: ['InvoicePosted'] },
       clocks: { now: () => 1 },
     });
-    p.release({ plan: 'free', cycle: 'monthly', tenancy: 'single' });
+    // A denied pattern is never frozen: release() fails before persisting.
     try {
-      p.project();
+      p.release({ plan: 'free', cycle: 'monthly', tenancy: 'single' });
       throw new Error('expected budget deny');
     } catch (error) {
       expect(error).toBeInstanceOf(ArkOrderError);
       expect((error as ArkOrderError).code).toBe('ARKORDER_INFORMATION_BUDGET');
     }
+    expect(p.current()).toBeNull();
+    // project() still re-checks a Release that arrived without the budget (store load).
+    const store = createMemoryReleaseStore();
+    createOrderPlane({ projector: billingProjector, store, clocks: { now: () => 1 } }).release({
+      plan: 'free',
+      cycle: 'monthly',
+      tenancy: 'single',
+    });
+    const loaded = createOrderPlane({
+      projector: billingProjector,
+      store,
+      informationBudget: { cannotObserve: ['InvoicePosted'] },
+      clocks: { now: () => 1 },
+    });
+    expect(() => loaded.project()).toThrow(/informationBudget/);
   });
 
   it('rejects ttl on ξ and freshness on σ (XP05)', () => {
@@ -369,17 +386,20 @@ describe('createOrderPlane (Haken slaving)', () => {
     expect(next.sigma.seatCap).toBe(10);
   });
 
-  it('RESTORE-001: invalid and unfrozen objects fail closed; restore is not durability', () => {
+  it('RESTORE-001: invalid and tampered objects fail closed; restore is not durability', () => {
     const p = plane();
     const frozen = plane().release({ plan: 'free', cycle: 'monthly', tenancy: 'single' });
-    const thawed = {
+    const tamperedThaw = {
       ...frozen,
-      xi: { ...frozen.xi },
+      xi: { ...frozen.xi, plan: 'enterprise' },
       sigma: { ...frozen.sigma },
     };
-    expect(Object.isFrozen(thawed)).toBe(false);
-    expect(() => p.restore(thawed as Release)).toThrow(ArkOrderError);
+    expect(() => p.restore(tamperedThaw as Release)).toThrow(ArkOrderError);
     expect(() => p.restore(null as never)).toThrow(ArkOrderError);
+    expect(() => p.restore({ ...frozen, version: 'x' } as never)).toThrow(ArkOrderError);
+    expect(() =>
+      p.restore({ ...frozen, xi: { ...frozen.xi, nested: { a: 1 } } } as never)
+    ).toThrow(ArkOrderError);
     const wrongHash = Object.freeze({
       ...frozen,
       hash: 'tampered',
@@ -434,5 +454,205 @@ describe('createOrderPlane (Haken slaving)', () => {
     expect(docs).toMatch(/not a pack predicate/);
     expect(docs).toMatch(/https:\/\/github\.com\/pedroknigge\/arkgate\/tree\/main\/examples\/arkorder-billing/);
     expect(docs).not.toMatch(/^# copy examples\/arkorder-billing\//m);
+  });
+
+  it('RESTORE-002: a JSON-deserialized Release restores as a frozen copy with the same hash', () => {
+    const frozen = plane().release(
+      { plan: 'pro', cycle: 'annual', tenancy: 'org' },
+      { seatCap: 9 }
+    );
+    const wire = JSON.parse(JSON.stringify(frozen)) as Release;
+    expect(Object.isFrozen(wire)).toBe(false);
+    const target = plane();
+    const installed = target.restore(wire);
+    expect(installed.hash).toBe(frozen.hash);
+    expect(Object.isFrozen(installed)).toBe(true);
+    expect(Object.isFrozen(installed.xi)).toBe(true);
+    expect(Object.isFrozen(installed.sigma)).toBe(true);
+  });
+
+  it('RESTORE-003: restore on a live plane never changes ξ and never rolls the version back', () => {
+    const codeOf = (fn: () => unknown): string | undefined => {
+      try {
+        fn();
+        return undefined;
+      } catch (error) {
+        return (error as ArkOrderError).code;
+      }
+    };
+    const p = plane();
+    const v1 = p.release({ plan: 'free', cycle: 'monthly', tenancy: 'single' }, { seatCap: 1 });
+    const v2 = p.apply(p.proposeRelease({ plan: 'pro' }));
+    expect(v2.version).toBe(2);
+    // Foreign ξ from another plane: the valve is proposeRelease -> apply.
+    const foreign = plane().release({ plan: 'enterprise', cycle: 'monthly', tenancy: 'single' });
+    expect(codeOf(() => p.restore(foreign))).toBe('ARKORDER_UNVALVED_RELEASE');
+    // A ξ change apply() would reject as empty blast cannot sneak in either.
+    const cycleOnly = plane().release({ plan: 'pro', cycle: 'annual', tenancy: 'single' });
+    expect(codeOf(() => p.proposeRelease({ cycle: 'annual' }))).toBe('ARKORDER_EMPTY_BLAST');
+    expect(codeOf(() => p.restore(cycleOnly))).toBe('ARKORDER_UNVALVED_RELEASE');
+    // Rolling back to v1 is refused; the old version cannot be reused with another ξ.
+    expect(codeOf(() => p.restore(v1))).toBe('ARKORDER_UNVALVED_RELEASE');
+    expect(p.current()).toBe(v2);
+    // Same ξ at an equal version with a different σ reinstalls.
+    const sameXi = createOrderPlane({ projector: billingProjector, clocks: { now: () => 5 } });
+    sameXi.restore(v2);
+    const refreshed = sameXi.refreshSigma({ seatCap: 3 });
+    const restored = p.restore(refreshed);
+    expect(restored.version).toBe(2);
+    expect(p.current()?.sigma.seatCap).toBe(3);
+    expect(p.current()?.xiHash).toBe(v2.xiHash);
+  });
+
+  it('STORE-001: ReleaseStore.load() output is validated; tampering fails closed at construction', () => {
+    const good = plane().release({ plan: 'free', cycle: 'monthly', tenancy: 'single' });
+    const tampered = {
+      ...JSON.parse(JSON.stringify(good)),
+      xi: { plan: 'enterprise', cycle: 'monthly', tenancy: 'org' },
+    };
+    const make = (loaded: unknown) =>
+      createOrderPlane({
+        projector: billingProjector,
+        store: { load: () => loaded as Release, save() {} },
+        clocks: { now: () => 1 },
+      });
+    expect(() => make(tampered)).toThrow(ArkOrderError);
+    expect(() => make({ ...good, version: 'x' })).toThrow(ArkOrderError);
+    expect(() => make({ ...good, xi: { ...good.xi, a: { nested: true } } })).toThrow(ArkOrderError);
+    expect(() => make('garbage')).toThrow(ArkOrderError);
+    const fromJson = make(JSON.parse(JSON.stringify(good)));
+    expect(fromJson.current()?.hash).toBe(good.hash);
+    expect(Object.isFrozen(fromJson.current())).toBe(true);
+  });
+
+  it('STORE-002: the plane advances only after store.save() succeeds', () => {
+    let fail = false;
+    const saved: Release[] = [];
+    const p = createOrderPlane({
+      projector: billingProjector,
+      store: {
+        load: () => null,
+        save(release) {
+          if (fail) throw new Error('disk full');
+          saved.push(release);
+        },
+      },
+      clocks: { now: () => 1 },
+    });
+    const v1 = p.release({ plan: 'free', cycle: 'monthly', tenancy: 'single' });
+    const proposal = p.proposeRelease({ plan: 'pro' });
+    fail = true;
+    expect(() => p.apply(proposal)).toThrow(/disk full/);
+    expect(() => p.refreshSigma({ seatCap: 2 })).toThrow(/disk full/);
+    expect(() => p.restore(v1)).toThrow(/disk full/);
+    expect(p.current()).toBe(v1);
+    expect(saved).toEqual([v1]);
+    fail = false;
+    const v2 = p.apply(proposal);
+    expect(v2.version).toBe(2);
+  });
+
+  it('PROPOSAL-001: apply rejects stale, hand-built, and tampered proposals', () => {
+    const codeOf = (fn: () => unknown): string | undefined => {
+      try {
+        fn();
+        return undefined;
+      } catch (error) {
+        return (error as ArkOrderError).code;
+      }
+    };
+    const p = plane();
+    const base = p.release({ plan: 'free', cycle: 'monthly', tenancy: 'single' });
+    const toPro = p.proposeRelease({ plan: 'pro' });
+    const toEnterprise = p.proposeRelease({ plan: 'enterprise' });
+    expect(toPro.baseXiHash).toBe(base.xiHash);
+    expect(toPro.baseVersion).toBe(1);
+    p.apply(toPro);
+    // Computed against v1; v2 is current now.
+    expect(codeOf(() => p.apply(toEnterprise))).toBe('ARKORDER_STALE_PROPOSAL');
+    // Hand-built without a base.
+    expect(
+      codeOf(() =>
+        p.apply({ nextXi: { plan: 'free' }, blastRadius: [], invalidations: [] } as never)
+      )
+    ).toBe('ARKORDER_STALE_PROPOSAL');
+    // Correct base, but a blast radius nobody reviewed.
+    const current = p.current()!;
+    expect(
+      codeOf(() =>
+        p.apply({
+          nextXi: { plan: 'pro', cycle: 'monthly', tenancy: 'team' },
+          blastRadius: ['x'],
+          invalidations: [],
+          baseXiHash: current.xiHash,
+          baseVersion: current.version,
+        })
+      )
+    ).toBe('ARKORDER_STALE_PROPOSAL');
+    expect(p.current()?.version).toBe(2);
+    // A proposal survives JSON (human review) and still applies when it is current.
+    const reviewed = JSON.parse(JSON.stringify(p.proposeRelease({ tenancy: 'team' })));
+    expect(p.apply(reviewed).version).toBe(3);
+  });
+
+  it('BUDGET-001: proposeRelease / apply never offer or persist a denied pattern', () => {
+    const saved: number[] = [];
+    const p = createOrderPlane({
+      projector: billingProjector,
+      informationBudget: { cannotObserve: ['SeatAdded'] },
+      store: { load: () => null, save: (release) => void saved.push(release.version) },
+      clocks: { now: () => 1 },
+    });
+    const v1 = p.release({ plan: 'free', cycle: 'monthly', tenancy: 'single' });
+    expect(() => p.proposeRelease({ plan: 'pro' })).toThrow(/informationBudget/);
+    expect(() =>
+      p.apply({
+        nextXi: { plan: 'pro', cycle: 'monthly', tenancy: 'single' },
+        blastRadius: ['SeatAdded', 'excess-seats'],
+        invalidations: [],
+        baseXiHash: v1.xiHash,
+        baseVersion: v1.version,
+      })
+    ).toThrow(/informationBudget/);
+    expect(saved).toEqual([1]);
+    expect(p.current()?.version).toBe(1);
+    expect(p.project().allowedKinds).toEqual(['InvoicePosted']);
+    expect(p.ingest({ kind: 'InvoicePosted' }).kind).toBe('absorb');
+  });
+
+  it('SIGMA-001: σ.freshUntil is honored without sigmaMaxAgeMs', () => {
+    let now = 1000;
+    const p = createOrderPlane({ projector: billingProjector, clocks: { now: () => now } });
+    p.release({ plan: 'free', cycle: 'monthly', tenancy: 'single' }, { freshUntil: 1500 });
+    expect(p.ingest({ kind: 'InvoicePosted' }).kind).toBe('absorb');
+    now = 999_999;
+    const stale = p.ingest({ kind: 'InvoicePosted' });
+    expect(stale.kind).toBe('hold');
+    if (stale.kind === 'hold') expect(stale.reasonCode).toBe('stale-sigma');
+    // Non-numeric freshUntil falls through to the (absent) age check: never stale.
+    const loose = createOrderPlane({ projector: billingProjector, clocks: { now: () => now } });
+    loose.release({ plan: 'free', cycle: 'monthly', tenancy: 'single' }, { freshUntil: 'soon' });
+    expect(loose.ingest({ kind: 'InvoicePosted' }).kind).toBe('absorb');
+  });
+
+  it('XI-FINITE-001: NaN and ±Infinity are rejected on ξ and σ (no stable identity)', () => {
+    const codeOf = (fn: () => unknown): string | undefined => {
+      try {
+        fn();
+        return undefined;
+      } catch (error) {
+        return (error as ArkOrderError).code;
+      }
+    };
+    const loose = () => createOrderPlane({ projector: billingProjector, clocks: { now: () => 1 } });
+    expect(codeOf(() => loose().release({ plan: 'free', n: Number.NaN }))).toBe('ARKORDER_NESTED_XI');
+    expect(codeOf(() => loose().release({ plan: 'free', n: Infinity }))).toBe('ARKORDER_NESTED_XI');
+    expect(codeOf(() => loose().release({ plan: 'free' }, { cap: -Infinity }))).toBe(
+      'ARKORDER_NESTED_XI'
+    );
+    const p = loose();
+    p.release({ plan: 'free', n: null });
+    expect(codeOf(() => p.release({ plan: 'free', n: Number.NaN }))).toBe('ARKORDER_NESTED_XI');
+    expect(p.current()?.version).toBe(1);
   });
 });

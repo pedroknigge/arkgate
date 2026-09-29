@@ -13,7 +13,7 @@ export const ARK_ORDER_DOCTOR_SCHEMA_VERSION = '1.0';
 const RESIDUAL_RULE_CAP = 12;
 export const ARKORDER_ONE_BREATH = 'Layers stop a bad import. ArkOrder stops rewriting a big product choice — like the billing plan — as if it were a seat count. Change those choices through a valve, not a generic update.';
 /** First-contact next step. Reuses the billing gallery + existing doors. */
-export const ARKORDER_FIRST_CONTACT_NEXT = 'Next: examples/arkorder-billing, then /ark-adopt to turn the extra on and /ark-order to wire one candidate.';
+export const ARKORDER_FIRST_CONTACT_NEXT = 'Next: see the billing gallery at github.com/pedroknigge/arkgate/tree/main/examples/arkorder-billing (git only, not in the npm package), then /ark-adopt to turn the extra on and /ark-order to wire one candidate.';
 function closedMode(value) {
     return value === 'enforced' || value === 'advisory' ? value : null;
 }

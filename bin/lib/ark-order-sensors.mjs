@@ -8,7 +8,7 @@
  * Pure CLI helper (bin/lib/ark-order-sensors.mjs). Zero Node I/O.
  */
 
-import { extractArkOrderGenericUpdatesFromSource, extractArkOrderIngestWritesXiFromSource, extractArkOrderPlaneCallsFromSource, extractArkOrderReleaseKeyCountsFromSource, extractArkOrderXiFieldWritesFromSource, isArkOrderModuleSpecifier, } from './ark-order-facts.mjs';
+import { extractArkOrderBudgetLeaksFromSource, extractArkOrderGenericUpdatesFromSource, extractArkOrderIngestWritesXiFromSource, extractArkOrderPlaneCallsFromSource, extractArkOrderReleaseKeyCountsFromSource, extractArkOrderXiFieldWritesFromSource, extractArkOrderXiTtlKeysFromSource, isArkOrderModuleSpecifier, } from './ark-order-facts.mjs';
 import { extraMergeTeethAllowed, } from './extra-merge-teeth.mjs';
 import { deterministicNextAction } from './remediation.mjs';
 /**
@@ -212,6 +212,12 @@ export function evaluateArkOrderSensors(input) {
     for (const ingest of input.ingestWritesXi ?? []) {
         findings.push(finding(extra, 'arkorder-ingest-writes-xi', ingest.file, ingest.line, 'ingest() result is assigned into a Release or ξ store; ingest may absorb or escalate, never mint a pattern.', undefined, teethAllowed));
     }
+    for (const ttl of input.xiTtlKeys ?? []) {
+        findings.push(finding(extra, 'arkorder-xi-ttl', ttl.file, ttl.line, `ξ key ${JSON.stringify(ttl.key)} is a freshness field; freshness belongs on σ (freshUntil), never on ξ.`, { target: ttl.key }, teethAllowed));
+    }
+    for (const leak of input.budgetLeaks ?? []) {
+        findings.push(finding(extra, 'arkorder-information-budget', leak.file, leak.line, `Projection allowedKinds lists ${JSON.stringify(leak.kind)}, which informationBudget.cannotObserve denies.`, { target: leak.kind }, teethAllowed));
+    }
     const managed = new Set(extra.managedLayers);
     for (const write of xiKeys.length === 0 ? [] : input.xiFieldWrites ?? []) {
         const fromLayer = input.layerForFile(write.file);
@@ -241,11 +247,15 @@ export function evaluateArkOrderEditorSensors(input) {
         xiFieldWrites: extractArkOrderXiFieldWritesFromSource(input.file, input.source, xiKeys),
         ingestWritesXi: extractArkOrderIngestWritesXiFromSource(input.file, input.source),
         releaseKeyCounts: extractArkOrderReleaseKeyCountsFromSource(input.file, input.source),
+        xiTtlKeys: extractArkOrderXiTtlKeysFromSource(input.file, input.source),
+        budgetLeaks: extractArkOrderBudgetLeaksFromSource(input.file, input.source),
         dependencies: [],
         layerForFile: () => input.fromLayer,
     }).findings.filter((item) => item.sensor === 'arkorder-generic-update' ||
         item.sensor === 'arkorder-kernel-in-domain' ||
         item.sensor === 'arkorder-xi-field-write' ||
         item.sensor === 'arkorder-ingest-writes-xi' ||
-        item.sensor === 'arkorder-too-many-params');
+        item.sensor === 'arkorder-too-many-params' ||
+        item.sensor === 'arkorder-xi-ttl' ||
+        item.sensor === 'arkorder-information-budget');
 }

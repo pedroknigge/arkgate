@@ -14,6 +14,7 @@ const resolvedFactsSchema = path.join(
   root,
   'schemas/ark.resolved-candidate-facts.schema.json'
 );
+const probeCanonical = path.join(root, 'src/domain/arkOrderError.ts');
 
 function runGenerate(args: string[] = []) {
   return spawnSync(process.execPath, [script, ...args], {
@@ -25,8 +26,13 @@ function runGenerate(args: string[] = []) {
 describe('generate-cli-pure drift guard (real script)', () => {
   let backup: string | undefined;
   let schemaBackup: string | undefined;
+  let canonicalBackup: string | undefined;
 
   afterEach(() => {
+    if (canonicalBackup !== undefined) {
+      fs.writeFileSync(probeCanonical, canonicalBackup, 'utf8');
+      canonicalBackup = undefined;
+    }
     if (backup !== undefined) {
       fs.writeFileSync(derived, backup, 'utf8');
       backup = undefined;
@@ -57,5 +63,19 @@ describe('generate-cli-pure drift guard (real script)', () => {
     const result = runGenerate(['--check']);
     expect(result.status).not.toBe(0);
     expect(result.stderr + result.stdout).toMatch(/resolved-candidate-facts.*out of date/i);
+  });
+
+  it('fails closed on a relative Domain import with no generated sibling', () => {
+    // ark-order-invariants.mjs once shipped `from './stableHash'` (no bin/lib sibling,
+    // ERR_MODULE_NOT_FOUND on load) while --check reported parity.
+    canonicalBackup = fs.readFileSync(probeCanonical, 'utf8');
+    fs.writeFileSync(
+      probeCanonical,
+      `${canonicalBackup}\nexport { probe as __unmappedProbe } from './notAGeneratedModule';\n`,
+      'utf8'
+    );
+    const result = runGenerate(['--check']);
+    expect(result.status).not.toBe(0);
+    expect(result.stderr + result.stdout).toMatch(/unmapped relative import '\.\/notAGeneratedModule'/);
   });
 });

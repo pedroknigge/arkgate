@@ -6,7 +6,7 @@
  * A pattern change with empty blast radius is not an order parameter.
  */
 import { ArkOrderError } from './arkOrderError';
-import { CAPACITY_OPS, DEFAULT_MAX_XI_KEYS } from './arkOrderTypes';
+import { CAPACITY_OPS, DEFAULT_MAX_XI_KEYS, XI_TTL_KEY_RE } from './arkOrderTypes';
 import type {
   CapacityOp,
   ConstraintPack,
@@ -43,7 +43,7 @@ function isPrimitive(value: unknown): value is XiPrimitive {
   return (
     value === null ||
     typeof value === 'string' ||
-    typeof value === 'number' ||
+    (typeof value === 'number' && Number.isFinite(value)) ||
     typeof value === 'boolean'
   );
 }
@@ -56,13 +56,20 @@ export function freezeRecord(input: Record<string, unknown>, label: string): XiR
   const out: Record<string, XiPrimitive> = {};
   for (const key of keys.sort()) {
     const value = input[key];
+    if (typeof value === 'number' && !Number.isFinite(value)) {
+      // JSON (and so the hash) turns NaN/±Infinity into null: no stable identity.
+      throw new ArkOrderError(
+        'ARKORDER_NESTED_XI',
+        `${label} key ${JSON.stringify(key)} is a non-finite number (NaN/±Infinity has no stable identity)`
+      );
+    }
     if (!isPrimitive(value)) {
       throw new ArkOrderError(
         'ARKORDER_NESTED_XI',
         `${label} key ${JSON.stringify(key)} is not a slow primitive (nested values are microstate)`
       );
     }
-    out[key] = value;
+    out[key] = Object.is(value, -0) ? 0 : value;
   }
   return Object.freeze(out);
 }
@@ -198,8 +205,6 @@ export function refreshSigmaRecord(input: {
   });
 }
 
-const XI_TTL_KEY_RE = /^(ttl|freshUntil|fresh_until|maxAge|max_age)$/i;
-
 export function assertXiHasNoTtl(xi: XiRecord): void {
   for (const key of Object.keys(xi)) {
     if (XI_TTL_KEY_RE.test(key)) {
@@ -227,6 +232,11 @@ export function assertInformationBudget(
   }
 }
 
+/**
+ * σ freshness. A numeric σ.freshUntil is honored on its own and wins over the age
+ * check; otherwise `maxAgeMs` (sigmaMaxAgeMs) bounds the age from σ.releasedAt or
+ * the Release freeze time. Neither set means σ never goes stale.
+ */
 export function assertSigmaFresh(input: {
   sigma: SigmaRecord;
   now: number;
@@ -234,7 +244,6 @@ export function assertSigmaFresh(input: {
   /** Freeze time on the Release. Used when σ has no freshUntil / releasedAt. */
   releasedAt?: number;
 }): void {
-  if (input.maxAgeMs === undefined) return;
   const until = input.sigma.freshUntil;
   if (typeof until === 'number') {
     if (input.now > until) {
@@ -242,6 +251,7 @@ export function assertSigmaFresh(input: {
     }
     return;
   }
+  if (input.maxAgeMs === undefined) return;
   const origin =
     typeof input.sigma.releasedAt === 'number' ? input.sigma.releasedAt : input.releasedAt;
   if (typeof origin === 'number' && input.now - origin > input.maxAgeMs) {
@@ -383,6 +393,7 @@ export function proposePatternChange(input: {
   xiSchema?: XiSchema;
   now: number;
   catalogDigest?: string;
+  informationBudget?: InformationBudget;
 }): ProposeResult {
   const merged: Record<string, unknown> = { ...input.current.xi };
   for (const [key, value] of Object.entries(input.delta)) {
@@ -409,6 +420,8 @@ export function proposePatternChange(input: {
   }
   const previous = input.projector(input.current, input.current.sigma);
   const next = input.projector(candidate, candidate.sigma);
+  // A pattern the budget denies is never offered for review.
+  assertInformationBudget(next, input.informationBudget);
   const { blastRadius, invalidations } = blastRadiusOf(previous, next);
   if (blastRadius.length === 0) {
     throw new ArkOrderError(
@@ -420,10 +433,30 @@ export function proposePatternChange(input: {
     nextXi: candidate.xi,
     blastRadius,
     invalidations,
+    baseXiHash: input.current.xiHash,
+    baseVersion: input.current.version,
   };
 }
 
-/** D1 valve: freeze ProposeResult.nextXi. Empty blast still fails. */
+function sameSortedList(left: unknown, right: readonly string[]): boolean {
+  if (!Array.isArray(left) || left.length !== right.length) return false;
+  const sorted = [...left].map(String).sort();
+  return sorted.every((item, index) => item === right[index]);
+}
+
+function staleProposal(detail: string): ArkOrderError {
+  return new ArkOrderError(
+    'ARKORDER_STALE_PROPOSAL',
+    `${detail}; re-run proposeRelease against the current Release and review the new blast radius`
+  );
+}
+
+/**
+ * D1 valve: freeze ProposeResult.nextXi. The proposal must be bound to the current
+ * Release (baseXiHash + baseVersion) and its reviewed blastRadius / invalidations must
+ * equal the transition actually committed — otherwise ARKORDER_STALE_PROPOSAL.
+ * Empty blast still fails; a pattern the information budget denies never persists.
+ */
 export function applyProposedRelease(input: {
   current: Release;
   proposal: ProposeResult;
@@ -432,7 +465,25 @@ export function applyProposedRelease(input: {
   xiSchema?: XiSchema;
   now: number;
   catalogDigest?: string;
+  informationBudget?: InformationBudget;
 }): Release {
+  const proposal = input.proposal as Partial<ProposeResult> | null | undefined;
+  if (
+    !proposal ||
+    typeof proposal !== 'object' ||
+    !proposal.nextXi ||
+    typeof proposal.nextXi !== 'object'
+  ) {
+    throw staleProposal('apply() requires a ProposeResult from proposeRelease');
+  }
+  if (
+    proposal.baseXiHash !== input.current.xiHash ||
+    proposal.baseVersion !== input.current.version
+  ) {
+    throw staleProposal(
+      `proposal was computed against a different Release (base v${String(proposal.baseVersion)}, current v${input.current.version})`
+    );
+  }
   const candidate = createFrozenRelease({
     xi: { ...input.proposal.nextXi },
     sigma: { ...input.current.sigma },
@@ -450,12 +501,19 @@ export function applyProposedRelease(input: {
   }
   const previous = input.projector(input.current, input.current.sigma);
   const next = input.projector(candidate, candidate.sigma);
-  const { blastRadius } = blastRadiusOf(previous, next);
+  assertInformationBudget(next, input.informationBudget);
+  const { blastRadius, invalidations } = blastRadiusOf(previous, next);
   if (blastRadius.length === 0) {
     throw new ArkOrderError(
       'ARKORDER_EMPTY_BLAST',
       'pattern change has empty blast radius; that key is not an order parameter'
     );
+  }
+  if (
+    !sameSortedList(proposal.blastRadius, blastRadius) ||
+    !sameSortedList(proposal.invalidations, invalidations)
+  ) {
+    throw staleProposal('the reviewed blast radius is not the transition apply() would commit');
   }
   return candidate;
 }

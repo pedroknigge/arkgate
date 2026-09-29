@@ -125,7 +125,8 @@ the same files or weaken the gate.
    - Keep Domain-role layers plane-free (`ARKORDER_KERNEL_IN_DOMAIN`).
    - First freeze: `release()`. Later change of a named choice is `proposeRelease` then `apply`
      — not a second `release()` (`ARKORDER_UNVALVED_RELEASE`), not `update` / `patch` / `set`
-     (`ARKORDER_GENERIC_UPDATE`).
+     (`ARKORDER_GENERIC_UPDATE`). Apply the proposal you reviewed against the current Release;
+     a stale or hand-built one fails `ARKORDER_STALE_PROPOSAL` — propose again.
    - Name **`xiKeys`** (3–5 slow product decisions). Membership ids and recomputable statuses
      are not keys: derive a status on read or fold it from ingest. A use-case that persists
      those keys is `ARKORDER_XI_FIELD_WRITE`. Invoices and seats still flow through `ingest`.
@@ -149,7 +150,8 @@ the same files or weaken the gate.
 - Extra absent and the user wants it: **STOP — do not continue this skill as complete.**
   **`/ark-adopt`** writes advisory `arkOrder`.
 - Skip cluster (`ARKORDER_MISSING_PLANE` / `ARKORDER_KERNEL_IN_DOMAIN` / `ARKORDER_GENERIC_UPDATE`
-  / `ARKORDER_TOO_MANY_PARAMS` / `ARKORDER_INGEST_WRITES_XI` / `ARKORDER_XI_FIELD_WRITE`) after
+  / `ARKORDER_TOO_MANY_PARAMS` / `ARKORDER_INGEST_WRITES_XI` / `ARKORDER_XI_FIELD_WRITE`
+  / `ARKORDER_XI_TTL` / `ARKORDER_INFORMATION_BUDGET`) after
   the extra is on: **`/ark-autopilot`** — this skill still wires one candidate.
 - New plane-root file after the extra is on: **`/ark-place`**.
 - One kernel / bus candidate: **`/ark-runtime`** — do not mix planes.

@@ -49,6 +49,15 @@ infers “this looks like a second freeze.”
 Same-ξ `release()` is not this deny (σ refresh is D2/`refreshSigma`). A public
 `release()` that changes ξ bypasses the valve — that is a bug; revert LV02.
 
+Amendment (post-4.8.23): a `ProposeResult` is bound to the Release it was
+computed against (`baseXiHash`, `baseVersion`). `apply` fails closed with
+`ARKORDER_STALE_PROPOSAL` when the base is not the current Release, or when the
+reviewed `blastRadius` / `invalidations` differ from the transition that would
+commit — so a stale or hand-built proposal cannot act as an unvalved
+`release()`. The binding is plain data, so a proposal still survives JSON for
+human review. `restore()` is not a second valve: on a live plane it may not
+change ξ or move the version backwards (`ARKORDER_UNVALVED_RELEASE`).
+
 ### D2 — ξ identity and σ identity are not the same hash
 
 Additive fields on `Release`:
