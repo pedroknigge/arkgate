@@ -30,6 +30,7 @@ import { composePrepareWrite } from './lib/prepare-write.mjs';
 import { placementDescriptionFields } from './lib/layer-description.mjs';
 import { loadArkConfigContract } from './lib/config-contract.mjs';
 import { loadEffectiveArkRulesFromDisk } from './lib/effective-contract-load.mjs';
+import { loadArkRulesContract } from './lib/arkrules-contract.mjs';
 import {
   buildRulesInventory,
   inventoryToExtractionCard,
@@ -420,35 +421,68 @@ function configuredConfigPath(args) {
 }
 
 /**
- * Law-file guard: a write that replaces the configured ark.config.json with content
- * the contract loader rejects would disable the gate for every later write (the
- * one-shot hook fails closed, but the agent would be locked out of governed writes).
- * Deny it up front with the loader's reason.
+ * Referenced ArkRules files (config.arkRules: layer -> project-relative path), keyed by
+ * canonical absolute path. These are law files exactly like ark.config.json.
  */
-function lawFileWriteDeny(args, writes) {
+function referencedArkRulesFiles(args, config) {
+  const refs = config?.arkRules;
+  const out = new Map();
+  if (!refs || typeof refs !== 'object') return out;
+  for (const [layer, rel] of Object.entries(refs)) {
+    if (typeof rel !== 'string' || rel.length === 0) continue;
+    out.set(canonicalPathLoose(path.resolve(args.root, rel)), { layer, rel });
+  }
+  return out;
+}
+
+function lawFileLabel(args, absolute) {
+  return (relativeToHookRoot(args.root, absolute) ?? path.basename(absolute))
+    .split(path.sep)
+    .join('/');
+}
+
+/**
+ * Law-file guard: a write that replaces the configured ark.config.json, or an ArkRules
+ * file it references, with content the contract loader rejects (or deletes it) would
+ * switch enforcement off for every later write. Deny it up front with the loader's
+ * reason. `content: null` / `delete: true` is a deletion.
+ */
+function lawFileWriteDeny(args, config, writes) {
   const configPath = canonicalPathLoose(configuredConfigPath(args));
+  const arkRulesFiles = referencedArkRulesFiles(args, config);
   for (const write of writes) {
-    if (typeof write?.filePath !== 'string' || typeof write.content !== 'string') continue;
-    if (canonicalPathLoose(path.resolve(args.root, write.filePath)) !== configPath) continue;
-    try {
-      loadArkConfigContract(JSON.parse(write.content), configPath);
-    } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error);
-      const file =
-        (relativeToHookRoot(args.root, configPath) ?? path.basename(configPath))
-          .split(path.sep)
-          .join('/');
-      return {
-        file,
-        message: formatWriteGateDeny({
-          file,
-          reason: `this write would leave ${file} unloadable, which switches the write gate off: ${reason}`,
-          ruleId: 'WRITE_GATE_UNAVAILABLE',
-          nextAction:
-            'Write a complete, valid contract (same schema ark-check --strict-config reads); do not remove or empty ark.config.json.',
-        }),
-      };
+    if (typeof write?.filePath !== 'string') continue;
+    const target = canonicalPathLoose(path.resolve(args.root, write.filePath));
+    const isConfig = target === configPath;
+    const arkRulesRef = isConfig ? undefined : arkRulesFiles.get(target);
+    if (!isConfig && !arkRulesRef) continue;
+    const deleting = write.delete === true || write.content === null;
+    if (!deleting && typeof write.content !== 'string') continue;
+    let reason = null;
+    if (deleting) {
+      reason = 'the file would be deleted';
+    } else {
+      try {
+        const parsed = JSON.parse(write.content);
+        if (isConfig) loadArkConfigContract(parsed, configPath);
+        else loadArkRulesContract(parsed, arkRulesRef.rel, arkRulesRef.layer);
+      } catch (error) {
+        reason = error instanceof Error ? error.message : String(error);
+      }
     }
+    if (reason === null) continue;
+    const file = isConfig ? lawFileLabel(args, configPath) : arkRulesRef.rel;
+    return {
+      file,
+      message: formatWriteGateDeny({
+        file,
+        reason: `this write would leave ${file} unloadable, which switches the write gate off: ${reason}`,
+        ruleId: 'WRITE_GATE_UNAVAILABLE',
+        nextAction: isConfig
+          ? 'Write a complete, valid contract (same schema ark-check --strict-config reads); do not remove or empty ark.config.json.'
+          : `Write a complete, valid ArkRules file for layer ${arkRulesRef.layer} (same schema ark-check loads); to drop it, remove its arkRules reference from ark.config.json in a law change.`,
+      }),
+    };
   }
   return null;
 }
@@ -520,9 +554,12 @@ function runHookPayload(payload, gate, config, args, ts, attemptContext, output 
     const patchWrites = parsedPatch.writes;
     const lawDeny = lawFileWriteDeny(
       args,
-      patchWrites
-        .filter((change) => change.delete !== true)
-        .map((change) => ({ filePath: change.filePath, content: change.content }))
+      config,
+      patchWrites.map((change) => ({
+        filePath: change.filePath,
+        content: change.delete === true ? null : change.content,
+        delete: change.delete === true,
+      }))
     );
     if (lawDeny) {
       emitHostDeny(output, { antigravityStyle, cursorStyle, grokStyle, ...lawDeny });
@@ -715,14 +752,17 @@ function runHookPayload(payload, gate, config, args, ts, attemptContext, output 
       emitHostAllow(output, { antigravityStyle, cursorStyle });
       return;
     }
-    const first = result.diagnostics[0];
+    // Pre-existing (ratcheted) findings ride as warnings; the deny names what blocks.
+    const blocking = result.diagnostics.filter((d) => d.severity === 'error');
+    const shown = blocking.length > 0 ? blocking : result.diagnostics;
+    const first = shown[0];
     const message = formatWriteGateDeny({
       file: `${changes.length} file(s)`,
       reason: first?.message || `this ${toolName} breaks the architecture layers`,
       ruleId: first?.ruleId,
       nextAction: first?.nextAction,
       extraLines: [
-        ...result.diagnostics.slice(1).map((d) => `[${d.ruleId}] ${d.message}`),
+        ...shown.slice(1).map((d) => `[${d.ruleId}] ${d.message}`),
         ...(designDelta && !designDelta.valid
           ? formatDesignDeltaBlock(designDelta).split('\n').slice(1)
           : []),
@@ -753,12 +793,12 @@ function runHookPayload(payload, gate, config, args, ts, attemptContext, output 
     return;
   }
   if (typeof rawFilePath === 'string' && !SOURCE_FILE.test(rawFilePath)) {
-    // Law files are not source, but a write that leaves ark.config.json unloadable
-    // would silently switch the gate off for every later write.
+    // Law files are not source, but a write that leaves ark.config.json or a referenced
+    // ArkRules file unloadable would silently switch the gate off for every later write.
     const source = proposedSource(toolName, toolInput);
     const lawDeny =
       typeof source === 'string'
-        ? lawFileWriteDeny(args, [{ filePath: rawFilePath, content: source }])
+        ? lawFileWriteDeny(args, config, [{ filePath: rawFilePath, content: source }])
         : null;
     if (lawDeny) {
       emitHostDeny(output, { antigravityStyle, cursorStyle, grokStyle, ...lawDeny });
@@ -893,12 +933,18 @@ function runHookPayload(payload, gate, config, args, ts, attemptContext, output 
   // every subsequent edit to that file un-writable while CI passes. Same-file keys ignore
   // line numbers (edits shift them); simpler than full baselineKey (no file/layer fields
   // needed — this file is fixed).
+  // Contract-level failures (WRITE_GATE_UNAVAILABLE: a referenced ArkRules file missing
+  // or invalid) say nothing about this file's content. The on-disk version reports the
+  // same one, so ratcheting it would cancel it and let every edit to an existing file
+  // skip the sensors that could not load. They are never pre-existing: always deny.
+  const ratchetExempt = (rule) =>
+    rule.startsWith('ANALYSIS_') || rule === 'WRITE_GATE_UNAVAILABLE';
   const violationKey = (violation) => `${violation.ruleId}|${violation.target ?? violation.message}`;
   let existingCounts = new Map();
   try {
     const current = fs.readFileSync(filePath, 'utf8');
     for (const violation of validateOnce(current).violations) {
-      if (String(violation.ruleId ?? violation.code).startsWith('ANALYSIS_')) continue;
+      if (ratchetExempt(String(violation.ruleId ?? violation.code))) continue;
       const key = violationKey(violation);
       existingCounts.set(key, (existingCounts.get(key) ?? 0) + 1);
     }
@@ -909,7 +955,7 @@ function runHookPayload(payload, gate, config, args, ts, attemptContext, output 
     const rule = String(violation.ruleId ?? violation.code);
     // Incremental mid-edit parse errors are normal for agents — do not deny solely on them.
     if (rule === 'ANALYSIS_PARSE_INCOMPLETE') return false;
-    if (rule.startsWith('ANALYSIS_')) return true;
+    if (ratchetExempt(rule)) return true;
     const key = violationKey(violation);
     const remaining = existingCounts.get(key) ?? 0;
     if (remaining === 0) return true;
@@ -2265,6 +2311,7 @@ export async function runArkMcp({ hookInput } = {}) {
               'What you are building. Does not invent a path — pass filePath. Without filePath the tool fail-closes.',
           },
         },
+        required: ['filePath'],
       },
     },
     {

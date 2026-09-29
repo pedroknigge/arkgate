@@ -139,7 +139,7 @@ try {
   if (args.hook) {
     // Hosts treat exit 1 as non-blocking: a gate that cannot run must not fail open
     // for governed source writes. Plumbing cases (bad payload, non-source) still allow.
-    const { hookFailClosedResponse, hookRootFromArgv } = await import('./lib/hook-fail-closed.mjs');
+    const { hookFailClosedResponse, hookRootFromArgv } = await import('./lib/mcp-hook-payload.mjs');
     const response = hookFailClosedResponse({
       hookInput,
       error,

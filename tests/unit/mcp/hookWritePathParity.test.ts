@@ -285,6 +285,72 @@ describe('hook enforces the extra planes CI enforces on the same file', () => {
     expect(out.stderr).toMatch(/referenced ArkRules file/);
   });
 
+  it('fails closed on an EXISTING file too (the ratchet never cancels a contract failure)', () => {
+    const root = project(ARKRULES_CONFIG);
+    // src/domain/a.ts exists on disk; its current version reports the same contract
+    // failure, which must not be counted as pre-existing debt.
+    const out = hook(root, write(root, 'src/domain/a.ts', BAD_ORDER));
+    expect(out.status).toBe(2);
+    expect(out.stderr).toMatch(/WRITE_GATE_UNAVAILABLE/);
+    expect(out.stderr).toMatch(/referenced ArkRules file/);
+    const edit = hook(root, {
+      tool_name: 'Edit',
+      tool_input: {
+        file_path: path.join(root, 'src/domain/a.ts'),
+        old_string: 'a = 1',
+        new_string: 'a = 2',
+      },
+    });
+    expect(edit.status).toBe(2);
+  });
+
+  it('treats referenced arkrules/*.json as law files: a broken or deleted one is denied', () => {
+    const root = project(ARKRULES_CONFIG, { 'arkrules/DomainModel.json': rulesFile('enforced') });
+    const broken = hook(root, write(root, 'arkrules/DomainModel.json', '{ broken'));
+    expect(broken.status).toBe(2);
+    expect(broken.stderr).toMatch(/WRITE_GATE_UNAVAILABLE/);
+    expect(broken.stderr).toMatch(/arkrules\/DomainModel\.json/);
+    const invalid = hook(root, write(root, 'arkrules/DomainModel.json', '{"schemaVersion":"1.0"}'));
+    expect(invalid.status).toBe(2);
+    const deleted = hook(root, patch(['*** Delete File: arkrules/DomainModel.json']));
+    expect(deleted.status).toBe(2);
+    expect(deleted.stderr).toMatch(/would be deleted/);
+    // A valid replacement (e.g. demoting to advisory in a law change) is not blocked here.
+    expect(hook(root, write(root, 'arkrules/DomainModel.json', rulesFile('advisory'))).status).toBe(0);
+    // Unreferenced JSON is not law.
+    expect(hook(root, write(root, 'arkrules/Other.json', '{ broken')).status).toBe(0);
+    // The enforced rule still blocks after the denied tamper attempt.
+    const out = hook(root, write(root, 'src/domain/a.ts', BAD_ORDER));
+    expect(out.status).toBe(2);
+    expect(out.stderr).toMatch(/ARKRULE_STRUCTURE/);
+    // Structure denies carry the ArkRule action, not the layer-import "move the import" line.
+    expect(out.stderr).not.toMatch(/Move the import or run \/ark-place/);
+  });
+
+  it('apply_patch ratchets pre-existing ArkRules debt (baseline brownfield) but blocks new debt', () => {
+    const root = project(ARKRULES_CONFIG, {
+      'arkrules/DomainModel.json': rulesFile('enforced'),
+      'src/domain/order.ts': BAD_ORDER,
+    });
+    const clean = hook(
+      root,
+      patch(['*** Update File: src/domain/a.ts', '@@', '-export const a = 1;', '+export const a = 2;'])
+    );
+    expect(clean.status).toBe(0);
+    const edited = hook(
+      root,
+      patch(['*** Update File: src/domain/order.ts', '@@', `-${BAD_ORDER.trim()}`, `+${BAD_ORDER.trim().replace('n: number', 'amount: number').replace('+= n', '+= amount')}`])
+    );
+    expect(edited.status).toBe(0);
+    const added = hook(
+      root,
+      patch(['*** Add File: src/domain/cart.ts', '+export class Cart { public items = 0; }'])
+    );
+    expect(added.status).toBe(2);
+    expect(added.stderr).toMatch(/Cart/);
+    expect(added.stderr).not.toMatch(/class Order/);
+  });
+
   it('blocks enforced ArkOrder kernel-in-domain and generic update', () => {
     const main =
       "import { createOrderPlane } from 'arkgate/order';\n" +

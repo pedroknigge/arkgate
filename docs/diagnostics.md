@@ -611,7 +611,7 @@ Haken slaving: few slow keys (ξ) determine derived fast state. Field ingest nev
 
 **Write gate could not run**
 
-- **Why:** The write gate could not load its own inputs (`ark.config.json` missing, unreadable, or invalid; a referenced ArkRules file missing or invalid; or the built library missing), so it cannot judge this governed source write. No checker, no write: the hook blocks instead of letting the write through unchecked.
+- **Why:** The write gate could not load its own inputs (`ark.config.json` missing, unreadable, or invalid; a referenced ArkRules file missing or invalid; or the built library missing), so it cannot judge this governed source write (existing files included), or a write would leave `ark.config.json` or a referenced ArkRules file unloadable. No checker, no write: the hook blocks instead of letting the write through unchecked.
 - **Fix:** Fix the reported input (repair `ark.config.json` or the ArkRules file, or run `npm run build` / reinstall arkgate from npm), then retry the same write. Do not remove the hook to get past it.
 
 <a id="DESIGN_SMELL_REGRESSION"></a>

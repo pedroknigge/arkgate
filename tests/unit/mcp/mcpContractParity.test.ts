@@ -192,6 +192,8 @@ describe('MCP outputSchema + structuredContent contract', () => {
     const listed = await client.request('tools/list');
     const prepareWrite = listed.result.tools.find((tool: any) => tool.name === 'ark_prepare_write');
     expect(prepareWrite.inputSchema.required).toEqual(['source', 'filePath']);
+    const place = listed.result.tools.find((tool: any) => tool.name === 'ark_place');
+    expect(place.inputSchema.required).toEqual(['filePath']);
     for (const tool of listed.result.tools) {
       expect(JSON.stringify(tool)).not.toMatch(/propose a conventional path/);
     }
