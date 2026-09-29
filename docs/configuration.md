@@ -317,8 +317,13 @@ Rule fields:
   otherwise (`requires peerIsolation: true and allowed: false`), because a child wall on a
   classic rule would enforce nothing. Absent means today's
   universe wall, byte for byte: no `reasonId`, same messages, same doctor output.
-  `sliceFolders` names the children (`lib/features/*/*` under a universe id `features/projects`).
-  `sliceIdentity` is the same `path` | `stars` choice. A flat file whose child id does not grow
+  `sliceFolders` names the children. `sliceIdentity` is the same `path` | `stars` choice, and
+  the child id must extend the universe id. With `"sliceIdentity": "stars"`, `lib/features/*/*`
+  yields child ids like `features/projects/rfi` under the universe id `features/projects`. Under
+  the default `path` identity the child id keeps the full prefix (`lib/features/projects/rfi`),
+  which does not extend a bare-name universe id such as `features/projects`: the check warns
+  `CONFIG_CHILD_SLICE_EXTENDS` and the child wall stays off. Pair a bare-name universe with
+  `"sliceIdentity": "stars"` on `childSlices`. A flat file whose child id does not grow
   past the universe id is universe common. So is a `commonFolders` directory (a name such as
   `domain`) **directly under the universe**: `lib/features/projects/domain/**`. A folder of
   that name inside a child (`lib/features/projects/rfi/domain/**`) belongs to that child, so a
@@ -555,7 +560,8 @@ is evidence:
   `message` override no longer hides it: the reason is appended to your text, not replaced by it.
   The write hook and MCP `validate_code` say the same, and for an evidence reason their fix
   asks you to move the file into a slice or declare its root in `sharedRoots`.
-- Both declarations are **weakening** changes in `ark policy-delta`
+- Both declarations are **weakening** changes in the policy delta (`arkgate-check --strict-merge`
+  with `--policy-base <file>` / `--policy-base-ref <ref>`, or MCP `ark_policy_delta`)
   (`shared-roots-added`, `cross-slice-allowance-added`), so a policy review sees them. Both are
   inert on a rule without `peerIsolation: true`, and policy-delta stays silent about them until
   the wall exists.

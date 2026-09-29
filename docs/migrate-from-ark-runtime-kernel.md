@@ -106,7 +106,7 @@ Composite action:
 
 ```diff
 - uses: pedroknigge/ark-runtime-kernel@main
-+ uses: pedroknigge/arkgate@main
++ uses: pedroknigge/arkgate@<tag-or-SHA> # the tag matching your arkgate version
 ```
 
 ### MCP (Claude / Cursor / `.mcp.json`)

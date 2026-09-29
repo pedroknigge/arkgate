@@ -51,38 +51,17 @@ import { runStatusCommand } from './lib/status-command.mjs';
 import { runAgentProjectionCommand } from './lib/agent-projection-command.mjs';
 import { setupUsage, setupUsageAll, upgradeUsage } from './lib/first-run-help.mjs';
 import { runUpstreamReportCommand } from './lib/upstream-report.mjs';
-import { DASHBOARD_HELP as dashboardHelp } from './lib/dashboard-cli.mjs';
+import {
+  dashboardHelp,
+  isMcpCommand,
+  isPassthroughCommand,
+  runDashboard,
+  runMcp,
+  withDashboardHelp,
+} from './lib/passthrough-commands.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const arkCheck = path.join(here, 'ark-check.mjs');
-const arkDashboard = path.join(here, 'ark-dashboard.mjs');
-
-function withDashboardHelp(text, detailed) {
-  const extra = detailed
-    ? '  arkgate dashboard [--url <inspector-url>] [--interval <ms>] [--once]\n  arkgate report  [--root <project>] [--json] [--title <text>] [--finding <ref>] [--submit] [--i-confirm-submit]\n'
-    : '';
-  const extraDesc = detailed
-    ? '  dashboard  ANSI observability TUI (spawns ark-dashboard).\n  report     Draft an upstream GitHub issue for pedroknigge/arkgate. Create needs --submit plus confirm. --yes does not submit.\n'
-    : '';
-  if (detailed) {
-    return text
-      .replace('  arkgate agents-md [--root', `${extra}  arkgate agents-md [--root`)
-      .replace('  agents-md Version-matched', `${extraDesc}  agents-md Version-matched`);
-  }
-  return text.replace(
-    '  arkgate-check --doctor     status — one next step\n',
-    '  arkgate-check --doctor     status — one next step\n  arkgate dashboard         observability TUI (inspector)\n  arkgate report            draft an upstream GitHub issue\n'
-  );
-}
-
-function runDashboard(passthroughArgs) {
-  const result = spawnSync(process.execPath, [arkDashboard, ...passthroughArgs], {
-    stdio: 'inherit',
-    encoding: 'utf8',
-  });
-  return result.status ?? 1;
-}
-
 /**
  * Day-zero architecture picture: freeze origin under `.ark/reports/` as soon as
  * `ark.config.json` exists — **before** agent docs, skills, CI templates, or cleanups.
@@ -203,8 +182,8 @@ function parseArgs(argv) {
     else if (arg === '--version' || arg === '-V') args.version = true;
     else if (!arg.startsWith('-') && args.command === undefined) {
       args.command = arg;
-      // Dashboard owns its flags (--url/--interval); pass the rest through untouched.
-      if (arg === 'dashboard' || arg === 'report') {
+      // dashboard / report / mcp own their flags; pass the rest through untouched.
+      if (isPassthroughCommand(arg)) {
         args.passthrough = argv.slice(i + 1);
         break;
       }
@@ -800,6 +779,8 @@ async function main() {
     console.error(error instanceof Error ? error.message : String(error));
     return 2;
   }
+  // Before --version/--help: the MCP server owns stdout (JSON-RPC) and all of its flags.
+  if (isMcpCommand(args.command)) return runMcp(args.passthrough);
   if (args.version) {
     console.log(cliVersion());
     return 0;
