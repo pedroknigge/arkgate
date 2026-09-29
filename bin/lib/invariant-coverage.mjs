@@ -8,6 +8,7 @@
  * Pure CLI helper (bin/lib/invariant-coverage.mjs). Zero Node I/O.
  */
 
+import { findClassDeclarations, scanClassMembers } from './class-source-scan.mjs';
 /** Adopted + catalogued invariants, but no declared tests path (P2 §10). */
 export const INVARIANT_TESTS_PATH_RULE_ID = 'INVARIANT_TESTS_PATH_MISSING';
 export const INVARIANT_TESTS_PATH_MESSAGE = 'This project is adopted and has domain invariants, but ark.config.json does not name a real tests path. Add coverage.testGlobs or coverage.coverageRoots pointing at the folder where those tests live, then re-run. Without that path, coverage is an empty checkbox.';
@@ -185,6 +186,23 @@ function declarationShape(content, name) {
     }
     return undefined;
 }
+/**
+ * `Class.member` coverage: the member must be declared inside the body of
+ * `class <className>` (exported, default-exported, abstract, or local) in this
+ * file. A method of another class, a free function, or a file that merely
+ * mentions the class name does not count.
+ */
+function classMemberShape(content, className, member) {
+    for (const decl of findClassDeclarations(content)) {
+        if (decl.name !== className || decl.bodyStart == null)
+            continue;
+        const body = content.slice(decl.bodyStart, decl.bodyEnd ?? content.length);
+        const found = scanClassMembers(body).members.some((m) => m.kind === 'method' && m.name === member);
+        if (found)
+            return 'method';
+    }
+    return undefined;
+}
 function lineAt(content, index) {
     const start = content.lastIndexOf('\n', index - 1) + 1;
     const end = content.indexOf('\n', index);
@@ -298,7 +316,8 @@ function symbolNeedle(symbol) {
     const name = parts[parts.length - 1] ?? '';
     if (!name)
         return undefined;
-    const className = parts.length > 1 ? (parts[0] ?? null) : null;
+    // `Aggregate.method` (or `ns.Aggregate.method`): the segment before the member names the class.
+    const className = parts.length > 1 ? (parts[parts.length - 2] || null) : null;
     return { className, name };
 }
 function declaredLabel(invariant) {
@@ -344,9 +363,9 @@ function rankCoverage(invariant, files, scanTests = true) {
             const content = files.fileContents[file];
             if (!content)
                 continue;
-            if (needle.className && !content.includes(needle.className))
-                continue;
-            const shape = declarationShape(content, needle.name);
+            const shape = needle.className
+                ? classMemberShape(content, needle.className, needle.name)
+                : declarationShape(content, needle.name);
             if (!shape)
                 continue;
             declaration = { file, shape };
@@ -515,8 +534,8 @@ export function evaluateInvariantCoverage(input) {
         const requiresEvidence = inv.coverage?.test === true || Boolean(symbol) || inv.coverage === undefined;
         const covered = requiresEvidence && counts
             ? true
-            : inv.coverage?.test === false && !symbol
-                ? true // explicitly no coverage requirements
+            : inv.coverage?.test === false && !symbol && inv.mode !== 'enforced'
+                ? true // explicitly no coverage requirements (advisory-only opt-out)
                 : counts;
         // Partial only when tests are missing *and* no other evidence (e.g. symbol) completed coverage.
         const partial = testGlobsMissing && wantsTest && !counts;
@@ -606,6 +625,14 @@ export function canPromoteInvariant(coverage) {
         return {
             ok: false,
             reason: `Invariant ${coverage.invariantId} is uncovered; add a test title or symbol before promoting to enforced.`,
+        };
+    }
+    // A `coverage.test: false` opt-out without a symbol reports covered with no
+    // evidence at all. That is fine while advisory; it is not a basis for enforcing.
+    if (Array.isArray(coverage.evidence) && coverage.evidence.length === 0) {
+        return {
+            ok: false,
+            reason: `Invariant ${coverage.invariantId} declares no evidence (coverage.test:false and no symbol); add coverage.symbol or a test title before promoting to enforced.`,
         };
     }
     // Promotion is the moment coverage stops being advice, so an evidence file

@@ -175,8 +175,8 @@
       "targets": [
         {
           "file": "src/domain/invariantCoverage.ts",
-          "startLine": 844,
-          "endLine": 885
+          "startLine": 869,
+          "endLine": 918
         }
       ]
     },
@@ -186,13 +186,13 @@
       "targets": [
         {
           "file": "src/domain/invariantCoverage.ts",
-          "startLine": 228,
-          "endLine": 247
+          "startLine": 229,
+          "endLine": 248
         },
         {
           "file": "src/domain/invariantCoverage.ts",
-          "startLine": 711,
-          "endLine": 715
+          "startLine": 736,
+          "endLine": 740
         }
       ]
     },

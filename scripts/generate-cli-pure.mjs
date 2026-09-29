@@ -31,6 +31,7 @@
  *   src/domain/arkRunDoctor.ts → bin/lib/ark-run-doctor.mjs
  *   src/domain/arkOrderDoctor.ts → bin/lib/ark-order-doctor.mjs
  *   src/domain/literalPathDrift.ts → bin/lib/literal-path-drift.mjs
+ *   src/domain/classSourceScan.ts → bin/lib/class-source-scan.mjs
  *
  * Layer match remains scripts/generate-layer-match.mjs (R1).
  *
@@ -80,6 +81,11 @@ const MODULES = [
     schemaDerived: 'schemas/ark.arkrules.schema.json',
     schemaExport: 'ARK_RULES_SCHEMA',
     label: 'versioned ArkRules (intra-layer) contract + schema',
+  },
+  {
+    canonical: 'src/domain/classSourceScan.ts',
+    derived: 'bin/lib/class-source-scan.mjs',
+    label: 'class-source tokenizer shared by ArkRules sensors + invariant coverage',
   },
   {
     canonical: 'src/domain/invariantCoverage.ts',

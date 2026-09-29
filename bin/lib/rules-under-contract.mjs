@@ -191,7 +191,7 @@ export function summarizeRulesUnderContract(root, config, facts, classification)
 
     const symbolEvidence = (coverage.coverage ?? [])
       .filter((row) => typeof row.symbolEvidenceFile === 'string' && row.symbolEvidenceFile.length > 0)
-      .map((row) => ({ id: row.invariantId, file: row.symbolEvidenceFile }));
+      .map((row) => ({ id: row.invariantId, file: projectRelativePath(root, row.symbolEvidenceFile) }));
     const coveredAll = (coverage.coverage ?? [])
       .filter((row) => row.covered)
       .map((row) => ({
@@ -200,7 +200,7 @@ export function summarizeRulesUnderContract(root, config, facts, classification)
         mode: row.mode ?? null,
         description: row.description ?? null,
         ...(typeof row.symbolEvidenceFile === 'string' && row.symbolEvidenceFile.length > 0
-          ? { symbolEvidenceFile: row.symbolEvidenceFile }
+          ? { symbolEvidenceFile: projectRelativePath(root, row.symbolEvidenceFile) }
           : {}),
       }));
     const coveredTruncated = Math.max(0, coveredAll.length - COVERED_SAMPLE_MAX);
