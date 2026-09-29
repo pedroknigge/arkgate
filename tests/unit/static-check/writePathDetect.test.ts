@@ -15,6 +15,8 @@ import {
 import { detectWritePathCapabilities as fromAgentGates } from '../../../bin/lib/agent-gates.mjs';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
+// These fixtures do not pin arkgate, so emitted fixes name the exact package via npx.
+const UNPINNED_RUNNER = `npx -y -p arkgate@${JSON.parse(fs.readFileSync(path.join(REPO, 'package.json'), 'utf8')).version}`;
 const SHIPPED_MCP = path.join(REPO, 'bin', 'ark-mcp.mjs');
 
 function mk(): string {
@@ -221,7 +223,7 @@ describe('detectWritePathCapabilities (shipped write-path-detect.mjs)', () => {
         message:
           'Active host claude has a hard write boundary without a repair payload. ' +
           'Install its MCP surface or enable hook repair for guided re-entry.',
-        fix: 'npx ark-check --install-agent-gates --tools claude --force',
+        fix: `${UNPINNED_RUNNER} ark-check --install-agent-gates --tools claude --force`,
       });
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
@@ -292,7 +294,7 @@ describe('detectWritePathCapabilities (shipped write-path-detect.mjs)', () => {
           'Fell back to MCP prepare: active host claude has no hard pre-hook. ' +
           'Advisory prepare-write/autoPatch is the local write surface. ' +
           'Next: install and trust the host write hook, or keep required CI as the merge line.',
-        fix: 'npx ark-check --install-agent-gates --tools claude',
+        fix: `${UNPINNED_RUNNER} ark-check --install-agent-gates --tools claude`,
       });
     } finally {
       fs.rmSync(root, { recursive: true, force: true });

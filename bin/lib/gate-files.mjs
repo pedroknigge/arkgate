@@ -7,6 +7,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { codexProjectMcpIsValid } from './codex-home.mjs';
 import { enforcingArkRunText, runsArkCheck } from './github-enforcement.mjs';
+import { npxArkgatePrefixLength } from './package-manager.mjs';
 
 export const __packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 export const __arkCheckCli = path.join(__packageRoot, 'bin', 'ark-check.mjs');
@@ -214,7 +215,10 @@ function arkMcpArgs(server) {
   const isArkBin = (value) => /^(?:arkgate-mcp|ark-mcp)(?:\.mjs)?$/.test(executableName(value));
   if ([server.command, ...args].filter(isArkBin).length !== 1) return null;
   if (isArkBin(server.command)) return args;
-  if ((command === 'npx' || command === 'yarn') && isArkBin(args[0])) return args.slice(1);
+  const npxPrefix = command === 'npx' ? npxArkgatePrefixLength(args) : 0;
+  if ((command === 'npx' || command === 'yarn') && isArkBin(args[npxPrefix])) {
+    return args.slice(npxPrefix + 1);
+  }
   if (command === 'pnpm') {
     const binIndex =
       args[0] === 'exec'

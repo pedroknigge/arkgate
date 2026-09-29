@@ -7,6 +7,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { execCommandParts } from '../ark-shared.mjs';
+import { npxArkgatePrefixLength } from './package-manager.mjs';
 
 export const PREFERRED_CODEX_MCP_BIN = 'arkgate-mcp';
 
@@ -204,8 +205,9 @@ function codexArkMcpInvocation(command, args) {
   const argv = [command, ...args];
   if (isArkMcpToken(command)) return { binArgs: argv.slice(1) };
   const runner = executableName(command);
-  if ((runner === 'npx' || runner === 'yarn') && isArkMcpToken(args[0])) {
-    return { binArgs: argv.slice(2) };
+  const npxPrefix = runner === 'npx' ? npxArkgatePrefixLength(args) : 0;
+  if ((runner === 'npx' || runner === 'yarn') && isArkMcpToken(args[npxPrefix])) {
+    return { binArgs: argv.slice(npxPrefix + 2) };
   }
   if (runner === 'node') {
     const script = args[0]?.replace(/\\/g, '/');

@@ -66,6 +66,13 @@ in the immutable pre-2.0 archive linked below.
   Required CI is still the shared merge line. No new skill, schema, or host.
 
 ### Fixed
+- Generated CI workflows, host hooks and MCP entries in a project that does not
+  have arkgate as a local dependency run `npx -y -p arkgate@<exact version> <bin>`
+  instead of a bare `npx ark-check` / `npx arkgate-mcp` (npm resolved those as a
+  nonexistent package, or ran a stale global). Without a `package.json` the workflow
+  skips the install step and the npm cache. `--migrate-commands` rewrites bare runners
+  into the pinned form, and `--doctor` leads with `PACKAGE_PIN_ABSENT` when a generated
+  file still uses the local runner without the pin.
 - Write hook and `ark-check` now agree on overlapping layer globs: the hook
   probes the same specifier extensions as `ark-check` and classifies with
   `layerForRelativePath` (explicit `money.ts` beats `src/lib/**`). Field

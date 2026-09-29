@@ -20,6 +20,7 @@ import {
 import { detectActiveAgentHost } from './skill-install.mjs';
 import { detectCiEnforcement } from './weakest-link.mjs';
 import { buildEnforcementState, packageInstallation } from './enforcement-state.mjs';
+import { npxArkgatePrefixLength } from './package-manager.mjs';
 
 export const WRITE_CAPABILITY_NAMES = [
   'hard-write',
@@ -161,8 +162,9 @@ function arkMcpInvocation(server) {
   if (argv.filter(isArkMcpToken).length !== 1) return false;
   if (isArkMcpToken(server.command)) return { argv, binIndex: 0 };
   const runner = path.basename(server.command.trim().replace(/\\/g, '/'));
-  if (['npx', 'yarn'].includes(runner) && isArkMcpToken(args[0])) {
-    return { argv, binIndex: 1 };
+  const npxPrefix = runner === 'npx' ? npxArkgatePrefixLength(args) : 0;
+  if (['npx', 'yarn'].includes(runner) && isArkMcpToken(args[npxPrefix])) {
+    return { argv, binIndex: npxPrefix + 1 };
   }
   if (runner === 'node') {
     const script = args[0]?.replace(/\\/g, '/');

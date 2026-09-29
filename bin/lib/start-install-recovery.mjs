@@ -187,9 +187,10 @@ export function ensureProjectArkgateDependency(root, opts = {}) {
 }
 
 /**
- * Setup-time pin shared by `ark start` and `ark init`: generated CI and host hooks call the
- * local `ark-check` / `arkgate-mcp` bins through the project runner, which only resolves to
- * this package when package.json declares it (otherwise npx 404s or picks a stale global).
+ * Setup-time pin shared by `ark start` and `ark init`. With the pin, generated CI and host
+ * hooks call the local `ark-check` / `arkgate-mcp` bins through the project runner. Without
+ * it they run `npx -y -p arkgate@<this exact version> <bin>`, because a bare `npx ark-check`
+ * asks npm for a package named `ark-check` (404) or runs a stale global.
  */
 export function pinArkgateForSetup(root, args, cliVersion) {
   if (!args.install) {
@@ -198,7 +199,7 @@ export function pinArkgateForSetup(root, args, cliVersion) {
   }
   if (!fs.existsSync(path.join(root, 'package.json'))) {
     console.log(
-      `  Warning: no package.json — the generated CI workflow and host hooks run local arkgate bins and will not resolve (npx 404s or picks a stale global). Create package.json and add arkgate@^${cliVersion()} to devDependencies, then re-run setup.`
+      `  Warning: no package.json — the generated CI workflow and host hooks run npx -y -p arkgate@${cliVersion()} (downloaded on each run). To run a local install instead, create package.json, add arkgate@^${cliVersion()} to devDependencies, then re-run setup.`
     );
     return;
   }

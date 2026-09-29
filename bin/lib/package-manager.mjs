@@ -83,7 +83,64 @@ const RUNNER_BY_PM = { pnpm: PNPM_EXEC, yarn: 'yarn', npm: 'npx' };
  * same detection.
  */
 export function execRunner(root) {
+  if (!arkgateIsProjectDependency(root)) return pinnedArkgateRunner();
   return RUNNER_BY_PM[detectPackageManager(root)];
+}
+
+/** The exact arkgate version that ships this CLI (the package.json next to bin/). */
+export function shippedArkgateVersion() {
+  try {
+    const pkg = JSON.parse(fs.readFileSync(new URL('../../package.json', import.meta.url), 'utf8'));
+    return typeof pkg.version === 'string' && pkg.version ? pkg.version : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * True when the project resolves arkgate locally: a `dependencies` / `devDependencies` entry,
+ * an installed node_modules/arkgate, or the arkgate package itself (self-host). Only then
+ * does a bare `npx ark-check` / `pnpm exec` / `yarn` runner reach this package's bins.
+ */
+export function arkgateIsProjectDependency(root) {
+  // An installed copy (node_modules/arkgate) also resolves the local runner.
+  if (fs.existsSync(path.join(root, 'node_modules', 'arkgate', 'package.json'))) return true;
+  const pkg = readPackageJson(root);
+  if (!pkg || typeof pkg !== 'object') return false;
+  if (pkg.name === 'arkgate') return true;
+  return [pkg.dependencies, pkg.devDependencies].some(
+    (deps) => deps && typeof deps === 'object' && typeof deps.arkgate === 'string'
+  );
+}
+
+/** `arkgate@<exact shipped version>` — the package an unpinned project runs through npx. */
+export function pinnedArkgateSpec(version = shippedArkgateVersion()) {
+  return version ? `arkgate@${version}` : 'arkgate';
+}
+
+/**
+ * Runner for a project that does not pin arkgate. Bare `npx ark-check` asks npm for a
+ * package named `ark-check` (404) or runs a stale global copy; `-p arkgate@<exact>` names the
+ * package that owns the bin, and `-y` keeps CI and host hooks from blocking on a prompt.
+ */
+export function pinnedArkgateRunner(version) {
+  return `npx -y -p ${pinnedArkgateSpec(version)}`;
+}
+
+/**
+ * Number of npx arguments before the bin: 0 for `npx <bin>`, more for the pinned form
+ * (`npx -y -p arkgate@x <bin>`, `--yes`, `--package arkgate@x`, `--package=arkgate@x`).
+ */
+export function npxArkgatePrefixLength(args) {
+  if (!Array.isArray(args)) return 0;
+  let index = 0;
+  if (args[index] === '-y' || args[index] === '--yes') index += 1;
+  const flag = args[index];
+  if ((flag === '-p' || flag === '--package') && /^arkgate(?:@\S+)?$/.test(args[index + 1] ?? '')) {
+    return index + 2;
+  }
+  if (typeof flag === 'string' && /^--package=arkgate(?:@\S+)?$/.test(flag)) return index + 1;
+  return 0;
 }
 
 /** Full runnable command string for an installed Ark binary, package-manager aware. */
@@ -116,7 +173,8 @@ export function execCommandParts(root, bin, binArgs = []) {
     };
   }
   if (runner === 'yarn') return { command: 'yarn', args: [bin, ...binArgs] };
-  return { command: 'npx', args: [bin, ...binArgs] };
+  // Pinned form (`npx -y -p arkgate@x`) keeps its prefix as real argv entries.
+  return { command: 'npx', args: [...runner.split(' ').slice(1), bin, ...binArgs] };
 }
 
 /**

@@ -12,6 +12,7 @@ import {
 import * as arkShared from '../ark-shared.mjs';
 import { summarizeRulesUnderContract } from './rules-under-contract.mjs';
 import { describePackageVersionDualTruth } from './field-install.mjs';
+import { withPinDependentGateFiles } from './pin-dependent-gates.mjs';
 import { detectAgentHomeGaps } from './agent-homes.mjs';
 import { collectDoctorNextActions, preferredDoctorPrimaryNextAction } from './doctor-next-actions.mjs';
 import { printDoctorCompactHuman, printDoctorDetailsHuman } from './doctor-human.mjs';
@@ -533,7 +534,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   const skillGaps = detectSkillGaps(root);
   const agentHomeGaps = detectAgentHomeGaps(root);
   // Dual-truth: CLI version vs package.json pin (field residual after upgrade --no-install).
-  const packageVersionTruth = describePackageVersionDualTruth(root);
+  const packageVersionTruth = withPinDependentGateFiles(root, describePackageVersionDualTruth(root));
   const staleRunners = staleRunnerGateFiles(root);
   const adoption = collectAdoptionGaps(root, config, cov);
   // Prefer writePath from adoption (same detector); recompute only if missing (tests/stubs).

@@ -7,6 +7,8 @@ import { describe, expect, it } from 'vitest';
 import { detectWritePathCapabilities } from '../../../bin/lib/write-path-detect.mjs';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
+// These fixtures do not pin arkgate, so emitted fixes name the exact package via npx.
+const UNPINNED_RUNNER = `npx -y -p arkgate@${JSON.parse(fs.readFileSync(path.join(REPO, 'package.json'), 'utf8')).version}`;
 const ARK_CHECK = path.join(REPO, 'bin', 'ark-check.mjs');
 const HOST_ENV_KEYS = [
   'ARK_ACTIVE_HOST',
@@ -474,7 +476,7 @@ describe('active-host write capability model', () => {
         message:
           'Active host codex has no hard write boundary or advisory Ark MCP. ' +
           'The CI check remains separate and does not block local writes.',
-        fix: 'npx ark-check --install-agent-gates --tools codex',
+        fix: `${UNPINNED_RUNNER} ark-check --install-agent-gates --tools codex`,
       });
     } finally {
       fs.rmSync(root, { recursive: true, force: true });

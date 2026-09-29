@@ -322,7 +322,12 @@ npx ark-check --watch                           # debounced re-check when govern
 **Package pin:** `ark start` and `ark init` both pin `arkgate` in `package.json`
 `devDependencies` (and install it unless `--skip-package-manager`) before writing the CI workflow
 and host hooks, because those call the local `ark-check` / `arkgate-mcp` bins. `--no-install`
-skips the pin; without a `package.json` setup prints a warning instead. `start --remove-host`
+skips the pin; without a `package.json` setup prints a warning instead. When arkgate is not a
+local dependency (no pin, no `node_modules/arkgate`), every generated command runs
+`npx -y -p arkgate@<exact version> <bin>` instead of a bare `npx ark-check`, which npm would
+resolve as a nonexistent `ark-check` package (404) or a stale global. `--doctor` leads with
+`PACKAGE_PIN_ABSENT` when an existing generated file still uses the local runner without the pin.
+`start --remove-host`
 never runs the package manager. An explicit `--archetype` / `--preset` on `ark start` is the
 contract that is written (not only a way past the shape-confidence gate), and re-running
 `ark start --apply` on a project that already has `ark.config.json` keeps that contract and is not

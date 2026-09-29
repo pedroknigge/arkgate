@@ -2361,6 +2361,11 @@ describe('ark-mcp --session-context (SessionStart injection)', () => {
       path.join(root, '.ark-baseline.json'),
       JSON.stringify({ version: 1, violations: ['a|b|c', 'd|e|f'] })
     );
+    // arkgate is a local dependency, so the check command uses the project's own runner.
+    fs.writeFileSync(
+      path.join(root, 'package.json'),
+      JSON.stringify({ name: 'session', devDependencies: { arkgate: '^4.8.0' } })
+    );
 
     const result = runSessionContext(root);
     expect(result.status).toBe(0);

@@ -10,6 +10,7 @@ import {
   execRunner,
   presentLockfiles,
 } from '../ark-shared.mjs';
+import { npxArkgatePrefixLength } from './package-manager.mjs';
 import {
   codexPromptsDir,
   codexSkillsDir,
@@ -121,7 +122,10 @@ export function staleRunnerGateFiles(root) {
       continue;
     }
     const ark = json?.mcpServers?.ark;
-    if (ark && ark.command && ark.command !== want.split(' ')[0]) stale.push(rel);
+    if (!ark || !ark.command) continue;
+    // Unpinned project: a bare `npx <bin>` MCP entry 404s the same way a text command does.
+    const barePinnedNpx = want.startsWith('npx ') && npxArkgatePrefixLength(ark.args) === 0;
+    if (ark.command !== want.split(' ')[0] || barePinnedNpx) stale.push(rel);
   }
   return stale;
 }

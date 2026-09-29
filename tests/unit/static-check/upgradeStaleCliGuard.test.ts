@@ -93,6 +93,7 @@ describe('buildUpgradeNextCommand (project-local, never bare ark)', () => {
 
   it('uses pnpm exec on pnpm lockfile projects', () => {
     write(tmp, 'pnpm-lock.yaml', 'lockfileVersion: 9\n');
+    write(tmp, 'package.json', JSON.stringify({ name: 'consumer', devDependencies: { arkgate: '^4.8.0' } }));
     const cmd = buildUpgradeNextCommand(
       { root: tmp, install: false, json: false, strict: true },
       'sha256:def'

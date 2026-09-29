@@ -21,8 +21,10 @@ const config = {
   // Ranges keep the gate focused on product decisions instead of presentation
   // strings and entry shells.
   mutate: [
-    'bin/lib/enforcement-profiles.mjs:10-92',
-    'bin/lib/write-path-capabilities.mjs:39-176',
+    // hostHookFileMergeable through the end of validateHardWriteRequest.
+    'bin/lib/enforcement-profiles.mjs:32-133',
+    // The pinned-npx import and prefix line moved the same code to 40-178.
+    'bin/lib/write-path-capabilities.mjs:40-178',
     'bin/lib/write-path-detect.mjs:11-32',
     'bin/lib/write-path-detect.mjs:47-47',
     'bin/lib/write-path-detect.mjs:62-62',
@@ -35,7 +37,8 @@ const config = {
     // 4.8.4 pinned 74-114 (the whole function). classifiedFileCount + JSDoc
     // growth moved the greenfield exemption and refuse return past 114.
     'bin/lib/analysis-completeness.mjs:81-141',
-    'bin/lib/resolved-candidate-facts.mjs:737-787',
+    // Receiver-trace merges shifted the same resolver body to 739-789.
+    'bin/lib/resolved-candidate-facts.mjs:739-789',
     // managed-upgrade force-preserve covered by fieldGapS4 unit tests; not in critical
     // mutation groups for 4.1.0 (NoCoverage noise on toml-section branch residual).
     'bin/lib/resident-hook.mjs:115-162',
@@ -100,7 +103,8 @@ const config = {
     'src/domain/invariantCoverage.ts:893-942',
     'src/kernel/semanticAnalysis.ts:18-49',
     'src/kernel/semanticAnalysis.ts:78-258',
-    'src/kernel/workflow/Saga.ts:188-238',
+    // runtimeIds removed the module sequence above Saga: same body at 186-236.
+    'src/kernel/workflow/Saga.ts:186-236',
   ],
   testFiles: [
     'tests/unit/workflow/workflowEngine.test.ts',

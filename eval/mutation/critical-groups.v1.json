@@ -65,16 +65,17 @@
     },
     {
       "id": "host-capabilities",
+      "note": "The old 10-92 pin started inside the host-support import and stopped mid-return. The hard-write merge fix inserted hostHookFileMergeable above HOST_ENFORCEMENT_SUPPORT and a merge guard into validateHardWriteRequest; the pin now covers hostHookFileMergeable through the end of validateHardWriteRequest (32-133). The pinned-npx prefix (npxArkgatePrefixLength import plus one line in arkMcpInvocation) moved the write-path-capabilities pin from 39-176 to 40-178 on the same code.",
       "targets": [
         {
           "file": "bin/lib/enforcement-profiles.mjs",
-          "startLine": 10,
-          "endLine": 92
+          "startLine": 32,
+          "endLine": 133
         },
         {
           "file": "bin/lib/write-path-capabilities.mjs",
-          "startLine": 39,
-          "endLine": 176
+          "startLine": 40,
+          "endLine": 178
         },
         {
           "file": "bin/lib/write-path-detect.mjs",
@@ -106,11 +107,12 @@
     },
     {
       "id": "resolved-candidate-facts",
+      "note": "resolvedCompilerInputPaths body after its TypeScript-API guard (realpath + candidate collection) through resolveRelativeFallback and resolveDependency (unresolved / resolved-project / resolved-external). The readConfigFile guard line stays outside the pin. The arkorder/arkrun receiver-trace merges shifted the same code to 739-789.",
       "targets": [
         {
           "file": "bin/lib/resolved-candidate-facts.mjs",
-          "startLine": 737,
-          "endLine": 787
+          "startLine": 739,
+          "endLine": 789
         }
       ]
     },
@@ -198,11 +200,12 @@
     },
     {
       "id": "workflow-failure-boundaries",
+      "note": "runtimeIds replaced the module-level workflow sequence above Saga, shifting the same body two lines up (186-236).",
       "targets": [
         {
           "file": "src/kernel/workflow/Saga.ts",
-          "startLine": 188,
-          "endLine": 238
+          "startLine": 186,
+          "endLine": 236
         }
       ]
     }

@@ -92,8 +92,10 @@ describe('ArkOrder rules render ark-check text at real positions', () => {
       "import { createOrderPlane } from 'arkgate/order';\nexport const plane = createOrderPlane({});\n",
     'src/domain/order.ts': "import { createOrderPlane } from 'arkgate/order';\nexport const x = createOrderPlane;\n",
     'src/core/billing.ts': "import { createOrderPlane } from 'arkgate/order';\nexport const y = createOrderPlane;\n",
+    // The receiver is bound to evidence: a named import of the plane from a declared
+    // planeRoots module. A bare `plane` parameter name is not evidence (ADR 0034 review).
     'src/application/billing.ts':
-      "export function upgrade(plane) {\n    plane.update({ plan: 'pro' });\n}\n",
+      "import { plane } from '../main';\nexport function upgrade() {\n    plane.update({ plan: 'pro' });\n}\n",
   };
 
   it('enforced: messages equal ark-check, columns are 1-based, Domain.* intentPrefixes count', () => {
@@ -123,7 +125,21 @@ describe('ArkOrder rules render ark-check text at real positions', () => {
     const update = lintFile(root, 'src/application/billing.ts').find(
       (m) => m.ruleId === 'ark/no-arkorder-generic-update'
     );
-    expect(update).toMatchObject({ line: 2, column: 5 });
+    expect(update).toMatchObject({ line: 3, column: 5 });
+  });
+
+  it('a bare plane parameter is not evidence on either side', () => {
+    const root = project('order-bare', orderConfig('enforced'), {
+      'src/application/other.ts':
+        "export function upgrade(plane) {\n    plane.update({ plan: 'pro' });\n}\n",
+    });
+    const cli = arkCheck(root);
+    expect(cli.stdout.trim().startsWith('{'), cli.stderr).toBe(true);
+    expect(cli.diagnostics.filter((d) => d.ruleId === 'ARKORDER_GENERIC_UPDATE')).toEqual([]);
+    const messages = lintFile(root, 'src/application/other.ts').filter((m) =>
+      m.ruleId.startsWith('ark/no-arkorder-')
+    );
+    expect(messages).toEqual([]);
   });
 
   it('advisory: ESLint exits clean where ark-check passes; findings surface as warnings', () => {

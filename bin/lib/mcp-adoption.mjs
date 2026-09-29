@@ -53,8 +53,14 @@ export const MCP_RUNNER_ARGV = new Set(['exec', '--config.verify-deps-before-run
 // The runner token immediately before an ark command in a text command string.
 // Matches npm/yarn runners and both pnpm forms (legacy `pnpm exec` + verify-deps-safe form).
 // Longer bin names first so `arkgate-check` is not partially matched as `ark`.
+// The pinned npx form (`npx -y -p arkgate@x`) comes first so it is replaced whole.
 export const RUNNER_BEFORE_ARK =
-  /\b(?:npx|pnpm --config\.verify-deps-before-run=false exec|pnpm exec|yarn)(?= (?:arkgate-check|arkgate-mcp|arkgate|ark-check|ark-mcp|ark)\b)/g;
+  /\b(?:npx -y -p arkgate@[^\s"'`]+|npx|pnpm --config\.verify-deps-before-run=false exec|pnpm exec|yarn)(?= (?:arkgate-check|arkgate-mcp|arkgate|ark-check|ark-mcp|ark)\b)/g;
+
+/** npx pinned-package argv (`-y`, `-p`, `arkgate@x`) — runner noise, not a server flag. */
+function isPinnedNpxArgv(entry) {
+  return /^(?:-y|--yes|-p|--package|--package=arkgate(?:@\S+)?|arkgate@\S+)$/.test(entry);
+}
 
 /** Keep only MCP server flags from existing args (drop runner tokens + any ark* bin names). */
 
@@ -66,6 +72,7 @@ export function stripMcpServerArgs(args) {
     (entry) =>
       typeof entry === 'string' &&
       !MCP_RUNNER_ARGV.has(entry) &&
+      !isPinnedNpxArgv(entry) &&
       !ARK_MCP_BINS.has(entry) &&
       !ARK_CHECK_BINS.has(entry) &&
       !ARK_CLI_BINS.has(entry)
@@ -89,6 +96,7 @@ export function stripOpencodeMcpCommand(command) {
     if (
       runners.has(base) ||
       MCP_RUNNER_ARGV.has(entry) ||
+      isPinnedNpxArgv(entry) ||
       ARK_MCP_BINS.has(base) ||
       ARK_MCP_BINS.has(entry) ||
       ARK_CHECK_BINS.has(base) ||
