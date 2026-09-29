@@ -259,7 +259,8 @@ describe('invalid contract honesty', () => {
       errors: ['$.layers[0].forbiddenGlobal: unknown field'],
     });
     expect(manifest.nextAction.id).toBe('fix-config');
-    const human = run(ARK, ['status', '--root', root]);
+    // Under CI=1/true status forces JSON; the human line is what a local terminal sees.
+    const human = run(ARK, ['status', '--root', root], { CI: '' });
     expect(human.stdout).toMatch(/contract: invalid/);
   });
 

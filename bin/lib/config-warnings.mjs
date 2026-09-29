@@ -73,7 +73,17 @@ export function collectConfigWarnings(root, config, files, rules, manifest) {
 export function configInvalidJsonEnvelope(error, argv) {
   if (!argv.includes('--json')) return null;
   const e = /** @type {{ name?: string, issues?: Array<{path: string, message: string}>, source?: string }} */ (error);
-  if (e?.name !== 'ArkConfigValidationError' || !Array.isArray(e.issues)) return null;
+  if (e?.name !== 'ArkConfigValidationError' || !Array.isArray(e.issues)) {
+    // Any other fatal error still answers --json with JSON (exit 2 stays the caller's job),
+    // so a CI step that parses stdout never sees an empty or plain-text body.
+    const message = error instanceof Error ? error.message : String(error);
+    const policyBase = /^(Cannot (read|resolve) policy base|Policy base )/.test(message);
+    return JSON.stringify({
+      ok: false,
+      error: policyBase ? 'POLICY_BASE_UNREADABLE' : 'CHECK_ERROR',
+      message,
+    });
+  }
   return JSON.stringify({
     ok: false,
     error: 'CONFIG_INVALID',

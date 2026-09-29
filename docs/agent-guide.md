@@ -212,7 +212,10 @@ When the resolved config fails the shared contract validator, status adds
 `contract: { valid: false, errors: [...] }` and the next action is `fix-config` — the same
 config every enforcing surface refuses is never reported as ready. `ark-check --json` (and
 `--doctor --json`) print `{ "ok": false, "error": "CONFIG_INVALID", "configPath", "messages" }`
-on stdout for that case (exit 2), so a JSON consumer always gets the reason.
+on stdout for that case (exit 2), so a JSON consumer always gets the reason. Any other fatal
+error under `--json` prints `{ "ok": false, "error": "POLICY_BASE_UNREADABLE" | "CHECK_ERROR", "message" }`
+(also exit 2); `POLICY_BASE_UNREADABLE` means the policy base ref (for example `GITHUB_BASE_REF`)
+could not be read in this checkout — fetch it or pass `--base <ref>`.
 
 MCP parity tool: **`ark_status`** (same envelope; pass `project.expectedRoot` after `ark_identity`).
 Schema: `arkgate/schema/status-manifest`. Never prompts; under `CI=1` JSON is forced. **Not a

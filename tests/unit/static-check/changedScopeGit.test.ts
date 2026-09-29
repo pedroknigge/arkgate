@@ -79,11 +79,19 @@ function initRepo(top: string, branch = 'main') {
   git(top, ['commit', '-qm', 'init']);
 }
 
+/** The test's git repo is the only base source: CI's own env must not leak in. */
+function hostNeutralEnv(): NodeJS.ProcessEnv {
+  const env = { ...process.env };
+  const leaks = ['CI', 'GITHUB_ACTIONS', 'GITHUB_BASE_REF', 'GITHUB_HEAD_REF', 'GITHUB_REF'];
+  for (const key of [...leaks, 'GITHUB_EVENT_NAME', 'GITHUB_ACTOR', 'ARK_POLICY_BASE_REF']) delete env[key];
+  return env;
+}
+
 function check(cwd: string, args: string[], env: NodeJS.ProcessEnv = {}) {
   const result = spawnSync(process.execPath, [arkCheck, ...args], {
     cwd,
     encoding: 'utf8',
-    env: { ...process.env, ...GIT_ENV, ARK_NO_OPEN_REPORT: '1', ARK_CHECK_LOCAL: '', ...env },
+    env: { ...hostNeutralEnv(), ...GIT_ENV, ARK_NO_OPEN_REPORT: '1', ARK_CHECK_LOCAL: '', ...env },
   });
   return { code: result.status, out: `${result.stdout}\n${result.stderr}` };
 }
@@ -278,6 +286,11 @@ describe('diff-scoped checks: missing base ref', () => {
       expect(json.teamParliament.reasonId).toBe('contract-diff-needs-base');
       expect(json.teamParliament.message).toMatch(/--base <ref>/);
     }
+    // A CI base ref this checkout cannot read still answers --json with JSON (exit 2).
+    const unreadable = check(trunk, ['--persona', 'steward', '--json'], { GITHUB_BASE_REF: 'main' });
+    expect(unreadable.code).toBe(2);
+    const body = unreadable.out.slice(unreadable.out.indexOf('{'), unreadable.out.lastIndexOf('}') + 1);
+    expect(JSON.parse(body)).toMatchObject({ ok: false, error: 'POLICY_BASE_UNREADABLE' });
     // With a base, the clean steward run passes and the explicit diff is not a false baseline-grow.
     expect(check(trunk, ['--persona', 'steward', '--base', 'trunk']).code).toBe(0);
     expect(check(trunk, ['--contract-diff', '--base', 'trunk']).code).toBe(0);
@@ -379,7 +392,10 @@ describe('report / status / doctor agree on the committed baseline', () => {
     expect(report.code).toBe(0);
     const latest = JSON.parse(fs.readFileSync(path.join(root, '.ark/reports/latest.json'), 'utf8'));
     expect(JSON.stringify(latest)).not.toMatch(/"verdict":\s*"fail"/);
-    const status = spawnSync(process.execPath, [arkCli, 'status', '--root', root], { encoding: 'utf8' });
+    const status = spawnSync(process.execPath, [arkCli, 'status', '--root', root], {
+      encoding: 'utf8',
+      env: hostNeutralEnv(),
+    });
     expect(status.stdout).toMatch(/lastCheck: pass/);
     expect(status.stdout).not.toMatch(/fix-active-violations/);
     // A plain check without --baseline still fails: the CI / exit-code contract is unchanged.
