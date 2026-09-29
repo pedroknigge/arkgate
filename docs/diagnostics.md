@@ -109,6 +109,8 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 | [`CONFIG_CHILD_SLICES_VERSION`](#CONFIG_CHILD_SLICES_VERSION) | config | Config needs a newer arkgate than a pinned copy |
 | [`CONFIG_CHILD_SLICE_EXTENDS`](#CONFIG_CHILD_SLICE_EXTENDS) | config | Child slice id does not extend its universe |
 | [`CONFIG_CHILD_SLICE_CROSS_UNIVERSE`](#CONFIG_CHILD_SLICE_CROSS_UNIVERSE) | config | Child slice allowance cannot cross the universe wall |
+| [`CONFIG_CHILD_SLICES_INERT`](#CONFIG_CHILD_SLICES_INERT) | config | childSlices on a rule that cannot run it |
+| [`CONFIG_SLICE_LEGACY_STARS_ID`](#CONFIG_SLICE_LEGACY_STARS_ID) | config | Slice id written in the 4.8.23 stars form |
 | [`ARK_UNKNOWN`](#ARK_UNKNOWN) | meta | Unknown diagnostic |
 
 ## Layer and dependency graph
@@ -992,6 +994,24 @@ never opting out of knowing.
 
 - **Why:** childSlices.allowedCrossSlice names a pattern that can match two universes. That list clears only a sibling crossing inside one universe. The universe wall still denies the edge.
 - **Fix:** Narrow the pattern so both sides share one universe prefix (features/projects/* to features/projects/d2d-item), or remove the entry. This warning does not fail the check.
+
+<a id="CONFIG_CHILD_SLICES_INERT"></a>
+
+### `CONFIG_CHILD_SLICES_INERT`
+
+**childSlices on a rule that cannot run it**
+
+- **Why:** A rule sets childSlices without peerIsolation: true and allowed: false. The child wall runs only inside a universe wall, so on this rule childSlices enforces nothing. Config load still accepts it (arkgate 4.8.23 did too).
+- **Fix:** Add "peerIsolation": true and "allowed": false to the same rule so the child wall runs, or remove childSlices. This warning does not fail the check.
+
+<a id="CONFIG_SLICE_LEGACY_STARS_ID"></a>
+
+### `CONFIG_SLICE_LEGACY_STARS_ID`
+
+**Slice id written in the 4.8.23 stars form**
+
+- **Why:** Under sliceIdentity "stars", a sliceAliases target or an allowedCrossSlice entry names the 4.8.23 stars id, which dropped a star binding before the last literal (modules/*/api/* bound api/v1). The id now keeps that binding (orders/api/v1). For one release the entry keeps its 4.8.23 meaning, so verdicts do not change.
+- **Fix:** Rewrite the entry with the new id the warning names (for example orders/api/v1/x instead of api/v1/x). A sliceAliases target that maps to more than one universe shape is rejected at config load. This warning does not fail the check.
 
 ## Meta
 

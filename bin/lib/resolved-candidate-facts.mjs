@@ -36,6 +36,7 @@ import {
 import { provePortProofInject } from './port-proof.mjs';
 import { extractClassShapesFromSource } from './arkrules-sensors.mjs';
 import {
+  arkRunEffectiveIntentPrefixes,
   createArkRunKernelRootSpecifierMatcher,
   extractArkRunDeclarationsFromSource,
   reexportsArkRunKernelRoot,
@@ -1558,12 +1559,14 @@ export function resolveCandidateFacts({
       patterns: kernelRootPatterns,
       resolveTarget: (file, dependency) => resolveOnce(dependency, file.candidate.absolute),
     });
+    const intentPrefixes = arkRunEffectiveIntentPrefixes(config);
     for (const candidate of extractCandidates) {
       if (!/\.(tsx?|mts|cts)$/i.test(candidate.path)) continue;
       try {
         arkRunKernelCalls.push(
           ...extractArkRunKernelCallsFromSource(candidate.path, candidate.content, {
             isKernelRootSpecifier: rootMatcherFor(candidate.path),
+            intentPrefixes,
           })
         );
       } catch {

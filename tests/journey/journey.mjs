@@ -356,6 +356,9 @@ function projectStep(fixture, step, stdout, stderr, ctx) {
   let parsed;
   try {
     parsed = JSON.parse(stdout);
+    // `ark-check --json` prints a CONFIG_INVALID envelope on stdout; the human text
+    // (the observed rejection) stays on stderr.
+    if (parsed && parsed.error === 'CONFIG_INVALID') throw new Error('config rejected');
   } catch {
     const rejected = configRejectionView(stderr);
     if (rejected) {

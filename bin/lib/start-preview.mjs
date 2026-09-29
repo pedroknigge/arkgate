@@ -20,6 +20,9 @@ import {
   grokHooks,
   grokProjectConfig,
   opencodeProjectConfig,
+  removeAntigravityArkHook,
+  removeClaudeStyleArkHooks,
+  removeCursorArkHook,
 } from './hook-templates.mjs';
 import { codexPrimaryTable, codexProjectMcpIsValid } from './codex-home.mjs';
 import { codexRuntimeActivation } from './enforcement-state.mjs';
@@ -54,6 +57,17 @@ const COMPACT_HOST_TEMPLATES = {
   roo: (root) => [['.roo/rules/ark.md', instructionRule(root)]],
   continue: (root) => [['.continue/rules/ark.md', instructionRule(root)]],
   gemini: (root) => [['GEMINI.md', instructionRule(root)]],
+};
+
+/**
+ * Host hook files the installer merges into (keeping user keys). Removal drops only the
+ * Ark-owned entries, with the same identity as the merge helper.
+ */
+const MERGED_HOOK_FILE_REMOVERS = {
+  '.claude/settings.json': removeClaudeStyleArkHooks,
+  '.codex/hooks.json': removeClaudeStyleArkHooks,
+  '.cursor/hooks.json': removeCursorArkHook,
+  '.agents/hooks.json': removeAntigravityArkHook,
 };
 
 function treeFiles(root) {
@@ -332,6 +346,22 @@ function planHostRemoval(args, helpers) {
       if (prefix.length === 0) next = next.replace(/^\n+/, '');
       const after = next.trim().length > 0 ? Buffer.from(next) : null;
       changes.push(change(relativePath, before, after));
+      continue;
+    }
+    const remover = MERGED_HOOK_FILE_REMOVERS[relativePath];
+    if (remover && before.toString('utf8') !== expected) {
+      const removal = remover(before.toString('utf8'), expected);
+      if (removal.status === 'removed') {
+        changes.push(
+          change(relativePath, before, removal.text == null ? null : Buffer.from(removal.text))
+        );
+      } else if (removal.status === 'customized') {
+        unresolvedDecisions.push(
+          `${relativePath}: the Ark hook entry was customized and was left untouched.`
+        );
+      } else if (removal.status === 'unreadable') {
+        unresolvedDecisions.push(`${relativePath} is not readable JSON and was left untouched.`);
+      }
       continue;
     }
     if (before.toString('utf8') !== expected) {

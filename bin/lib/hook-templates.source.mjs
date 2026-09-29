@@ -330,6 +330,135 @@ export function mergeClaudeStyleArkHooks(existingText, generatedText) {
   return `${JSON.stringify({ ...existing, hooks }, null, 2)}\n`;
 }
 
+/** Stable JSON for identity checks; the pinned `arkgate@x.y.z` never counts as an edit. */
+function arkHookIdentity(value) {
+  const normalize = (item) => {
+    if (typeof item === 'string') return item.replace(/arkgate@[^\s"']+/g, 'arkgate@*');
+    if (Array.isArray(item)) return item.map(normalize);
+    if (item && typeof item === 'object') {
+      return Object.fromEntries(
+        Object.keys(item)
+          .sort()
+          .map((key) => [key, normalize(item[key])])
+      );
+    }
+    return item;
+  };
+  return JSON.stringify(normalize(value));
+}
+
+function parseHookObjects(existingText, generatedText) {
+  try {
+    const existing = JSON.parse(existingText);
+    const generated = JSON.parse(generatedText);
+    if (!existing || typeof existing !== 'object' || Array.isArray(existing)) return null;
+    if (!generated || typeof generated !== 'object' || Array.isArray(generated)) return null;
+    return { existing, generated };
+  } catch {
+    return null;
+  }
+}
+
+function removalResult(next) {
+  return {
+    status: 'removed',
+    text: Object.keys(next).length === 0 ? null : `${JSON.stringify(next, null, 2)}\n`,
+  };
+}
+
+/**
+ * Inverse of {@link mergeClaudeStyleArkHooks} for host removal: drop only the Ark
+ * SessionStart / PreToolUse groups the merge added (same `arkgate-mcp --hook` /
+ * `--session-context` identity), keep every user key, event, and hook.
+ * `status`: `removed` (`text` null → nothing else remains, delete the file),
+ * `absent` (no Ark entry), `customized` (an Ark entry was edited), `unreadable`.
+ */
+export function removeClaudeStyleArkHooks(existingText, generatedText) {
+  const parsed = parseHookObjects(existingText, generatedText);
+  if (!parsed) return { status: 'unreadable' };
+  const { existing, generated } = parsed;
+  if (existing.hooks === undefined) return { status: 'absent' };
+  if (!existing.hooks || typeof existing.hooks !== 'object' || Array.isArray(existing.hooks)) {
+    return { status: 'unreadable' };
+  }
+  const hooks = { ...existing.hooks };
+  let removed = 0;
+  for (const [event, arkGroups] of Object.entries(generated.hooks ?? {})) {
+    if (!Array.isArray(arkGroups) || hooks[event] === undefined) continue;
+    if (!Array.isArray(hooks[event])) return { status: 'unreadable' };
+    const arkIds = new Set(arkGroups.map(arkHookIdentity));
+    const kept = [];
+    for (const group of hooks[event]) {
+      const holdsArk =
+        group && typeof group === 'object' && Array.isArray(group.hooks) && group.hooks.some(isArkHookCommand);
+      if (!holdsArk) {
+        kept.push(group);
+        continue;
+      }
+      if (!arkIds.has(arkHookIdentity(group))) return { status: 'customized' };
+      removed += 1;
+    }
+    if (kept.length > 0) hooks[event] = kept;
+    else delete hooks[event];
+  }
+  if (removed === 0) return { status: 'absent' };
+  const next = { ...existing, hooks };
+  if (Object.keys(hooks).length === 0) delete next.hooks;
+  return removalResult(next);
+}
+
+/** Inverse of {@link mergeCursorArkHook}: drop only Ark's `preToolUse` write-gate entry. */
+export function removeCursorArkHook(existingText, generatedText) {
+  const parsed = parseHookObjects(existingText, generatedText);
+  if (!parsed) return { status: 'unreadable' };
+  const { existing, generated } = parsed;
+  const current = existing.hooks?.preToolUse;
+  if (current === undefined) return { status: 'absent' };
+  if (!Array.isArray(current)) return { status: 'unreadable' };
+  const arkIds = new Set(
+    (Array.isArray(generated.hooks?.preToolUse) ? generated.hooks.preToolUse : []).map(arkHookIdentity)
+  );
+  const kept = [];
+  let removed = 0;
+  for (const entry of current) {
+    const isArk =
+      entry &&
+      typeof entry === 'object' &&
+      typeof entry.command === 'string' &&
+      /arkgate-mcp|ark-mcp/.test(entry.command) &&
+      /\s--hook(?:\s|$)/.test(` ${entry.command} `);
+    if (!isArk) {
+      kept.push(entry);
+      continue;
+    }
+    if (!arkIds.has(arkHookIdentity(entry))) return { status: 'customized' };
+    removed += 1;
+  }
+  if (removed === 0) return { status: 'absent' };
+  const hooks = { ...existing.hooks };
+  if (kept.length > 0) hooks.preToolUse = kept;
+  else delete hooks.preToolUse;
+  const next = { ...existing, hooks };
+  if (Object.keys(hooks).length === 0) delete next.hooks;
+  // A bare `version` is the merge's own scaffold, not user content.
+  if (Object.keys(next).length === 1 && next.version === (generated.version ?? 1)) delete next.version;
+  return removalResult(next);
+}
+
+/** Inverse of {@link mergeAntigravityArkHook}: drop only the `ark-write-gate` named hook. */
+export function removeAntigravityArkHook(existingText, generatedText) {
+  const parsed = parseHookObjects(existingText, generatedText);
+  if (!parsed) return { status: 'unreadable' };
+  const { existing, generated } = parsed;
+  if (!Object.prototype.hasOwnProperty.call(existing, 'ark-write-gate')) return { status: 'absent' };
+  if (arkHookIdentity(existing['ark-write-gate']) !== arkHookIdentity(generated['ark-write-gate'])) {
+    return { status: 'customized' };
+  }
+  const next = { ...existing };
+  delete next['ark-write-gate'];
+  return removalResult(next);
+}
+
 /**
  * Upsert only the `ark-write-gate` named hook into an existing Antigravity hooks map.
  * Preserves sibling named hooks and unknown top-level keys. Returns null if unreadable.

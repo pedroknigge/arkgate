@@ -16,6 +16,7 @@ import {
   sharedImportsSliceStopAt,
   sliceFindingExtras,
   resolveGovernedSlice,
+  resolveGovernedSlicePair,
   universePairLabel,
   type EdgeRule,
 } from '../domain/layerMatch';
@@ -310,6 +311,17 @@ function crossParentViaSharedViolations(
         if (dest.kind !== 'slice' || dest.id.toLowerCase() === origin.id.toLowerCase()) continue;
         // Declared on purpose by the importer's rule (directed); childSlices.allowedCrossSlice never counts.
         if (crossSliceEdgeAllowed(rule.allowedCrossSlice, origin.id, dest.id)) continue;
+        if (rule.sliceIdentity === 'stars') {
+          // One-release 4.8.23 stars compatibility (legacy alias targets / allowances).
+          const pair = resolveGovernedSlicePair(
+            rule,
+            peerSliceFolders(rule, hop.fromLayer, input.config.layers),
+            hop.from,
+            step.to
+          );
+          if (pair.crossSliceAllowed) continue;
+          if (pair.from.universeId && pair.from.universeId === pair.to.universeId) continue;
+        }
         const path = [...current.path, step.to];
         const key = `${hop.from}\0${step.to}`;
         const candidate: Hit = {

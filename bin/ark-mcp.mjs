@@ -119,11 +119,33 @@ if (args.help) {
   process.exit(0);
 }
 let hookInput;
+let hookRoot;
 let residentHandled = false;
 try {
   if (args.hook) {
     hookInput = fs.readFileSync(0, 'utf8');
-    const resident = await tryResidentHook(args, hookInput);
+    // Root: a set --root-env var or a root holding the config, else walk up from the
+    // payload (file, cwd, workspace roots) to the nearest config, like ark-check.
+    const { discoverHookRoot, hookOutsideArkProjectResponse } = await import(
+      './lib/mcp-hook-payload.mjs'
+    );
+    const discovered = discoverHookRoot({ argv: process.argv, hookInput });
+    if (!discovered.configFound && discovered.configExplicit) {
+      // No Ark project owns this write (4.8.23 never blocked it either).
+      const response = hookOutsideArkProjectResponse({
+        hookInput,
+        config: args.config,
+        grokHookEvent: Boolean(process.env.GROK_HOOK_EVENT),
+      });
+      if (response.stdout) process.stdout.write(response.stdout);
+      if (response.stderr) process.stderr.write(response.stderr);
+      process.exitCode = response.status;
+      residentHandled = true;
+    } else {
+      hookRoot = discovered.root;
+      args.root = hookRoot;
+    }
+    const resident = residentHandled ? null : await tryResidentHook(args, hookInput);
     if (resident) {
       if (resident.stdout) process.stdout.write(resident.stdout);
       if (resident.stderr) process.stderr.write(resident.stderr);
@@ -133,7 +155,7 @@ try {
   }
   if (!residentHandled) {
     const runtime = await import('./ark-mcp-runtime.mjs');
-    await runtime.runArkMcp({ hookInput });
+    await runtime.runArkMcp({ hookInput, hookRoot });
   }
 } catch (error) {
   if (args.hook) {
@@ -143,7 +165,7 @@ try {
     const response = hookFailClosedResponse({
       hookInput,
       error,
-      root: hookRootFromArgv(process.argv),
+      root: hookRoot ?? hookRootFromArgv(process.argv),
       grokHookEvent: Boolean(process.env.GROK_HOOK_EVENT),
     });
     if (response.stdout) process.stdout.write(response.stdout);

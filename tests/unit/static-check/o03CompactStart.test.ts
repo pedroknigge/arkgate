@@ -327,4 +327,66 @@ describe('O03 compact start', () => {
       fs.rmSync(root, { recursive: true, force: true });
     }
   }, 60_000);
+
+  it('removes only the merged Ark hook entries from user-owned host hook files', async () => {
+    const root = createFixture();
+    try {
+      const userCodex = {
+        hooks: {
+          PreToolUse: [
+            { matcher: 'Bash', hooks: [{ type: 'command', command: 'my-codex-guard' }] },
+          ],
+        },
+      };
+      const userClaude = {
+        permissions: { allow: ['Bash(npm test)'] },
+        hooks: {
+          PreToolUse: [{ matcher: 'Bash', hooks: [{ type: 'command', command: 'my-guard' }] }],
+        },
+      };
+      fs.mkdirSync(path.join(root, '.codex'), { recursive: true });
+      fs.mkdirSync(path.join(root, '.claude'), { recursive: true });
+      const codexPath = path.join(root, '.codex', 'hooks.json');
+      const claudePath = path.join(root, '.claude', 'settings.json');
+      fs.writeFileSync(codexPath, `${JSON.stringify(userCodex, null, 2)}\n`);
+      fs.writeFileSync(claudePath, `${JSON.stringify(userClaude, null, 2)}\n`);
+
+      await start(root, 'codex', ['--apply', '--tools', 'codex']);
+      await start(root, 'claude', ['--apply', '--tools', 'claude']);
+      expect(fs.readFileSync(codexPath, 'utf8')).toContain('arkgate-mcp');
+      expect(fs.readFileSync(claudePath, 'utf8')).toContain('arkgate-mcp');
+
+      for (const host of ['codex', 'claude']) {
+        const removal = JSON.parse(
+          await arkJson([
+            'start', '--root', root, '--remove-host', host, '--no-install', '--apply', '--json',
+          ])
+        ) as { changes: Array<{ path: string; action: string }>; unresolvedDecisions: string[] };
+        const hookFile = host === 'codex' ? '.codex/hooks.json' : '.claude/settings.json';
+        expect(removal.changes).toContainEqual(
+          expect.objectContaining({ path: hookFile, action: 'edit' })
+        );
+        expect(removal.unresolvedDecisions.join('\n')).not.toContain(hookFile);
+      }
+      expect(JSON.parse(fs.readFileSync(codexPath, 'utf8'))).toEqual(userCodex);
+      expect(JSON.parse(fs.readFileSync(claudePath, 'utf8'))).toEqual(userClaude);
+
+      // An edited Ark entry is the only "customized" case: the file stays as the user left it.
+      await start(root, 'codex', ['--apply', '--tools', 'codex']);
+      const edited = fs
+        .readFileSync(codexPath, 'utf8')
+        .replace('--fail-on-new-smells', '--fail-on-new-smells --verbose');
+      fs.writeFileSync(codexPath, edited);
+      const kept = JSON.parse(
+        await arkJson(['start', '--root', root, '--remove-host', 'codex', '--no-install', '--json'])
+      ) as { changes: Array<{ path: string }>; unresolvedDecisions: string[] };
+      expect(kept.changes.some((item) => item.path === '.codex/hooks.json')).toBe(false);
+      expect(kept.unresolvedDecisions).toContain(
+        '.codex/hooks.json: the Ark hook entry was customized and was left untouched.'
+      );
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  }, 120_000);
 });
+

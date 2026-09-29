@@ -189,6 +189,16 @@ export function scanClassMembers(body) {
             modifiers.push(tok.ident);
             cursor = skipWsAndComments(body, tok.end);
         }
+        if (modifiers.length === 1 && modifiers[0] === 'static' && body[cursor] === '{') {
+            // `static { … }` is a class static initialization block, not a member.
+            const afterBlock = skipBalanced(body, cursor, '{', '}');
+            if (afterBlock == null) {
+                truncatedAt = body.length;
+                break;
+            }
+            i = afterBlock;
+            continue;
+        }
         const nameTok = readIdent(body, cursor);
         if (!nameTok) {
             i += 1;

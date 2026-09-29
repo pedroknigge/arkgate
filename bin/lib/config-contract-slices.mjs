@@ -36,7 +36,7 @@ export const CHILD_SLICES_SCHEMA_DEF = {
     type: 'object',
     additionalProperties: false,
     required: ['sliceFolders'],
-    description: 'Optional inner wall under this rule. Needs peerIsolation: true and allowed: false on the same rule; config load rejects it otherwise. Absent keeps today\'s universe wall. sliceFolders names children. Flat files are universe common, and so is a commonFolders directory directly under the universe (a folder of that name inside a child belongs to that child). siblings is "deny" (default), "advisory", or { default, enforce, ratchet }. parentMayImportChild defaults to false. message is the text for inner-wall findings. allowedCrossSlice may use a whole-segment *. It clears only a sibling crossing. Cross-parent has no advisory knob. arkgate 4.8.22 and older reject this key. A build that still rejects unknown childSlices fields rejects allowedCrossSlice at config load. A build that still types siblings as a string enum rejects the object at config load.',
+    description: 'Optional inner wall under this rule. Runs only on a rule with peerIsolation: true and allowed: false; elsewhere it is inert and ark-check warns CONFIG_CHILD_SLICES_INERT (config load still accepts it, as 4.8.23 did). Absent keeps today\'s universe wall. sliceFolders names children. Flat files are universe common, and so is a commonFolders directory directly under the universe (a folder of that name inside a child belongs to that child). siblings is "deny" (default), "advisory", or { default, enforce, ratchet }. parentMayImportChild defaults to false. message is the text for inner-wall findings. allowedCrossSlice may use a whole-segment *. It clears only a sibling crossing. Cross-parent has no advisory knob. arkgate 4.8.22 and older reject this key. A build that still rejects unknown childSlices fields rejects allowedCrossSlice at config load. A build that still types siblings as a string enum rejects the object at config load.',
     properties: {
         sliceFolders: { ...stringArraySchema, minItems: 1 },
         sliceIdentity: {
@@ -69,7 +69,7 @@ export const CHILD_SLICES_SCHEMA_DEF = {
         sliceAliases: {
             type: 'array',
             minItems: 1,
-            description: 'Maps a source path glob onto a child slice id (universe id plus one child segment) so files outside the slice trees take that universe and child for both walls. A path without a wildcard also covers everything under it, as sharedRoots does. A bare name, a universe id alone, a target outside every universe shape, and a wildcard in to are rejected. Config load checks only the shape; doctor reports a target universe no file belongs to. The glob may not overlap a slice folder, and two aliases may not match the same file. Doctor lists each alias as an owed move. A build that rejects unknown childSlices fields fails at config load (unknown field). arkgate 4.8.22 and older reject childSlices.',
+            description: 'Maps a source path glob onto a child slice id (universe id plus one child segment) so files outside the slice trees take that universe and child for both walls. A path without a wildcard also covers everything under it, as sharedRoots does. A bare name, a universe id alone, a target outside every universe shape, and a wildcard in to are rejected. Under stars identity a target written against the 4.8.23 stars id (star bindings before the last literal dropped, e.g. api/v1/x for modules/*/api/*) still loads when it maps to one universe shape, and ark-check warns CONFIG_SLICE_LEGACY_STARS_ID with the new id; it is rejected only when it maps to more than one shape. Config load checks only the shape; doctor reports a target universe no file belongs to. The glob may not overlap a slice folder, and two aliases may not match the same file. Doctor lists each alias as an owed move. A build that rejects unknown childSlices fields fails at config load (unknown field). arkgate 4.8.22 and older reject childSlices.',
             items: {
                 type: 'object',
                 additionalProperties: false,
@@ -113,26 +113,14 @@ function trimTrailingSlashes(value) {
 }
 /** Every slice-wall check the generic schema walk cannot express. */
 export function validateSliceContract(candidate, issues) {
-    validateChildSlicesHost(candidate, issues);
     validateSharedImportsSlice(candidate, issues);
     validateChildSliceSiblings(candidate, issues);
     validateChildSliceAllowedCrossSlice(candidate, issues);
     validateChildSliceAliases(candidate, issues);
 }
-const CHILD_SLICES_HOST_MESSAGE = 'requires peerIsolation: true and allowed: false on the same rule. The child wall runs inside the universe wall; without it childSlices would enforce nothing.';
-/** childSlices on a classic rule is inert. Reject it instead of loading a wall that never runs. */
-export function validateChildSlicesHost(candidate, issues) {
-    const rules = candidate.rules;
-    if (!Array.isArray(rules))
-        return;
-    rules.forEach((rule, index) => {
-        if (!isObject(rule) || rule.childSlices === undefined)
-            return;
-        if (rule.peerIsolation === true && rule.allowed === false)
-            return;
-        issues.push({ path: `$.rules[${index}].childSlices`, message: CHILD_SLICES_HOST_MESSAGE });
-    });
-}
+// childSlices on a rule without peerIsolation: true + allowed: false is inert. 4.8.23
+// loaded it, so config load keeps accepting it; ark-check warns CONFIG_CHILD_SLICES_INERT
+// (layerMatch childSliceConfigFindings) instead of failing a patch-release upgrade.
 const SHARED_IMPORTS_SLICE_FORM_MESSAGE = 'must be "deny", "deny-cross-parent", or { "mode": "deny-cross-parent", "stopAt": ["<composition root path or glob>"] }';
 const STOP_AT_WHOLE_TREE = 'must not cover the whole tree. Name the composition root itself (bootstrap file, DI registrations folder).';
 function isWildcardSegment(part) {
@@ -424,6 +412,7 @@ export function validateChildSliceAllowedCrossSlice(candidate, issues) {
     });
 }
 const ALIAS_TARGET_MESSAGE = 'must be a child of a universe shape this rule names (its universe sliceFolders shape plus one child segment). A bare name, a universe id alone, a target outside every universe shape, and a wildcard are rejected. Config load checks the shape only; doctor reports a target universe no file belongs to.';
+const ALIAS_LEGACY_AMBIGUOUS_MESSAGE = 'is a 4.8.23 stars id (star bindings before the last literal dropped) that maps to more than one universe shape of this rule. Write the new stars id, which keeps every star binding (e.g. orders/api/v1/x for modules/*/api/*).';
 const ALIAS_OVERLAP_MESSAGE = 'overlaps a slice folder. An alias covers only files outside the slice trees.';
 const ALIAS_SAME_FILE_MESSAGE = 'two slice aliases match the same file';
 function aliasPathSegments(raw) {
@@ -553,11 +542,11 @@ function universeShapes(folders, identity) {
             }
             if (lastLiteral < 0)
                 continue;
-            shapes.push({
-                literals: segments
-                    .filter((part, index) => index >= lastLiteral || part === '*')
-                    .map((part) => (part === '*' ? null : part)),
-            });
+            const literals = segments
+                .filter((part, index) => index >= lastLiteral || part === '*')
+                .map((part) => (part === '*' ? null : part));
+            const legacy = segments.slice(lastLiteral).map((part) => (part === '*' ? null : part));
+            shapes.push(legacy.length === literals.length ? { literals } : { literals, legacy });
             continue;
         }
         shapes.push({ literals: segments.map((part) => (part === '*' ? null : part)) });
@@ -583,6 +572,17 @@ function aliasTargetIssue(raw, shapes) {
         return ALIAS_TARGET_MESSAGE;
     if (shapes.some((shape) => shapeMatches(shape, parts.slice(0, -1))))
         return null;
+    // 4.8.23 stars id: accepted (with a CONFIG_SLICE_LEGACY_STARS_ID warning) when it maps
+    // to exactly one new universe shape; rejected only when that mapping is ambiguous.
+    const legacyTargets = new Set(shapes
+        .filter((shape) => shape.legacy !== undefined &&
+        !shapeMatches({ literals: shape.legacy }, parts) &&
+        shapeMatches({ literals: shape.legacy }, parts.slice(0, -1)))
+        .map((shape) => shape.literals.map((part) => part ?? '*').join('/')));
+    if (legacyTargets.size === 1)
+        return null;
+    if (legacyTargets.size > 1)
+        return ALIAS_LEGACY_AMBIGUOUS_MESSAGE;
     return ALIAS_TARGET_MESSAGE;
 }
 /** A leading src/ or app/ is optional at match time, so both spellings are one glob. */

@@ -12,7 +12,17 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
-import { claudeSettings, mergeClaudeStyleArkHooks } from '../../../bin/lib/hook-templates.mjs';
+import {
+  antigravityHooks,
+  claudeSettings,
+  cursorHooks,
+  mergeAntigravityArkHook,
+  mergeClaudeStyleArkHooks,
+  mergeCursorArkHook,
+  removeAntigravityArkHook,
+  removeClaudeStyleArkHooks,
+  removeCursorArkHook,
+} from '../../../bin/lib/hook-templates.mjs';
 import { validateHardWriteRequest } from '../../../bin/lib/enforcement-profiles.mjs';
 import { setupUsageAll } from '../../../bin/lib/first-run-help.mjs';
 import { KNOWN_TOOLS } from '../../../bin/lib/skill-install.mjs';
@@ -88,6 +98,44 @@ describe('Claude-style hook merge', () => {
     expect(mergeClaudeStyleArkHooks('{ nope', generated)).toBeNull();
     expect(mergeClaudeStyleArkHooks('[]', generated)).toBeNull();
     expect(mergeClaudeStyleArkHooks('{"hooks":[]}', generated)).toBeNull();
+  });
+
+  it('host removal drops only the merged Ark entries (same identity as the merge)', () => {
+    const generated = claudeSettings('/tmp/none');
+    const merged = mergeClaudeStyleArkHooks(JSON.stringify(USER_SETTINGS), generated)!;
+    const removed = removeClaudeStyleArkHooks(merged, generated);
+    expect(removed.status).toBe('removed');
+    expect(JSON.parse(removed.text!)).toEqual(USER_SETTINGS);
+    // Only Ark content: nothing remains, so the file can be deleted.
+    expect(removeClaudeStyleArkHooks(generated, generated)).toEqual({ status: 'removed', text: null });
+    // A different pinned version is not an edit.
+    const repinned = merged.replace(/arkgate@[^\s"]+/g, 'arkgate@9.9.9');
+    expect(removeClaudeStyleArkHooks(repinned, generated).status).toBe('removed');
+    // An edited Ark entry is customized; no Ark entry is absent; bad JSON is unreadable.
+    const edited = merged.replace('--fail-on-new-smells', '--fail-on-new-smells --x');
+    expect(removeClaudeStyleArkHooks(edited, generated)).toEqual({ status: 'customized' });
+    expect(removeClaudeStyleArkHooks(JSON.stringify(USER_SETTINGS), generated)).toEqual({
+      status: 'absent',
+    });
+    expect(removeClaudeStyleArkHooks('{ nope', generated)).toEqual({ status: 'unreadable' });
+
+    const cursorGenerated = cursorHooks('/tmp/none');
+    const cursorUser = {
+      version: 1,
+      hooks: { preToolUse: [{ command: 'my-guard', matcher: 'Shell' }], stop: [{ command: 'x' }] },
+    };
+    const cursorMerged = mergeCursorArkHook(JSON.stringify(cursorUser), cursorGenerated)!;
+    const cursorRemoved = removeCursorArkHook(cursorMerged, cursorGenerated);
+    expect(JSON.parse(cursorRemoved.text!)).toEqual(cursorUser);
+    expect(removeCursorArkHook(cursorGenerated, cursorGenerated)).toEqual({
+      status: 'removed',
+      text: null,
+    });
+
+    const agGenerated = antigravityHooks('/tmp/none');
+    const agUser = { 'my-hook': { PreToolUse: [] } };
+    const agMerged = mergeAntigravityArkHook(JSON.stringify(agUser), agGenerated)!;
+    expect(JSON.parse(removeAntigravityArkHook(agMerged, agGenerated).text!)).toEqual(agUser);
   });
 
   it('install-agent-gates merges an existing .claude/settings.json without --force', () => {

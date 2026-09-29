@@ -11,7 +11,7 @@ import type {
   ResolvedArkRunManagedNewFact,
   ResolvedDependencyFact,
 } from './resolvedCandidateFactsTypes';
-import { looksLikeArkIntent } from './sourcePolicy';
+import { DEFAULT_INTENT_PREFIXES, effectiveIntentPrefixes, looksLikeArkIntent } from './sourcePolicy';
 
 /** Closed factory names from ADR 0022 `arkrun-missing-root`. */
 export const ARKRUN_KERNEL_FACTORY_CALLEES = [
@@ -444,6 +444,11 @@ type KernelReceiverTrace = {
   receivers: Set<string>;
   /** Destructured interaction functions (`const { send } = ark`). */
   calleeBindings: Set<string>;
+  /**
+   * Namespace imports of a kernel root module (`import * as main from '../main'`).
+   * One member hop (`main.ark`) is the same binding a named import would give.
+   */
+  rootNamespaces: Set<string>;
 };
 
 function isFactoryCalleeExpression(expression: string, bindings: KernelImportBindings): boolean {
@@ -459,12 +464,16 @@ function isFactoryCalleeExpression(expression: string, bindings: KernelImportBin
 function addRootModuleImports(
   source: string,
   isKernelRootSpecifier: (specifier: string) => boolean,
-  receivers: Set<string>
+  receivers: Set<string>,
+  rootNamespaces?: Set<string>
 ): void {
   parseValueImportClause(source, (clause, specifier) => {
     if (!isKernelRootSpecifier(specifier)) return;
     const namespace = /\*\s+as\s+([A-Za-z_$][\w$]*)/.exec(clause);
-    if (namespace?.[1]) receivers.add(namespace[1]);
+    if (namespace?.[1]) {
+      receivers.add(namespace[1]);
+      rootNamespaces?.add(namespace[1]);
+    }
     const defaultIdent = /^([A-Za-z_$][\w$]*)\s*(?:,|$)/.exec(clause.trim());
     if (defaultIdent?.[1]) receivers.add(defaultIdent[1]);
     const braced = /\{([^}]*)\}/.exec(clause);
@@ -502,7 +511,11 @@ function addDerivedReceivers(source: string, trace: KernelReceiverTrace): void {
     }
     derived.lastIndex = 0;
     while ((match = derived.exec(source)) !== null) {
-      if (!receivers.has(match[2]!) || !KERNEL_DERIVED_MEMBERS.has(match[3]!)) continue;
+      if (!receivers.has(match[2]!)) continue;
+      // `const k = main.ark` on a root namespace is a named-import equivalent.
+      if (!KERNEL_DERIVED_MEMBERS.has(match[3]!) && !trace.rootNamespaces.has(match[2]!)) {
+        continue;
+      }
       if (receivers.has(match[1]!)) continue;
       receivers.add(match[1]!);
       changed = true;
@@ -538,8 +551,14 @@ function traceKernelReceivers(
   bindings: KernelImportBindings,
   isKernelRootSpecifier: ((specifier: string) => boolean) | undefined
 ): KernelReceiverTrace {
-  const trace: KernelReceiverTrace = { receivers: new Set(), calleeBindings: new Set() };
-  if (isKernelRootSpecifier) addRootModuleImports(source, isKernelRootSpecifier, trace.receivers);
+  const trace: KernelReceiverTrace = {
+    receivers: new Set(),
+    calleeBindings: new Set(),
+    rootNamespaces: new Set(),
+  };
+  if (isKernelRootSpecifier) {
+    addRootModuleImports(source, isKernelRootSpecifier, trace.receivers, trace.rootNamespaces);
+  }
   const factoryBound =
     /\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*(?::[^=;]+)?=\s*(?:await\s+)?((?:[A-Za-z_$][\w$]*\s*\.\s*)?[A-Za-z_$][\w$]*)\s*(?:<[^>]*>)?\s*\(/g;
   let match: RegExpExecArray | null;
@@ -619,7 +638,10 @@ function chainReachesKernel(
   if (rest.length === 0 && bindings.namespaces.has(root)) return true;
   // Backstop: ambient receivers are never the kernel, even if shadowed by a trace.
   if (SKIP_INTERACTION_RECEIVERS.has(root) || !trace.receivers.has(root)) return false;
-  return rest.every((member) => KERNEL_TRANSIT_MEMBERS.has(member));
+  // `main.ark.publisher(..)`: the first hop off a root namespace is an exported
+  // binding of the composition root — the same receiver `import { ark }` traces.
+  const transit = trace.rootNamespaces.has(root) ? rest.slice(1) : rest;
+  return transit.every((member) => KERNEL_TRANSIT_MEMBERS.has(member));
 }
 
 /**
@@ -668,7 +690,42 @@ export type ExtractArkRunKernelCallsOptions = {
    * from them are traced as kernel receivers.
    */
   isKernelRootSpecifier?: (specifier: string) => boolean;
+  /**
+   * The project's effective intent prefixes (configured `layers[].intentPrefixes`
+   * plus the canonical defaults — {@link arkRunEffectiveIntentPrefixes}). An
+   * untraced receiver counts as a kernel call when its name literal carries one.
+   * Omitted: only the canonical prefixes count.
+   */
+  intentPrefixes?: readonly string[];
 };
+
+/**
+ * Effective intent prefixes of a config: each layer's declared `intentPrefixes`
+ * (or its canonical defaults) plus every canonical prefix. The kernel maps intents
+ * by these, so a name carrying one is kernel-valid evidence.
+ */
+export function arkRunEffectiveIntentPrefixes(config: {
+  layers: readonly { name: string; intentPrefixes?: readonly string[] }[];
+}): string[] {
+  const prefixes = new Set<string>();
+  for (const entry of DEFAULT_INTENT_PREFIXES) {
+    for (const prefix of entry.prefixes) prefixes.add(prefix);
+  }
+  for (const layer of config.layers) {
+    for (const prefix of effectiveIntentPrefixes(layer)) prefixes.add(prefix);
+  }
+  return [...prefixes].sort();
+}
+
+function carriesIntentPrefix(value: string, prefixes: readonly string[] | undefined): boolean {
+  if (looksLikeArkIntent(value)) return true;
+  return (prefixes ?? []).some((raw) => {
+    const prefix = raw.trim();
+    if (!prefix) return false;
+    const normalized = prefix.endsWith('.') ? prefix : `${prefix}.`;
+    return value.startsWith(normalized) && /^[A-Za-z0-9_.]+$/.test(value.slice(normalized.length));
+  });
+}
 
 function receiverName(chain: ReceiverChain | undefined): string | undefined {
   if (!chain) return undefined;
@@ -680,14 +737,18 @@ function receiverName(chain: ReceiverChain | undefined): string | undefined {
 /**
  * A receiver the trace cannot follow (untyped parameter, cross-file hop the
  * resolver did not see) still counts when the call names a kernel-valid intent
- * (`Domain.…`, `Application.…` — the only names a kernel accepts). `res.send('ok')`
+ * (`Domain.…`, or a configured `intentPrefixes` prefix such as `Billing.…` — the only
+ * names a kernel maps). `res.send('ok')`
  * or `require.resolve('pkg')` never carry such a name; ambient receivers never count.
  */
 function untracedKernelNameEvidence(
   chain: ReceiverChain | undefined,
-  stringArg: string | undefined
+  stringArg: string | undefined,
+  intentPrefixes: readonly string[] | undefined
 ): boolean {
-  if (!chain || stringArg === undefined || !looksLikeArkIntent(stringArg)) return false;
+  if (!chain || stringArg === undefined || !carriesIntentPrefix(stringArg, intentPrefixes)) {
+    return false;
+  }
   const root = chain.parts[0];
   return root !== undefined && root !== '<expr>' && !SKIP_INTERACTION_RECEIVERS.has(root);
 }
@@ -772,7 +833,7 @@ export function extractArkRunKernelCallsFromSource(
     if (
       kind !== 'factory' &&
       (chain === undefined ? !viaImport : !chainReachesKernel(chain, bindings, trace)) &&
-      !untracedKernelNameEvidence(chain, stringArg)
+      !untracedKernelNameEvidence(chain, stringArg, options.intentPrefixes)
     ) {
       continue;
     }

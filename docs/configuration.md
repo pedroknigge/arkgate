@@ -306,16 +306,27 @@ Rule fields:
   `stars` names a starred prefix as the last literal plus every star binding. It
   drops only the literals before the last literal; a star before it is kept, so
   `modules/*/api/*` binds `orders/api/v1` and `users/api/v1`, never one shared `api/v1`.
+  arkgate 4.8.23 dropped that star too (`api/v1`). For one release a `sliceAliases`
+  `to`, an `allowedCrossSlice` entry, or a `childSlices.allowedCrossSlice` entry written
+  against the 4.8.23 id still loads and keeps its 4.8.23 verdict: a legacy alias target
+  (`api/v1/x`) joins the universe whose 4.8.23 id it names on each edge, and a legacy
+  allowance still clears the edges it cleared. ark-check warns `CONFIG_SLICE_LEGACY_STARS_ID`
+  (`failsStrict: false`) and names the new id to write (`orders/api/v1/x`, or one entry
+  per module when several modules share that old id). A legacy alias target is rejected at
+  config load only when it maps to more than one universe shape of the rule
+  (`maps to more than one universe shape`). Rewrite these entries before the next minor
+  release, which drops the legacy form.
   `lib/features/*/*` and `lib/repositories/features/*/*` both yield
   `features/projects/rfi`, so one feature has one id across parallel trees. Bare names
   (`features`) are unchanged. Doctor warns when two different prefixes bind as the
   same id, and the warning names both paths (`admin/features/*` and `public/features/*`
   both bind as `features/*`). That warning is advisory. Unrelated trees that share a
   last folder name should stay on `path`.
-- `childSlices` is an optional inner wall on a `peerIsolation` rule. It needs
-  `peerIsolation: true` and `allowed: false` on the same rule; config load rejects it
-  otherwise (`requires peerIsolation: true and allowed: false`), because a child wall on a
-  classic rule would enforce nothing. Absent means today's
+- `childSlices` is an optional inner wall on a `peerIsolation` rule. It runs only with
+  `peerIsolation: true` and `allowed: false` on the same rule. Elsewhere it is inert: config
+  load still accepts it (4.8.23 did), and ark-check warns `CONFIG_CHILD_SLICES_INERT`
+  (`failsStrict: false`) with the fix — add both flags to the rule, or remove `childSlices`.
+  Absent means today's
   universe wall, byte for byte: no `reasonId`, same messages, same doctor output.
   `sliceFolders` names the children. `sliceIdentity` is the same `path` | `stars` choice, and
   the child id must extend the universe id. With `"sliceIdentity": "stars"`, `lib/features/*/*`
@@ -405,7 +416,9 @@ Rule fields:
   everything under it, as `sharedRoots` does (`lib/compliance` equals `lib/compliance/**`).
   `to` must match a universe `sliceFolders` shape of the rule, plus one child segment.
   A bare name, a universe id alone, a target outside every universe shape, and a
-  wildcard in `to` are rejected at config load (`child of a universe shape`). Config
+  wildcard in `to` are rejected at config load (`child of a universe shape`); under
+  `"sliceIdentity": "stars"` a target written against the 4.8.23 id loads with a
+  `CONFIG_SLICE_LEGACY_STARS_ID` warning (see `sliceIdentity` above). Config
   load cannot see the tree, so it checks only the shape: doctor marks an alias move
   whose target universe no scanned file belongs to (`unknownUniverse`, "check for a
   typo"). The source glob may cover only files the slice folders do not already classify. Overlap with a

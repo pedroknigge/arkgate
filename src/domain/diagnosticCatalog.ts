@@ -739,6 +739,23 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
     { oftenAdvisory: true }
   ),
 
+  entry(
+    'CONFIG_CHILD_SLICES_INERT',
+    'config',
+    'childSlices on a rule that cannot run it',
+    'A rule sets childSlices without peerIsolation: true and allowed: false. The child wall runs only inside a universe wall, so on this rule childSlices enforces nothing. Config load still accepts it (arkgate 4.8.23 did too).',
+    'Add "peerIsolation": true and "allowed": false to the same rule so the child wall runs, or remove childSlices. This warning does not fail the check.',
+    { oftenAdvisory: true }
+  ),
+  entry(
+    'CONFIG_SLICE_LEGACY_STARS_ID',
+    'config',
+    'Slice id written in the 4.8.23 stars form',
+    'Under sliceIdentity "stars", a sliceAliases target or an allowedCrossSlice entry names the 4.8.23 stars id, which dropped a star binding before the last literal (modules/*/api/* bound api/v1). The id now keeps that binding (orders/api/v1). For one release the entry keeps its 4.8.23 meaning, so verdicts do not change.',
+    'Rewrite the entry with the new id the warning names (for example orders/api/v1/x instead of api/v1/x). A sliceAliases target that maps to more than one universe shape is rejected at config load. This warning does not fail the check.',
+    { oftenAdvisory: true }
+  ),
+
   // ── literal path drift ───────────────────────────────────────────────────
   entry(
     'LITERAL_PATH_DRIFT',

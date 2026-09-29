@@ -124,6 +124,44 @@ describe('class-shape extractor robustness (arkrules cluster)', () => {
     expect(truncated[0]?.severity).toBe('error');
   });
 
+  it('skips a static initialization block instead of reading it as a member', () => {
+    const tricky = `
+export class Tricky<T extends { id: string }> {
+  private items: Map<string, T> = new Map();
+  private label = \`x\${'}'}y\`;
+  private constructor() { this.ensureInvariants(); }
+  static create<T extends { id: string }>(): Tricky<T> { return new Tricky<T>(); }
+  ensureInvariants(): void { if (this.label.length < 0) throw new Error('bad'); }
+  static { const x = { a: 1 }; void x; }
+}`;
+    const staticBlock = `export class S {
+  private constructor(private v: number) { this.ensureInvariants(); }
+  static of(v: number): S { return new S(v); }
+  ensureInvariants(): void { if (this.v < 0) throw new Error('x'); }
+  static { const seed = { a: 1 }; void seed; }
+}`;
+    for (const [file, source] of [
+      ['Tricky.ts', tricky],
+      ['StaticBlock.ts', staticBlock],
+    ] as const) {
+      expect(shapeRow(file, source)).toEqual([
+        {
+          className: file === 'Tricky.ts' ? 'Tricky' : 'S',
+          hasPublicMutableFields: false,
+          truncatedUntil: undefined,
+        },
+      ]);
+      expect(extractCli(file, source).map((shape) => shape.hasPublicMutableFields)).toEqual([false]);
+    }
+    const { members } = scanClassMembers(
+      'static { let a = 1; } private x = 1; static count = 0;'
+    );
+    expect(members.map((member) => `${member.kind}:${member.name}`)).toEqual([
+      'field:x',
+      'field:count',
+    ]);
+  });
+
   it('keeps the generated CLI extractor aligned', () => {
     const source =
       'export class Box<T> { public value: T | undefined; }\nexport class Order { private sep = "}"; private re = /\\}/; public total = 0; }\nexport class Z<T { x = 1 }';

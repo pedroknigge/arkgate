@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { baselineKey } from '../../../src/domain/baselineKey';
 import {
   applyAdvisorySiblingRatchet,
+  childSliceConfigFindings,
   composeSliceDenialMessage,
   crossParentViaSharedHubs,
   findDeniedEdgeDecision,
@@ -20,6 +21,7 @@ import {
   sliceConsumerMessage,
   sliceIdForPath,
   sliceIdentityCollisions,
+  legacyStarsSliceIdForPath,
   type EdgeRule,
 } from '../../../src/domain/layerMatch';
 import { loadArkConfigContract } from '../../../src/domain/configContract';
@@ -282,11 +284,15 @@ describe('childSlices needs a peerIsolation deny rule', () => {
       'peerIsolation with allowed: true',
       { from: 'Application', to: 'Application', allowed: true, peerIsolation: true, childSlices: child },
     ],
-  ])('rejects %s', (_name, rule) => {
+  ])('loads %s (4.8.23 did) and warns CONFIG_CHILD_SLICES_INERT', (_name, rule) => {
     for (const load of [loadArkConfigContract, loadGeneratedArkConfigContract]) {
-      expect(() => load({ ...base, rules: [rule] })).toThrow('$.rules[0].childSlices');
-      expect(() => load({ ...base, rules: [rule] })).toThrow('requires peerIsolation: true and allowed: false');
+      expect(() => load({ ...base, rules: [rule] })).not.toThrow();
     }
+    const findings = childSliceConfigFindings([rule as EdgeRule], ['src/lib/features/a/b/x.ts']);
+    const inert = findings.filter((row) => row.ruleId === 'CONFIG_CHILD_SLICES_INERT');
+    expect(inert).toHaveLength(1);
+    expect(inert[0]?.message).toMatch(/inert.*"peerIsolation": true and "allowed": false/);
+    expect(inert[0]?.failsStrict).toBe(false);
   });
   it('accepts it on a peerIsolation deny rule', () => {
     expect(() =>
@@ -856,5 +862,100 @@ describe('policy delta for sharedImportsSlice stopAt (#335)', () => {
   it('an identical object is no change; a mode change keeps the existing finding', () => {
     expect(ids(object(['a.ts']), object(['a.ts/']))).toEqual([]);
     expect(ids(object(['a.ts']), 'deny')).toEqual(['shared-imports-slice:strengthening']);
+  });
+});
+
+describe('4.8.23 stars ids stay loadable and keep their verdicts for one release', () => {
+  const apiLayers = [{ name: 'Api', patterns: ['src/**'] }];
+  const starsRule = (child: Record<string, unknown> = {}, extra: Partial<EdgeRule> = {}): EdgeRule =>
+    ({
+      from: 'Api',
+      to: 'Api',
+      allowed: false,
+      peerIsolation: true,
+      sliceFolders: ['modules/*/api/*'],
+      sliceIdentity: 'stars',
+      childSlices: { sliceFolders: ['modules/*/api/*/*'], sliceIdentity: 'stars', ...child },
+      ...extra,
+    }) as EdgeRule;
+  const decide = (rule: EdgeRule, fromPath: string, toPath: string) =>
+    findDeniedEdgeDecision([rule], 'Api', 'Api', { fromPath, toPath, layers: apiLayers });
+  const files = [
+    'src/modules/billing/api/v1/x/a.ts',
+    'src/modules/billing/api/v1/y/b.ts',
+    'src/modules/billing/api/v2/z/c.ts',
+    'src/legacy/old.ts',
+  ];
+
+  it('binds the old and the new stars id', () => {
+    expect(sliceIdForPath('src/modules/billing/api/v1/x/a.ts', ['modules/*/api/*'], 'stars')).toBe(
+      'billing/api/v1'
+    );
+    expect(legacyStarsSliceIdForPath('src/modules/billing/api/v1/x/a.ts', ['modules/*/api/*'])).toBe(
+      'api/v1'
+    );
+  });
+
+  it('accepts a legacy sliceAliases target, keeps its verdict, and warns with the new id', () => {
+    const rule = starsRule({ sliceAliases: [{ from: 'src/legacy/**', to: 'api/v1/x' }] });
+    for (const load of [loadArkConfigContract, loadGeneratedArkConfigContract]) {
+      expect(() =>
+        load({ include: ['src'], layers: apiLayers, rules: [rule] })
+      ).not.toThrow();
+    }
+    // Same universe and child as 4.8.23: the aliased file may import its own child.
+    expect(decide(rule, 'src/legacy/old.ts', 'src/modules/billing/api/v1/x/a.ts')).toBeUndefined();
+    // A sibling child is still a sibling crossing, as it was.
+    expect(decide(rule, 'src/legacy/old.ts', 'src/modules/billing/api/v1/y/b.ts')?.sliceVerdict?.reasonId).toBe(
+      'CROSS_SIBLING_SLICE'
+    );
+    const warnings = childSliceConfigFindings([rule], files).filter(
+      (row) => row.ruleId === 'CONFIG_SLICE_LEGACY_STARS_ID'
+    );
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]?.message).toContain('"api/v1/x"');
+    expect(warnings[0]?.message).toContain('billing/api/v1/x');
+  });
+
+  it('rejects a legacy alias target only when it maps to more than one universe shape', () => {
+    const rule = {
+      ...starsRule({ sliceAliases: [{ from: 'src/legacy/**', to: 'api/v1/x' }] }),
+      sliceFolders: ['modules/*/api/*', 'apps/*/*/api/*'],
+    };
+    for (const load of [loadArkConfigContract, loadGeneratedArkConfigContract]) {
+      expect(() => load({ include: ['src'], layers: apiLayers, rules: [rule] })).toThrow(
+        /maps to more than one universe shape/
+      );
+    }
+  });
+
+  it('keeps a legacy universe allowedCrossSlice matching, with a warning naming the new ids', () => {
+    const rule = starsRule({}, { allowedCrossSlice: [{ from: 'api/v1', to: 'api/v2' }] });
+    expect(
+      decide(rule, 'src/modules/billing/api/v1/x/a.ts', 'src/modules/billing/api/v2/z/c.ts')
+    ).toBeUndefined();
+    const warnings = childSliceConfigFindings([rule], files).filter(
+      (row) => row.ruleId === 'CONFIG_SLICE_LEGACY_STARS_ID'
+    );
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]?.message).toContain('billing/api/v1 → billing/api/v2');
+    // The new form is silent and matches too.
+    const modern = starsRule({}, { allowedCrossSlice: [{ from: 'billing/api/v1', to: 'billing/api/v2' }] });
+    expect(
+      decide(modern, 'src/modules/billing/api/v1/x/a.ts', 'src/modules/billing/api/v2/z/c.ts')
+    ).toBeUndefined();
+    expect(childSliceConfigFindings([modern], files).map((row) => row.ruleId)).not.toContain(
+      'CONFIG_SLICE_LEGACY_STARS_ID'
+    );
+  });
+
+  it('keeps a legacy childSlices.allowedCrossSlice matching, with a warning', () => {
+    const rule = starsRule({ allowedCrossSlice: [{ from: 'api/v1/x', to: 'api/v1/y' }] });
+    expect(
+      decide(rule, 'src/modules/billing/api/v1/x/a.ts', 'src/modules/billing/api/v1/y/b.ts')
+    ).toBeUndefined();
+    expect(
+      childSliceConfigFindings([rule], files).some((row) => row.ruleId === 'CONFIG_SLICE_LEGACY_STARS_ID')
+    ).toBe(true);
   });
 });

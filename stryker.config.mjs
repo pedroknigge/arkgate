@@ -39,7 +39,7 @@ const config = {
     'bin/lib/analysis-completeness.mjs:81-141',
     // Receiver-trace merges shifted the same resolver body to 739-789; the memory
     // pass (lazy source reads, path reuse, resolution memo) shifted it to 786-839.
-    'bin/lib/resolved-candidate-facts.mjs:786-839',
+    'bin/lib/resolved-candidate-facts.mjs:787-840',
     // managed-upgrade force-preserve covered by fieldGapS4 unit tests; not in critical
     // mutation groups for 4.1.0 (NoCoverage noise on toml-section branch residual).
     'bin/lib/resident-hook.mjs:115-162',
@@ -87,7 +87,7 @@ const config = {
     // #335/#336 mode, stop, and ratchet types above it moved it to 895-922; the
     // stars-identity JSDoc correction moved it to 897-924; the memory pass
     // sliceFolders parse cache moved it to 923-950.
-    'src/domain/layerMatch.ts:923-950',
+    'src/domain/layerMatch.ts:950-977',
     // AP02 (#264) shifted the helper; sharedImportsSlice and #308 sliceIdentity
     // compares shifted it again. Same policyDeltaAcknowledgementMatches body.
     // #326 compareChildSlices shifted the same function by 93 lines.

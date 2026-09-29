@@ -8,20 +8,29 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
     },
     "./nestjs": {
-      "types": "./dist/nestjs/index.d.ts",
-      "import": "./dist/nestjs/index.js",
-      "require": "./dist/nestjs/index.cjs"
+      "import": {
+        "types": "./dist/nestjs/index.d.ts",
+        "default": "./dist/nestjs/index.js"
+      },
+      "require": {
+        "types": "./dist/nestjs/index.d.cts",
+        "default": "./dist/nestjs/index.cjs"
+      }
     },
     "./package.json": "./package.json"
   },
   "files": [
     "dist",
-    "!dist/**/*.d.cts",
     "README.md"
   ],
   "peerDependencies": {

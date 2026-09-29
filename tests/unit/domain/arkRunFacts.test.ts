@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   ARKRUN_KERNEL_FACTORY_CALLEES,
   ARKRUN_KERNEL_INTERACTION_CALLEES,
+  arkRunEffectiveIntentPrefixes,
   createArkRunKernelRootSpecifierMatcher,
   arkRunKernelCallKind,
   extractArkRunDeclarationsFromSource,
@@ -264,6 +265,27 @@ other.send('x');
     expect(extractArkRunKernelCallsFromSource('src/application/a.ts', source)).toEqual([]);
   });
 
+  it('traces a namespace import of a composition root one member hop down', () => {
+    const source = `
+import * as main from '../main';
+import * as util from './util';
+export function wire5() { main.ark.publisher('Billing.Five'); }
+export function wire6() { main.ark.eventBus.publish(Placed, {}); }
+const kernel = main.ark;
+kernel.send('Undeclared.K', {});
+main.logger.info('x');
+util.ark.send('Undeclared.U', {});
+`;
+    const calls = extractArkRunKernelCallsFromSource('src/application/x.ts', source, {
+      isKernelRootSpecifier: (specifier) => specifier === '../main',
+    });
+    expect(calls.map((call) => `${call.receiver}:${call.callee}:${call.nameLiteral ?? ''}`)).toEqual([
+      'ark:publisher:Billing.Five',
+      'eventBus:publish:',
+      'kernel:send:Undeclared.K',
+    ]);
+  });
+
   it('traces plain aliasing and typeof-typed bindings of a kernel receiver', () => {
     const source = `
 import { ark } from '../main';
@@ -297,6 +319,35 @@ export async function viaParam(k, res) {
     expect(calls.map((call) => `${call.receiver}:${call.nameLiteral}`)).toEqual([
       'k:Application.Order.Place',
     ]);
+  });
+
+  it('counts an untraced receiver whose name carries a configured intent prefix', () => {
+    const source = `
+export function wire(k: any) {
+  k.publisher('Billing.Order.Placed');
+  k.publisher('Domain.X.Y');
+  k.publisher('Other.X');
+  k.send('Billing.', {});
+}
+`;
+    const config = {
+      layers: [
+        { name: 'DomainModel', intentPrefixes: ['Billing.'] },
+        { name: 'ApplicationOrchestration', intentPrefixes: ['App'] },
+      ],
+    };
+    const prefixes = arkRunEffectiveIntentPrefixes(config);
+    expect(prefixes).toContain('Billing.');
+    expect(prefixes).toContain('App');
+    expect(prefixes).toContain('Domain.');
+    const calls = extractArkRunKernelCallsFromSource('src/application/x.ts', source, {
+      intentPrefixes: prefixes,
+    });
+    expect(calls.map((call) => call.nameLiteral)).toEqual(['Billing.Order.Placed', 'Domain.X.Y']);
+    // Without the project's prefixes only canonical names count.
+    expect(
+      extractArkRunKernelCallsFromSource('src/application/x.ts', source).map((c) => c.nameLiteral)
+    ).toEqual(['Domain.X.Y']);
   });
 
   it('does not resolve a creator bound to two different names in one file', () => {

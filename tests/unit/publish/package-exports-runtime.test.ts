@@ -66,6 +66,15 @@ describe('isolated runtime distribution', () => {
     expect(pkg.name).toBe('@arkgate/runtime');
     expect(pkg.version).toMatch(/^0\./);
     expect(pkg.publishConfig.tag).toBe('experimental');
-    expect(pkg.files).toEqual(['dist', '!dist/**/*.d.cts', 'README.md']);
+    expect(pkg.files).toEqual(['dist', 'README.md']);
+    // CJS consumers get CJS declarations, mapped per condition like the root package.
+    expect(pkg.exports['.']).toEqual({
+      import: { types: './dist/index.d.ts', default: './dist/index.js' },
+      require: { types: './dist/index.d.cts', default: './dist/index.cjs' },
+    });
+    expect(pkg.exports['./nestjs']).toEqual({
+      import: { types: './dist/nestjs/index.d.ts', default: './dist/nestjs/index.js' },
+      require: { types: './dist/nestjs/index.d.cts', default: './dist/nestjs/index.cjs' },
+    });
   });
 });

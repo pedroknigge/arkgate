@@ -95,13 +95,57 @@ describe('hook fails closed when the gate cannot run', () => {
     expect(out.stderr).toMatch(/WRITE_GATE_UNAVAILABLE/);
   });
 
-  it('blocks when the schemaVersion is unsupported or the config file is missing', () => {
+  it('blocks when the schemaVersion is unsupported; a project with no config is not blocked', () => {
     const invalid = project({ schemaVersion: '9.9' });
     expect(hook(invalid, write(invalid, 'src/domain/c.ts', BAD_IMPORT)).status).toBe(2);
+    // No ark.config.json anywhere up the tree: not an Ark project (4.8.23 never blocked it).
     const missing = project(undefined);
     const out = hook(missing, write(missing, 'src/domain/c.ts', BAD_IMPORT));
-    expect(out.status).toBe(2);
-    expect(out.stderr).toMatch(/File not found/);
+    expect(out.status).toBe(0);
+    expect(out.stderr).toMatch(/no ark\.config\.json found/);
+  });
+
+  it('walks up from the payload to the Ark root when the hook runs from a subdirectory', () => {
+    const root = project(BASE_CONFIG);
+    const good = write(root, 'src/domain/good.ts', 'export const good = 1;\n');
+    const bad = write(root, 'src/domain/c.ts', BAD_IMPORT);
+    // Host ran the hook from src/ with `--root .` and the --root-env var unset.
+    const run = (payload: unknown) => {
+      const result = spawnSync(
+        process.execPath,
+        [mcpBin, '--hook', '--root', '.', '--root-env', 'ARK_TEST_UNSET_ROOT', '--config', 'ark.config.json'],
+        {
+          input: JSON.stringify(payload),
+          encoding: 'utf8',
+          cwd: path.join(root, 'src'),
+          env: { ...process.env, ARK_TEST_UNSET_ROOT: '' },
+        }
+      );
+      return { status: result.status, stderr: result.stderr };
+    };
+    expect(run(good).status).toBe(0);
+    const denied = run(bad);
+    expect(denied.status).toBe(2);
+    expect(denied.stderr).not.toMatch(/WRITE_GATE_UNAVAILABLE/);
+
+    // A file outside any Ark project is never blocked.
+    const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-hook-outside-'));
+    cleanup.push(outside);
+    expect(run(write(outside, 'x.ts', BAD_IMPORT)).status).toBe(0);
+
+    // A discovered Ark root whose config cannot load still fails closed.
+    const broken = project('{ broken');
+    const result = spawnSync(
+      process.execPath,
+      [mcpBin, '--hook', '--root', '.', '--config', 'ark.config.json'],
+      {
+        input: JSON.stringify(write(broken, 'src/domain/c.ts', BAD_IMPORT)),
+        encoding: 'utf8',
+        cwd: path.join(broken, 'src'),
+      }
+    );
+    expect(result.status).toBe(2);
+    expect(result.stderr).toMatch(/WRITE_GATE_UNAVAILABLE/);
   });
 
   it('emits Grok deny JSON on stdout and still lets the config itself be repaired', () => {

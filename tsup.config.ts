@@ -11,12 +11,16 @@ const pkg = JSON.parse(fs.readFileSync(new URL('./package.json', import.meta.url
  * ESM default. The entry also has named exports, so cjsInterop alone leaves a namespace;
  * this footer re-points module.exports at the plugin and keeps every named export reachable
  * as a non-enumerable property (the plugin's own enumerable keys stay meta/rules/configs).
+ * A non-enumerable `__esModule: true` lets Babel `_interopRequireWildcard` and TypeScript
+ * `__importStar` (which copy only enumerable keys otherwise) read those named exports; the
+ * `default` getter still returns the plugin, so default imports resolve to it.
  */
 const ESLINT_CJS_MARKER = '/* arkgate:eslint-cjs-plugin-shape */';
 const ESLINT_CJS_FOOTER = `${ESLINT_CJS_MARKER}
 ;(function(){var m=module.exports,p=m&&m.default;if(!p||typeof p!=="object")return;
 Object.keys(m).forEach(function(k){if(Object.prototype.hasOwnProperty.call(p,k))return;
 Object.defineProperty(p,k,{get:function(){return k==="default"?p:m[k]},enumerable:false,configurable:true});});
+if(!Object.prototype.hasOwnProperty.call(p,"__esModule"))Object.defineProperty(p,"__esModule",{value:true,enumerable:false,configurable:true});
 module.exports=p;})();
 `;
 

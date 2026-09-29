@@ -551,6 +551,106 @@ export function hookRootFromArgv(argv, env = process.env, cwd = process.cwd()) {
   return root;
 }
 
+function hookArgvConfig(argv) {
+  let config = 'ark.config.json';
+  let explicit = false;
+  for (let index = 2; index < argv.length; index += 1) {
+    if (argv[index] === '--config' && argv[index + 1]) {
+      config = argv[++index];
+      explicit = true;
+    }
+  }
+  return { config, explicit };
+}
+
+function walkUpForConfig(start, config) {
+  let dir = path.resolve(start);
+  for (;;) {
+    if (fs.existsSync(path.join(dir, config))) return dir;
+    const parent = path.dirname(dir);
+    if (parent === dir) return null;
+    dir = parent;
+  }
+}
+
+/**
+ * Hook project root. A set `--root-env` variable or a root that already holds the
+ * config wins (the runtime's own resolution). Otherwise — the host ran the hook from a
+ * subdirectory, or the env var is unset — walk up from the payload (each written file,
+ * then `cwd`, then `workspace_roots`, then the argv root) to the nearest config, the
+ * way `ark-check` walks up.
+ * `configFound: false` means the write is not inside any Ark project.
+ * @returns {{ root: string, configFound: boolean, configExplicit: boolean, source: string }}
+ */
+export function discoverHookRoot({
+  argv,
+  hookInput,
+  env = process.env,
+  cwd = process.cwd(),
+  grokHookEvent = Boolean(process.env.GROK_HOOK_EVENT),
+}) {
+  const base = hookRootFromArgv(argv, env, cwd);
+  const { config, explicit } = hookArgvConfig(argv);
+  const result = (root, configFound, source) => ({
+    root,
+    configFound,
+    configExplicit: explicit,
+    source,
+  });
+  if (path.isAbsolute(config)) return result(base, fs.existsSync(config), 'argv');
+  if (fs.existsSync(path.join(base, config))) return result(base, true, 'argv');
+  let payload;
+  try {
+    payload = JSON.parse(hookInput ?? '');
+  } catch {
+    payload = undefined;
+  }
+  const payloadCwd =
+    payload && typeof payload.cwd === 'string' && payload.cwd.trim() ? payload.cwd.trim() : null;
+  const starts = [];
+  if (payload && typeof payload === 'object') {
+    const targets = hookPayloadTargets(normalizeHookPayload(payload, grokHookEvent)) ?? [];
+    for (const target of targets) {
+      if (typeof target !== 'string' || !target) continue;
+      starts.push(path.dirname(path.resolve(payloadCwd ?? base, target)));
+    }
+    if (payloadCwd) starts.push(path.resolve(payloadCwd));
+    for (const workspace of Array.isArray(payload.workspace_roots) ? payload.workspace_roots : []) {
+      if (typeof workspace === 'string' && workspace.trim()) starts.push(path.resolve(workspace));
+    }
+  }
+  starts.push(base);
+  for (const start of starts) {
+    const found = walkUpForConfig(start, config);
+    if (found) return result(found, true, 'payload');
+  }
+  return result(base, false, 'none');
+}
+
+/**
+ * The write is outside any Ark project (no config found from the hook root or the
+ * payload): ArkGate does not govern it, so the hook allows it.
+ * @returns {{ status: number, stdout: string, stderr: string }}
+ */
+export function hookOutsideArkProjectResponse({ hookInput, config = 'ark.config.json', grokHookEvent }) {
+  let stdout = '';
+  let payload;
+  try {
+    payload = JSON.parse(hookInput ?? '');
+  } catch {
+    return { status: 0, stdout, stderr: '' };
+  }
+  emitHostAllow(
+    { stdout: (value) => { stdout += value; }, stderr: () => {} },
+    normalizeHookPayload(payload, grokHookEvent)
+  );
+  return {
+    status: 0,
+    stdout,
+    stderr: `[ark-mcp] no ${config} found for this write; ArkGate does not govern it.\n`,
+  };
+}
+
 function patchTargets(patch) {
   if (typeof patch !== 'string') return [];
   const targets = [];

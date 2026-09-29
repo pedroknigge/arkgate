@@ -1488,10 +1488,12 @@ function printSessionContext(config, profile, forbiddenGlobals, args, configPath
   process.stdout.write(`${lines.join('\n')}\n`);
 }
 
-export async function runArkMcp({ hookInput } = {}) {
+export async function runArkMcp({ hookInput, hookRoot } = {}) {
   const processStartedAt = new Date().toISOString();
   const runtimeId = randomUUID();
   const args = parseArgs(process.argv);
+  // The launcher already resolved the hook's project root (walk-up from the payload).
+  if (args.hook && typeof hookRoot === 'string' && hookRoot) args.root = hookRoot;
   const requestedRoot = args.root;
   const resolvedRoot = canonicalPathIncludingMissing(requestedRoot);
   // MCP identity and file containment use the canonical workspace. Hook payloads,
