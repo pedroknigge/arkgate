@@ -56,8 +56,9 @@ export type OrderPlane = {
   refreshSigma(sigma: Record<string, unknown>): Release;
   /**
    * Reinstall a validated Release (frozen or JSON-deserialized; hash is identity).
-   * On a live plane it never changes ξ and never moves the version backwards —
-   * a pattern change is proposeRelease then apply. Not durable; does not close K01.
+   * On a live plane it never changes ξ and accepts only the current version or the
+   * next one (no rollback, no jump) — a pattern change is proposeRelease then apply.
+   * A freeze time after the plane clock fails closed. Not durable; does not close K01.
    */
   restore(release: Release): Release;
   current(): Release | null;
@@ -79,13 +80,18 @@ export function createOrderPlane(options: CreateOrderPlaneOptions): OrderPlane {
   };
   const store = options.store;
   const catalogDigest = options.catalogDigest;
-  const integrity = { maxXiKeys, xiSchema: options.xiSchema, catalogDigest };
+  const integrity = (now: number) => ({
+    maxXiKeys,
+    xiSchema: options.xiSchema,
+    catalogDigest,
+    now,
+  });
   // ADR 0034 D8: a stored Release is validated exactly like restore() — fail closed.
   const loaded: unknown = store ? store.load() : null;
   let current: Release | null =
     loaded === null || loaded === undefined
       ? null
-      : rehydrateRelease(loaded, integrity, 'ReleaseStore.load()');
+      : rehydrateRelease(loaded, integrity(clock.now()), 'ReleaseStore.load()');
   let version = current?.version ?? 0;
 
   /** Save first; the plane advances only after the store accepted the Release. */
@@ -202,14 +208,16 @@ export function createOrderPlane(options: CreateOrderPlaneOptions): OrderPlane {
       );
     },
     restore(release) {
-      const candidate = rehydrateRelease(release, integrity);
+      const candidate = rehydrateRelease(release, integrity(clock.now()));
       if (current) {
         // ξ changes only through the valve (proposeRelease -> apply).
         assertUnvalvedRelease(current, candidate.xi);
-        if (candidate.version < current.version) {
+        // Only a Release this plane's own verbs could reach: the current version
+        // (refreshSigma) or the next one (a same-ξ release()). No rollback, no jump.
+        if (candidate.version < current.version || candidate.version > current.version + 1) {
           throw new ArkOrderError(
             'ARKORDER_UNVALVED_RELEASE',
-            `restore() cannot move the version backwards (${candidate.version} < ${current.version}); change the pattern with proposeRelease then apply`
+            `restore() on a live plane accepts version ${current.version} or ${current.version + 1}, got ${candidate.version}; change the pattern with proposeRelease then apply`
           );
         }
       }

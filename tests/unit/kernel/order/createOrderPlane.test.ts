@@ -495,13 +495,46 @@ describe('createOrderPlane (Haken slaving)', () => {
     expect(codeOf(() => p.restore(v1))).toBe('ARKORDER_UNVALVED_RELEASE');
     expect(p.current()).toBe(v2);
     // Same ξ at an equal version with a different σ reinstalls.
-    const sameXi = createOrderPlane({ projector: billingProjector, clocks: { now: () => 5 } });
+    const sameXi = createOrderPlane({ projector: billingProjector, clocks: { now: () => 1 } });
     sameXi.restore(v2);
     const refreshed = sameXi.refreshSigma({ seatCap: 3 });
     const restored = p.restore(refreshed);
     expect(restored.version).toBe(2);
     expect(p.current()?.sigma.seatCap).toBe(3);
     expect(p.current()?.xiHash).toBe(v2.xiHash);
+    // Version is not hashed: a jump past the next version is refused (no forged 999),
+    // while the next version (what a same-ξ release() mints) reinstalls.
+    const wire = JSON.parse(JSON.stringify(refreshed));
+    expect(codeOf(() => p.restore({ ...wire, version: 999 }))).toBe('ARKORDER_UNVALVED_RELEASE');
+    expect(p.current()?.version).toBe(2);
+    expect(p.restore({ ...wire, version: 3 }).version).toBe(3);
+    expect(p.release({ plan: 'pro', cycle: 'monthly', tenancy: 'single' }).version).toBe(4);
+  });
+
+  it('STORE-003: a freeze time after the plane clock fails closed (unhashed fields are bounded)', () => {
+    let now = 100;
+    const clocks = { now: () => now };
+    const source = createOrderPlane({ projector: billingProjector, clocks, sigmaMaxAgeMs: 100 });
+    const good = source.release({ plan: 'free', cycle: 'monthly', tenancy: 'single' });
+    const wire = JSON.parse(JSON.stringify(good));
+    const make = (loaded: unknown) =>
+      createOrderPlane({
+        projector: billingProjector,
+        sigmaMaxAgeMs: 100,
+        store: { load: () => loaded as Release, save() {} },
+        clocks,
+      });
+    // Far-future releasedAt would switch σ staleness off: refused on load and restore.
+    expect(() => make({ ...wire, releasedAt: 9e15 })).toThrow(/releasedAt/);
+    expect(() => source.restore({ ...wire, releasedAt: 9e15 })).toThrow(/releasedAt/);
+    // σ.releasedAt is hashed, but a recomputed hash is not a signature: bounded too.
+    const futureSigma = createOrderPlane({ projector: billingProjector, clocks: { now: () => 50 } })
+      .release({ plan: 'free', cycle: 'monthly', tenancy: 'single' }, { releasedAt: 9e15 });
+    expect(() => make(JSON.parse(JSON.stringify(futureSigma)))).toThrow(/σ\.releasedAt/);
+    // The untampered copy loads and goes stale on schedule.
+    const loaded = make(wire);
+    now = 100_000;
+    expect(loaded.ingest({ kind: 'InvoicePosted' }).kind).toBe('hold');
   });
 
   it('STORE-001: ReleaseStore.load() output is validated; tampering fails closed at construction', () => {
@@ -590,6 +623,18 @@ describe('createOrderPlane (Haken slaving)', () => {
       )
     ).toBe('ARKORDER_STALE_PROPOSAL');
     expect(p.current()?.version).toBe(2);
+    // The binding is data, not a capability: a hand-built proposal that states the
+    // current base and the exact transition is the same proposal proposeRelease would
+    // return, so it applies — the reviewed blast is still what commits (never empty).
+    const exact = p.proposeRelease({ cycle: 'annual', tenancy: 'org' });
+    const handBuilt = {
+      nextXi: { ...exact.nextXi },
+      blastRadius: [...exact.blastRadius],
+      invalidations: [...exact.invalidations],
+      baseXiHash: current.xiHash,
+      baseVersion: current.version,
+    };
+    expect(handBuilt).toEqual({ ...exact });
     // A proposal survives JSON (human review) and still applies when it is current.
     const reviewed = JSON.parse(JSON.stringify(p.proposeRelease({ tenancy: 'team' })));
     expect(p.apply(reviewed).version).toBe(3);

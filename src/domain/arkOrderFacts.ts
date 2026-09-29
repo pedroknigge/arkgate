@@ -56,6 +56,97 @@ export type ResolvedArkOrderBudgetLeakFact = {
   kind: string;
 };
 
+/**
+ * XIWRITE-001: same engine as `globToRegExp` in src/domain/layerMatch.ts.
+ * Inlined so generate:cli-pure emits self-contained bin/lib/ark-order-facts.mjs /
+ * ark-order-sensors.mjs
+ * (layerMatch is derived to bin/ark-layer-match.mjs, not a bin/lib sibling).
+ */
+const appliesToRegexpCache = new Map<string, RegExp>();
+
+function escapeAppliesToLiteral(ch: string): string {
+  return /[.*+?^${}()|[\]\\]/.test(ch) ? `\\${ch}` : ch;
+}
+
+function normalizeAppliesToGlob(pattern: string): string {
+  let out = '';
+  for (let i = 0; i < pattern.length; i += 1) {
+    const c = pattern[i];
+    if (c === '\\' && i + 1 < pattern.length) {
+      const next = pattern[i + 1]!;
+      if ('*?{}[],'.includes(next) || next === '\\') {
+        out += '\\' + next;
+        i += 1;
+        continue;
+      }
+      out += '/';
+      continue;
+    }
+    out += c;
+  }
+  return out;
+}
+
+function appliesToBracesBalanced(glob: string): boolean {
+  let depth = 0;
+  for (let i = 0; i < glob.length; i += 1) {
+    const c = glob[i];
+    if (c === '\\') {
+      i += 1;
+      continue;
+    }
+    if (c === '{') depth += 1;
+    else if (c === '}') {
+      depth -= 1;
+      if (depth < 0) return false;
+    }
+  }
+  return depth === 0;
+}
+
+export function arkOrderGlobToRegExp(pattern: string): RegExp {
+  const cached = appliesToRegexpCache.get(pattern);
+  if (cached) return cached;
+  const glob = normalizeAppliesToGlob(pattern);
+  const useBraces = appliesToBracesBalanced(glob);
+  let out = '';
+  let braceDepth = 0;
+  for (let i = 0; i < glob.length; i += 1) {
+    const c = glob[i];
+    if (c === '\\' && i + 1 < glob.length) {
+      out += escapeAppliesToLiteral(glob[i + 1]!);
+      i += 1;
+    } else if (c === '*') {
+      if (glob[i + 1] === '*') {
+        if (glob[i + 2] === '/') {
+          out += '(?:.*/)?';
+          i += 2;
+        } else {
+          out += '.*';
+          i += 1;
+        }
+      } else {
+        out += '[^/]*';
+      }
+    } else if (c === '?') {
+      out += '[^/]';
+    } else if (c === '{' && useBraces) {
+      out += '(?:';
+      braceDepth += 1;
+    } else if (c === '}' && useBraces && braceDepth > 0) {
+      out += ')';
+      braceDepth -= 1;
+    } else if (c === ',' && useBraces && braceDepth > 0) {
+      out += '|';
+    } else {
+      out += escapeAppliesToLiteral(c);
+    }
+  }
+  const re = new RegExp(`^${out}$`);
+  appliesToRegexpCache.set(pattern, re);
+  return re;
+}
+
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -95,8 +186,30 @@ export function extractArkOrderPlaneCallsFromSource(
 const PLANE_BINDING_RE =
   /\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*(?::[^=;\n]+)?=\s*createOrderPlane\s*(?:<[^>]*>)?\s*\(/g;
 
-/** Conventional plane names: `plane`, `orderPlane`, `billingPlane`, … (not the factory). */
+/**
+ * Conventional plane names: `plane`, `orderPlane`, `billingPlane`, … (not the factory).
+ * A name alone is never evidence (`clipPlane.set`, `controlPlane.update` are not ArkOrder):
+ * it counts only in a file that imports `arkgate/order`, or on a named import from a
+ * declared `planeRoots` module.
+ */
 const CONVENTIONAL_PLANE_NAME_RE = /^(?:plane|[A-Za-z_$][\w$]*Plane)$/;
+
+/** `plane: OrderPlane` — parameters, fields, and variables annotated with the plane type. */
+const ORDER_PLANE_ANNOTATION_RE =
+  /\b([A-Za-z_$][\w$]*)\s*[?!]?\s*:\s*(?:Readonly\s*<\s*)?OrderPlane\b/g;
+
+const ARKORDER_IMPORT_RE =
+  /\bfrom\s+['"]arkgate\/order(?:\/[^'"]*)?['"]|\brequire\s*\(\s*['"]arkgate\/order(?:\/[^'"]*)?['"]|\bimport\s*\(\s*['"]arkgate\/order(?:\/[^'"]*)?['"]/;
+
+const NAMED_IMPORT_RE = /\bimport\s+(?:type\s+)?\{([^}]*)\}\s*from\s*['"]([^'"]+)['"]/g;
+
+const RELATIVE_EXTENSIONS = ['', '.ts', '.tsx', '.mts', '.cts', '.js', '.jsx', '.mjs', '.cjs'];
+
+/** Receiver-resolution context for the plane-bound extractors. */
+export type ArkOrderPlaneReceiverOptions = {
+  /** Declared `arkOrder.planeRoots` globs; a named import from one resolves to a plane. */
+  planeRoots?: readonly string[];
+};
 
 /** Trailing identifier, allowing a non-null `!` and optional-chain `?` before the dot. */
 const TRAILING_IDENTIFIER_RE = /([A-Za-z_$][\w$]*)\s*!?\s*\??\s*$/;
@@ -115,6 +228,94 @@ export function arkOrderPlaneBindings(content: string): string[] {
     if (match[1]) names.add(match[1]);
   }
   return [...names].sort();
+}
+
+function normalizeRelativePath(parts: readonly string[]): string {
+  const out: string[] = [];
+  for (const part of parts) {
+    if (part === '' || part === '.') continue;
+    if (part === '..') {
+      if (out.length === 0) return '';
+      out.pop();
+      continue;
+    }
+    out.push(part);
+  }
+  return out.join('/');
+}
+
+/** Project-relative candidates for a relative specifier (lexical; no tsconfig paths). */
+function relativeModuleCandidates(file: string, specifier: string): string[] {
+  if (!specifier.startsWith('./') && !specifier.startsWith('../')) return [];
+  const dir = file.replace(/\\/g, '/').split('/').slice(0, -1);
+  const base = normalizeRelativePath([...dir, ...specifier.split('/')]);
+  if (!base) return [];
+  const stem = base.replace(/\.(?:[cm]?js|jsx)$/, '');
+  const out = new Set<string>();
+  for (const root of [base, stem]) {
+    for (const ext of RELATIVE_EXTENSIONS) out.add(`${root}${ext}`);
+    for (const ext of RELATIVE_EXTENSIONS.slice(1)) out.add(`${root}/index${ext}`);
+  }
+  return [...out];
+}
+
+function specifierResolvesToPlaneRoot(
+  file: string,
+  specifier: string,
+  planeRoots: readonly string[]
+): boolean {
+  const candidates = relativeModuleCandidates(file, specifier);
+  if (candidates.length === 0) return false;
+  return planeRoots.some((pattern) => {
+    let re: RegExp;
+    try {
+      re = arkOrderGlobToRegExp(pattern);
+    } catch {
+      return false;
+    }
+    return candidates.some((candidate) => re.test(candidate));
+  });
+}
+
+/**
+ * Identifiers that name an order plane in this file, from direct evidence only:
+ * bound to `createOrderPlane(...)`, annotated `: OrderPlane`, or a `plane` / `*Plane`
+ * named import from a declared plane root. `isArkOrderFile` reports an `arkgate/order`
+ * import, which admits the conventional names file-wide.
+ */
+export function arkOrderPlaneReceivers(
+  file: string,
+  content: string,
+  options: ArkOrderPlaneReceiverOptions = {}
+): { names: string[]; isArkOrderFile: boolean } {
+  const source = stripCommentsPreservingLines(content);
+  const names = new Set(arkOrderPlaneBindings(content));
+  const annotated = new RegExp(ORDER_PLANE_ANNOTATION_RE.source, 'g');
+  let match: RegExpExecArray | null;
+  while ((match = annotated.exec(source)) !== null) {
+    if (match[1]) names.add(match[1]);
+  }
+  const planeRoots = options.planeRoots ?? [];
+  if (planeRoots.length > 0) {
+    const imports = new RegExp(NAMED_IMPORT_RE.source, 'g');
+    while ((match = imports.exec(source)) !== null) {
+      if (!specifierResolvesToPlaneRoot(file, match[2] ?? '', planeRoots)) continue;
+      for (const element of (match[1] ?? '').split(',')) {
+        const parts = element
+          .trim()
+          .replace(/^type\s+/, '')
+          .split(/\s+as\s+/);
+        const imported = parts[0]?.trim() ?? '';
+        const local = (parts[1] ?? parts[0] ?? '').trim();
+        if (!local || !/^[A-Za-z_$][\w$]*$/.test(local)) continue;
+        if (CONVENTIONAL_PLANE_NAME_RE.test(imported) || CONVENTIONAL_PLANE_NAME_RE.test(local)) {
+          names.add(local);
+        }
+      }
+    }
+  }
+  names.delete(ARKORDER_PLANE_FACTORY);
+  return { names: [...names].sort(), isArkOrderFile: ARKORDER_IMPORT_RE.test(source) };
 }
 
 const KEYWORDS_BEFORE_PAREN = new Set([
@@ -157,30 +358,43 @@ function receiverBefore(before: string): string | null {
   return null;
 }
 
-function isPlaneReceiver(name: string | null, bound: ReadonlySet<string>): boolean {
+type PlaneReceiverContext = { names: ReadonlySet<string>; isArkOrderFile: boolean };
+
+function planeReceiverContext(
+  file: string,
+  content: string,
+  options: ArkOrderPlaneReceiverOptions
+): PlaneReceiverContext {
+  const resolved = arkOrderPlaneReceivers(file, content, options);
+  return { names: new Set(resolved.names), isArkOrderFile: resolved.isArkOrderFile };
+}
+
+function isPlaneReceiver(name: string | null, context: PlaneReceiverContext): boolean {
   if (!name || name === ARKORDER_PLANE_FACTORY) return false;
-  return bound.has(name) || CONVENTIONAL_PLANE_NAME_RE.test(name);
+  if (context.names.has(name)) return true;
+  return context.isArkOrderFile && CONVENTIONAL_PLANE_NAME_RE.test(name);
 }
 
 /**
- * Direct evidence only: `.update|patch|set|mutate(` whose receiver is a plane —
- * bound to createOrderPlane(...) in this file, or named `plane` / `*Plane`.
- * EOSF5-001: Map / URLSearchParams / React `order.set` / `prisma.x.update` are not ξ
- * mutation, even inside the plane-root file.
+ * Direct evidence only: `.update|patch|set|mutate(` whose receiver is a plane (see
+ * arkOrderPlaneReceivers). EOSF5-001: Map / URLSearchParams / React `order.set` /
+ * `prisma.x.update` are not ξ mutation, even inside the plane-root file; nor is
+ * `clipPlane.set` / `controlPlane.update` in a file with no ArkOrder evidence.
  */
 export function extractArkOrderGenericUpdatesFromSource(
   file: string,
-  content: string
+  content: string,
+  options: ArkOrderPlaneReceiverOptions = {}
 ): ResolvedArkOrderGenericUpdateFact[] {
   const source = stripCommentsPreservingLines(content);
-  const bound = new Set(arkOrderPlaneBindings(content));
+  const context = planeReceiverContext(file, content, options);
   const facts: ResolvedArkOrderGenericUpdateFact[] = [];
   const re = /\.((?:update|patch|set|mutate))\s*\(/g;
   let match: RegExpExecArray | null;
   while ((match = re.exec(source)) !== null) {
     const method = match[1]!;
     const before = source.slice(Math.max(0, match.index - 160), match.index);
-    if (!isPlaneReceiver(receiverBefore(before), bound)) continue;
+    if (!isPlaneReceiver(receiverBefore(before), context)) continue;
     facts.push({ file, line: lineAt(content, match.index), method });
   }
   return facts;
@@ -219,10 +433,20 @@ export function extractArkOrderXiFieldWritesFromSource(
 }
 
 /**
- * ingest() assigned into a Release / ξ holder: a whole-word `xi` / `release` / `pattern` /
- * `house` / `current` / `currentRelease|Xi|Pattern` binding, or a property write such as
- * `store.xi =` / `release.xi[k] =` / `store.current =`. Names that merely start with those
- * words (`currentResidual`, `patternResult`) and comparisons (`===`) are not evidence.
+ * Holder names that read as a Release or ξ store: whole-word `xi` / `release` /
+ * `pattern` / `house` / `current`; an `xi` camelCase head (`xiNext`, `xiState`); or a
+ * `…Xi` / `…Release` / `…Pattern` camelCase tail (`nextXi`, `currentRelease`).
+ * Trade-off (ADR 0013, prefer false negatives): names that only *start* with
+ * release/current/pattern (`releaseState`, `currentResidual`, `patternResult`,
+ * `releaseDate`) are not evidence, so `this.releaseState = plane.ingest(e)` stays silent.
+ */
+const INGEST_XI_HOLDER_SOURCE =
+  '(?:xi(?:[A-Z][\\w$]*)?|release|pattern|house|current|[A-Za-z_$][\\w$]*?(?:Xi|Release|Pattern))(?![\\w$])';
+
+/**
+ * ingest() assigned into a Release / ξ holder (INGEST_XI_HOLDER_SOURCE), as a binding
+ * or a property write such as `store.xi =` / `release.xi[k] =` / `this.nextXi =`.
+ * Comparisons (`===`) and arrows (`=>`) are not evidence.
  */
 export function extractArkOrderIngestWritesXiFromSource(
   file: string,
@@ -230,8 +454,10 @@ export function extractArkOrderIngestWritesXiFromSource(
 ): ResolvedArkOrderIngestWriteFact[] {
   const source = stripCommentsPreservingLines(content);
   const facts: ResolvedArkOrderIngestWriteFact[] = [];
-  const re =
-    /(?:\b(?:xi|release|pattern|house|current(?:Release|Xi|Pattern)?)\b|\.(?:xi|release|pattern|current)\b)(?:\s*:\s*[A-Za-z_$][\w$.<>, |[\]]*?)?\s*(?:\[[^\]\n]*\])?\s*=(?![=>])\s*[^\n;]{0,160}?\bingest\s*\(/gi;
+  const re = new RegExp(
+    `(?:(?<![\\w$])|\\.)${INGEST_XI_HOLDER_SOURCE}(?:\\s*:\\s*[A-Za-z_$][\\w$.<>, |[\\]]*?)?\\s*(?:\\[[^\\]\\n]*\\])?\\s*=(?![=>])\\s*[^\\n;]{0,160}?\\bingest\\s*\\(`,
+    'g'
+  );
   let match: RegExpExecArray | null;
   while ((match = re.exec(source)) !== null) {
     facts.push({ file, line: lineAt(content, match.index) });
@@ -257,12 +483,12 @@ export function extractArkOrderReleaseKeyCountsFromSource(
   return facts;
 }
 
+/** Keys of a flat object-literal body: `key: v`, `'key': v`, and shorthand `key`. */
 function literalKeys(body: string): string[] {
   const keys: string[] = [];
-  const re = /(?:^|[{,\s])['"]?([A-Za-z_$][\w$]*)['"]?\s*:/g;
-  let match: RegExpExecArray | null;
-  while ((match = re.exec(body)) !== null) {
-    if (match[1]) keys.push(match[1]);
+  for (const entry of body.split(',')) {
+    const match = /^\s*(['"]?)([A-Za-z_$][\w$]*)\1\s*(?::|$)/.exec(entry);
+    if (match?.[2]) keys.push(match[2]);
   }
   return keys;
 }
@@ -270,21 +496,22 @@ function literalKeys(body: string): string[] {
 /**
  * Freshness keys in the ξ literal (first argument) of `plane.release({...})` /
  * `plane.proposeRelease({...})`. σ (the second argument) may carry freshUntil — that
- * is where freshness belongs. The receiver must be a plane (bound or `*Plane`), so a
- * lock/lease `release({ ttl })` is never evidence.
+ * is where freshness belongs. The receiver must be a plane (arkOrderPlaneReceivers), so
+ * a lock/lease `release({ ttl })` is never evidence. Shorthand `{ plan, ttl }` counts.
  */
 export function extractArkOrderXiTtlKeysFromSource(
   file: string,
-  content: string
+  content: string,
+  options: ArkOrderPlaneReceiverOptions = {}
 ): ResolvedArkOrderXiTtlFact[] {
   const source = stripCommentsPreservingLines(content);
-  const bound = new Set(arkOrderPlaneBindings(content));
+  const context = planeReceiverContext(file, content, options);
   const facts: ResolvedArkOrderXiTtlFact[] = [];
   const re = /\.(?:release|proposeRelease)\s*\(\s*\{([^}]*)\}/g;
   let match: RegExpExecArray | null;
   while ((match = re.exec(source)) !== null) {
     const before = source.slice(Math.max(0, match.index - 160), match.index);
-    if (!isPlaneReceiver(receiverBefore(before), bound)) continue;
+    if (!isPlaneReceiver(receiverBefore(before), context)) continue;
     for (const key of literalKeys(match[1] ?? '')) {
       if (!XI_TTL_KEY_RE.test(key)) continue;
       facts.push({ file, line: lineAt(content, match.index), key });

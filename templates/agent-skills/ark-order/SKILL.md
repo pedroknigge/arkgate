@@ -126,7 +126,7 @@ the same files or weaken the gate.
    - First freeze: `release()`. Later change of a named choice is `proposeRelease` then `apply`
      — not a second `release()` (`ARKORDER_UNVALVED_RELEASE`), not `update` / `patch` / `set`
      (`ARKORDER_GENERIC_UPDATE`). Apply the proposal you reviewed against the current Release;
-     a stale or hand-built one fails `ARKORDER_STALE_PROPOSAL` — propose again.
+     a stale one, or one whose blast is not the transition that commits, fails `ARKORDER_STALE_PROPOSAL` — propose again.
    - Name **`xiKeys`** (3–5 slow product decisions). Membership ids and recomputable statuses
      are not keys: derive a status on read or fold it from ingest. A use-case that persists
      those keys is `ARKORDER_XI_FIELD_WRITE`. Invoices and seats still flow through `ingest`.

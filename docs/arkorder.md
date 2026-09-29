@@ -58,7 +58,7 @@ They already exist:
 | Escalation as a first-class concept | `IngestResult` residual `absorb \| escalate_up \| hold` (`reasonCode`, `IngestEscalate.target`) | 4.8.0 / 4.8.6 |
 | Projection at the boundary | `Projector = (release, sigma) => Projection` | 4.8.0 |
 | Cap on badly designed slow parameters | `DEFAULT_MAX_XI_KEYS = 7`, `maxXiKeys`, `ARKORDER_TOO_MANY_PARAMS`, `ARKORDER_EMPTY_XI`, `ARKORDER_NESTED_XI` | 4.8.0 |
-| Valved proposals, never direct mutation | `ProposeResult` then `apply` (`ARKORDER_UNVALVED_RELEASE`); a proposal carries `baseXiHash` / `baseVersion` and a stale, hand-built, or tampered one fails `ARKORDER_STALE_PROPOSAL` | 4.8.0 / 4.8.6 |
+| Valved proposals, never direct mutation | `ProposeResult` then `apply` (`ARKORDER_UNVALVED_RELEASE`); a proposal carries `baseXiHash` / `baseVersion`; a stale one, one without that binding, or one whose blast radius is not the transition that would commit fails `ARKORDER_STALE_PROPOSAL`. The binding is data, not a capability: an object that states the current base and the exact transition applies whoever built it | 4.8.0 / 4.8.6 |
 | Typed cell schema | `XiSchema` / `XiPropertySchema` / `XiPrimitive` (finite numbers only; NaN / ±Infinity fail `ARKORDER_NESTED_XI`) | 4.8.0 |
 | Named slow keys on the write path | `arkOrder.xiKeys`; `ARKORDER_XI_FIELD_WRITE` | 4.8.3 |
 | Factory isolation | `createOrderPlane` from `arkgate/order` only | 4.8.0 |
@@ -69,10 +69,10 @@ They already exist:
 | Decision tape | ArkRun information package `decisionTape` `{ xiHash, event, residual }` | 4.8.6 |
 | σ vs ξ identity | `xiHash` / `sigmaHash` / `refreshSigma` | 4.8.6 |
 | Capacity as data | `ConstraintPack.capacity` (`kind` / `sigmaKey` / `payloadKey` / `op`) | 4.8.6 |
-| Store port | `ReleaseStore` / `createMemoryReleaseStore` in-memory default — not durable, not K01. `load()` output is validated like `restore()` (fails closed on tampering; JSON copies are accepted). The plane advances only after `save()` returns | 4.8.6 |
+| Store port | `ReleaseStore` / `createMemoryReleaseStore` in-memory default — not durable, not K01. `load()` output is validated like `restore()`: JSON copies are accepted; hashes are recomputed from ξ / σ and an inconsistent one fails closed; a `releasedAt` (or σ.`releasedAt`) after the plane clock fails closed, so a rewritten timestamp cannot switch off σ staleness. Hashes are a consistency check, not a signature — authenticity stays the store's job. The plane advances only after `save()` returns | 4.8.6 |
 | Thin travel helper | `ingestTravelAction` absorb→`send` / escalate_up human→`raises` | 4.8.6 |
 | Verify a stored `Release.hash` | `hashOf(ξ, σ)` alias of `hashReleasePayload` — no `release()` side effect | 4.8.9 |
-| Reinstall a Release | `restore(release)` — frozen or JSON-deserialized; hash is identity; onto an empty plane, or the same ξ at a version no older than the current one. Never changes ξ, never rolls the version back (`ARKORDER_UNVALVED_RELEASE`). Process-local; not durable; does not close K01 | 4.8.9 |
+| Reinstall a Release | `restore(release)` — frozen or JSON-deserialized; hash is identity; onto an empty plane, or the same ξ at the current version or the next one. Never changes ξ, never rolls the version back, never jumps it (`ARKORDER_UNVALVED_RELEASE`); a freeze time after the plane clock fails closed. Process-local; not durable; does not close K01 | 4.8.9 |
 | Default clock | omitted `clocks` is Kernel `Date.now()`; Domain must not call `Date.now` | 4.8.9 |
 
 Nothing here is a hosted runtime. Nothing here can be “down”. A degraded-mode
@@ -105,7 +105,7 @@ plane.ingest(event);           // residual absorb | escalate_up | hold. Never a 
 plane.proposeRelease(delta);   // blast radius, bound to the current Release. Empty blast = domain error
 plane.apply(proposal);         // valve: later ξ change; stale proposal = ARKORDER_STALE_PROPOSAL
 plane.refreshSigma(sigma);     // saldo / clocks; xiHash unchanged
-plane.restore(release);        // reinstall (same ξ, version never backwards); not durable; not K01
+plane.restore(release);        // reinstall (same ξ, current or next version); not durable; not K01
 hashOf(xi, sigma);             // same bytes as hashReleasePayload; no freeze side effect
 ```
 
@@ -215,12 +215,12 @@ except withdrawn heuristics.
 |------------|------|
 | `ARKORDER_MISSING_PLANE` | Extra on, no `createOrderPlane` in `planeRoots` |
 | `ARKORDER_KERNEL_IN_DOMAIN` | Domain-role layer imports `arkgate/order` |
-| `ARKORDER_GENERIC_UPDATE` | `update` / `patch` / `set` on a plane receiver: bound to `createOrderPlane(...)` in the file, or named `plane` / `*Plane` |
+| `ARKORDER_GENERIC_UPDATE` | `update` / `patch` / `set` on a plane receiver: bound to `createOrderPlane(...)` in the file, annotated `: OrderPlane`, a `plane` / `*Plane` import from a `planeRoots` module, or a `plane` / `*Plane` name in a file that imports `arkgate/order`. A name alone (`clipPlane`, `controlPlane`) is not evidence |
 | `ARKORDER_TOO_MANY_PARAMS` | ξ keys > `maxXiKeys` |
-| `ARKORDER_INGEST_WRITES_XI` | `ingest` result assigned into a whole-word Release / ξ holder (`release`, `xi`, `store.xi`, …) |
-| `ARKORDER_XI_FIELD_WRITE` | Managed-layer driver import **and** a write on a persistence client (`db` / `prisma` / …, `new PrismaClient()`, or a name bound to a driver constructor) **and** a declared `xiKeys` name |
+| `ARKORDER_INGEST_WRITES_XI` | `ingest` result assigned into a Release / ξ holder (`release`, `xi`, `xiNext`, `nextXi`, `currentRelease`, `store.xi`, …); a prefix alone (`releaseState`, `currentResidual`) is not evidence |
+| `ARKORDER_XI_FIELD_WRITE` | Managed-layer driver import **and** a write on a persistence client (`db` / `prisma` / …, `new PrismaClient()`, a name bound to a driver constructor or annotated with a client type, or imported from a local `db` / `orm` / … module) **and** a declared `xiKeys` name |
 | `ARKORDER_INFORMATION_BUDGET` | A literal `allowedKinds` entry that a literal `informationBudget.cannotObserve` denies |
-| `ARKORDER_XI_TTL` | ttl/freshUntil/maxAge in the ξ literal of `plane.release` / `plane.proposeRelease` — freshness is σ |
+| `ARKORDER_XI_TTL` | ttl/freshUntil/maxAge (shorthand included) in the ξ literal of `plane.release` / `plane.proposeRelease` on a plane receiver — freshness is σ |
 
 Runtime `ArkOrderError` codes (thrown by the plane; not static sensors, not
 promoted by `arkOrder.mode`):
@@ -246,7 +246,7 @@ or hosted replay. [ADR 0033](adr/0033-arkorder-runtime-half-is-arkrun.md).
 
 Durability (`K01`) stays parked. In-memory is the honesty line.
 `restore(release)` reinstalls a validated Release in this process: onto an
-empty plane, or the same ξ at a version no older than the current one. It is
+empty plane, or the same ξ at the current version or the next one. It is
 not a store and not a rollback (that is `proposeRelease` then `apply`). It does
 not close `K01`.
 

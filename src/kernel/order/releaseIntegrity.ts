@@ -1,8 +1,13 @@
 /**
  * Release integrity for the two install paths that do not mint a Release:
  * `ReleaseStore.load()` at construction and `restore()`. Both accept a frozen
- * Release or a JSON-deserialized copy; both fail closed on tampering.
- * Not durable; does not close K01.
+ * Release or a JSON-deserialized copy and fail closed on an inconsistent one:
+ * the three hashes are recomputed from ξ / σ, and the unhashed clock fields are
+ * bounded — `releasedAt` (and a numeric σ.releasedAt) may not lie in the future of
+ * the plane clock, so a rewritten timestamp cannot switch off σ staleness.
+ * The hashes are a consistency check, not a signature: a writer who controls the
+ * store can recompute them. Authenticity and durability stay the store's job
+ * (not K01). Version continuity on a live plane is checked by restore().
  */
 import { ArkOrderError } from '../../domain/arkOrderError';
 import {
@@ -20,12 +25,14 @@ export type ReleaseIntegrityOptions = {
   maxXiKeys: number;
   xiSchema: XiSchema | undefined;
   catalogDigest: string | undefined;
+  /** Plane clock reading; a Release may not claim a freeze time after it. */
+  now: number;
 };
 
-function closed(origin: string): ArkOrderError {
+function closed(origin: string, detail = ''): ArkOrderError {
   return new ArkOrderError(
     'ARKORDER_SCHEMA',
-    `${origin} requires a valid Release; hash is the identity (not durable, not K01)`
+    `${origin} requires a valid Release${detail}; hash is the identity (not durable, not K01)`
   );
 }
 
@@ -36,7 +43,7 @@ function isPlainRecord(value: unknown): value is Record<string, unknown> {
 /**
  * Validate a candidate Release and return a canonical deep-frozen copy.
  * Checks shape, primitive ξ/σ (no nested or non-finite values), key cap, no TTL on ξ,
- * xiSchema, and all three recomputed hashes.
+ * xiSchema, all three recomputed hashes, and no freeze time after `options.now`.
  */
 export function rehydrateRelease(
   candidate: unknown,
@@ -60,12 +67,18 @@ export function rehydrateRelease(
   ) {
     throw closed(origin);
   }
+  if (releasedAt > options.now) {
+    throw closed(origin, ` (releasedAt ${releasedAt} is after the plane clock ${options.now})`);
+  }
   // freezeRecord rejects nested / non-finite values with ARKORDER_NESTED_XI.
   assertXiKeyCap(candidate.xi, options.maxXiKeys);
   const xi = freezeRecord(candidate.xi, 'ξ');
   const sigma = freezeRecord(sigmaInput, 'σ');
   assertXiHasNoTtl(xi);
   assertXiSchema(xi, options.xiSchema);
+  if (typeof sigma.releasedAt === 'number' && sigma.releasedAt > options.now) {
+    throw closed(origin, ` (σ.releasedAt ${sigma.releasedAt} is after the plane clock ${options.now})`);
+  }
   if (
     hash !== hashReleasePayload(xi, sigma, options.catalogDigest) ||
     xiHash !== hashXiIdentity(xi, options.catalogDigest) ||

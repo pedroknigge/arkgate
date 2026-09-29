@@ -1303,7 +1303,9 @@ export function resolveCandidateFacts({
         }
         try {
           arkOrderGenericUpdates.push(
-            ...extractArkOrderGenericUpdatesFromSource(candidate.path, candidate.content)
+            ...extractArkOrderGenericUpdatesFromSource(candidate.path, candidate.content, {
+              planeRoots: planeRootPatterns,
+            })
           );
         } catch {
           // Never fail the resolver for ArkOrder generic-update extraction.
@@ -1331,7 +1333,9 @@ export function resolveCandidateFacts({
         }
         try {
           arkOrderXiTtlKeys.push(
-            ...extractArkOrderXiTtlKeysFromSource(candidate.path, candidate.content)
+            ...extractArkOrderXiTtlKeysFromSource(candidate.path, candidate.content, {
+              planeRoots: planeRootPatterns,
+            })
           );
         } catch {
           // Never fail the resolver for ArkOrder ξ-TTL extraction.
