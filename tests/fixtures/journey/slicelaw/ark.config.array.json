@@ -1,0 +1,46 @@
+{
+  "$schema": "https://unpkg.com/arkgate@4/schemas/ark.config.schema.json",
+  "schemaVersion": "1.3",
+  "name": "slicelaw",
+  "include": ["src"],
+  "stewards": ["steward@example.invalid"],
+  "layers": [
+    {
+      "name": "DomainModel",
+      "description": "Feature domain. Pure types for one universe feature.",
+      "patterns": ["src/features/**/domain/**"]
+    },
+    {
+      "name": "Application",
+      "description": "Feature application. One use case next to its domain.",
+      "patterns": ["src/features/**/application/**"]
+    },
+    {
+      "name": "Persistence",
+      "description": "Feature persistence. The repository sits in the feature.",
+      "patterns": ["src/features/**/persistence/**"]
+    },
+    {
+      "name": "Presentation",
+      "description": "Feature UI, plus the framework route that stays under src/app.",
+      "patterns": ["src/features/**/ui/**", "src/app/**"]
+    }
+  ],
+  "rules": [
+    {
+      "from": "DomainModel",
+      "to": "DomainModel",
+      "allowed": false,
+      "peerIsolation": true,
+      "sliceFolders": ["features"],
+      "childSlices": {
+        "sliceFolders": ["features/*/*"],
+        "sliceIdentity": "stars",
+        "siblings": "deny"
+      }
+    }
+  ],
+  "arkRules": {
+    "DomainModel": ["arkrules/DomainModel.json", "arkrules/DomainModel.shared.json"]
+  }
+}

@@ -388,6 +388,7 @@ function projectStep(fixture, step, stdout, stderr, ctx) {
 const FIXTURE_VIEWS = {
   ledgerline: { check: checkView, doctor: doctorView },
   atlasgrid: { check: atlasgridCheckView, doctor: atlasgridDoctorView },
+  slicelaw: { check: slicelawCheckView, doctor: slicelawDoctorView },
 };
 
 function configRejectionView(stderr) {
@@ -401,6 +402,109 @@ function projectFixture(fixture, step, parsed) {
   const project = step.includes('--doctor') ? views.doctor : views.check;
   if (fixture === 'atlasgrid') return project(parsed, step);
   return project(parsed);
+}
+
+function slicelawCheckView(parsed) {
+  requireFields(parsed, ['valid', 'ok', 'completeness', 'violations'], 'check');
+  const violations = Array.isArray(parsed.violations) ? parsed.violations : [];
+  const ruleIds = uniqueSorted(violations.map((row) => row?.ruleId).filter((id) => typeof id === 'string'));
+  return {
+    valid: parsed.valid === true,
+    ok: parsed.ok === true,
+    completeness: String(parsed.completeness),
+    policyHash: typeof parsed.policyHash === 'string' ? parsed.policyHash : null,
+    violationRuleIds: ruleIds,
+  };
+}
+
+function slicelawDoctorView(parsed) {
+  const section = parsed?.doctor?.rulesUnderContract ?? null;
+  const honesty = parsed?.doctor?.productHonesty ?? null;
+  const aliases = parsed?.doctor?.sliceAliases ?? null;
+  return {
+    rulesActive: section?.active === true,
+    invariantIds: catalogIds(section),
+    layers: catalogLayers(section),
+    unreferencedFiles: Array.isArray(section?.unreferencedFiles)
+      ? section.unreferencedFiles.filter((file) => typeof file === 'string').sort()
+      : [],
+    bySlice: projectBySlice(section?.bySlice ?? parsed?.doctor?.rulesBySlice),
+    honestyReasonIds: Array.isArray(honesty?.reasonIds)
+      ? honesty.reasonIds.filter((id) => typeof id === 'string').sort()
+      : [],
+    sliceAliases: projectSlicelawAliases(aliases),
+  };
+}
+
+function catalogIds(section) {
+  if (!section || section.active !== true) return [];
+  const ids = [];
+  for (const row of [
+    ...(section.uncovered ?? []),
+    ...(section.coveredSample ?? []),
+    ...(section.structure ?? []),
+  ]) {
+    if (row && typeof row.id === 'string' && row.id.length > 0) ids.push(row.id);
+  }
+  return uniqueSorted(ids);
+}
+
+function catalogLayers(section) {
+  if (!section || !Array.isArray(section.layers)) return [];
+  const layers = section.layers
+    .filter((layer) => layer && typeof layer.name === 'string')
+    .map((layer) => {
+      const listed = [];
+      if (Array.isArray(layer.sourceFiles)) {
+        for (const file of layer.sourceFiles) {
+          if (typeof file === 'string') listed.push(file);
+        }
+      } else if (typeof layer.sourceFile === 'string') {
+        listed.push(layer.sourceFile);
+      }
+      return { name: layer.name, sourceFiles: uniqueSorted(listed) };
+    });
+  layers.sort((left, right) => left.name.localeCompare(right.name));
+  return layers;
+}
+
+function projectBySlice(value) {
+  if (!Array.isArray(value)) return null;
+  const rows = value
+    .filter((row) => row && typeof row === 'object')
+    .map((row) => ({
+      slice: typeof row.slice === 'string' ? row.slice : '',
+      sourceFile: typeof row.sourceFile === 'string' ? row.sourceFile : null,
+      ids: Array.isArray(row.ids) ? uniqueSorted(row.ids.filter((id) => typeof id === 'string')) : [],
+      appliesTo: Array.isArray(row.appliesTo)
+        ? uniqueSorted(row.appliesTo.filter((pattern) => typeof pattern === 'string'))
+        : [],
+    }));
+  rows.sort((left, right) => left.slice.localeCompare(right.slice) || String(left.sourceFile).localeCompare(String(right.sourceFile)));
+  return rows;
+}
+
+function projectSlicelawAliases(aliases) {
+  if (!aliases || typeof aliases !== 'object' || Array.isArray(aliases)) return null;
+  const moves = Array.isArray(aliases.moves) ? aliases.moves.map(projectAliasMove).filter(Boolean) : [];
+  moves.sort(compareRows(['from', 'to', 'destination']));
+  const pinned = Array.isArray(aliases.pinned)
+    ? aliases.pinned
+        .filter((row) => row && typeof row === 'object')
+        .map((row) => ({
+          from: typeof row.from === 'string' ? row.from : null,
+          to: typeof row.to === 'string' ? row.to : null,
+          reason: typeof row.reason === 'string' ? row.reason : null,
+          files: Array.isArray(row.files) ? row.files.filter((file) => typeof file === 'string').sort() : [],
+        }))
+    : [];
+  pinned.sort(compareRows(['from', 'to']));
+  return {
+    finished: aliases.finished === true,
+    debt: typeof aliases.debt === 'string' ? aliases.debt : null,
+    moves,
+    pinned,
+  };
 }
 
 function checkView(parsed) {
@@ -688,6 +792,9 @@ function caseResult(spec, judged) {
 }
 
 function evaluateJourneyCase(spec, steps) {
+  if (typeof spec.kind === 'string' && spec.kind.startsWith('slicelaw-')) {
+    return caseResult(spec, judgeSlicelaw(spec, steps));
+  }
   const pick = (config, doctor = false) =>
     selectStep(steps, { doctor, hierarchy: false, config })?.output ?? null;
   if (spec.kind === 'stop-at') return caseResult(spec, judgeStopAt(spec, pick('stop-at')));
@@ -777,6 +884,228 @@ function evaluateJourneyCase(spec, steps) {
     ...(judged.want ? { want: judged.want } : {}),
     ...(judged.got !== undefined ? { got: judged.got } : {}),
   };
+}
+
+function slicelawStep(steps, { doctor, config = null }) {
+  return selectStep(steps, { doctor, hierarchy: false, config })?.output ?? null;
+}
+
+function rejectionText(check) {
+  return typeof check?.message === 'string' ? check.message : '';
+}
+
+function loadedSlicelaw(check) {
+  return Boolean(check) && check.configRejected !== true && check.ok === true;
+}
+
+function judgeSlicelaw(spec, steps) {
+  switch (spec.kind) {
+    case 'slicelaw-compat':
+      return judgeSlicelawCompat(spec, slicelawStep(steps, { doctor: false }), slicelawStep(steps, { doctor: true }));
+    case 'slicelaw-unpinned-debt':
+      return judgeSlicelawUnpinned(spec, slicelawStep(steps, { doctor: true }));
+    case 'slicelaw-array':
+      return judgeSlicelawArray(
+        spec,
+        slicelawStep(steps, { doctor: false, config: 'array.json' }),
+        slicelawStep(steps, { doctor: true, config: 'array.json' })
+      );
+    case 'slicelaw-duplicate':
+      return judgeSlicelawCode(spec, slicelawStep(steps, { doctor: false, config: 'duplicate.json' }));
+    case 'slicelaw-discovery':
+      return judgeSlicelawDiscovery(
+        spec,
+        slicelawStep(steps, { doctor: false }),
+        slicelawStep(steps, { doctor: false, config: 'discovery.json' }),
+        slicelawStep(steps, { doctor: true, config: 'discovery.json' })
+      );
+    case 'slicelaw-escape':
+      return judgeSlicelawEscape(spec, slicelawStep(steps, { doctor: false, config: 'escape.json' }));
+    case 'slicelaw-unreferenced':
+      return judgeSlicelawUnreferenced(spec, slicelawStep(steps, { doctor: true }));
+    case 'slicelaw-pinned-only':
+      return judgeSlicelawPinnedOnly(
+        spec,
+        slicelawStep(steps, { doctor: false, config: 'pinned-only.json' }),
+        slicelawStep(steps, { doctor: true, config: 'pinned-only.json' })
+      );
+    case 'slicelaw-pinned-mixed':
+      return judgeSlicelawPinnedMixed(
+        spec,
+        slicelawStep(steps, { doctor: false, config: 'ark.config.pinned.json' }),
+        slicelawStep(steps, { doctor: true, config: 'ark.config.pinned.json' })
+      );
+    default:
+      throw new JourneyError('case', `unknown journey case kind ${spec.kind}`);
+  }
+}
+
+function judgeSlicelawCompat(spec, check, doctor) {
+  const ids = doctor?.invariantIds ?? [];
+  const unreferenced = doctor?.unreferencedFiles ?? [];
+  const got = {
+    ok: check?.ok === true,
+    rulesActive: doctor?.rulesActive === true,
+    hasUniverse: ids.includes(spec.want.universeId),
+    hasShared: ids.includes(spec.want.sharedId),
+    hasSliceId: ids.includes(spec.want.sliceId),
+    orphanUnreferenced: unreferenced.includes(spec.want.orphan),
+  };
+  const met =
+    loadedSlicelaw(check) &&
+    got.rulesActive &&
+    got.hasUniverse &&
+    got.hasShared === false &&
+    got.hasSliceId === false &&
+    got.orphanUnreferenced;
+  return { met, want: spec.want, got };
+}
+
+function aliasFiles(doctor) {
+  return (doctor?.sliceAliases?.moves ?? []).flatMap((move) => move.files ?? []);
+}
+
+function moveForFile(doctor, file) {
+  return (doctor?.sliceAliases?.moves ?? []).find((move) => (move.files ?? []).includes(file)) ?? null;
+}
+
+function judgeSlicelawUnpinned(spec, doctor) {
+  const route = moveForFile(doctor, spec.want.route);
+  const compliance = moveForFile(doctor, spec.want.compliance);
+  const reasons = doctor?.honestyReasonIds ?? [];
+  const got = {
+    debt: reasons.includes('slice-alias-debt'),
+    routeDestination: route?.destination ?? null,
+    complianceDestination: compliance?.destination ?? null,
+    pinned: doctor?.sliceAliases?.pinned?.length ?? 0,
+  };
+  const met =
+    doctor?.rulesActive === true &&
+    got.debt === spec.want.debt &&
+    got.routeDestination === spec.want.routeDestination &&
+    got.complianceDestination === spec.want.complianceDestination &&
+    got.pinned === 0;
+  return { met, want: spec.want, got };
+}
+
+function judgeSlicelawArray(spec, check, doctor) {
+  const ids = doctor?.invariantIds ?? [];
+  const layer = (doctor?.layers ?? []).find((row) => row.name === spec.want.layer) ?? null;
+  const got = {
+    ok: check?.ok === true,
+    ids,
+    sourceFiles: layer?.sourceFiles ?? [],
+  };
+  const met =
+    loadedSlicelaw(check) &&
+    doctor?.rulesActive === true &&
+    stable(got.ids.filter((id) => spec.want.ids.includes(id))) === stable([...spec.want.ids]) &&
+    stable(got.sourceFiles) === stable([...spec.want.sourceFiles]);
+  return { met, want: spec.want, got };
+}
+
+function judgeSlicelawCode(spec, check) {
+  const message = rejectionText(check);
+  const got = {
+    configRejected: check?.configRejected === true,
+    hasCode: message.includes(spec.want.code),
+    hasId: message.includes(spec.want.id),
+  };
+  const met = got.configRejected && got.hasCode && got.hasId;
+  return { met, want: spec.want, got };
+}
+
+function judgeSlicelawDiscovery(spec, baseline, check, doctor) {
+  const ids = doctor?.invariantIds ?? [];
+  const unreferenced = doctor?.unreferencedFiles ?? [];
+  const baseHash = typeof baseline?.policyHash === 'string' ? baseline.policyHash : null;
+  const nextHash = typeof check?.policyHash === 'string' ? check.policyHash : null;
+  const got = {
+    ok: check?.ok === true,
+    rulesActive: doctor?.rulesActive === true,
+    hasUniverse: ids.includes(spec.want.universeId),
+    hasSliceId: ids.includes(spec.want.sliceId),
+    hasBareId: ids.includes(spec.want.bareId),
+    hasEscapedId: ids.includes(spec.want.escapedId),
+    referencedUnreferenced: unreferenced.includes(spec.want.referenced),
+    policyHashDiffers: baseHash !== null && nextHash !== null && baseHash !== nextHash,
+    bySlice: doctor?.bySlice ?? null,
+  };
+  const met =
+    loadedSlicelaw(check) &&
+    got.rulesActive &&
+    got.hasUniverse &&
+    got.hasSliceId &&
+    got.hasBareId === false &&
+    got.hasEscapedId === false &&
+    got.referencedUnreferenced === false &&
+    got.policyHashDiffers &&
+    stable(got.bySlice) === stable(spec.want.bySlice);
+  return { met, want: spec.want, got };
+}
+
+function judgeSlicelawEscape(spec, check) {
+  const message = rejectionText(check);
+  const ids = check?.violationRuleIds ?? [];
+  const got = {
+    configRejected: check?.configRejected === true,
+    ok: check?.ok === true,
+    hasCode: message.includes(spec.want.code) || ids.includes(spec.want.code),
+    namesFile: message.includes(spec.want.file),
+    enforcesEscaped: ids.includes(spec.want.escapedId),
+  };
+  const met = got.configRejected && got.hasCode && got.namesFile && got.enforcesEscaped === false;
+  return { met, want: spec.want, got };
+}
+
+function judgeSlicelawUnreferenced(spec, doctor) {
+  const files = doctor?.unreferencedFiles ?? [];
+  const missing = spec.want.files.filter((file) => !files.includes(file));
+  const got = { unreferencedFiles: files, missing };
+  const met = doctor?.rulesActive === true && missing.length === 0;
+  return { met, want: spec.want, got };
+}
+
+function judgeSlicelawPinnedOnly(spec, check, doctor) {
+  const reasons = doctor?.honestyReasonIds ?? [];
+  const pinned = doctor?.sliceAliases?.pinned ?? [];
+  const route = pinned.find((row) => row.from === spec.want.from && row.to === spec.want.to) ?? null;
+  const owed = aliasFiles(doctor);
+  const got = {
+    ok: check?.ok === true,
+    debt: reasons.includes('slice-alias-debt'),
+    pinnedReason: route?.reason ?? null,
+    pinnedFiles: route?.files ?? [],
+    owed,
+  };
+  const met =
+    loadedSlicelaw(check) &&
+    got.debt === spec.want.debt &&
+    got.pinnedReason === spec.want.reason &&
+    got.pinnedFiles.includes(spec.want.file) &&
+    owed.length === 0;
+  return { met, want: spec.want, got };
+}
+
+function judgeSlicelawPinnedMixed(spec, check, doctor) {
+  const reasons = doctor?.honestyReasonIds ?? [];
+  const pinned = doctor?.sliceAliases?.pinned ?? [];
+  const owed = aliasFiles(doctor);
+  const compliance = moveForFile(doctor, spec.want.compliance);
+  const got = {
+    ok: check?.ok === true,
+    debt: reasons.includes('slice-alias-debt'),
+    routeOwed: owed.includes(spec.want.route),
+    routePinned: pinned.some((row) => row.from === spec.want.pinnedFrom && (row.files ?? []).includes(spec.want.route)),
+    complianceDestination: compliance?.destination ?? null,
+  };
+  const met =
+    loadedSlicelaw(check) &&
+    got.debt === spec.want.debt &&
+    got.routeOwed === false &&
+    got.routePinned === true &&
+    got.complianceDestination === spec.want.complianceDestination;
+  return { met, want: spec.want, got };
 }
 
 function caseStatus(expect, met) {

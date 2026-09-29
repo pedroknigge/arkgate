@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "1.0",
+  "layer": "DomainModel",
+  "invariants": [
+    {
+      "id": "STRAY",
+      "description": "Named like a slice rule file, but it sits on the universe folder, not a child root.",
+      "mode": "advisory"
+    }
+  ]
+}

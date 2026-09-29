@@ -1,0 +1,12 @@
+{
+  "schemaVersion": "1.0",
+  "layer": "DomainModel",
+  "invariants": [
+    {
+      "id": "scm-board",
+      "description": "A board rule that tries to govern the RFI slice.",
+      "mode": "advisory",
+      "appliesTo": ["src/features/projects/rfi/**"]
+    }
+  ]
+}

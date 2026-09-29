@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "1.0",
+  "layer": "DomainModel",
+  "invariants": [
+    {
+      "id": "rfi-intake",
+      "description": "An RFI intake records the asking project and nothing from a sibling feature.",
+      "mode": "advisory"
+    }
+  ]
+}

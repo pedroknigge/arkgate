@@ -20,6 +20,12 @@
  * child wall keeps advisory siblings advisory), `337-wall-messages` (inner-wall
  * findings never reuse the universe rule message), `338-version-silent` (no
  * CONFIG_CHILD_SLICES_VERSION without a stale pin).
+ *
+ * #341 is `slicelaw`: co-located feature rules and a framework route.
+ * `expect: 'pass'` is today's string catalog, and the unpinned app route still
+ * counting as an owed move. `expect: 'fail'` records claims that are still red.
+ * The journey stays green while a claim is unmet. When it starts holding,
+ * status becomes `unexpected-pass` until that PR flips `expect` to `pass`.
  */
 const crossParentEdges = Object.freeze([
   Object.freeze({
@@ -159,6 +165,20 @@ export const JOURNEYS = Object.freeze({
       'baseline.legacy.json',
     ]),
     Object.freeze(['ark-check', '--json', '--no-cache', '--config', 'ark.config.wall-messages.json']),
+  ]),
+  slicelaw: Object.freeze([
+    Object.freeze(['ark-check', '--json', '--no-cache']),
+    Object.freeze(['ark-check', '--doctor', '--json', '--no-cache']),
+    Object.freeze(['ark-check', '--json', '--no-cache', '--config', 'ark.config.array.json']),
+    Object.freeze(['ark-check', '--doctor', '--json', '--no-cache', '--config', 'ark.config.array.json']),
+    Object.freeze(['ark-check', '--json', '--no-cache', '--config', 'ark.config.duplicate.json']),
+    Object.freeze(['ark-check', '--json', '--no-cache', '--config', 'ark.config.discovery.json']),
+    Object.freeze(['ark-check', '--doctor', '--json', '--no-cache', '--config', 'ark.config.discovery.json']),
+    Object.freeze(['ark-check', '--json', '--no-cache', '--config', 'ark.config.escape.json']),
+    Object.freeze(['ark-check', '--json', '--no-cache', '--config', 'ark.config.pinned-only.json']),
+    Object.freeze(['ark-check', '--doctor', '--json', '--no-cache', '--config', 'ark.config.pinned-only.json']),
+    Object.freeze(['ark-check', '--json', '--no-cache', '--config', 'ark.config.pinned.json']),
+    Object.freeze(['ark-check', '--doctor', '--json', '--no-cache', '--config', 'ark.config.pinned.json']),
   ]),
 });
 
@@ -473,6 +493,135 @@ export const JOURNEY_CASES = Object.freeze({
       kind: 'version-silent',
       note: 'Owned by #338. The fixture pins no older arkgate (the installed copy is the candidate), so no childSlices step warns CONFIG_CHILD_SLICES_VERSION.',
       want: Object.freeze({ versionWarnings: 0 }),
+    }),
+  ]),
+  slicelaw: Object.freeze([
+    Object.freeze({
+      id: 'compat-string-catalog',
+      owner: '#341',
+      expect: 'pass',
+      kind: 'slicelaw-compat',
+      note: 'Today\'s string arkRules path still loads INV-UNIVERSE-CODES only. The second central file and the slice file are not in the catalog. arkrules/orphan.json stays an unreferenced top-level file.',
+      want: Object.freeze({
+        universeId: 'INV-UNIVERSE-CODES',
+        sharedId: 'INV-SHARED-CODES',
+        sliceId: 'features/projects/rfi#rfi-intake',
+        orphan: 'arkrules/orphan.json',
+      }),
+    }),
+    Object.freeze({
+      id: 'unpinned-route-is-debt',
+      owner: '#341',
+      expect: 'pass',
+      kind: 'slicelaw-unpinned-debt',
+      note: 'Without pinned, the app route is an owed move and slice-alias-debt stays set. compliance/hold.ts is an owed move to features/projects/compliance.',
+      want: Object.freeze({
+        debt: true,
+        route: 'src/app/projects/rfi/page.tsx',
+        routeDestination: 'src/features/projects/rfi',
+        compliance: 'src/lib/compliance/hold.ts',
+        complianceDestination: 'src/features/projects/compliance',
+      }),
+    }),
+    Object.freeze({
+      id: '341-array-merge',
+      owner: '#341',
+      expect: 'fail',
+      kind: 'slicelaw-array',
+      note: 'Owned by #341. arkRules.DomainModel as two paths merges both ids. The DomainModel layer lists both source files. Last-file-wins on byLayer is not a merge.',
+      want: Object.freeze({
+        ids: Object.freeze(['INV-SHARED-CODES', 'INV-UNIVERSE-CODES']),
+        layer: 'DomainModel',
+        sourceFiles: Object.freeze(['arkrules/DomainModel.json', 'arkrules/DomainModel.shared.json']),
+      }),
+    }),
+    Object.freeze({
+      id: '341-duplicate-id',
+      owner: '#341',
+      expect: 'fail',
+      kind: 'slicelaw-duplicate',
+      note: 'Owned by #341. Two central files that share INV-DUP fail config load with ARKRULE_DUPLICATE_ID. The id is named in the message.',
+      want: Object.freeze({
+        code: 'ARKRULE_DUPLICATE_ID',
+        id: 'INV-DUP',
+      }),
+    }),
+    Object.freeze({
+      id: '341-discovery',
+      owner: '#341',
+      expect: 'fail',
+      kind: 'slicelaw-discovery',
+      note: 'Owned by #341. A governed child root contributes arkrules.<Layer>.json. The id is features/projects/rfi#rfi-intake. Default appliesTo is the slice directory. The central id stays. scm is outside include, so its escaping file is not a child root. policyHash differs from the string-only config. The referenced slice file is not ARKRULE_FILE_UNREFERENCED. Doctor lists the rule on the slice.',
+      want: Object.freeze({
+        universeId: 'INV-UNIVERSE-CODES',
+        sliceId: 'features/projects/rfi#rfi-intake',
+        bareId: 'rfi-intake',
+        escapedId: 'scm-board',
+        referenced: 'src/features/projects/rfi/arkrules.DomainModel.json',
+        bySlice: Object.freeze([
+          Object.freeze({
+            slice: 'features/projects/rfi',
+            sourceFile: 'src/features/projects/rfi/arkrules.DomainModel.json',
+            ids: Object.freeze(['features/projects/rfi#rfi-intake']),
+            appliesTo: Object.freeze(['src/features/projects/rfi/**']),
+          }),
+        ]),
+      }),
+    }),
+    Object.freeze({
+      id: '341-scope-escapes',
+      owner: '#341',
+      expect: 'fail',
+      kind: 'slicelaw-escape',
+      note: 'Owned by #341. scm/arkrules.DomainModel.json sets appliesTo on the RFI slice. Config load fails closed with ARKRULE_SCOPE_ESCAPES_SLICE and names that file. The escaping id is not enforced.',
+      want: Object.freeze({
+        code: 'ARKRULE_SCOPE_ESCAPES_SLICE',
+        file: 'src/features/projects/scm/arkrules.DomainModel.json',
+        escapedId: 'scm-board',
+      }),
+    }),
+    Object.freeze({
+      id: '341-unreferenced-slice',
+      owner: '#341',
+      expect: 'fail',
+      kind: 'slicelaw-unreferenced',
+      note: 'Owned by #341. With discovery off, ARKRULE_FILE_UNREFERENCED covers the slice files and the universe-level lookalike, not only top-level arkrules/*.json.',
+      want: Object.freeze({
+        files: Object.freeze([
+          'arkrules/orphan.json',
+          'src/features/projects/arkrules.DomainModel.json',
+          'src/features/projects/rfi/arkrules.DomainModel.json',
+          'src/features/projects/scm/arkrules.DomainModel.json',
+        ]),
+      }),
+    }),
+    Object.freeze({
+      id: '341-pinned-route',
+      owner: '#341',
+      expect: 'fail',
+      kind: 'slicelaw-pinned-only',
+      note: 'Owned by #341. A pinned framework route is not an owed move and does not set slice-alias-debt. Doctor lists it under pinned, with reason framework-route. Other honesty reasons may remain.',
+      want: Object.freeze({
+        debt: false,
+        from: 'src/app/**',
+        to: 'features/projects/rfi',
+        reason: 'framework-route',
+        file: 'src/app/projects/rfi/page.tsx',
+      }),
+    }),
+    Object.freeze({
+      id: '341-pinned-keeps-real-debt',
+      owner: '#341',
+      expect: 'fail',
+      kind: 'slicelaw-pinned-mixed',
+      note: 'Owned by #341. Pinning the route does not clear the compliance alias. The route is listed under pinned and is absent from owed moves. slice-alias-debt stays because compliance is still an owed move.',
+      want: Object.freeze({
+        debt: true,
+        route: 'src/app/projects/rfi/page.tsx',
+        compliance: 'src/lib/compliance/hold.ts',
+        complianceDestination: 'src/features/projects/compliance',
+        pinnedFrom: 'src/app/**',
+      }),
     }),
   ]),
 });
