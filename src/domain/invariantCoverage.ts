@@ -8,7 +8,12 @@
  */
 
 import type { EffectiveArkRules, EffectiveInvariantRule } from './arkRulesTypes';
-import { findClassDeclarations, scanClassMembers } from './classSourceScan';
+import {
+  findClassDeclarations,
+  findMemberContainers,
+  objectLiteralMemberNames,
+  scanClassMembers,
+} from './classSourceScan';
 // Type-only import erased for CLI generation.
 
 /**
@@ -393,23 +398,36 @@ function declarationShape(content: string, name: string): DeclarationShape | und
 }
 
 /**
- * `Class.member` coverage: the member must be declared inside the body of
- * `class <className>` (exported, default-exported, abstract, or local) in this
- * file. A method of another class, a free function, or a file that merely
- * mentions the class name does not count.
+ * `Name.member` coverage: the member must be declared inside the body of
+ * `class Name` (exported, default-exported, abstract, or local), a
+ * `const Name = class { … }` expression, a `namespace Name { … }` (function or
+ * const member), or a `const Name = { … }` object literal, in this file. A
+ * member of another container, a free function, or a file that merely mentions
+ * the name does not count.
  */
 function classMemberShape(
   content: string,
   className: string,
   member: string
 ): DeclarationShape | undefined {
+  const hasClassMethod = (body: string) =>
+    scanClassMembers(body).members.some((m) => m.kind === 'method' && m.name === member);
   for (const decl of findClassDeclarations(content)) {
     if (decl.name !== className || decl.bodyStart == null) continue;
-    const body = content.slice(decl.bodyStart, decl.bodyEnd ?? content.length);
-    const found = scanClassMembers(body).members.some(
-      (m) => m.kind === 'method' && m.name === member
-    );
-    if (found) return 'method';
+    if (hasClassMethod(content.slice(decl.bodyStart, decl.bodyEnd ?? content.length))) {
+      return 'method';
+    }
+  }
+  for (const container of findMemberContainers(content, className)) {
+    const body = content.slice(container.bodyStart, container.bodyEnd);
+    if (container.kind === 'class-expression' && hasClassMethod(body)) return 'method';
+    if (container.kind === 'object' && objectLiteralMemberNames(body).includes(member)) {
+      return 'method';
+    }
+    if (container.kind === 'namespace') {
+      const shape = declarationShape(body, member);
+      if (shape === 'function' || shape === 'const') return shape;
+    }
   }
   return undefined;
 }
@@ -778,10 +796,14 @@ export function evaluateInvariantCoverage(
     // Covered if the policy says this verdict counts.
     // When coverage declares neither test nor symbol, require at least description-only advisory presence = not covered.
     const requiresEvidence = inv.coverage?.test === true || Boolean(symbol) || inv.coverage === undefined;
+    // `coverage.test: false` without a symbol declares zero evidence. That opt-out is
+    // advisory-only: on an enforced invariant it is reported uncovered (never a false
+    // green), not refused at load, so the rest of the contract still evaluates.
+    const zeroEvidenceOptOut = inv.coverage?.test === false && !symbol;
     const covered =
       requiresEvidence && counts
         ? true
-        : inv.coverage?.test === false && !symbol && inv.mode !== 'enforced'
+        : zeroEvidenceOptOut && inv.mode !== 'enforced'
           ? true // explicitly no coverage requirements (advisory-only opt-out)
           : counts;
 
@@ -835,7 +857,9 @@ export function evaluateInvariantCoverage(
                     ? coverageBudgetExhausted
                       ? `Invariant ${inv.id} coverage cannot be proven (${budgetDetail}); reporting partial, not covered.`
                       : `Invariant ${inv.id} coverage cannot be proven (test globs missing or empty); reporting partial, not covered (never-had-tests).`
-                    : // The sentence is the verdict. It names a title, a declaration
+                    : zeroEvidenceOptOut
+                      ? `Invariant ${inv.id} is enforced but declares no evidence (coverage.test is false and no coverage.symbol); set coverage.symbol, drop test:false, or keep mode "advisory".`
+                      : // The sentence is the verdict. It names a title, a declaration
                       // shape, a bare mention, or silence — it does not re-scan.
                       `Invariant ${inv.id}: ${describeCoverage(inv, ev)} (${
                         kind === 'tests-disappeared'

@@ -85,6 +85,35 @@ describe('coverage.symbol Class.member requires class membership (arkrules clust
     expect(generic.coverage[0]?.symbolEvidenceFile).toBe('src/domain/order.ts');
   });
 
+  it('namespace, object-literal and class-expression containers named Order still count', () => {
+    const cases: Array<[string, string]> = [
+      ['export namespace Order { export function ensureInvariants() {} }', 'function'],
+      ['export namespace Order { export const ensureInvariants = () => {}; }', 'const'],
+      ['export const Order = { ensureInvariants() {} };', 'method'],
+      ['export const Order = { total: 0, ensureInvariants: () => true };', 'method'],
+      ['export const Order: Api = { async ensureInvariants() {} };', 'method'],
+      ['export const Order = class { ensureInvariants() {} };', 'method'],
+      ['export const Order = class Impl extends Base<{ a: 1 }> { ensureInvariants() {} };', 'method'],
+    ];
+    for (const [source, shape] of cases) {
+      const result = covered({ 'src/domain/order.ts': source });
+      expect(result.coverage[0]?.covered, source).toBe(true);
+      expect(result.coverage[0]?.shape, source).toBe(shape);
+    }
+  });
+
+  it('a member of a nested object or another container is not coverage', () => {
+    for (const source of [
+      'export const Order = { nested: { ensureInvariants() {} } };',
+      'export const Invoice = { ensureInvariants() {} };\nexport const Order = { total: 0 };',
+      'export namespace Invoice { export function ensureInvariants() {} }\nexport namespace Order {}',
+      'export const Order = { total: ensureInvariants };\nfunction ensureInvariants() {}',
+      '// const Order = { ensureInvariants() {} }\nexport const x = 1;',
+    ]) {
+      expect(covered({ 'src/domain/order.ts': source }).coverage[0]?.covered, source).toBe(false);
+    }
+  });
+
   it('a bare symbol keeps the top-level declaration match', () => {
     expect(
       covered(

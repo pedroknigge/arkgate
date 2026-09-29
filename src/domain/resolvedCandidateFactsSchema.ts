@@ -251,6 +251,7 @@ export const RESOLVED_CANDIDATE_FACTS_SCHEMA = {
           hasPublicConstructor: { type: 'boolean' },
           hasStaticFactory: { type: 'boolean' },
           dataOnly: { type: 'boolean' },
+          truncatedUntil: { type: 'integer', minimum: 0 },
           mutatingMethods: {
             type: 'array',
             items: {

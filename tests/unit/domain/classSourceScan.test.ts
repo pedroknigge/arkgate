@@ -4,16 +4,14 @@ import {
   extractClassShapesFromSource,
 } from '../../../src/domain/arkRuleSensors';
 import { buildEffectiveArkRules, loadArkRulesContract } from '../../../src/domain/arkRulesContract';
-import { findClassDeclarations } from '../../../src/domain/classSourceScan';
+import { findClassDeclarations, scanClassMembers } from '../../../src/domain/classSourceScan';
 import { extractClassShapesFromSource as extractCli } from '../../../bin/lib/arkrules-sensors.mjs';
 
 function shapeRow(file: string, source: string) {
   return extractClassShapesFromSource(file, source).map((shape) => ({
     className: shape.className,
     hasPublicMutableFields: shape.hasPublicMutableFields,
-    truncatedUntil: Object.getOwnPropertyDescriptor(shape, 'truncatedUntil')?.value as
-      | number
-      | undefined,
+    truncatedUntil: shape.truncatedUntil,
   }));
 }
 
@@ -52,6 +50,35 @@ describe('class-shape extractor robustness (arkrules cluster)', () => {
     expect(
       shapeRow('o.ts', 'export class O { private s = `a}b`; public total = 0; }')
     ).toEqual([{ className: 'O', hasPublicMutableFields: true, truncatedUntil: undefined }]);
+  });
+
+  it('does not let a brace inside a regex literal close or unbalance the class', () => {
+    expect(
+      shapeRow('a.ts', 'export class A { private r = /\\}/; public t = 1; }')
+    ).toEqual([{ className: 'A', hasPublicMutableFields: true, truncatedUntil: undefined }]);
+    expect(
+      shapeRow('b.ts', 'export class B { private re = /[{]/; public total = 0; }')
+    ).toEqual([{ className: 'B', hasPublicMutableFields: true, truncatedUntil: undefined }]);
+    expect(
+      shapeRow('c.ts', 'export class C { private readonly re = /\\}$/g; public total = 0; }')
+    ).toEqual([{ className: 'C', hasPublicMutableFields: true, truncatedUntil: undefined }]);
+    expect(
+      shapeRow('d.ts', 'export class D { m() { return /[/}]/.test(x); }\n  public total = 0; }')
+    ).toEqual([{ className: 'D', hasPublicMutableFields: true, truncatedUntil: undefined }]);
+  });
+
+  it('keeps division as division (no false regex)', () => {
+    expect(
+      shapeRow('h.ts', 'export class H { private t = 4; half() { return this.t / 2 / 1; } public v = 1; }')
+    ).toEqual([{ className: 'H', hasPublicMutableFields: true, truncatedUntil: undefined }]);
+  });
+
+  it('flags a field initializer that never balances as truncated', () => {
+    const rows = shapeRow('u.ts', 'export class U { private x = foo({ a: 1 ; public v = 1; }');
+    expect(rows).toHaveLength(1);
+    expect(typeof rows[0]?.truncatedUntil).toBe('number');
+    const body = ' private x = foo(( ; public v = 1; ';
+    expect(scanClassMembers(body).truncatedAt).toBe(body.length);
   });
 
   it('ignores class declarations that only appear in comments', () => {
@@ -99,7 +126,7 @@ describe('class-shape extractor robustness (arkrules cluster)', () => {
 
   it('keeps the generated CLI extractor aligned', () => {
     const source =
-      'export class Box<T> { public value: T | undefined; }\nexport class Order { private sep = "}"; public total = 0; }';
+      'export class Box<T> { public value: T | undefined; }\nexport class Order { private sep = "}"; private re = /\\}/; public total = 0; }\nexport class Z<T { x = 1 }';
     expect(JSON.stringify(extractCli('f.ts', source))).toBe(
       JSON.stringify(extractClassShapesFromSource('f.ts', source))
     );

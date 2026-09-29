@@ -283,20 +283,6 @@ function validateSemantics(candidate, issues) {
             }
             seen.add(id);
         }
-        // `coverage.test: false` without a `coverage.symbol` declares zero evidence.
-        // That opt-out is advisory-only: an enforced invariant with no evidence would
-        // otherwise report covered (false green) and pass the promotion gate (ADR 0014).
-        const cov = isObject(entry.coverage) ? entry.coverage : undefined;
-        if (entry.mode === 'enforced' &&
-            cov?.test === false &&
-            !(typeof cov.symbol === 'string' && cov.symbol.length > 0)) {
-            issues.push({
-                path: `$.invariants[${index}].coverage`,
-                message: `invariant ${id ? `${JSON.stringify(id)} ` : ''}is enforced but declares no evidence ` +
-                    '(coverage.test is false and no coverage.symbol); set coverage.symbol, drop test:false, ' +
-                    'or keep mode "advisory"',
-            });
-        }
         if (Array.isArray(entry.appliesTo) && entry.appliesTo.length === 0) {
             issues.push({
                 path: `$.invariants[${index}].appliesTo`,

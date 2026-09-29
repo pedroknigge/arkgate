@@ -2,8 +2,9 @@
  * Pure class-source scanner shared by ArkRules structure sensors (ADR 0013) and
  * invariant symbol coverage (ADR 0014).
  *
- * A small tokenizer, not a regex: strings, comments, and template literals are
- * skipped, so a `"}"` literal never closes a class body, and type-parameter lists
+ * A small tokenizer, not a regex: strings, comments, template literals, and
+ * regular-expression literals (`/[}]/`, detected from the preceding token) are
+ * skipped, so a `"}"` or `/\}/` literal never closes a class body, and type-parameter lists
  * (`class Box<T extends { a: 1 }>`) are walked with balanced delimiters.
  * No filesystem, no TypeScript compiler (Domain stays zero-dependency).
  */
@@ -22,7 +23,71 @@ export const MEMBER_MODIFIERS = new Set([
   'set',
 ]);
 
-/** Index after a string / comment starting at `index`, or `index` when none starts there. */
+/** Characters after which a `/` starts a regular-expression literal, not a division. */
+const REGEX_PRECEDING_CHARS = new Set([
+  '(', ',', '=', ':', '[', '!', '&', '|', '?', '{', '}', ';', '+', '-', '*', '%', '<', '>', '~', '^',
+]);
+
+/** Keywords after which a `/` starts a regular-expression literal. */
+const REGEX_PRECEDING_KEYWORDS = new Set([
+  'return', 'typeof', 'case', 'do', 'else', 'in', 'of', 'new', 'delete', 'void', 'throw',
+  'instanceof', 'yield', 'await',
+]);
+
+/**
+ * True when the `/` at `index` sits where an expression starts (so it opens a
+ * regex literal). Looks back to the previous significant character; identifiers,
+ * numbers, `)` and `]` mean division.
+ */
+function slashStartsRegex(src: string, index: number): boolean {
+  let j = index - 1;
+  while (j >= 0 && /\s/.test(src[j]!)) j -= 1;
+  if (j < 0) return true;
+  const prev = src[j]!;
+  if (/[A-Za-z0-9_$]/.test(prev)) {
+    let k = j;
+    while (k >= 0 && /[A-Za-z0-9_$]/.test(src[k]!)) k -= 1;
+    return REGEX_PRECEDING_KEYWORDS.has(src.slice(k + 1, j + 1));
+  }
+  // `*/` ends a comment; what came before it is not examined (treated as division, rare).
+  if (prev === '/' && src[j - 1] === '*') return false;
+  return REGEX_PRECEDING_CHARS.has(prev);
+}
+
+/**
+ * Index after the regex literal starting at `index` (`/…/flags`), or `index` when
+ * none starts there. Character classes (`[/]`) and escapes are honoured; a line
+ * break before the closing `/` means it was not a regex after all.
+ */
+function skipRegexLiteral(src: string, index: number): number {
+  if (!slashStartsRegex(src, index)) return index;
+  let j = index + 1;
+  let inClass = false;
+  while (j < src.length) {
+    const ch = src[j];
+    if (ch === '\n' || ch === '\r') return index;
+    if (ch === '\\') {
+      j += 2;
+      continue;
+    }
+    if (inClass) {
+      if (ch === ']') inClass = false;
+    } else if (ch === '[') {
+      inClass = true;
+    } else if (ch === '/') {
+      j += 1;
+      while (j < src.length && /[A-Za-z]/.test(src[j]!)) j += 1;
+      return j;
+    }
+    j += 1;
+  }
+  return index;
+}
+
+/**
+ * Index after a string / comment / regex literal starting at `index`, or `index`
+ * when none starts there.
+ */
 export function skipStringOrComment(src: string, index: number): number {
   const ch = src[index];
   if (ch === '/' && src[index + 1] === '/') {
@@ -33,6 +98,7 @@ export function skipStringOrComment(src: string, index: number): number {
     const end = src.indexOf('*/', index + 2);
     return end === -1 ? src.length : end + 2;
   }
+  if (ch === '/') return skipRegexLiteral(src, index);
   if (ch === "'" || ch === '"' || ch === '`') {
     let j = index + 1;
     while (j < src.length) {
@@ -207,6 +273,10 @@ export function scanClassMembers(body: string): {
       }
       cursor += 1;
     }
+    if (cursor >= body.length && (depthBrace > 0 || depthParen > 0 || depthBracket > 0)) {
+      // An initializer that never balances: later members are not visible.
+      truncatedAt = body.length;
+    }
     members.push({
       name: nameTok.ident,
       modifiers,
@@ -314,4 +384,106 @@ function maskStringsAndComments(content: string): string {
     i += 1;
   }
   return out;
+}
+
+/** A non-class declaration whose body can hold `Name.member` members. */
+export type ScannedMemberContainer = {
+  kind: 'namespace' | 'object' | 'class-expression';
+  /** Index just after the opening `{`. */
+  bodyStart: number;
+  /** Index of the closing `}` (content length when it never closes). */
+  bodyEnd: number;
+};
+
+/**
+ * Locate `namespace Name {` / `module Name {`, `const Name = {` (object literal) and
+ * `const Name = class … {` (class expression) declarations of `name`, so a
+ * `Name.member` symbol can be checked for membership in them as well as in
+ * `class Name`. Strings, comments, and regex literals are ignored.
+ */
+export function findMemberContainers(content: string, name: string): ScannedMemberContainer[] {
+  const out: ScannedMemberContainer[] = [];
+  if (!/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(name)) return out;
+  const code = maskStringsAndComments(content);
+  const escaped = name.replace(/\$/g, '\\$');
+  const re = new RegExp(
+    `\\b(?:(namespace|module)\\s+${escaped}\\s*\\{|(?:const|let|var)\\s+${escaped}\\s*(?::[^=;]+?)?=(?!=|>)\\s*(class\\b)?)`,
+    'g'
+  );
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(code)) !== null) {
+    let brace: number | null;
+    let kind: ScannedMemberContainer['kind'];
+    if (match[1]) {
+      kind = 'namespace';
+      brace = match.index + match[0].length - 1;
+    } else if (match[2]) {
+      kind = 'class-expression';
+      brace = findClassBodyBrace(content, match.index + match[0].length);
+    } else {
+      kind = 'object';
+      const at = skipWsAndComments(content, match.index + match[0].length);
+      brace = content[at] === '{' ? at : null;
+    }
+    if (brace == null) continue;
+    const after = skipBalanced(content, brace, '{', '}');
+    out.push({ kind, bodyStart: brace + 1, bodyEnd: after == null ? content.length : after - 1 });
+  }
+  return out;
+}
+
+/**
+ * Top-level member names of an object-literal body: `name() {}`, `async name()`,
+ * `*name()`, `name: …`, and shorthand `name,`. Nested braces/parens/brackets are
+ * skipped so a key of an inner object is not a member of the outer one.
+ */
+export function objectLiteralMemberNames(body: string): string[] {
+  const names: string[] = [];
+  let i = 0;
+  let expectKey = true;
+  while (i < body.length) {
+    const skipped = skipStringOrComment(body, i);
+    if (skipped !== i) {
+      i = skipped;
+      expectKey = false;
+      continue;
+    }
+    const ch = body[i]!;
+    if (ch === '{' || ch === '(' || ch === '[') {
+      const close = ch === '{' ? '}' : ch === '(' ? ')' : ']';
+      i = skipBalanced(body, i, ch, close) ?? body.length;
+      expectKey = false;
+      continue;
+    }
+    if (ch === ',') {
+      expectKey = true;
+      i += 1;
+      continue;
+    }
+    if (expectKey && /[A-Za-z_$]/.test(ch)) {
+      let tok = readIdent(body, i);
+      // `async name()`, `get name()`, `set name(v)`, `async *name()`: the modifier is not the key.
+      while (tok && (tok.ident === 'async' || tok.ident === 'get' || tok.ident === 'set')) {
+        let next = skipWsAndComments(body, tok.end);
+        if (body[next] === '*') next = skipWsAndComments(body, next + 1);
+        const peek = readIdent(body, next);
+        if (!peek) break;
+        tok = peek;
+      }
+      if (tok) {
+        const after = skipWsAndComments(body, tok.end);
+        if ('(:,<'.includes(body[after] ?? '') || after >= body.length) names.push(tok.ident);
+        i = tok.end;
+        expectKey = false;
+        continue;
+      }
+    }
+    if (expectKey && ch === '*') {
+      i += 1;
+      continue;
+    }
+    if (!/\s/.test(ch)) expectKey = false;
+    i += 1;
+  }
+  return names;
 }

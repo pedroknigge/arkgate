@@ -46,8 +46,6 @@ const ANY_THIS_EMPTY_ARRAY_RE = /^this\.[A-Za-z_][A-Za-z0-9_]*\s*=\s*\[\s*\]/;
 
 const THIS_FIELD_ASSIGNMENT_RE = /\bthis\.[A-Za-z_][A-Za-z0-9_]*\s*=(?!=)/g;
 
-const SHAPE_TRUNCATED_UNTIL = 'truncatedUntil';
-
 export function expectedDomainInvariantWordsPhrase(): string {
   return `${DOMAIN_INVARIANT_WORDS.join(', ')}, or events-array .push(`;
 }
@@ -83,18 +81,11 @@ function attachShapeTruncation(
   shape: ClassShapeFact,
   truncatedUntil: number | undefined
 ): ClassShapeFact {
-  if (truncatedUntil == null) return shape;
-  Object.defineProperty(shape, SHAPE_TRUNCATED_UNTIL, {
-    value: truncatedUntil,
-    enumerable: false,
-    configurable: true,
-  });
-  return shape;
+  return truncatedUntil == null ? shape : { ...shape, truncatedUntil };
 }
 
 function shapeTruncatedUntil(shape: ClassShapeFact): number | undefined {
-  const value = Object.getOwnPropertyDescriptor(shape, SHAPE_TRUNCATED_UNTIL)?.value;
-  return typeof value === 'number' ? value : undefined;
+  return typeof shape.truncatedUntil === 'number' ? shape.truncatedUntil : undefined;
 }
 
 function shapeTruncationSuffix(shape: ClassShapeFact): string {
@@ -116,6 +107,13 @@ export type ClassShapeFact = {
   }[];
   /** Heuristic: data-only class (fields, no methods beyond accessors). */
   dataOnly?: boolean;
+  /**
+   * Set when the scanner could not walk the class to its end: the character
+   * offset (in the source file) where analysis stopped. Enumerable on purpose so
+   * it survives fact canonicalisation and serialisation; enforced structure
+   * sensors report it instead of passing in silence.
+   */
+  truncatedUntil?: number;
 };
 
 export type ArkRuleSensorViolation = {
