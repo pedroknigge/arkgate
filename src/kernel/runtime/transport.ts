@@ -51,10 +51,6 @@ function stampMetadata(
   return metadata;
 }
 
-function ignoreDetachedFailure(): void {
-  /* Fire-and-forget after kernel accept; adapter errors must not become unhandled. */
-}
-
 export async function sendOnArkRunTransport<N extends IntentName, P>(
   deps: ArkRunTransportDeps,
   intent: IntentCreator<N, P>,
@@ -67,17 +63,42 @@ export async function sendOnArkRunTransport<N extends IntentName, P>(
     brokerBound: typeof deps.broker?.send === 'function',
   });
   const metadata = stampMetadata(options);
+  const viaBroker = plan.deliveredVia === 'broker' && deps.broker !== undefined;
+  let bufferRecordId: string | undefined;
   const event = await deps.eventBus.dispatch(intent, payload, metadata, {
     notifySubscribers: plan.notifySubscribers,
     awaitHandlers: plan.awaitHandlers,
+    // The broker handoff, not local delivery, decides this record's outcome.
+    ...(viaBroker ? { settleBufferOnLocalDelivery: false } : {}),
+    onBufferRecord: (record) => {
+      bufferRecordId = record.id;
+    },
   });
 
-  if (plan.deliveredVia === 'broker' && deps.broker) {
-    const handoff = Promise.resolve(deps.broker.send(event));
+  if (viaBroker && deps.broker) {
+    const bus = deps.eventBus;
+    const broker = deps.broker;
+    const handoff = (async () => {
+      try {
+        await broker.send(event);
+      } catch (error) {
+        // Record the failed handoff so the outbox monitor and audit trail see it.
+        if (bufferRecordId !== undefined) {
+          await bus.settleBufferRecord(event, bufferRecordId, { ok: false, error });
+        }
+        await bus.recordHandoffFailure(event, error, 'broker');
+        throw error;
+      }
+      if (bufferRecordId !== undefined) {
+        await bus.settleBufferRecord(event, bufferRecordId, { ok: true });
+      }
+    })();
     if (plan.awaitHandoff) {
       await handoff;
     } else {
-      void handoff.then(undefined, ignoreDetachedFailure);
+      // Fire-and-forget after kernel accept: the failure is already recorded
+      // (buffer `failed` + `event.handoffFailed` trace/audit); never unhandled.
+      void handoff.then(undefined, () => undefined);
     }
   }
 

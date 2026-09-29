@@ -3,6 +3,7 @@ export type MaybePromise<T> = T | Promise<T>;
 export type AuditRecordType =
   | 'event.published'
   | 'event.rawPublish'
+  | 'event.handoffFailed'
   | 'event.intercepted'
   | 'interceptor.error'
   | 'policy.softViolation'

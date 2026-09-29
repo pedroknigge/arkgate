@@ -1,43 +1,55 @@
 #!/usr/bin/env node
+import { readFileSync } from 'node:fs';
 import { parseArgs } from 'node:util';
+import {
+  DASHBOARD_DEFAULT_INTERVAL_MS,
+  DASHBOARD_DEFAULT_TIMEOUT_MS,
+  DASHBOARD_DEFAULT_URL,
+  DASHBOARD_EPHEMERAL_PORT_HINT,
+  DASHBOARD_HELP,
+  clampDashboardMs,
+  dashboardSiblingUrl,
+} from './lib/dashboard-cli.mjs';
 
-const DEFAULT_INTERVAL_MS = '2000';
-const DEFAULT_SNAPSHOT_URL = 'http://127.0.0.1:3000/snapshot';
-const DEFAULT_FETCH_TIMEOUT_MS = 5_000;
 const MAX_FIELD_LEN = 120;
 
-const args = parseArgs({
-  options: {
-    interval: {
-      type: 'string',
-      short: 'i',
-      default: DEFAULT_INTERVAL_MS
-    },
-    url: {
-      type: 'string',
-      short: 'u',
-      default: DEFAULT_SNAPSHOT_URL
-    },
-    timeout: {
-      type: 'string',
-      short: 't',
-      default: String(DEFAULT_FETCH_TIMEOUT_MS)
-    }
-  },
-  allowPositionals: true
-});
+function parseDashboardArgs() {
+  try {
+    return parseArgs({
+      options: {
+        interval: { type: 'string', short: 'i' },
+        url: { type: 'string', short: 'u' },
+        timeout: { type: 'string', short: 't' },
+        once: { type: 'boolean' },
+        help: { type: 'boolean', short: 'h' },
+        version: { type: 'boolean', short: 'v' },
+      },
+      allowPositionals: true,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message.split('. ')[0] : String(err);
+    process.stderr.write(`ark-dashboard: ${message}. Run ark-dashboard --help.\n`);
+    process.exit(2);
+  }
+}
 
-const parsedInterval = parseInt(args.values.interval, 10);
-const interval =
-  Number.isFinite(parsedInterval) && parsedInterval >= 200 && parsedInterval <= 60_000
-    ? parsedInterval
-    : Number(DEFAULT_INTERVAL_MS);
-const targetUrl = args.values.url || DEFAULT_SNAPSHOT_URL;
-const parsedTimeout = parseInt(args.values.timeout, 10);
-const fetchTimeoutMs =
-  Number.isFinite(parsedTimeout) && parsedTimeout >= 200 && parsedTimeout <= 60_000
-    ? parsedTimeout
-    : DEFAULT_FETCH_TIMEOUT_MS;
+const args = parseDashboardArgs();
+if (args.values.help || args.positionals[0] === 'help') {
+  console.log(DASHBOARD_HELP);
+  process.exit(0);
+}
+if (args.values.version) {
+  const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+  console.log(pkg.version);
+  process.exit(0);
+}
+
+const envUrl = process.env.ARK_DASHBOARD_URL?.trim();
+const urlExplicit = Boolean(args.values.url || envUrl);
+const targetUrl = args.values.url || envUrl || DASHBOARD_DEFAULT_URL;
+const interval = clampDashboardMs(args.values.interval, DASHBOARD_DEFAULT_INTERVAL_MS);
+const fetchTimeoutMs = clampDashboardMs(args.values.timeout, DASHBOARD_DEFAULT_TIMEOUT_MS);
+const once = Boolean(args.values.once);
 
 const RESET = '\x1b[0m';
 const RED = '\x1b[31m';
@@ -71,22 +83,6 @@ function sanitizeField(value, maxLen = MAX_FIELD_LEN) {
     return `${text.slice(0, Math.max(0, maxLen - 1))}…`;
   }
   return text;
-}
-
-function siblingUrl(snapshotUrl, suffix) {
-  try {
-    const u = new URL(snapshotUrl);
-    let basePath = u.pathname;
-    if (basePath.endsWith('/snapshot')) {
-      basePath = basePath.slice(0, -'/snapshot'.length);
-    } else if (basePath.endsWith('/snapshot/')) {
-      basePath = basePath.slice(0, -'/snapshot/'.length);
-    }
-    u.pathname = `${basePath}${suffix}`;
-    return u.toString();
-  } catch {
-    return null;
-  }
 }
 
 /**
@@ -340,6 +336,7 @@ function renderHardening(snapshotResult) {
     } else {
       const detail = snapshotResult.error ? ` (${snapshotResult.error})` : '';
       console.log(`${RED}Failure contacting kernel${detail}${RESET}`);
+      if (!urlExplicit) console.log(`${MUTED}${DASHBOARD_EPHEMERAL_PORT_HINT}${RESET}`);
     }
     return;
   }
@@ -381,13 +378,13 @@ function renderHardening(snapshotResult) {
 }
 
 async function render() {
-  process.stdout.write('\x1b[2J\x1b[H');
+  if (!once) process.stdout.write('\x1b[2J\x1b[H');
   console.log(`ArkGate Observability Dashboard`);
   console.log(`Time: ${sanitizeField(new Date().toISOString())}`);
   console.log(`Endpoint: ${sanitizeField(targetUrl)}\n`);
 
-  const outboxUrl = siblingUrl(targetUrl, '/outbox');
-  const workflowsUrl = siblingUrl(targetUrl, '/workflows');
+  const outboxUrl = dashboardSiblingUrl(targetUrl, '/outbox');
+  const workflowsUrl = dashboardSiblingUrl(targetUrl, '/workflows');
   const [snapshotResult, outboxResult, workflowsResult] = await Promise.all([
     fetchJsonResult(targetUrl),
     fetchJsonResult(outboxUrl),
@@ -404,9 +401,15 @@ async function render() {
     snapshot?.outbox,
     snapshot?.workflows,
   );
+  return snapshotResult.ok;
 }
 
 async function startDashboard() {
+  if (once) {
+    const ok = await render();
+    process.exitCode = ok ? 0 : 1;
+    return;
+  }
   console.log(
     `Starting ArkGate Observability Dashboard (polling every ${interval}ms, fetch timeout ${fetchTimeoutMs}ms)`,
   );

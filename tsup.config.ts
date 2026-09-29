@@ -11,7 +11,7 @@ export default defineConfig({
   format: ['esm', 'cjs'],
   external: ['@nestjs/common'],
   dts: true,
-  splitting: false,
+  splitting: true,
   sourcemap: false,
   clean: true,
   // npm ships this output alongside readable TypeScript sources in the repository.

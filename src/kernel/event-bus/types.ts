@@ -12,7 +12,7 @@ import type { ArchitectureProfile } from '../layers';
 import type { Policy, PolicyEngine, PolicyEvaluationResult } from '../policy';
 import type { AuditTrail } from '../audit';
 import type { EventContractRegistry } from '../event-contracts';
-import type { EventBufferStore } from '../outbox';
+import type { EventBufferRecord, EventBufferStore } from '../outbox';
 
 export type { IntentCreator };
 
@@ -20,6 +20,7 @@ export type { IntentCreator };
 export type TraceRecordType =
   | 'event.published'
   | 'event.rawPublish'
+  | 'event.handoffFailed'
   | 'event.intercepted'
   | 'interceptor.error'
   | 'policy.hardViolation'
@@ -83,6 +84,16 @@ export interface EventBusOptions<Context = unknown> {
 
   /** Optional non-atomic event buffer for dispatch handoff. */
   eventBuffer?: EventBufferStore;
+
+  /**
+   * When true, the event-buffer record written for a publish is marked
+   * `dispatched` once local delivery finishes (handlers + onPublish), or `failed`
+   * when a rethrown handler error aborts it. Use only when no external relay
+   * drains the buffer. Default: false — records stay `pending` for a
+   * consumer-owned relay (`claim` / `markDispatched`). `createArkKernel` turns
+   * this on for its default in-memory buffer only.
+   */
+  settleBufferOnLocalDelivery?: boolean;
   /** @deprecated Use eventBuffer. */
   outbox?: EventBufferStore;
 
@@ -212,6 +223,14 @@ export interface EventDispatchControl {
   awaitHandlers?: boolean;
   runOnPublish?: boolean;
   tx?: unknown;
+  /**
+   * When false, skip local-delivery settlement of the buffer record even if the
+   * bus settles on local delivery (the caller owns the outcome, e.g. a broker
+   * handoff). Default: the bus `settleBufferOnLocalDelivery` option.
+   */
+  settleBufferOnLocalDelivery?: boolean;
+  /** Receives the event-buffer record written for this publish, when any. */
+  onBufferRecord?: (record: EventBufferRecord) => void;
 }
 
 /**

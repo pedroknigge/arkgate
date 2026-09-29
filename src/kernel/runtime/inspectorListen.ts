@@ -74,7 +74,9 @@ function sseHeaders(): Record<string, string> {
 }
 
 function requestUrl(url: string | undefined): URL {
-  const raw = url && url.length > 0 ? url : '/';
+  // Collapse leading slashes: `//outbox` must route as `/outbox`, never be read
+  // as a protocol-relative authority (host "outbox", path "/") → snapshot.
+  const raw = (url && url.length > 0 ? url : '/').replace(/^\/+/, '/');
   return new URL(raw, 'http://127.0.0.1');
 }
 
