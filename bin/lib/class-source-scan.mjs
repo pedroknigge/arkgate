@@ -392,7 +392,7 @@ export function findMemberContainers(content, name) {
     if (!/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(name))
         return out;
     const code = maskStringsAndComments(content);
-    const escaped = name.replace(/\$/g, '\\$');
+    const escaped = name.replace(/[\\^$.*+?()[\]{}|]/g, '\\$&');
     const re = new RegExp(`\\b(?:(namespace|module)\\s+${escaped}\\s*\\{|(?:const|let|var)\\s+${escaped}\\s*(?::[^=;]+?)?=(?!=|>)\\s*(class\\b)?)`, 'g');
     let match;
     while ((match = re.exec(code)) !== null) {

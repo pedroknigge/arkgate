@@ -278,7 +278,7 @@ export function resolveImportSpecifier(
     const captured = matchAlias(alias, specifier);
     if (captured === null) continue;
     for (const target of alias.targets) {
-      const mapped = alias.wildcard ? target.replace('*', captured) : target;
+      const mapped = alias.wildcard ? target.split('*').join(captured) : target;
       const hit = existingSourceFile(path.resolve(baseUrl, mapped));
       if (hit) return hit;
     }

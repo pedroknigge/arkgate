@@ -163,7 +163,11 @@ export function isGitHubEmail(value: string | null | undefined): boolean {
   if (typeof value !== 'string') return false;
   const email = value.trim().toLowerCase();
   if (!email.includes('@') || email.includes(' ') || isAutomationAuthor(email)) return false;
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  // local@domain.tld without a backtracking regex (CodeQL js/polynomial-redos).
+  const parts = email.split('@');
+  if (parts.length !== 2 || !parts[0] || /\s/.test(email)) return false;
+  const dot = parts[1].lastIndexOf('.');
+  return dot > 0 && dot < parts[1].length - 1;
 }
 
 /** `123+login@users.noreply.github.com` or `login@users.noreply.github.com` → login. */
