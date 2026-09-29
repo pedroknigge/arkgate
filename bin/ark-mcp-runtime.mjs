@@ -108,6 +108,7 @@ import {
   formatDesignDeltaBlock,
 } from './lib/design-delta.mjs';
 import { attachPolicyAdrNote } from './lib/adr-path.mjs';
+import { resolvePolicyDeltaArkRules } from './lib/policy-delta-io.mjs';
 
 const arkCheckBin = fileURLToPath(new URL('./ark-check.mjs', import.meta.url));
 const arkMcpLauncher = fileURLToPath(new URL('./ark-mcp.mjs', import.meta.url));
@@ -2009,6 +2010,19 @@ export async function runArkMcp({ hookInput } = {}) {
             type: 'object',
             description: 'Candidate complete config; defaults to the current project contract.',
           },
+          baseArkRuleFiles: {
+            type: 'object',
+            description:
+              'Base ArkRules catalog as data: { "<path from baseConfig.arkRules>": <ArkRules file JSON> }. ' +
+              'Required when baseConfig maps arkRules; otherwise the call is refused rather than ' +
+              'classifying ArkRule demotions/deletions as neutral.',
+          },
+          candidateArkRuleFiles: {
+            type: 'object',
+            description:
+              'Candidate ArkRules catalog as data, same shape. Defaults to the files on disk when ' +
+              'candidateConfig is omitted or equals the project contract.',
+          },
           acknowledgement: {
             type: 'object',
             description:
@@ -2472,11 +2486,26 @@ export async function runArkMcp({ hookInput } = {}) {
     }
     try {
       const acknowledgement = params?.arguments?.acknowledgement;
+      const suppliedCandidate = params?.arguments?.candidateConfig;
+      const candidateConfig = suppliedCandidate ?? config;
+      // ArkRules are part of the policy: classify their transition too, or refuse.
+      const { baseArkRules, candidateArkRules } = resolvePolicyDeltaArkRules({
+        root: args.root,
+        baseConfig,
+        candidateConfig,
+        candidateIsProjectConfig:
+          suppliedCandidate === undefined ||
+          stableSerialize(suppliedCandidate) === stableSerialize(config),
+        baseArkRuleFiles: params?.arguments?.baseArkRuleFiles,
+        candidateArkRuleFiles: params?.arguments?.candidateArkRuleFiles,
+      });
       const result = attachPolicyAdrNote(
         ark.analyzePolicyDelta({
           baseConfig,
-          candidateConfig: params?.arguments?.candidateConfig ?? config,
+          candidateConfig,
           acknowledgement,
+          baseArkRules,
+          candidateArkRules,
         }),
         { root: args.root, acknowledgement, failClosed: true }
       );

@@ -571,6 +571,13 @@ npx ark-check --strict-config --policy-base ./before.ark.config.json --json
 npx ark-check --strict-merge --policy-base-ref origin/main
 ```
 
+ArkRules are part of the policy. With a Git ref, the base `arkrules/*.json` files are read from
+that same ref (a file the base config references but the ref does not contain yet counts as an
+empty layer). With `--policy-base <file>`, the base ArkRules paths resolve next to that file (keep
+a copy of the base `arkrules/` beside it). A base ArkRules file that cannot be read or parsed fails
+closed, because comparing the candidate catalog with itself would read every demotion or
+deletion as neutral.
+
 The additive JSON result includes `policyDelta`: both policy hashes, the overall classification,
 stable findings, and `blockingFindingIds`. Supported comparisons cover governed include/exclude
 roots, layer patterns/exclusions/forbidden globals, deny rules, same-layer peer isolation,
@@ -651,5 +658,9 @@ verdict.
 
 MCP clients can call `ark_policy_delta` with the previous `baseConfig`, an optional candidate
 contract (the current project contract is the default), and the same optional acknowledgement.
+When `baseConfig` maps `arkRules`, pass the base catalog as data in `baseArkRuleFiles`
+(`{ "<path from baseConfig.arkRules>": <ArkRules file JSON> }`); without it the call is refused
+instead of returning a config-only verdict. The candidate catalog is read from disk when the
+candidate is the project contract; otherwise pass `candidateArkRuleFiles` in the same shape.
 It invokes the public classifier directly, is read-only, and marks a blocking result as an MCP
 error without maintaining separate adapter policy.

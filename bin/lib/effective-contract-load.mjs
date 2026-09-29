@@ -1,6 +1,10 @@
 /**
  * Tooling adapter: load Effective Contract from disk for a root config.
  * Pure resolution lives in Domain (`resolveEffectiveContract`); this module owns I/O.
+ *
+ * `loadEffectiveArkRules` is the source-agnostic core (working tree, a policy base
+ * ref, or supplied file objects all pass the same path validation); only the
+ * reader differs.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -10,7 +14,7 @@ import {
   loadArkRulesContract,
 } from './arkrules-contract.mjs';
 
-function normalizeProjectRelativePath(value) {
+export function normalizeProjectRelativePath(value) {
   const normalized = value.replace(/\\/g, '/');
   if (
     !normalized ||
@@ -29,7 +33,7 @@ function normalizeProjectRelativePath(value) {
   return segments.length > 0 ? segments.join('/') : undefined;
 }
 
-function isWithinRoot(root, candidate) {
+export function isWithinRoot(root, candidate) {
   const relative = path.relative(root, candidate);
   return (
     relative === '' ||
@@ -40,26 +44,29 @@ function isWithinRoot(root, candidate) {
 }
 
 /**
- * @param {string} root
- * @param {Record<string, unknown>} config loaded ark.config.json object
- * @param {{ observeInput?: (abs: string, kind: string) => void }} [opts]
- * @returns {{ arkRules: ReturnType<typeof emptyEffectiveArkRules>, warnings: Array<{path:string,message:string,severity:string}>, errors: Array<{path:string,message:string}> }}
+ * @typedef {{ ok: true, content: string } | { ok: false, missing?: boolean, message: string }} ArkRulesRead
  */
-export function loadEffectiveArkRulesFromDisk(root, config, opts = {}) {
-  const refs = config?.arkRules;
-  if (!refs || typeof refs !== 'object' || Object.keys(refs).length === 0) {
-    return { arkRules: emptyEffectiveArkRules(), warnings: [], errors: [] };
-  }
 
+/**
+ * Core loader shared by every source.
+ *
+ * @param {Record<string, unknown>} config loaded ark.config.json object
+ * @param {(rel: string) => ArkRulesRead} readRelative
+ * @param {{ missingAsEmpty?: boolean }} [opts] missingAsEmpty: a referenced file absent
+ *   from the source counts as an empty layer (a base that predates the file), not an error.
+ * @returns {{ arkRules: ReturnType<typeof emptyEffectiveArkRules>, errors: Array<{path:string,message:string}>, referenced: Set<string> }}
+ */
+export function loadEffectiveArkRules(config, readRelative, opts = {}) {
+  const refs = config?.arkRules;
+  const referenced = new Set();
+  if (!refs || typeof refs !== 'object' || Object.keys(refs).length === 0) {
+    return { arkRules: emptyEffectiveArkRules(), errors: [], referenced };
+  }
   const layerNames = new Set(
     Array.isArray(config.layers) ? config.layers.map((layer) => layer.name) : []
   );
   const errors = [];
-  const warnings = [];
   const parts = [];
-  const referenced = new Set();
-  const canonicalRoot = fs.realpathSync(root);
-
   for (const layer of Object.keys(refs).sort()) {
     const relRaw = refs[layer];
     const pathKey = `$.arkRules[${JSON.stringify(layer)}]`;
@@ -83,57 +90,15 @@ export function loadEffectiveArkRulesFromDisk(root, config, opts = {}) {
       });
       continue;
     }
-
     referenced.add(rel);
-    const lexicalTarget = path.resolve(canonicalRoot, ...rel.split('/'));
-    if (!isWithinRoot(canonicalRoot, lexicalTarget)) {
-      errors.push({
-        path: pathKey,
-        message: `referenced ArkRules path ${JSON.stringify(rel)} resolves outside the project root`,
-      });
-      continue;
-    }
-    if (!fs.existsSync(lexicalTarget)) {
-      errors.push({
-        path: pathKey,
-        message: `referenced ArkRules file ${JSON.stringify(rel)} is missing`,
-      });
-      continue;
-    }
-    let absolute;
-    try {
-      absolute = fs.realpathSync(lexicalTarget);
-    } catch (error) {
-      errors.push({
-        path: pathKey,
-        message: `referenced ArkRules file ${JSON.stringify(rel)} could not be resolved: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
-      });
-      continue;
-    }
-    if (!isWithinRoot(canonicalRoot, absolute)) {
-      errors.push({
-        path: pathKey,
-        message: `referenced ArkRules path ${JSON.stringify(rel)} resolves outside the project root`,
-      });
-      continue;
-    }
-    opts.observeInput?.(absolute, 'arkrules');
-    let content;
-    try {
-      content = fs.readFileSync(absolute, 'utf8');
-    } catch (error) {
-      errors.push({
-        path: pathKey,
-        message: `referenced ArkRules file ${JSON.stringify(rel)} could not be read: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
-      });
+    const read = readRelative(rel);
+    if (!read.ok) {
+      if (read.missing && opts.missingAsEmpty) continue;
+      errors.push({ path: pathKey, message: read.message });
       continue;
     }
     try {
-      const loaded = loadArkRulesContract(JSON.parse(content), rel, layer);
+      const loaded = loadArkRulesContract(JSON.parse(read.content), rel, layer);
       parts.push({ layer, sourceFile: rel, file: loaded.config });
     } catch (error) {
       errors.push({
@@ -145,8 +110,82 @@ export function loadEffectiveArkRulesFromDisk(root, config, opts = {}) {
       });
     }
   }
+  if (errors.length > 0) return { arkRules: emptyEffectiveArkRules(), errors, referenced };
+  return { arkRules: buildEffectiveArkRules(parts), errors: [], referenced };
+}
 
-  // Drift: unreferenced files under arkrules/
+/**
+ * Directory reader: realpath + within-root guards, then readFileSync.
+ * @param {string} canonicalRoot realpath of the directory the paths are relative to
+ * @param {{ observeInput?: (abs: string, kind: string) => void }} [opts]
+ * @returns {(rel: string) => ArkRulesRead}
+ */
+export function directoryArkRulesReader(canonicalRoot, opts = {}) {
+  return (rel) => {
+    const lexicalTarget = path.resolve(canonicalRoot, ...rel.split('/'));
+    const outside = {
+      ok: false,
+      message: `referenced ArkRules path ${JSON.stringify(rel)} resolves outside the project root`,
+    };
+    if (!isWithinRoot(canonicalRoot, lexicalTarget)) return outside;
+    if (!fs.existsSync(lexicalTarget)) {
+      return {
+        ok: false,
+        missing: true,
+        message: `referenced ArkRules file ${JSON.stringify(rel)} is missing`,
+      };
+    }
+    let absolute;
+    try {
+      absolute = fs.realpathSync(lexicalTarget);
+    } catch (error) {
+      return {
+        ok: false,
+        message: `referenced ArkRules file ${JSON.stringify(rel)} could not be resolved: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      };
+    }
+    if (!isWithinRoot(canonicalRoot, absolute)) return outside;
+    opts.observeInput?.(absolute, 'arkrules');
+    try {
+      return { ok: true, content: fs.readFileSync(absolute, 'utf8') };
+    } catch (error) {
+      return {
+        ok: false,
+        message: `referenced ArkRules file ${JSON.stringify(rel)} could not be read: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      };
+    }
+  };
+}
+
+/**
+ * Reader over supplied ArkRules file objects keyed by project-relative path
+ * (MCP callers hand a catalog as data instead of a checkout).
+ * @param {Record<string, unknown>} files
+ * @returns {(rel: string) => ArkRulesRead}
+ */
+export function objectArkRulesReader(files) {
+  const byPath = new Map();
+  for (const [key, value] of Object.entries(files ?? {})) {
+    const rel = normalizeProjectRelativePath(String(key));
+    if (rel) byPath.set(rel, value);
+  }
+  return (rel) =>
+    byPath.has(rel)
+      ? { ok: true, content: JSON.stringify(byPath.get(rel)) }
+      : {
+          ok: false,
+          missing: true,
+          message: `ArkRules file ${JSON.stringify(rel)} was not supplied`,
+        };
+}
+
+/** Advisory drift: `arkrules/*.json` files the arkRules map does not reference (ADR 0012 D2). */
+function unreferencedArkRulesWarnings(canonicalRoot, referenced) {
+  const warnings = [];
   const arkrulesDir = path.join(canonicalRoot, 'arkrules');
   const resolvedArkRulesDir = fs.existsSync(arkrulesDir)
     ? fs.realpathSync(arkrulesDir)
@@ -168,13 +207,19 @@ export function loadEffectiveArkRulesFromDisk(root, config, opts = {}) {
       }
     }
   }
+  return warnings;
+}
 
-  if (errors.length > 0) {
-    return { arkRules: emptyEffectiveArkRules(), warnings, errors };
-  }
-  return {
-    arkRules: buildEffectiveArkRules(parts),
-    warnings,
-    errors: [],
-  };
+/**
+ * @param {string} root
+ * @param {Record<string, unknown>} config loaded ark.config.json object
+ * @param {{ observeInput?: (abs: string, kind: string) => void }} [opts]
+ * @returns {{ arkRules: ReturnType<typeof emptyEffectiveArkRules>, warnings: Array<{path:string,message:string,severity:string}>, errors: Array<{path:string,message:string}> }}
+ */
+export function loadEffectiveArkRulesFromDisk(root, config, opts = {}) {
+  const canonicalRoot = fs.realpathSync(root);
+  const loaded = loadEffectiveArkRules(config, directoryArkRulesReader(canonicalRoot, opts));
+  // Drift runs with or without a map: an arkrules/ directory nobody references is visible.
+  const warnings = unreferencedArkRulesWarnings(canonicalRoot, loaded.referenced);
+  return { arkRules: loaded.arkRules, warnings, errors: loaded.errors };
 }
