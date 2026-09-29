@@ -12,7 +12,7 @@ import {
 import { loadTypeScript } from '../../../bin/lib/typescript-host.mjs';
 import { resolveCandidateFacts } from '../../../bin/lib/resolved-candidate-facts.mjs';
 import { prepareChangeFromRoot } from '../../../bin/lib/prepare-change.mjs';
-import { noDomainInfraImports } from '../../../src/eslint/index';
+import { architectureAdvisory, noDomainInfraImports } from '../../../src/eslint/index';
 import { withDistLock } from '../../helpers/distLock';
 import { writeSemanticGateArtifacts } from '../../helpers/semanticGateArtifacts';
 
@@ -452,23 +452,27 @@ describe('Z04 resolved adapter differential corpus', () => {
       'relative',
       'type-only',
     ]);
+    // Error findings report on the blocking rule, warning findings (type-only placement
+    // debt) on the warn-level advisory rule; together they carry the CLI diagnostics.
     const reports: JsonResult[] = [];
-    const listener = noDomainInfraImports.create({
-      getFilename: () => path.join(root, 'src/domain/syntax.ts'),
-      options: [],
-      report: (descriptor: JsonResult) => reports.push(descriptor),
-    });
-    listener.ImportDeclaration({
-      type: 'ImportDeclaration',
-      source: { value: '../kernel/relative' },
-      loc: { start: { line: 1 } },
-    });
-    listener.ImportDeclaration({
-      type: 'ImportDeclaration',
-      source: { value: '../kernel/types' },
-      importKind: 'type',
-      loc: { start: { line: 9 } },
-    });
+    for (const rule of [noDomainInfraImports, architectureAdvisory]) {
+      const listener = rule.create({
+        getFilename: () => path.join(root, 'src/domain/syntax.ts'),
+        options: [],
+        report: (descriptor: JsonResult) => reports.push(descriptor),
+      });
+      listener.ImportDeclaration({
+        type: 'ImportDeclaration',
+        source: { value: '../kernel/relative' },
+        loc: { start: { line: 1 } },
+      });
+      listener.ImportDeclaration({
+        type: 'ImportDeclaration',
+        source: { value: '../kernel/types' },
+        importKind: 'type',
+        loc: { start: { line: 9 } },
+      });
+    }
     expect(reports.map(({ diagnostic }) => diagnostic)).toEqual([
       cliRun.data.diagnostics.find(
         ({ evidence }: JsonResult) => evidence.target === 'src/kernel/relative.ts',

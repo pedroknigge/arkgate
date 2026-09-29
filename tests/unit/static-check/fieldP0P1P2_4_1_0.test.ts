@@ -27,6 +27,7 @@ import { evaluateArchitectureGraph } from '../../../src/kernel/graphEvaluate';
 import {
   resolveImportSpecifier,
   readTsconfigPathAliases,
+  architectureAdvisory,
   noDomainInfraImports,
 } from '../../../src/eslint/index';
 import {
@@ -508,21 +509,32 @@ describe('P0-C ESLint tsconfig path alias resolution', () => {
     const domainFile = path.join(root, 'src/domain/order.ts');
     fs.writeFileSync(domainFile, "import type { UiId } from '@/app/types';\nexport type O = UiId;\n");
 
+    const typeOnlyNode = {
+      type: 'ImportDeclaration',
+      importKind: 'type',
+      source: { value: '@/app/types' },
+      specifiers: [{ type: 'ImportSpecifier', importKind: 'type' }],
+      loc: { start: { line: 1, column: 0 } },
+    };
+    // Warning-severity findings never report on the error-level rule id.
+    const blocking: Array<Record<string, unknown>> = [];
+    noDomainInfraImports
+      .create({
+        filename: domainFile,
+        report: (desc: Record<string, unknown>) => blocking.push(desc),
+        sourceCode: { getScope: () => undefined },
+      })
+      .ImportDeclaration?.(typeOnlyNode);
+    expect(blocking).toHaveLength(0);
     const reports: Array<Record<string, unknown>> = [];
-    const listener = noDomainInfraImports.create({
+    const listener = architectureAdvisory.create({
       filename: domainFile,
       report(desc) {
         reports.push(desc);
       },
       sourceCode: { getScope: () => undefined },
     });
-    listener.ImportDeclaration?.({
-      type: 'ImportDeclaration',
-      importKind: 'type',
-      source: { value: '@/app/types' },
-      specifiers: [{ type: 'ImportSpecifier', importKind: 'type' }],
-      loc: { start: { line: 1, column: 0 } },
-    });
+    listener.ImportDeclaration?.(typeOnlyNode);
     expect(reports.length).toBe(1);
     const diagnostic = reports[0]?.diagnostic as {
       severity?: string;
