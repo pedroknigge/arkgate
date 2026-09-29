@@ -29,6 +29,7 @@ import {
   grokHooks,
   grokProjectConfig,
   mergeAntigravityArkHook,
+  mergeClaudeStyleArkHooks,
   mergeCursorArkHook,
   mergeOpencodeArkMcp,
   opencodeProjectConfig,
@@ -39,6 +40,7 @@ import {
   compactRouterHost,
   mergeArkMcpJson,
   MCP_JSON_GATE_FILES,
+  CLAUDE_STYLE_HOOK_FILES,
   writeTemplate,
 } from './gate-files.mjs';
 import {
@@ -341,6 +343,18 @@ export function runMigrateCommands(root) {
   warnLockfileConflict(root);
 }
 
+/** Shared host files Ark merges into (keeps sibling servers / hooks / keys). */
+function mergeableGateFile(relativePath) {
+  if (relativePath === 'opencode.json') return { fn: mergeOpencodeArkMcp, forceReplaces: false };
+  if (relativePath === '.cursor/hooks.json') return { fn: mergeCursorArkHook, forceReplaces: false };
+  if (relativePath === '.agents/hooks.json') return { fn: mergeAntigravityArkHook, forceReplaces: false };
+  if (CLAUDE_STYLE_HOOK_FILES.includes(relativePath)) {
+    return { fn: mergeClaudeStyleArkHooks, forceReplaces: true };
+  }
+  if (MCP_JSON_GATE_FILES.includes(relativePath)) return { fn: mergeArkMcpJson, forceReplaces: true };
+  return null;
+}
+
 export function runInstallAgentGates(args) {
   const root = args.root;
   if (args.migrateCommands) {
@@ -454,6 +468,11 @@ export function runInstallAgentGates(args) {
         `Added package.json script "typecheck": "${typecheckBootstrap.script}" (tsconfig present; local/CI parity).`
       );
     }
+    if (typecheckBootstrap.reason === 'no-typescript' && !args.compact && !args.json) {
+      console.log(
+        'tsconfig/jsconfig found but typescript is not a dependency — skipped the "typecheck" script and CI step (add typescript as a devDependency, then "typecheck": "tsc --noEmit").'
+      );
+    }
   }
   const catalog = buildManagedAssetCatalog({
     root,
@@ -518,81 +537,24 @@ export function runInstallAgentGates(args) {
       if (merged === existing) return { relativePath, status: 'skipped' };
       return writeTemplate(root, relativePath, merged, true);
     }
-    if (relativePath === 'opencode.json') {
-      const fullPath = path.join(root, relativePath);
+    const merge = mergeableGateFile(relativePath);
+    if (merge) {
+      // Upsert Ark's entry into a shared host file without --force; never wipe sibling keys.
       let existing = '';
       try {
-        existing = fs.readFileSync(fullPath, 'utf8');
+        existing = fs.readFileSync(path.join(root, relativePath), 'utf8');
       } catch {
-        // Missing project config → write the generated Ark MCP block.
+        // Missing file → write the generated Ark template.
       }
-      if (!existing) {
-        return writeTemplate(root, relativePath, content, true);
-      }
-      const merged = mergeOpencodeArkMcp(existing, content);
+      if (!existing) return writeTemplate(root, relativePath, content, true);
+      const merged = merge.fn(existing, content);
       if (merged == null) {
-        return { relativePath, status: 'skipped-non-ark' };
-      }
-      if (merged === existing) return { relativePath, status: 'skipped' };
-      return writeTemplate(root, relativePath, merged, true);
-    }
-    if (relativePath === '.cursor/hooks.json') {
-      const fullPath = path.join(root, relativePath);
-      let existing = '';
-      try {
-        existing = fs.readFileSync(fullPath, 'utf8');
-      } catch {
-        // Missing hooks file → write generated Cursor preToolUse gate.
-      }
-      if (!existing) {
-        return writeTemplate(root, relativePath, content, true);
-      }
-      const merged = mergeCursorArkHook(existing, content);
-      if (merged == null) {
-        return { relativePath, status: 'skipped-non-ark' };
-      }
-      if (merged === existing) return { relativePath, status: 'skipped' };
-      // Upsert Ark preToolUse without requiring --force; never wipe sibling hooks.
-      return writeTemplate(root, relativePath, merged, true);
-    }
-    if (relativePath === '.agents/hooks.json') {
-      const fullPath = path.join(root, relativePath);
-      let existing = '';
-      try {
-        existing = fs.readFileSync(fullPath, 'utf8');
-      } catch {
-        // Missing hooks file → write generated ark-write-gate map.
-      }
-      if (!existing) {
-        return writeTemplate(root, relativePath, content, true);
-      }
-      const merged = mergeAntigravityArkHook(existing, content);
-      if (merged == null) {
-        return { relativePath, status: 'skipped-non-ark' };
-      }
-      if (merged === existing) return { relativePath, status: 'skipped' };
-      // Upsert ark-write-gate without requiring --force; never wipe sibling named hooks.
-      return writeTemplate(root, relativePath, merged, true);
-    }
-    if (MCP_JSON_GATE_FILES.includes(relativePath)) {
-      const fullPath = path.join(root, relativePath);
-      let existing = '';
-      try {
-        existing = fs.readFileSync(fullPath, 'utf8');
-      } catch {
-        // Missing MCP JSON → write generated ark server.
-      }
-      if (!existing) {
-        return writeTemplate(root, relativePath, content, true);
-      }
-      const merged = mergeArkMcpJson(existing, content);
-      if (merged == null) {
-        return args.force
+        // Unmergeable file: never guess. --force replaces it only where that is explicit consent.
+        return merge.forceReplaces && args.force
           ? writeTemplate(root, relativePath, content, true)
           : { relativePath, status: 'skipped-non-ark' };
       }
       if (merged === existing) return { relativePath, status: 'skipped' };
-      // Upsert mcpServers.ark without requiring --force; never wipe sibling servers.
       return writeTemplate(root, relativePath, merged, true);
     }
     return writeTemplate(
@@ -799,9 +761,20 @@ export function runInstallAgentGates(args) {
       console.log('    - Not equivalent to Claude/Grok PreToolUse hard-write + repair.');
     }
     if (args.codexHome) {
-      console.log(
-        `  Codex: refreshed home skills under ${codexSkillsDir()}/<name>/SKILL.md (Codex skill catalog).`
-      );
+      // Report what the home write actually did (it is skipped when the project catalog exists).
+      if (homeResults.some((r) => r.status === 'written')) {
+        console.log(
+          `  Codex: refreshed home skills under ${codexSkillsDir()}/<name>/SKILL.md (Codex skill catalog).`
+        );
+      } else if (homeResults.some((r) => r.status === 'failed')) {
+        console.log(`  Codex: home skills NOT written under ${codexSkillsDir()} (see failures above).`);
+      } else if (homeResults.length === 0) {
+        console.log(
+          '  Codex: home skills not written — project .agents/skills is the catalog (Codex reads repo scope).'
+        );
+      } else {
+        console.log(`  Codex: home skills under ${codexSkillsDir()} already current (no changes).`);
+      }
     } else if (tools.has('codex') && skills.length > 0 && !args.compact) {
       console.log(
         '  Codex: project skills at `.agents/skills/<name>/SKILL.md` (Agent Skills REPO scope).'

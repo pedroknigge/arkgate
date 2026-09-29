@@ -90,6 +90,7 @@ export function resolvePolicyBaseConfig({
   configPath,
   basePath,
   baseRef,
+  adoptMissingBase = false,
   env = process.env,
 }) {
   if (basePath) {
@@ -119,7 +120,8 @@ export function resolvePolicyBaseConfig({
     // A newly adopted contract has no predecessor to weaken. CI-provided and
     // auto-discovered bases may therefore omit the config; an explicit CLI ref
     // remains fail-closed because the caller asked to compare that exact input.
-    if (refExists.status === 0 && !baseRef) return null;
+    // A team base bound by --base / discovery (adoptMissingBase) is not such a request.
+    if (refExists.status === 0 && (!baseRef || adoptMissingBase)) return null;
     if (requestedRef) {
       throw new Error(
         `Cannot read policy base ${ref}:${relativeConfig}: ${result.stderr.trim() || 'git show failed'}`
@@ -155,11 +157,12 @@ export function analyzePolicyTransition({
   strictMerge,
   basePath,
   baseRef,
+  adoptMissingBase = false,
   acknowledgementPath,
 }) {
   if (!strictMerge && !basePath && !baseRef && !acknowledgementPath) return undefined;
-  const base = resolvePolicyBaseConfig({ root, configPath, basePath, baseRef });
-  if (!base && (basePath || baseRef || acknowledgementPath)) {
+  const base = resolvePolicyBaseConfig({ root, configPath, basePath, baseRef, adoptMissingBase });
+  if (!base && (basePath || (baseRef && !adoptMissingBase) || acknowledgementPath)) {
     throw new Error('Policy delta was requested but no policy base could be resolved.');
   }
   if (!base) return undefined;

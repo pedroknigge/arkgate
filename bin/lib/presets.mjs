@@ -6,6 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   applyFrameworkLayoutOverlays,
+  cloneArchetypeForLayer,
   createElevenLayerConfig,
   DEFAULT_DOMAIN_FORBIDDEN_GLOBALS,
   discoverRepoUnits,
@@ -371,11 +372,8 @@ export function buildArkRulesTemplateForLayer(layerName, role = resolveLayerSens
     const sourcePath = path.join(ARKRULES_TEMPLATES_DIR, archetype);
     if (fs.existsSync(sourcePath)) {
       try {
-        const parsed = JSON.parse(fs.readFileSync(sourcePath, 'utf8'));
-        return {
-          ...parsed,
-          layer: layerName,
-        };
+        // Unique ids across arkrules/*.json so `--promote <id> --apply` works on the starter.
+        return cloneArchetypeForLayer(JSON.parse(fs.readFileSync(sourcePath, 'utf8')), layerName);
       } catch {
         // Fall through to generic mold.
       }

@@ -10,6 +10,35 @@ import {
   HOST_SUPPORT_MATRIX,
 } from './host-support-matrix.mjs';
 import { KNOWN_TOOLS, normalizeToolsList } from './skill-install.mjs';
+import {
+  antigravityHooks,
+  claudeSettings,
+  codexHooks,
+  cursorHooks,
+  mergeAntigravityArkHook,
+  mergeClaudeStyleArkHooks,
+  mergeCursorArkHook,
+} from './hook-templates.mjs';
+
+/** Hosts whose hook file the installer merges (keeping user keys) instead of replacing. */
+const MERGEABLE_HOOK_FILES = {
+  claude: [claudeSettings, mergeClaudeStyleArkHooks],
+  codex: [codexHooks, mergeClaudeStyleArkHooks],
+  cursor: [cursorHooks, mergeCursorArkHook],
+  antigravity: [antigravityHooks, mergeAntigravityArkHook],
+};
+
+/** True when install will upsert Ark's hook into the existing host file without --force. */
+export function hostHookFileMergeable(root, host, hookFile) {
+  const entry = MERGEABLE_HOOK_FILES[host];
+  if (!entry) return false;
+  try {
+    const [template, merge] = entry;
+    return merge(fs.readFileSync(hookFile, 'utf8'), template(root)) != null;
+  } catch {
+    return false;
+  }
+}
 
 export const HOST_ENFORCEMENT_SUPPORT = Object.freeze(
   Object.fromEntries(
@@ -79,12 +108,19 @@ export function validateHardWriteRequest({ root, host, tools, force = false }) {
   }
 
   const hookFile = path.join(root, support.hookPath);
-  if (fs.existsSync(hookFile) && !force && !hasHardWriteHook(root, normalizedHost)) {
+  if (
+    fs.existsSync(hookFile) &&
+    !force &&
+    !hasHardWriteHook(root, normalizedHost) &&
+    !hostHookFileMergeable(root, normalizedHost, hookFile)
+  ) {
     return {
       ok: false,
-      error:
-        `${support.hookPath} already exists without an Ark hard-write hook and would be preserved. ` +
-        'Use --force to replace that host file, or omit --require-write-hook for merge-only enforcement.',
+      error: MERGEABLE_HOOK_FILES[normalizedHost]
+        ? `${support.hookPath} already exists but is not a JSON object Ark can merge into, so it would be preserved. ` +
+          'Fix that file (or use --force to replace it), or omit --require-write-hook for merge-only enforcement.'
+        : `${support.hookPath} already exists without an Ark hard-write hook and would be preserved. ` +
+          'Use --force to replace that host file, or omit --require-write-hook for merge-only enforcement.',
     };
   }
 

@@ -126,7 +126,11 @@ describe('gate-files direct behavior', () => {
 
     const dryRun = temporaryRoot();
     writeJson(dryRun, 'tsconfig.json', {});
-    writeJson(dryRun, 'package.json', { name: 'dry-run', scripts: { lint: 'eslint .' } });
+    writeJson(dryRun, 'package.json', {
+      name: 'dry-run',
+      scripts: { lint: 'eslint .' },
+      devDependencies: { typescript: '^5.9.0' },
+    });
     expect(ensureTypecheckScript(dryRun, { write: false })).toEqual({
       changed: true,
       reason: 'added',

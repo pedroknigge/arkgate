@@ -145,8 +145,11 @@ export function bindTeamBaseRefs(args, root) {
     if (!next.against && (next.changed || next.contractDiff || next.persona)) {
       next.against = teamBase;
     }
-    if (!next.policyBaseRef && (next.contractDiff || next.changed || next.against)) {
+    // A contract session must classify the law change, or loosening skips steward/ack checks.
+    // policyBaseFromTeam: a base without the contract yet is adoption (no predecessor), not an error.
+    if (!next.policyBaseRef && (next.contractDiff || next.changed || next.against || next.contractSession)) {
       next.policyBaseRef = teamBase;
+      next.policyBaseFromTeam = true;
     }
     if (!next.baseRef && next.failOnNewSmells) next.baseRef = teamBase;
   }

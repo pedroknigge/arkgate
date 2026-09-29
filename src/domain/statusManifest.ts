@@ -122,6 +122,11 @@ export type StatusManifest = {
   rules: StatusRulesSlice;
   nextAction: StatusNextAction;
   /**
+   * Contract validity for the resolved config. Present only when a config file exists and
+   * failed the shared contract validator (same fail-closed rules as ark-check / MCP / ESLint).
+   */
+  contract?: StatusContractSlice;
+  /**
    * Improvement compass residual map with honesty mode (DF02).
    * Tooling should always supply a projection (including mode=unavailable).
    */
@@ -138,6 +143,12 @@ export type StatusManifest = {
    * residual is a finding-id count (null = unknown, not green).
    */
   arkOrder?: ArkOrderStatusSlice;
+};
+
+export type StatusContractSlice = {
+  valid: false;
+  /** Validator messages (`<json path>: <message>`), in validator order. */
+  errors: string[];
 };
 
 export type StatusVsBaseSlice = {
@@ -157,6 +168,11 @@ export type StatusManifestFacts = {
   arkgateVersion: string;
   resolvedRoot: string;
   resolvedConfigPath?: string | null;
+  /**
+   * Contract validator messages for the resolved config. Non-empty → the config is invalid
+   * (every enforcing surface refuses it). Empty/omitted → valid or not evaluated.
+   */
+  configErrors?: string[] | null;
   projectId?: string | null;
   /**
    * Optional agent expectation (same shape as MCP `project`).
@@ -384,6 +400,11 @@ export function defaultHonestLabel(
  * Deterministic next action from residual facts (no LLM).
  * Prefer explicit override from productHonesty when provided.
  */
+function normalizedConfigErrors(errors: unknown): string[] {
+  if (!Array.isArray(errors)) return [];
+  return errors.filter((entry): entry is string => typeof entry === 'string' && entry.length > 0);
+}
+
 export function resolveStatusNextAction(
   facts: StatusManifestFacts,
   binding: ProjectBinding,
@@ -418,6 +439,15 @@ export function resolveStatusNextAction(
     return {
       id: 'run-ark-start',
       summary: 'No ark.config.json found — run ark start (preview) then ark start --apply.',
+    };
+  }
+  const configErrors = normalizedConfigErrors(facts.configErrors);
+  if (configErrors.length > 0) {
+    return {
+      id: 'fix-config',
+      summary: `The Ark config is invalid, so ark-check, MCP and ESLint refuse it — fix: ${configErrors
+        .slice(0, 3)
+        .join('; ')}${configErrors.length > 3 ? ` (+${configErrors.length - 3} more)` : ''}`,
     };
   }
   if (lastCheck.verdict === 'fail' || (lastCheck.activeViolations ?? 0) > 0) {
@@ -573,6 +603,10 @@ export function buildStatusManifest(facts: StatusManifestFacts): StatusManifest 
     nextAction: resolveStatusNextAction(facts, binding, activation, lastCheck, rules),
   };
 
+  const configErrors = normalizedConfigErrors(facts.configErrors);
+  if (projectIdentity.resolvedConfigPath && configErrors.length > 0) {
+    status.contract = { valid: false, errors: configErrors };
+  }
   const compass = normalizeStatusImprovementCompass(facts.improvementCompass);
   if (compass) status.improvementCompass = compass;
   if (facts.vsBase && typeof facts.vsBase.baseRef === 'string' && facts.vsBase.baseRef.length > 0) {
@@ -852,6 +886,17 @@ export const ARK_STATUS_MANIFEST_SCHEMA = {
       properties: {
         id: { type: 'string', minLength: 1 },
         summary: { type: 'string', minLength: 1 },
+      },
+    },
+    contract: {
+      type: 'object',
+      description:
+        'Present only when the resolved config fails the shared contract validator (the same fail-closed rules ark-check, MCP and ESLint apply).',
+      additionalProperties: false,
+      required: ['valid', 'errors'],
+      properties: {
+        valid: { const: false },
+        errors: { type: 'array', minItems: 1, items: { type: 'string', minLength: 1 } },
       },
     },
     improvementCompass: {
