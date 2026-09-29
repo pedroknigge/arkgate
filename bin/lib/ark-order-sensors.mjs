@@ -8,7 +8,7 @@
  * Pure CLI helper (bin/lib/ark-order-sensors.mjs). Zero Node I/O.
  */
 
-import { extractArkOrderGenericUpdatesFromSource, extractArkOrderIngestWritesXiFromSource, extractArkOrderPlaneCallsFromSource, extractArkOrderReleaseKeyCountsFromSource, extractArkOrderXiFieldWritesFromSource, isArkOrderModuleSpecifier, } from './ark-order-facts.mjs';
+import { extractArkOrderGenericUpdatesFromSource, extractArkOrderIngestWritesXiFromSource, extractArkOrderModuleImportsFromSource, extractArkOrderPlaneCallsFromSource, extractArkOrderReleaseKeyCountsFromSource, extractArkOrderXiFieldWritesFromSource, isArkOrderModuleSpecifier, } from './ark-order-facts.mjs';
 import { extraMergeTeethAllowed, } from './extra-merge-teeth.mjs';
 import { deterministicNextAction } from './remediation.mjs';
 /**
@@ -232,17 +232,29 @@ export function evaluateArkOrderEditorSensors(input) {
     const planeCalls = extractArkOrderPlaneCallsFromSource(input.file, input.source);
     const genericUpdates = extractArkOrderGenericUpdatesFromSource(input.file, input.source);
     const xiKeys = input.arkOrder.xiKeys ?? [];
+    // kernel-in-domain needs the file's own layer (name + intent prefixes) and the
+    // arkgate/order specifiers of this one source — the write-path twin of CI facts.
+    const layers = input.fromLayer
+        ? [
+            {
+                name: input.fromLayer,
+                patterns: [],
+                intentPrefixes: [...(input.intentPrefixes ?? [])],
+            },
+        ]
+        : [];
     return evaluateArkOrderSensors({
         arkOrder: input.arkOrder,
-        layers: [],
+        layers,
         planeCalls,
         genericUpdates,
         planeRootHits: [],
         xiFieldWrites: extractArkOrderXiFieldWritesFromSource(input.file, input.source, xiKeys),
         ingestWritesXi: extractArkOrderIngestWritesXiFromSource(input.file, input.source),
         releaseKeyCounts: extractArkOrderReleaseKeyCountsFromSource(input.file, input.source),
-        dependencies: [],
+        dependencies: extractArkOrderModuleImportsFromSource(input.file, input.source),
         layerForFile: () => input.fromLayer,
+        ...(input.classification ? { classification: input.classification } : {}),
     }).findings.filter((item) => item.sensor === 'arkorder-generic-update' ||
         item.sensor === 'arkorder-kernel-in-domain' ||
         item.sensor === 'arkorder-xi-field-write' ||

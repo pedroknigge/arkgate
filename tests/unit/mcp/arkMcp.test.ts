@@ -763,7 +763,7 @@ describe('ark-mcp project identity and fail-closed binding (WI01)', () => {
     }
   });
 
-  it('uses one startup ArkRules snapshot for identity, manifest, and inventory until restart', async () => {
+  it('fails project tools closed with CONTRACT_STALE after an ArkRules edit until restart', async () => {
     prepareMcpRuntime();
     const project = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-mcp-rules-snapshot-'));
     const rulesPath = path.join(project, 'arkrules', 'core.json');
@@ -822,7 +822,8 @@ describe('ark-mcp project identity and fail-closed binding (WI01)', () => {
       );
       firstHash = identity.projectIdentity.contractHash;
 
-      // A running process remains internally coherent even if the contract changes on disk.
+      // The contract changed on disk after startup: the running process must not keep
+      // answering authoritatively from the old contract (CONTRACT_STALE, fail closed).
       writeRules('custom-rule-b');
 
       const manifest = await firstClient.request('tools/call', {
@@ -834,12 +835,12 @@ describe('ark-mcp project identity and fail-closed binding (WI01)', () => {
           },
         },
       });
+      expect(manifest.result.isError).toBe(true);
       const manifestBody = JSON.parse(manifest.result.content[0].text);
-      expect(manifestBody.binding).toMatchObject({ status: 'matched', authoritative: true });
+      expect(manifestBody.error.code).toBe('CONTRACT_STALE');
+      expect(manifestBody.authoritative).toBe(false);
+      expect(manifestBody.contractStale).toBe(true);
       expect(manifestBody.projectIdentity.contractHash).toBe(firstHash);
-      expect(manifestBody.arkRulesCatalog.structure.map((rule: { id: string }) => rule.id)).toEqual(
-        ['no-anemic-model']
-      );
 
       const inventory = await firstClient.request('tools/call', {
         name: 'ark_rules_inventory',
@@ -850,21 +851,20 @@ describe('ark-mcp project identity and fail-closed binding (WI01)', () => {
           },
         },
       });
-      const inventoryBody = JSON.parse(inventory.result.content[0].text);
-      expect(inventoryBody.projectIdentity.contractHash).toBe(firstHash);
-      expect(inventoryBody.rulesInventory).toMatchObject({
-        underContract: 1,
-        candidates: [
-          expect.objectContaining({
-            kind: 'anemic-entity',
-            governedLayer: 'core',
-            suggestedArkRule: expect.objectContaining({
-              layer: 'core',
-              structureId: 'no-anemic-model',
-            }),
-          }),
-        ],
-      });
+      expect(inventory.result.isError).toBe(true);
+      expect(JSON.parse(inventory.result.content[0].text).error.code).toBe('CONTRACT_STALE');
+
+      // ark_identity keeps answering so the host can diagnose, but not authoritatively.
+      const staleIdentity = JSON.parse(
+        (
+          await firstClient.request('tools/call', {
+            name: 'ark_identity',
+            arguments: { project: { expectedRoot: project } },
+          })
+        ).result.content[0].text
+      );
+      expect(staleIdentity.contractStale).toBe(true);
+      expect(staleIdentity.authoritative).toBe(false);
     } finally {
       firstClient.close();
     }

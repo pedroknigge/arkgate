@@ -114,12 +114,24 @@ export type AnalyzeResolvedProjectInput = {
   >;
 };
 
+/** Tooling-supplied analysis evidence for one side (base or candidate) of a preflight. */
+export type ResolvedAnalysisSideInputs = Pick<
+  AnalyzeResolvedProjectInput,
+  'adopted' | 'invariantTestsPathPresent' | 'coverageRootsPresent' | 'coverageInputs' | 'fileHints'
+>;
+
 export type PreflightResolvedChangeInput = {
   contract: AnalysisContract;
   baseFacts: unknown;
   candidateFacts: unknown;
   changes: readonly AnalysisFileChange[];
   changeMap?: ArchitectureChangeMapContract;
+  /**
+   * ArkRules evidence (coverage contents, structural hints) for the on-disk base and
+   * the in-memory candidate, so preflight runs the same engine inputs as ark-check.
+   */
+  baseAnalysisInputs?: ResolvedAnalysisSideInputs;
+  candidateAnalysisInputs?: ResolvedAnalysisSideInputs;
 };
 
 export type ResolvedAnalysisFile = ResolvedFileFact & {

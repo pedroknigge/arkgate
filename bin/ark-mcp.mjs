@@ -23,6 +23,8 @@ function launcherArgs(argv) {
     failOnNewSmells: /^(?:1|true|yes|on)$/i.test(
       String(process.env.ARK_FAIL_ON_NEW_SMELLS ?? '').trim()
     ),
+    help: false,
+    version: false,
   };
   for (let index = 2; index < argv.length; index += 1) {
     const value = argv[index];
@@ -35,6 +37,8 @@ function launcherArgs(argv) {
     else if (value === '--config' && argv[index + 1]) args.config = argv[++index];
     else if (value === '--manifest' && argv[index + 1]) args.manifest = argv[++index];
     else if (value === '--tsconfig' && argv[index + 1]) args.tsconfig = argv[++index];
+    else if (value === '--help' || value === '-h') args.help = true;
+    else if (value === '--version' || value === '-V' || value === '-v') args.version = true;
   }
   return args;
 }
@@ -92,7 +96,28 @@ async function tryResidentHook(args, hookInput) {
   return response;
 }
 
+const USAGE = `Usage: arkgate-mcp [--root <dir>] [--config <file>] [--manifest <file>] [--tsconfig <file>]
+                   [--hook | --hook-repair] [--fail-on-new-smells] [--root-env <VAR[,VAR]>]
+                   [--session-context]
+
+Starts the ArkGate MCP stdio server (JSON-RPC on stdin/stdout). With --hook, runs one
+PreToolUse write-gate evaluation from the host payload on stdin: exit 0 allows, exit 2
+blocks (a gate that cannot run blocks governed source writes too).
+
+  -h, --help     Show this help
+  -V, --version  Print the arkgate version
+`;
+
 const args = launcherArgs(process.argv);
+if (args.version) {
+  const pkg = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+  process.stdout.write(`${pkg.version}\n`);
+  process.exit(0);
+}
+if (args.help) {
+  process.stdout.write(USAGE);
+  process.exit(0);
+}
 let hookInput;
 let residentHandled = false;
 try {
@@ -111,6 +136,23 @@ try {
     await runtime.runArkMcp({ hookInput });
   }
 } catch (error) {
-  process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
-  process.exitCode = 1;
+  if (args.hook) {
+    // Hosts treat exit 1 as non-blocking: a gate that cannot run must not fail open
+    // for governed source writes. Plumbing cases (bad payload, non-source) still allow.
+    const { hookFailClosedResponse, hookRootFromArgv } = await import('./lib/mcp-hook-payload.mjs');
+    const response = hookFailClosedResponse({
+      hookInput,
+      error,
+      root: hookRootFromArgv(process.argv),
+      grokHookEvent: Boolean(process.env.GROK_HOOK_EVENT),
+    });
+    if (response.stdout) process.stdout.write(response.stdout);
+    process.stderr.write(
+      response.stderr || `${error instanceof Error ? error.message : String(error)}\n`
+    );
+    process.exitCode = response.status;
+  } else {
+    process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+    process.exitCode = 1;
+  }
 }

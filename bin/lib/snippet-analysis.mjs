@@ -2,16 +2,31 @@
 import { layerForRelativePath } from '../ark-layer-match.mjs';
 import { ANALYSIS_COMPLETENESS } from './analysis-completeness.mjs';
 import { evaluateArkRunEditorSensorsFromSource } from './ark-run-sensors.mjs';
+import { evaluateArkOrderEditorSensors } from './ark-order-sensors.mjs';
+import {
+  buildArkRuleFileHints,
+  evaluateArkRuleSensors,
+  extractClassShapesFromSource,
+} from './arkrules-sensors.mjs';
 import { getDiagnosticCatalogEntry } from './diagnostic-catalog.mjs';
+import { demoteExtraPlaneTeethUnderClassificationFloor } from './extra-merge-teeth.mjs';
 
-function lexicalEvidenceIncompleteMessage(file) {
+/** Hook-only guidance: a hook deny is already the verdict for that write. */
+export const HOOK_DENY_PREPARE_CHANGE_NOTE = 'Do not call ark_prepare_change from a hook deny.';
+
+function surfaceNote(context) {
+  return context?.surface === 'hook' ? ` ${HOOK_DENY_PREPARE_CHANGE_NOTE}` : '';
+}
+
+function lexicalEvidenceIncompleteMessage(file, context) {
   const entry = getDiagnosticCatalogEntry('LEXICAL_EVIDENCE_INCOMPLETE');
   const text = [entry?.why, entry?.fix].filter(Boolean).join(' ');
   return {
     code: 'LEXICAL_EVIDENCE_INCOMPLETE',
     message:
-      text ||
-      'This check only saw one file, so it cannot fully prove how the import resolves. The result is provisional — `ark-check` on the project is the authority. Run `npx arkgate-check --root . --config ark.config.json` to confirm. Do not call ark_prepare_change from a hook deny.',
+      (text ||
+        'This check only saw one file, so it cannot fully prove how the import resolves. The result is provisional — `ark-check` on the project is the authority. For a complete verdict, run `npx arkgate-check --root . --config ark.config.json` (or ark_prepare_change over MCP with the full candidate batch).') +
+      surfaceNote(context),
     ...(file ? { file } : {}),
   };
 }
@@ -81,14 +96,132 @@ function arkRunSnippetViolations(source, context = {}) {
     }));
 }
 
+const TS_CLASS_SHAPE_FILE = /\.(tsx?|mts|cts)$/i;
+
+/**
+ * File-local ArkRules structure sensors on the proposed source — the same sensors,
+ * class-shape extraction, and per-file hints ark-check runs, pinned to this one file.
+ * Only enforced (failsStrict) findings block; advisory rules stay CI/doctor warnings.
+ */
+function arkRulesSnippetViolations(source, context = {}) {
+  const arkRules = context.arkRules;
+  const file = context.relFile;
+  if (!arkRules || !(arkRules.structure?.length > 0) || typeof file !== 'string' || !file) {
+    return [];
+  }
+  const layers = Array.isArray(context.layers) ? context.layers : [];
+  const layerForFile = (pathValue) =>
+    pathValue === file && typeof context.layer === 'string'
+      ? context.layer
+      : layerForRelativePath(pathValue, layers);
+  let classShapes = [];
+  if (TS_CLASS_SHAPE_FILE.test(file)) {
+    try {
+      classShapes = extractClassShapesFromSource(file, source);
+    } catch {
+      // Same as the CI resolver: shape extraction never fails the run.
+      classShapes = [];
+    }
+  }
+  const findings = evaluateArkRuleSensors({
+    arkRules,
+    classShapes,
+    files: [file],
+    layerForFile,
+    fileHints: buildArkRuleFileHints({ [file]: source }),
+  });
+  // Same classification floor ark-check applies before merge (teeth only on a classified tree).
+  return demoteExtraPlaneTeethUnderClassificationFloor(findings, context.classification ?? {})
+    .filter((finding) => finding.failsStrict)
+    .map((finding) => ({
+      ...finding,
+      nextAction:
+        getDiagnosticCatalogEntry('ARKRULE_STRUCTURE')?.fix ??
+        'Fix the ArkRules structure finding in this file, then retry the write.',
+      failsStrict: true,
+      severity: 'error',
+    }));
+}
+
+/** ArkOrder editor sensors (generic update, kernel-in-domain, ξ writes) on one source. */
+function arkOrderSnippetViolations(source, context = {}) {
+  const arkOrder = context.arkOrder;
+  const file = context.relFile;
+  if (!arkOrder || typeof file !== 'string' || !file) return [];
+  const layers = Array.isArray(context.layers) ? context.layers : [];
+  const fromLayer =
+    typeof context.layer === 'string' ? context.layer : layerForRelativePath(file, layers);
+  const layerMeta = layers.find((layer) => layer?.name === fromLayer);
+  return evaluateArkOrderEditorSensors({
+    arkOrder,
+    file,
+    source,
+    fromLayer,
+    intentPrefixes: layerMeta?.intentPrefixes ?? [],
+    ...(context.classification ? { classification: context.classification } : {}),
+  })
+    .filter((finding) => finding.failsStrict)
+    .map((finding) => ({
+      ruleId: finding.ruleId,
+      code: finding.ruleId,
+      message: finding.message,
+      file: finding.file,
+      line: finding.line,
+      ...(finding.fromLayer ? { fromLayer: finding.fromLayer } : {}),
+      ...(finding.target ? { target: finding.target } : {}),
+      nextAction: finding.nextAction,
+      failsStrict: true,
+      severity: 'error',
+    }));
+}
+
+/**
+ * The write gate could not load part of its own contract (e.g. a referenced ArkRules
+ * file is missing). CI fails closed on the same input, so the write path does too.
+ */
+function contractLoadViolations(context = {}) {
+  const errors = Array.isArray(context.contractErrors) ? context.contractErrors : [];
+  return errors.map((error) => ({
+    ruleId: 'WRITE_GATE_UNAVAILABLE',
+    code: 'WRITE_GATE_UNAVAILABLE',
+    message: `Invalid Effective Contract: ${
+      typeof error === 'string' ? error : `${error?.path ?? ''}: ${error?.message ?? ''}`.trim()
+    }`,
+    ...(context.relFile ? { file: context.relFile } : {}),
+    nextAction:
+      getDiagnosticCatalogEntry('WRITE_GATE_UNAVAILABLE')?.fix ??
+      'Fix the ArkRules reference in ark.config.json, then retry the write.',
+    failsStrict: true,
+    severity: 'error',
+  }));
+}
+
+/**
+ * Extras (ArkRules structure + ArkOrder) run only on files CI would scan. A file
+ * outside include / excluded is never judged by these planes in CI either.
+ */
+function extraPlaneSnippetViolations(source, context = {}) {
+  if (context.inScope === false) return [];
+  return [
+    ...contractLoadViolations(context),
+    ...arkRulesSnippetViolations(source, context),
+    ...arkOrderSnippetViolations(source, context),
+  ];
+}
+
 export function validateSnippetAnalysis({ gate, ts, source, context = {} }) {
   const observed = gate.validate(source, context);
   const arkRunViolations = arkRunSnippetViolations(source, context);
+  const extraViolations = extraPlaneSnippetViolations(source, context);
   const base = {
-    valid: Boolean(observed.lexicalValid ?? observed.valid) && arkRunViolations.length === 0,
+    valid:
+      Boolean(observed.lexicalValid ?? observed.valid) &&
+      arkRunViolations.length === 0 &&
+      extraViolations.length === 0,
     violations: [
       ...(Array.isArray(observed.violations) ? observed.violations : []),
       ...arkRunViolations,
+      ...extraViolations,
     ],
   };
   const file = context.filePath;
@@ -154,7 +287,8 @@ export function validateSnippetAnalysis({ gate, ts, source, context = {} }) {
               'ANALYSIS_PARSE_INCOMPLETE',
               `Analysis partial: ${detail}`,
               file,
-              'Incremental mid-edit parse errors are normal. Finish the source, then re-run `npx arkgate-check` (or the write hook). Do not call ark_prepare_change from a hook deny.'
+              'Incremental mid-edit parse errors are normal. Finish the source, then re-run `npx arkgate-check` (or the write hook).' +
+                surfaceNote(context)
             ),
             line: first?.line ?? 1,
             column: first?.column ?? 1,
@@ -169,7 +303,7 @@ export function validateSnippetAnalysis({ gate, ts, source, context = {} }) {
       valid: false,
       lexicalValid: base.valid,
       completeness: ANALYSIS_COMPLETENESS.partial,
-      completenessReasons: [lexicalEvidenceIncompleteMessage(file)],
+      completenessReasons: [lexicalEvidenceIncompleteMessage(file, context)],
     };
   } catch {
     return {

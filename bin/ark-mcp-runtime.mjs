@@ -30,6 +30,7 @@ import { composePrepareWrite } from './lib/prepare-write.mjs';
 import { placementDescriptionFields } from './lib/layer-description.mjs';
 import { loadArkConfigContract } from './lib/config-contract.mjs';
 import { loadEffectiveArkRulesFromDisk } from './lib/effective-contract-load.mjs';
+import { loadArkRulesContract } from './lib/arkrules-contract.mjs';
 import {
   buildRulesInventory,
   inventoryToExtractionCard,
@@ -86,6 +87,8 @@ import {
   formatWriteGateDeny,
   unclassifiedIncludedWriteDeny,
   requiredOwnerWriteDeny,
+  relativeToHookRoot,
+  canonicalPathLoose,
 } from './lib/mcp-hook-payload.mjs';
 import {
   canonicalizeCandidateChanges,
@@ -300,8 +303,10 @@ function isResolvedAnalysisInput(relativePath, args, compilerInputs = new Set())
   const relative = String(relativePath).replace(/\\/g, '/');
   try {
     const candidate = resolvedInputIdentities(args.root, [relative]);
+    // Referenced ArkRules files are contract inputs too: a patch that edits one cannot
+    // be preflighted against the catalog loaded from disk.
     const known = resolvedInputIdentities(args.root, [
-      args.config, args.manifest, args.tsconfig, ...compilerInputs,
+      args.config, args.manifest, args.tsconfig, ...compilerInputs, ...(args.arkRulesInputs ?? []),
     ]);
     if ([...candidate].some((identity) => known.has(identity))) return true;
   } catch {
@@ -345,22 +350,141 @@ function extraMergeTeethClassification(root, config) {
   };
 }
 
-function arkRunSnippetContext({ root, config, filePath, layer, relFile, classification }) {
-  const extra = config?.arkRun;
-  if (!extra) return { layer, filePath };
+/**
+ * Load the Effective ArkRules the same way ark-check does. Errors are kept (never
+ * thrown) so each surface decides: write paths fail closed, manifest/inventory degrade.
+ */
+function loadArkRulesSnapshot(root, config) {
+  try {
+    const loaded = loadEffectiveArkRulesFromDisk(root, config);
+    return {
+      arkRules: loaded.arkRules ?? null,
+      warnings: loaded.warnings ?? [],
+      errors: loaded.errors ?? [],
+    };
+  } catch (error) {
+    return {
+      arkRules: null,
+      warnings: [],
+      errors: [error instanceof Error ? error.message : String(error)],
+    };
+  }
+}
+
+/**
+ * Single-file context for validateSnippetAnalysis: layer plane plus every extra plane
+ * CI enforces on the same file (ArkRun, ArkRules structure, ArkOrder), with the same
+ * classification floor. `surface` only tunes guidance text (hook vs MCP).
+ */
+function snippetContext({
+  root,
+  config,
+  filePath,
+  layer,
+  relFile,
+  classification,
+  arkRulesSnapshot,
+  surface,
+}) {
+  const base = { layer, filePath, ...(surface ? { surface } : {}) };
+  const arkRulesOn = (arkRulesSnapshot?.arkRules?.structure?.length ?? 0) > 0;
+  const contractErrors = arkRulesSnapshot?.errors ?? [];
+  if (!config?.arkRun && !config?.arkOrder && !arkRulesOn && contractErrors.length === 0) {
+    return base;
+  }
   const relative =
     relFile ||
     (typeof filePath === 'string'
       ? path.relative(root, path.resolve(root, filePath)).split(path.sep).join('/')
       : undefined);
+  const inRoot =
+    typeof relative === 'string' &&
+    relative !== '' &&
+    relative !== '..' &&
+    !relative.startsWith('../') &&
+    !path.isAbsolute(relative);
   return {
-    layer,
-    filePath,
+    ...base,
     relFile: relative,
-    arkRun: extra,
+    inScope: inRoot ? isCandidateSourceInScope(config, relative) : false,
+    ...(config.arkRun ? { arkRun: config.arkRun } : {}),
+    ...(config.arkOrder ? { arkOrder: config.arkOrder } : {}),
+    ...(arkRulesOn ? { arkRules: arkRulesSnapshot.arkRules } : {}),
+    ...(contractErrors.length > 0 ? { contractErrors } : {}),
     layers: config.layers ?? [],
     classification: classification ?? extraMergeTeethClassification(root, config),
   };
+}
+
+function configuredConfigPath(args) {
+  return path.isAbsolute(args.config) ? args.config : path.join(args.root, args.config);
+}
+
+/**
+ * Referenced ArkRules files (config.arkRules: layer -> project-relative path), keyed by
+ * canonical absolute path. These are law files exactly like ark.config.json.
+ */
+function referencedArkRulesFiles(args, config) {
+  const refs = config?.arkRules;
+  const out = new Map();
+  if (!refs || typeof refs !== 'object') return out;
+  for (const [layer, rel] of Object.entries(refs)) {
+    if (typeof rel !== 'string' || rel.length === 0) continue;
+    out.set(canonicalPathLoose(path.resolve(args.root, rel)), { layer, rel });
+  }
+  return out;
+}
+
+function lawFileLabel(args, absolute) {
+  return (relativeToHookRoot(args.root, absolute) ?? path.basename(absolute))
+    .split(path.sep)
+    .join('/');
+}
+
+/**
+ * Law-file guard: a write that replaces the configured ark.config.json, or an ArkRules
+ * file it references, with content the contract loader rejects (or deletes it) would
+ * switch enforcement off for every later write. Deny it up front with the loader's
+ * reason. `content: null` / `delete: true` is a deletion.
+ */
+function lawFileWriteDeny(args, config, writes) {
+  const configPath = canonicalPathLoose(configuredConfigPath(args));
+  const arkRulesFiles = referencedArkRulesFiles(args, config);
+  for (const write of writes) {
+    if (typeof write?.filePath !== 'string') continue;
+    const target = canonicalPathLoose(path.resolve(args.root, write.filePath));
+    const isConfig = target === configPath;
+    const arkRulesRef = isConfig ? undefined : arkRulesFiles.get(target);
+    if (!isConfig && !arkRulesRef) continue;
+    const deleting = write.delete === true || write.content === null;
+    if (!deleting && typeof write.content !== 'string') continue;
+    let reason = null;
+    if (deleting) {
+      reason = 'the file would be deleted';
+    } else {
+      try {
+        const parsed = JSON.parse(write.content);
+        if (isConfig) loadArkConfigContract(parsed, configPath);
+        else loadArkRulesContract(parsed, arkRulesRef.rel, arkRulesRef.layer);
+      } catch (error) {
+        reason = error instanceof Error ? error.message : String(error);
+      }
+    }
+    if (reason === null) continue;
+    const file = isConfig ? lawFileLabel(args, configPath) : arkRulesRef.rel;
+    return {
+      file,
+      message: formatWriteGateDeny({
+        file,
+        reason: `this write would leave ${file} unloadable, which switches the write gate off: ${reason}`,
+        ruleId: 'WRITE_GATE_UNAVAILABLE',
+        nextAction: isConfig
+          ? 'Write a complete, valid contract (same schema ark-check --strict-config reads); do not remove or empty ark.config.json.'
+          : `Write a complete, valid ArkRules file for layer ${arkRulesRef.layer} (same schema ark-check loads); to drop it, remove its arkRules reference from ark.config.json in a law change.`,
+      }),
+    };
+  }
+  return null;
 }
 
 function designDeltaViolations(delta) {
@@ -418,10 +542,30 @@ function runHookPayload(payload, gate, config, args, ts, attemptContext, output 
     // Codex ApplyPatch is only preflighted when Ark can reconstruct every file operation.
     // An incomplete reconstruction must not be mislabeled as atomic or hard enforcement.
     if (!parsedPatch.complete) {
+      // Documented residual: a patch Ark cannot reconstruct stays CI-backed. Say so
+      // instead of allowing silently.
+      output.stderr(
+        'Ark architecture gate: this apply_patch could not be fully reconstructed, so it was ' +
+          'not preflighted here; CI (--strict-merge) still checks it.\n'
+      );
       emitHostAllow(output, { antigravityStyle, cursorStyle });
       return;
     }
     const patchWrites = parsedPatch.writes;
+    const lawDeny = lawFileWriteDeny(
+      args,
+      config,
+      patchWrites.map((change) => ({
+        filePath: change.filePath,
+        content: change.delete === true ? null : change.content,
+        delete: change.delete === true,
+      }))
+    );
+    if (lawDeny) {
+      emitHostDeny(output, { antigravityStyle, cursorStyle, grokStyle, ...lawDeny });
+      output.status(2);
+      return;
+    }
     const patchChangeSet = classifyChangeSet(patchWrites.map((change) => String(change.path)));
     const patchLawGate = evaluateTeamGate({
       changeSet: patchChangeSet,
@@ -608,14 +752,17 @@ function runHookPayload(payload, gate, config, args, ts, attemptContext, output 
       emitHostAllow(output, { antigravityStyle, cursorStyle });
       return;
     }
-    const first = result.diagnostics[0];
+    // Pre-existing (ratcheted) findings ride as warnings; the deny names what blocks.
+    const blocking = result.diagnostics.filter((d) => d.severity === 'error');
+    const shown = blocking.length > 0 ? blocking : result.diagnostics;
+    const first = shown[0];
     const message = formatWriteGateDeny({
       file: `${changes.length} file(s)`,
       reason: first?.message || `this ${toolName} breaks the architecture layers`,
       ruleId: first?.ruleId,
       nextAction: first?.nextAction,
       extraLines: [
-        ...result.diagnostics.slice(1).map((d) => `[${d.ruleId}] ${d.message}`),
+        ...shown.slice(1).map((d) => `[${d.ruleId}] ${d.message}`),
         ...(designDelta && !designDelta.valid
           ? formatDesignDeltaBlock(designDelta).split('\n').slice(1)
           : []),
@@ -639,19 +786,46 @@ function runHookPayload(payload, gate, config, args, ts, attemptContext, output 
     output.status(2);
     return;
   }
-  const filePath = toolInput.file_path;
+  const rawFilePath = toolInput.file_path;
   if (!['Write', 'Edit', 'MultiEdit'].includes(toolName)) {
     // Non-file tools: fail-open. Antigravity still needs an explicit allow decision.
     emitHostAllow(output, { antigravityStyle, cursorStyle });
     return;
   }
-  if (typeof filePath !== 'string' || !SOURCE_FILE.test(filePath) || filePath.endsWith('.d.ts')) {
+  if (typeof rawFilePath === 'string' && !SOURCE_FILE.test(rawFilePath)) {
+    // Law files are not source, but a write that leaves ark.config.json or a referenced
+    // ArkRules file unloadable would silently switch the gate off for every later write.
+    const source = proposedSource(toolName, toolInput);
+    const lawDeny =
+      typeof source === 'string'
+        ? lawFileWriteDeny(args, config, [{ filePath: rawFilePath, content: source }])
+        : null;
+    if (lawDeny) {
+      emitHostDeny(output, { antigravityStyle, cursorStyle, grokStyle, ...lawDeny });
+      output.status(2);
+      return;
+    }
+  }
+  if (
+    typeof rawFilePath !== 'string' ||
+    !SOURCE_FILE.test(rawFilePath) ||
+    rawFilePath.endsWith('.d.ts')
+  ) {
     emitHostAllow(output, { antigravityStyle, cursorStyle });
     return;
   }
-  const rel = path.relative(args.root, path.resolve(filePath));
+  // Containment compares the caller's spelling first, then the canonical (realpath)
+  // spelling: /tmp vs /private/tmp or a symlinked checkout is the same workspace.
+  // Every downstream consumer then sees the path re-spelled under args.root.
+  const rootRelative = relativeToHookRoot(args.root, path.resolve(rawFilePath));
+  if (rootRelative === null) {
+    emitHostAllow(output, { antigravityStyle, cursorStyle });
+    return;
+  }
+  const rel = rootRelative;
+  const filePath = path.join(args.root, rel);
   const segments = rel.split(path.sep);
-  if (segments[0] === '..' || segments.includes('node_modules')) {
+  if (segments.includes('node_modules')) {
     emitHostAllow(output, { antigravityStyle, cursorStyle });
     return;
   }
@@ -708,19 +882,17 @@ function runHookPayload(payload, gate, config, args, ts, attemptContext, output 
     output.status(2);
     return;
   }
+  const context = snippetContext({
+    root: args.root,
+    config,
+    filePath,
+    layer,
+    relFile: normalizedRel,
+    arkRulesSnapshot: args.arkRulesSnapshot,
+    surface: 'hook',
+  });
   const validateOnce = (src) =>
-    validateSnippetAnalysis({
-      gate,
-      ts,
-      source: src,
-      context: arkRunSnippetContext({
-        root: args.root,
-        config,
-        filePath,
-        layer,
-        relFile: normalizedRel,
-      }),
-    });
+    validateSnippetAnalysis({ gate, ts, source: src, context });
   // W1: one validation pass (+ optional autoPatch). Original write still blocked when
   // invalid; hosts must apply autoPatch explicitly (never silent write).
   const result = ts
@@ -761,12 +933,18 @@ function runHookPayload(payload, gate, config, args, ts, attemptContext, output 
   // every subsequent edit to that file un-writable while CI passes. Same-file keys ignore
   // line numbers (edits shift them); simpler than full baselineKey (no file/layer fields
   // needed — this file is fixed).
+  // Contract-level failures (WRITE_GATE_UNAVAILABLE: a referenced ArkRules file missing
+  // or invalid) say nothing about this file's content. The on-disk version reports the
+  // same one, so ratcheting it would cancel it and let every edit to an existing file
+  // skip the sensors that could not load. They are never pre-existing: always deny.
+  const ratchetExempt = (rule) =>
+    rule.startsWith('ANALYSIS_') || rule === 'WRITE_GATE_UNAVAILABLE';
   const violationKey = (violation) => `${violation.ruleId}|${violation.target ?? violation.message}`;
   let existingCounts = new Map();
   try {
     const current = fs.readFileSync(filePath, 'utf8');
     for (const violation of validateOnce(current).violations) {
-      if (String(violation.ruleId ?? violation.code).startsWith('ANALYSIS_')) continue;
+      if (ratchetExempt(String(violation.ruleId ?? violation.code))) continue;
       const key = violationKey(violation);
       existingCounts.set(key, (existingCounts.get(key) ?? 0) + 1);
     }
@@ -777,7 +955,7 @@ function runHookPayload(payload, gate, config, args, ts, attemptContext, output 
     const rule = String(violation.ruleId ?? violation.code);
     // Incremental mid-edit parse errors are normal for agents — do not deny solely on them.
     if (rule === 'ANALYSIS_PARSE_INCOMPLETE') return false;
-    if (rule.startsWith('ANALYSIS_')) return true;
+    if (ratchetExempt(rule)) return true;
     const key = violationKey(violation);
     const remaining = existingCounts.get(key) ?? 0;
     if (remaining === 0) return true;
@@ -961,7 +1139,7 @@ function residentCompilerInputs(ts, args) {
   return [...inputs];
 }
 
-function residentHookInputs(ts, args) {
+function residentHookInputs(ts, args, config) {
   const configPath = path.isAbsolute(args.config)
     ? args.config
     : path.join(args.root, args.config);
@@ -973,6 +1151,7 @@ function residentHookInputs(ts, args) {
   return [
     configPath,
     ...(manifestPath ? [manifestPath] : []),
+    ...arkRulesInputPaths(args.root, config),
     ...residentCompilerInputs(ts, args),
     ...[
       'package.json',
@@ -983,6 +1162,15 @@ function residentHookInputs(ts, args) {
       '.yarnrc.yml',
     ].map((relative) => path.join(args.root, relative)),
   ];
+}
+
+/** Referenced ArkRules files (existing or not): editing/deleting one invalidates caches. */
+function arkRulesInputPaths(root, config) {
+  const refs = config?.arkRules;
+  if (!refs || typeof refs !== 'object') return [];
+  return Object.values(refs)
+    .filter((value) => typeof value === 'string' && value.length > 0)
+    .map((value) => path.resolve(root, value));
 }
 
 function captureResidentHook(payload, gate, config, args, ts, request) {
@@ -1121,7 +1309,7 @@ async function startResidentHookControl({ args, gate, config, ts, loadedTypeScri
     launcher: arkMcpLauncher,
   });
   const identityPaths = [
-    ...residentHookInputs(ts, args),
+    ...residentHookInputs(ts, args, config),
     ...(loadedTypeScript?.resolvedPath ? [loadedTypeScript.resolvedPath] : []),
   ];
   const identityTokens = [
@@ -1437,6 +1625,12 @@ export async function runArkMcp({ hookInput } = {}) {
     },
   });
 
+  // Effective ArkRules load once, before the hook: write paths run the same
+  // structure sensors CI runs and fail closed when a referenced file is broken.
+  const effectiveArkRulesSnapshot = loadArkRulesSnapshot(args.root, config);
+  args.arkRulesSnapshot = effectiveArkRulesSnapshot;
+  args.arkRulesInputs = arkRulesInputPaths(args.root, config);
+
   if (args.hook) {
     runHook(gate, config, args, ts, hookInput);
     return;
@@ -1447,23 +1641,6 @@ export async function runArkMcp({ hookInput } = {}) {
     return;
   }
 
-  const effectiveArkRulesSnapshot = (() => {
-    try {
-      const loaded = loadEffectiveArkRulesFromDisk(args.root, config);
-      return {
-        arkRules: loaded.arkRules ?? null,
-        warnings: loaded.warnings ?? [],
-        errors: loaded.errors ?? [],
-      };
-    } catch (error) {
-      return {
-        arkRules: null,
-        warnings: [],
-        errors: [error instanceof Error ? error.message : String(error)],
-      };
-    }
-  })();
-
   const residentHookControl = await startResidentHookControl({
     args,
     gate,
@@ -1473,6 +1650,13 @@ export async function runArkMcp({ hookInput } = {}) {
     version: ark.version,
   });
   if (residentHookControl) process.once('exit', residentHookControl.cleanup);
+
+  const contractInputPaths = [
+    configPath,
+    ...(manifestPath ? [manifestPath] : []),
+    ...arkRulesInputPaths(args.root, config),
+  ].filter(Boolean);
+  const startupContractIdentity = residentEnvironmentIdentity(contractInputPaths);
 
   const SERVER_INFO = { name: 'arkgate', version: ark.version };
   const DEFAULT_PROTOCOL = '2024-11-05';
@@ -1569,6 +1753,31 @@ export async function runArkMcp({ hookInput } = {}) {
       overallOk: { type: 'boolean' },
     },
   };
+  // withProjectContext always spreads processPackage (FX06) into structuredContent;
+  // both oneOf branches are additionalProperties:false, so it must be declared.
+  const processPackageOutputSchema = {
+    type: 'object',
+    additionalProperties: false,
+    required: [
+      'schemaVersion',
+      'notAScore',
+      'processArkgateVersion',
+      'projectInstalledVersion',
+      'processPackageMismatch',
+      'processStale',
+      'nextAction',
+    ],
+    properties: {
+      schemaVersion: { const: '1.0' },
+      notAScore: { const: true },
+      processArkgateVersion: { type: ['string', 'null'] },
+      projectInstalledVersion: { type: ['string', 'null'] },
+      processPackageMismatch: { type: 'boolean' },
+      processStale: { type: 'boolean' },
+      nextAction: { type: 'string', minLength: 1 },
+    },
+  };
+  const contractStaleOutputSchema = { type: 'boolean' };
   const analysisResultWithProjectSchema = {
     type: ARK_ANALYSIS_RESULT_SCHEMA.type,
     additionalProperties: ARK_ANALYSIS_RESULT_SCHEMA.additionalProperties,
@@ -1578,19 +1787,23 @@ export async function runArkMcp({ hookInput } = {}) {
       'projectIdentity',
       'binding',
       'authoritative',
+      'processPackage',
     ],
     properties: {
       ...ARK_ANALYSIS_RESULT_SCHEMA.properties,
       projectIdentity: projectIdentityOutputSchema,
       binding: PROJECT_BINDING_SCHEMA,
       authoritative: { type: 'boolean' },
+      processPackage: processPackageOutputSchema,
+      contractStale: contractStaleOutputSchema,
+      lexicalValid: { type: 'boolean' },
       verdict: checkVerdictOutputSchema,
     },
   };
   const projectBindingErrorSchema = {
     type: 'object',
     additionalProperties: false,
-    required: ['ok', 'error', 'projectIdentity', 'binding', 'authoritative'],
+    required: ['ok', 'error', 'projectIdentity', 'binding', 'authoritative', 'processPackage'],
     properties: {
       ok: { const: false },
       error: {
@@ -1605,9 +1818,13 @@ export async function runArkMcp({ hookInput } = {}) {
       projectIdentity: projectIdentityOutputSchema,
       binding: PROJECT_BINDING_SCHEMA,
       authoritative: { type: 'boolean' },
+      processPackage: processPackageOutputSchema,
+      contractStale: contractStaleOutputSchema,
     },
   };
+  // MCP (and the TypeScript SDK) require outputSchema.type === 'object' at the top level.
   const projectAwareAnalysisResultSchema = {
+    type: 'object',
     oneOf: [analysisResultWithProjectSchema, projectBindingErrorSchema],
   };
 
@@ -1812,15 +2029,28 @@ export async function runArkMcp({ hookInput } = {}) {
     });
   }
 
+  /**
+   * Contract inputs (config, manifest, referenced ArkRules) are loaded once at startup.
+   * An edit afterwards makes this process's gate, manifest, and contractHash stale:
+   * report it and fail project tools closed (CONTRACT_STALE) instead of answering
+   * authoritatively from the old contract while ark_check reads the new one.
+   */
+  function contractStale() {
+    return residentEnvironmentIdentity(contractInputPaths) !== startupContractIdentity;
+  }
+
   function contextFor(binding) {
     const processPackage = processPackageHonesty();
+    const stale = contractStale();
     return {
       projectIdentity,
       binding,
       // A correctly bound project is still non-authoritative when this long-lived
-      // process loaded a different package version than the project now resolves.
-      authoritative: binding.authoritative && !processPackage.processStale,
+      // process loaded a different package version (or contract) than the project
+      // now has on disk.
+      authoritative: binding.authoritative && !processPackage.processStale && !stale,
       processPackage,
+      ...(stale ? { contractStale: true } : {}),
     };
   }
 
@@ -1897,6 +2127,31 @@ export async function runArkMcp({ hookInput } = {}) {
     );
   }
 
+  function staleContractFailureResult(binding) {
+    return withProjectContext(
+      {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              ok: false,
+              error: {
+                code: 'CONTRACT_STALE',
+                message:
+                  `ark.config.json, the project manifest, or a referenced ArkRules file changed ` +
+                  `since this MCP process started (contractHash ${projectIdentity.contractHash}). ` +
+                  'Restart the MCP server, then re-run ark_identity. Until then use the ' +
+                  'project-local CLI (npx arkgate-check), which reads the current contract.',
+              },
+            }),
+          },
+        ],
+        isError: true,
+      },
+      binding
+    );
+  }
+
   function staleProcessFailureResult(binding) {
     const processPackage = processPackageHonesty();
     return withProjectContext(
@@ -1941,12 +2196,16 @@ export async function runArkMcp({ hookInput } = {}) {
     {
       name: 'validate_code',
       description:
-        "Validate a source snippet about to be written against Ark's architecture " +
-        '(forbidden infra imports, unknown intents, and layer-reference violations). ' +
-        'Bind to PreToolUse on Write/Edit to block architecturally-invalid generated code. ' +
-        'Returns { valid, violations, autoPatch? }. autoPatch (when present) is a ' +
-        'mechanical-safe rewrite of the source (import type conversion) that re-validates green; ' +
-        'hosts may apply it instead of re-drafting. isError is true when valid is false.',
+        "Single-file lexical check of a source snippet against Ark's architecture " +
+        '(forbidden infra imports, unknown intents, layer-reference violations, and the enforced ' +
+        'ArkRun / ArkRules structure / ArkOrder sensors CI runs on that file). One file can never ' +
+        'prove the whole candidate, so the result is always partial: valid:false and isError:true ' +
+        'until complete-candidate preflight. Read lexicalValid and violations for the snippet ' +
+        'verdict; use ark_prepare_change (or arkgate-check) for a green result. For hard ' +
+        'write-path blocking use the `arkgate-mcp --hook` PreToolUse hook, not this tool. ' +
+        'Returns { valid, lexicalValid, completeness, violations, autoPatch? }. autoPatch (when ' +
+        'present) is a mechanical-safe rewrite of the source (import type conversion); hosts may ' +
+        'apply it instead of re-drafting.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -2052,12 +2311,13 @@ export async function runArkMcp({ hookInput } = {}) {
               'What you are building. Does not invent a path — pass filePath. Without filePath the tool fail-closes.',
           },
         },
+        required: ['filePath'],
       },
     },
     {
       name: 'ark_prepare_write',
       description:
-        'Prepare a write against the architecture contract: place (filePath and/or description) + ' +
+        'Prepare a write against the architecture contract: place (filePath required; fail-closed without it — never invents a path) + ' +
         'constrain (layer, mayImport, mustNotImport, forbiddenGlobals) + validate source + optional ' +
         'mechanical-safe autoPatch + judgmentBrief when judgment is needed + contentHash for host commit. ' +
         'Also returns the versioned new/worsened designDelta for the proposed full file. ' +
@@ -2065,7 +2325,8 @@ export async function runArkMcp({ hookInput } = {}) {
         'When the matched layer has layers[].description, the JSON includes description; the field is omitted when absent. ' +
         'When the matched layer has layers[].trustBoundary (public|auth|admin|internal), the JSON includes trustBoundary; omitted when absent. ' +
         'When the matched layer has layers[].owners, the JSON includes owners; omitted when absent. ' +
-        'Returns { filePath, layer, description?, trustBoundary?, owners?, valid, violations?, autoPatch?, judgmentBrief?, contentHash, ... }.',
+        'Single-file evidence is partial, so valid stays false (isError:true) until complete-candidate preflight; read lexicalValid for the snippet verdict and use ark_prepare_change for a green result. ' +
+        'Returns { filePath, layer, description?, trustBoundary?, owners?, valid, lexicalValid, violations?, autoPatch?, judgmentBrief?, contentHash, ... }.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -2076,14 +2337,15 @@ export async function runArkMcp({ hookInput } = {}) {
           },
           description: {
             type: 'string',
-            description: 'When filePath omitted: propose a conventional path from this description.',
+            description:
+              'What you are building (hint only). Does not invent a path — pass filePath. Without filePath the tool fail-closes.',
           },
           layer: {
             type: 'string',
             description: 'Optional explicit layer override (otherwise inferred from filePath).',
           },
         },
-        required: ['source'],
+        required: ['source', 'filePath'],
       },
     },
     {
@@ -2159,6 +2421,8 @@ export async function runArkMcp({ hookInput } = {}) {
           projectIdentity: projectIdentityOutputSchema,
           binding: PROJECT_BINDING_SCHEMA,
           authoritative: { type: 'boolean' },
+          processPackage: processPackageOutputSchema,
+          contractStale: contractStaleOutputSchema,
         },
       },
     },
@@ -2304,18 +2568,15 @@ export async function runArkMcp({ hookInput } = {}) {
     }
     const filePath = params.arguments.filePath;
     const layer = params.arguments.layer ?? inferLayer(filePath, config, args.root);
-    const validateOnce = (src) =>
-      validateSnippetAnalysis({
-        gate,
-        ts,
-        source: src,
-        context: arkRunSnippetContext({
-          root: args.root,
-          config,
-          filePath,
-          layer,
-        }),
-      });
+    const context = snippetContext({
+      root: args.root,
+      config,
+      filePath,
+      layer,
+      arkRulesSnapshot: effectiveArkRulesSnapshot,
+      surface: 'mcp',
+    });
+    const validateOnce = (src) => validateSnippetAnalysis({ gate, ts, source: src, context });
     // W1: attempt mechanical-safe single-file autoPatch (import type), re-validate or discard.
     const result = validateWithAutoPatch({
       source,
@@ -2331,6 +2592,12 @@ export async function runArkMcp({ hookInput } = {}) {
       completenessReasons: result.completenessReasons,
       violations: result.violations,
     });
+    // lexicalValid is the one-file verdict (valid stays false: single-file evidence
+    // is partial). Same field ark_prepare_write already exposes.
+    const lexicalValid =
+      typeof result.lexicalValid === 'boolean'
+        ? result.lexicalValid
+        : (result.violations ?? []).length === 0 && result.completeness !== 'unavailable';
     return {
       content: [
         {
@@ -2339,6 +2606,7 @@ export async function runArkMcp({ hookInput } = {}) {
             {
               ...adapterResult,
               valid: adapterResult.valid,
+              lexicalValid,
               violations: result.violations,
               ...(result.autoPatch ? { autoPatch: result.autoPatch } : {}),
               layer,
@@ -2348,7 +2616,7 @@ export async function runArkMcp({ hookInput } = {}) {
           ),
         },
       ],
-      structuredContent: adapterResult,
+      structuredContent: { ...adapterResult, lexicalValid },
       isError: !adapterResult.valid,
     };
   }
@@ -2593,7 +2861,7 @@ export async function runArkMcp({ hookInput } = {}) {
         content: [
           {
             type: 'text',
-            text: 'ark_prepare_write requires "source" (string). Optional: filePath, description.',
+            text: 'ark_prepare_write requires "source" (string) and "filePath". Optional: description, layer.',
           },
         ],
         isError: true,
@@ -2610,18 +2878,15 @@ export async function runArkMcp({ hookInput } = {}) {
       placement.layer ||
       params?.arguments?.layer ||
       inferLayer(placement.filePath, config, args.root);
-    const validateOnce = (src) =>
-      validateSnippetAnalysis({
-        gate,
-        ts,
-        source: src,
-        context: arkRunSnippetContext({
-          root: args.root,
-          config,
-          filePath: placement.filePath,
-          layer,
-        }),
-      });
+    const context = snippetContext({
+      root: args.root,
+      config,
+      filePath: placement.filePath,
+      layer,
+      arkRulesSnapshot: effectiveArkRulesSnapshot,
+      surface: 'mcp',
+    });
+    const validateOnce = (src) => validateSnippetAnalysis({ gate, ts, source: src, context });
     const result = composePrepareWrite({
       source,
       placement: { ...placement, layer },
@@ -2690,7 +2955,9 @@ export async function runArkMcp({ hookInput } = {}) {
     try {
       const status = buildProjectStatusManifest({
         root: args.root,
-        config: path.basename(configPath) === 'ark.config.json' ? 'ark.config.json' : configPath,
+        // Pass the server's own resolved contract through (a --config in a subdirectory
+        // must not collapse to <root>/ark.config.json); keep upward discovery otherwise.
+        config: args.configExplicit ? configPath : 'ark.config.json',
         expectedRoot: binding?.expectedRoot ?? _params?.arguments?.project?.expectedRoot,
         expectedProjectId:
           binding?.expectedProjectId ?? _params?.arguments?.project?.expectedProjectId,
@@ -2899,6 +3166,10 @@ export async function runArkMcp({ hookInput } = {}) {
         // version installed for this root.
         if (params?.name !== 'ark_identity' && processPackageHonesty().processStale) {
           reply(id, staleProcessFailureResult(binding));
+          return;
+        }
+        if (params?.name !== 'ark_identity' && contractStale()) {
+          reply(id, staleContractFailureResult(binding));
           return;
         }
         try {

@@ -476,6 +476,13 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
     'Use resolved-candidate facts / ark_prepare_change with a complete batch, or fall back to ark-check on disk. Do not treat missing preflight as green.'
   ),
   entry(
+    'WRITE_GATE_UNAVAILABLE',
+    'preflight',
+    'Write gate could not run',
+    'The write gate could not load its own inputs (ark.config.json missing, unreadable, or invalid; a referenced ArkRules file missing or invalid; or the built library missing), so it cannot judge this governed source write (existing files included), or a write would leave ark.config.json or a referenced ArkRules file unloadable. No checker, no write: the hook blocks instead of letting the write through unchecked.',
+    'Fix the reported input (repair ark.config.json or the ArkRules file, or run `npm run build` / reinstall arkgate from npm), then retry the same write. Do not remove the hook to get past it.'
+  ),
+  entry(
     'DESIGN_SMELL_REGRESSION',
     'preflight',
     'Design smell regression on base-relative ratchet',
@@ -496,7 +503,7 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
     'analysis',
     'Lexical evidence incomplete',
     'This check only saw one file, so it cannot fully prove how the import resolves. The result is provisional — `ark-check` on the project is the authority.',
-    'Run `npx arkgate-check --root . --config ark.config.json` to confirm. Do not call ark_prepare_change from a hook deny.'
+    'For a complete verdict, run `npx arkgate-check --root . --config ark.config.json` (or ark_prepare_change over MCP with the full candidate batch). Read lexicalValid for the one-file result.'
   ),
   entry(
     'ANALYSIS_COVERS_NO_FILES',

@@ -1395,13 +1395,13 @@ The server exposes these thirteen tools. Every tool accepts the additive
 |------|---------------------------|
 | `ark_identity` | `{ project: { expectedRoot, expectedProjectId? } }`: return the canonical root/config, stable project id, contract identity, and live runtime identity; use it before every other project-bound surface. |
 | `ark_manifest` | No non-project args: return the machine-readable architecture contract with an authoritative binding after the identity handshake. |
-| `validate_code` | `{ source, layer?, filePath? }`: validate one snippet; infer the layer from `filePath` when possible; return an error result when invalid. |
+| `validate_code` | `{ source, layer?, filePath? }`: single-file lexical check (layer plane plus the enforced ArkRun / ArkRules structure / ArkOrder sensors CI runs on that file); infer the layer from `filePath` when possible. Always partial: `valid:false` / `isError:true` until complete-candidate preflight — read `lexicalValid` for the one-file verdict. Not a hook; hard blocking is `arkgate-mcp --hook`. |
 | `ark_check` | `{ strict?, baseline? }`: run the full project architecture check. `verdict` separates `identity`, `completeness`, `graph`, `coverage`, `gates`, and `overallOk`; no individual green fact substitutes for the combined verdict. |
 | `ark_policy_delta` | `{ baseConfig, candidateConfig?, acknowledgement? }`: classify a complete contract transition; never edits the contract. Weakening / new layer / new allow edge needs `adrPath` on the acknowledgement. |
 | `ark_coverage` | No args: report per-layer counts, every unclassified file, unmatched layers, and missing rule edges. |
-| `ark_place` | `{ filePath?, description? }`: resolve or propose a governed home and return its import/global constraints. |
-| `ark_prepare_write` | `{ source, filePath?, description?, layer? }`: compose placement and snippet validation, with hashes and a mechanical-safe patch when available. |
-| `ark_prepare_change` | `{ changes, changeMap? }`: preflight one complete create/update/delete batch in memory; never writes files. |
+| `ark_place` | `{ filePath, description? }`: resolve the governed home for `filePath` (fail-closed without it; never invents a path) and return its import/global constraints. |
+| `ark_prepare_write` | `{ source, filePath, description?, layer? }`: compose placement and snippet validation, with hashes and a mechanical-safe patch when available. `filePath` is required (fail-closed). Partial like `validate_code`: read `lexicalValid`. |
+| `ark_prepare_change` | `{ changes, changeMap? }`: preflight one complete create/update/delete batch in memory against the same Effective Contract as `ark-check` (ArkRules included: same `policyHash`, structure/invariant findings; a missing referenced ArkRules file fails closed); ArkRules-plane findings the base tree already has are returned as `preExisting: true` warnings and do not block, so baselined brownfield debt does not reject an unrelated batch; never writes files. |
 | `ark_recommend` | No args: return the deterministic application-shape plan used by `ark-check --recommend --json`. |
 | `ark_suggest_include` | No args: propose TypeScript/JavaScript include roots from workspaces and nested packages. |
 | `ark_rules_inventory` | No args: inventory possible intra-layer rules using configured layer evidence when available; test/fixture/seed/migration surfaces and narrow technical constants are excluded from extraction pilots. Counts are not a score. |
@@ -1431,7 +1431,13 @@ Every project-bound tool success, tool error, and JSON-RPC error data carries:
 ```
 
 `projectId` stays stable across process restarts and contract edits; `runtimeId` and
-`processStartedAt` identify this live process. Binding states are:
+`processStartedAt` identify this live process. The contract (`ark.config.json`, the project
+manifest, referenced ArkRules files) is loaded once at startup: after any of them changes on
+disk, every project tool except `ark_identity` returns `CONTRACT_STALE` (`isError`,
+`authoritative: false`, `contractStale: true`) until the MCP server restarts — the process never
+answers authoritatively from an old contract. `ark_identity` keeps answering with
+`contractStale: true` so the host can diagnose it; the project-local CLI reads the current
+contract meanwhile. Binding states are:
 
 - `matched` — canonical `expectedRoot` is the exact project root, or it is a contained
   descendant and the caller also supplied the matching project id; `authoritative` is `true`;

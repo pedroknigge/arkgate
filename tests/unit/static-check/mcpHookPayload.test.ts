@@ -115,6 +115,35 @@ describe('mcp-hook-payload (extracted)', () => {
     expect(result.writes[0].content).toBe('hello ark\n');
   });
 
+  it('reconstructs the full Codex grammar: End of File, implicit first hunk, Move to', () => {
+    const dir = mkdtempSync(path.join(os.tmpdir(), 'ark-codex-grammar-'));
+    mkdirSync(path.join(dir, 'src'), { recursive: true });
+    writeFileSync(path.join(dir, 'src/a.ts'), 'one\ntwo\nthree\n');
+    const run = (lines: string[]) =>
+      codexPatchWrites(['*** Begin Patch', ...lines, '*** End Patch'].join('\n'), dir);
+
+    const eof = run(['*** Update File: src/a.ts', '@@', ' three', '+four', '*** End of File']);
+    expect(eof.complete).toBe(true);
+    expect(eof.writes[0].content).toBe('one\ntwo\nthree\nfour\n');
+
+    const implicit = run(['*** Update File: src/a.ts', '-one', '+ONE', '@@ two', '-three', '+THREE']);
+    expect(implicit.complete).toBe(true);
+    expect(implicit.writes[0].content).toBe('ONE\ntwo\nTHREE\n');
+
+    const moved = run(['*** Update File: src/a.ts', '*** Move to: src/b.ts', '@@', '-two', '+TWO']);
+    expect(moved.complete).toBe(true);
+    expect(moved.writes).toEqual([
+      expect.objectContaining({ path: 'src/b.ts', content: 'one\nTWO\nthree\n' }),
+      expect.objectContaining({ path: 'src/a.ts', delete: true }),
+    ]);
+
+    // A second hunk without @@ and a stray EOF marker mid-hunk stay outside the grammar.
+    expect(run(['*** Update File: src/a.ts', '@@', '-one', '+ONE', '*** End of File', '+x']).complete).toBe(
+      false
+    );
+    expect(applyCodexUpdatePatch('a\n', ['@@', '-missing', '+x'])).toBeNull();
+  });
+
   it('emits host allow JSON only for the matching style', () => {
     const lines = [];
     emitHostAllow({ stdout: (chunk) => lines.push(chunk) }, { antigravityStyle: true, cursorStyle: false });

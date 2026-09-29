@@ -128,7 +128,11 @@ project id before using project evidence.
 Like `ark-check --baseline`, the hook ratchets: an edit is blocked only when it **adds**
 violations relative to the file's current on-disk state, so files with pre-existing
 (baselined) violations stay editable — they just can't get worse. New files block on
-every violation.
+every violation. A contract failure (`WRITE_GATE_UNAVAILABLE`, e.g. a referenced ArkRules
+file missing) is never ratcheted: it blocks edits to existing files as well as new ones.
+The Codex `apply_patch` atomic preflight ratchets ArkRules-plane findings (`ARKRULE_*`,
+`INVARIANT_*`) the same way against the base tree: debt the repository already has is
+reported as a warning (`preExisting: true`), and only findings the patch adds block.
 
 The hook classifies import targets with the same `layerForRelativePath` specificity as
 `ark-check` (an explicit file pattern beats a broader glob such as `src/lib/**`).
@@ -725,8 +729,25 @@ If your runtime can run a shell command before file writes and pass the tool pay
 - Grok: `{ "decision": "deny", "reason": "…" }` on stdout when blocked
 - Antigravity: **stdout `decision` is required** — allow → `{ "decision": "allow" }`; deny →
   `{ "decision": "deny", "reason": "…" }` (exit 2 still set on deny)
-- plumbing problems (no stdin, non-source files, files outside `--root`) never block; Antigravity
-  still emits `{ "decision": "allow" }` on those fail-open paths
+- plumbing problems (no stdin, malformed payload, non-file tools, non-source files, files outside
+  `--root`) never block; Antigravity still emits `{ "decision": "allow" }` on those fail-open paths.
+  "Outside `--root`" is judged after realpath: `/tmp` vs `/private/tmp` or a symlinked checkout is
+  the same workspace and is gated
+- a gate that **cannot run** blocks every governed source write (exit `2`, `WRITE_GATE_UNAVAILABLE`,
+  plus the host deny JSON): `ark.config.json` missing / unparsable / invalid, a referenced ArkRules
+  file missing or invalid, or `dist/` missing or broken. No checker, no write. This applies to
+  existing files too: the same-file ratchet never cancels a contract failure. Writes to the law
+  files (`ark.config.json` and every ArkRules file it references under `arkRules`) are still
+  allowed so the contract can be repaired, but a write or `apply_patch` delete that would leave
+  one unloadable is denied (`WRITE_GATE_UNAVAILABLE`)
+- Codex `apply_patch`: the full grammar is reconstructed (`*** End of File`, a first hunk without
+  `@@`, `*** Move to:` judged at the destination). A patch that truly cannot be reconstructed is
+  allowed with a stderr notice and stays CI-backed
+- the hook runs the same file-local extra planes CI runs on that file: enforced ArkRun editor
+  sensors, enforced ArkRules structure sensors (`ARKRULE_STRUCTURE`), and enforced ArkOrder editor
+  sensors (`ARKORDER_KERNEL_IN_DOMAIN`, `ARKORDER_GENERIC_UPDATE`, …), under the same
+  classification floor. Cross-file evidence (invariant coverage, missing plane roots) stays
+  CI-authoritative
 
 ## ESLint (editor feedback) — bounded parity envelope
 
