@@ -131,7 +131,9 @@ describe.skipIf(!deps)('real ESLint run (eslint + @typescript-eslint/parser)', (
       {
         'src/main.ts': "import { createOrderPlane } from 'arkgate/order';\nexport const plane = createOrderPlane({});\n",
         'src/application/billing.ts':
-          "export function upgrade(plane: { update(v: unknown): void }) {\n    plane.update({ plan: 'pro' });\n}\n",
+          // The receiver must be plane evidence (a named import from a planeRoots module);
+          // a bare parameter named `plane` is not, on either side.
+          "import { plane } from '../main';\nexport function upgrade() {\n    plane.update({ plan: 'pro' });\n}\n",
       }
     );
     const messages = await lint(
@@ -140,7 +142,7 @@ describe.skipIf(!deps)('real ESLint run (eslint + @typescript-eslint/parser)', (
       'src/application/billing.ts'
     );
     const update = messages.find((m) => m.ruleId === 'ark/no-arkorder-generic-update');
-    expect(update).toMatchObject({ severity: 2, line: 2, column: 5 });
+    expect(update).toMatchObject({ severity: 2, line: 3, column: 5 });
     expect(update!.message).not.toContain('{{');
     expect(update!.message).toContain('Generic update()');
   });
