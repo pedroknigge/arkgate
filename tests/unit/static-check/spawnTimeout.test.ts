@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { SPAWN_TIMEOUT_MS as policyTimeout } from '../../../bin/lib/policy-delta-io.mjs';
-import { SPAWN_TIMEOUT_MS as teamTimeout } from '../../../bin/lib/team-parliament-io.mjs';
+import { SPAWN_TIMEOUT_MS as teamTimeout } from '../../../bin/lib/git-change-scope.mjs';
 import {
   reportGithubCiRuntime,
   SPAWN_TIMEOUT_MS as ghTimeout,
@@ -24,7 +24,7 @@ describe('git/gh spawnSync timeout', () => {
     expect(coachTimeout).toBe(8000);
     const files = [
       'bin/lib/policy-delta-io.mjs',
-      'bin/lib/team-parliament-io.mjs',
+      'bin/lib/git-change-scope.mjs',
       'bin/lib/github-enforcement.mjs',
       'bin/lib/deep-module-coach.mjs',
     ];

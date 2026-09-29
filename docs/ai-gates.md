@@ -912,6 +912,18 @@ npx ark-check --update-baseline   # writes .ark-baseline.json — commit it
 npx ark-check --baseline          # only NEW violations fail
 ```
 
+`--update-baseline` always measures the whole governed tree. It refuses `--changed` /
+`--local` and ignores `ARK_CHECK_LOCAL=1`, because a changed-files scan would overwrite the
+freeze with only that subset.
+
+`ark-check --report` applies the committed `.ark-baseline.json` by default (the same file
+`--doctor` reads), so the report, `.ark/reports/latest.json`, and `ark status` agree with
+doctor on what is active versus frozen. A plain `ark-check` without `--baseline` is
+unchanged, and so is a merge verdict: with `--strict` / `--strict-merge` / `--contract-diff`,
+`--report` does **not** apply the implicit freeze (pass `--baseline` explicitly), so adding a
+reporting flag can never turn a failing merge run green. Only `--report` refreshes the `ark status` last-check snapshot; a plain check or
+`--doctor` does not write it.
+
 `--update-baseline` also patches existing check **invocations** so CI keeps using the
 new freeze file: `package.json` scripts and GitHub workflow `run:` lines that already
 call `ark-check` / `arkgate-check` via `npx`, `pnpm`, `yarn`, `npm`, or `node`. Those

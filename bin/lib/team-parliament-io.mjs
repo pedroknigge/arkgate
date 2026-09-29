@@ -2,11 +2,10 @@
  * Team parliament I/O — git base refs, changed paths, pin/contract/baseline compare.
  * Pure classification lives in team-parliament.mjs (Domain).
  */
-import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
-import { applyAdvisorySiblingRatchet } from '../ark-layer-match.mjs';
+import { applyAdvisorySiblingRatchet, globToRegExp } from '../ark-layer-match.mjs';
 import {
   baselineKeysFromDocument,
   classifyBaselineKeyDelta,
@@ -20,6 +19,15 @@ import {
   resolveStewardHandle,
   suggestStewards,
 } from './team-parliament.mjs';
+import {
+  SPAWN_TIMEOUT_MS,
+  TEAM_BASE_CANDIDATES,
+  discoverTeamBaseRef,
+  gitShowText,
+  listChangedPaths,
+  runGit,
+  safeGitRef,
+} from './git-change-scope.mjs';
 
 export {
   baselineKeysFromDocument,
@@ -33,26 +41,13 @@ export {
   personaCheckBudget,
   resolveStewardHandle,
   suggestStewards,
+  SPAWN_TIMEOUT_MS,
+  TEAM_BASE_CANDIDATES,
+  discoverTeamBaseRef,
+  gitShowText,
+  listChangedPaths,
+  safeGitRef,
 };
-
-/** Kill hung git instead of stalling CI. */
-export const SPAWN_TIMEOUT_MS = 8000;
-
-function runGit(cwd, args) {
-  return spawnSync('git', ['-C', cwd, ...args], {
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'pipe'],
-    timeout: SPAWN_TIMEOUT_MS,
-  });
-}
-
-export function safeGitRef(value) {
-  return (
-    typeof value === 'string' &&
-    /^[A-Za-z0-9][A-Za-z0-9._/-]{0,200}$/.test(value) &&
-    !value.includes('..')
-  );
-}
 
 export function contractSessionFrom(args, env = process.env) {
   if (args?.contractSession === true) return true;
@@ -68,49 +63,6 @@ export function resolveTeamAuthor(args, env = process.env) {
     authorEmail: env.GIT_AUTHOR_EMAIL,
     gitName: env.GIT_AUTHOR_NAME,
   });
-}
-
-export function discoverTeamBaseRef(root, preferred) {
-  if (safeGitRef(preferred)) return preferred;
-  const candidates = ['origin/dev', 'origin/main', 'origin/master', 'dev', 'main'];
-  for (const candidate of candidates) {
-    const exists = runGit(root, ['rev-parse', '--verify', `${candidate}^{commit}`]);
-    if (exists.status === 0) return candidate;
-  }
-  return null;
-}
-
-export function listChangedPaths(root, baseRef) {
-  if (!safeGitRef(baseRef)) {
-    return { ok: false, paths: [], error: 'Invalid or missing git base ref.' };
-  }
-  const verify = runGit(root, ['rev-parse', '--verify', `${baseRef}^{commit}`]);
-  if (verify.status !== 0) {
-    return { ok: false, paths: [], error: `Cannot resolve git ref ${baseRef}.` };
-  }
-  const diff = runGit(root, ['diff', '--name-only', `${baseRef}...HEAD`]);
-  const unstaged = runGit(root, ['diff', '--name-only']);
-  const staged = runGit(root, ['diff', '--name-only', '--cached']);
-  const untracked = runGit(root, ['ls-files', '--others', '--exclude-standard']);
-  if (diff.status !== 0) {
-    return { ok: false, paths: [], error: diff.stderr.trim() || `git diff ${baseRef} failed.` };
-  }
-  const paths = [
-    ...diff.stdout.split('\n'),
-    ...unstaged.stdout.split('\n'),
-    ...staged.stdout.split('\n'),
-    ...untracked.stdout.split('\n'),
-  ]
-    .map((line) => line.trim().replace(/\\/g, '/'))
-    .filter(Boolean);
-  return { ok: true, paths: [...new Set(paths)].sort(), error: null };
-}
-
-export function gitShowText(root, baseRef, relPath) {
-  if (!safeGitRef(baseRef) || !relPath) return null;
-  const shown = runGit(root, ['show', `${baseRef}:${relPath}`]);
-  if (shown.status !== 0) return null;
-  return shown.stdout;
 }
 
 export function readJsonMaybe(text) {
@@ -236,17 +188,28 @@ export function runTeamPreflight({ root, args, config, policyDelta, teamBase }) 
     return { halt: null, teamParliament: null, changedPaths: [] };
   }
   const againstRef = args.against || teamBase;
-  if (args.local && !againstRef) {
-    const message =
-      '--local needs a git merge base so it can reuse --changed. Pass --base <ref> (for example --base HEAD or --base origin/main). The merge gate stays --strict-merge.';
-    const teamParliament = { deny: false, reasonId: 'local-needs-base', message };
+  if ((args.local || args.changed || args.contractDiff) && !againstRef) {
+    const reasonId = args.local
+      ? 'local-needs-base'
+      : args.changed
+        ? 'changed-needs-base'
+        : 'contract-diff-needs-base';
+    const message = args.local
+      ? '--local needs a git merge base so it can reuse --changed. Pass --base <ref> (for example --base HEAD or --base origin/main). The merge gate stays --strict-merge.'
+      : args.changed
+        ? changedNeedsBaseMessage(args)
+        : contractDiffNeedsBaseMessage(args);
+    const teamParliament = { deny: false, reasonId, message };
     return {
       halt: { exitCode: 2, message, teamParliament },
       teamParliament,
       changedPaths: [],
     };
   }
-  const listed = againstRef ? listChangedPaths(root, againstRef) : { ok: true, paths: [], error: null };
+  // No base ref means the change set was never computed: never report it as empty.
+  const listed = againstRef
+    ? listChangedPaths(root, againstRef)
+    : { ok: false, paths: [], error: 'No git base ref resolved.' };
   const changedPaths = listed.ok ? listed.paths : [];
   const changeSet = classifyChangeSet(changedPaths);
   const baseBaselineRaw = againstRef
@@ -279,8 +242,12 @@ export function runTeamPreflight({ root, args, config, policyDelta, teamBase }) 
     changedPathError: listed.ok ? null : listed.error,
   };
   if (!listed.ok && (args.changed || args.against || args.contractDiff)) {
+    // The verdict above ran over an uncomputed diff: never label it `ok`.
+    teamParliament.deny = false;
+    teamParliament.reasonId = 'changed-paths-unavailable';
+    teamParliament.message = `${listed.error || 'Cannot list changed paths.'} Pass --base <ref> or fix the git error, or run a full check without diff flags.`;
     return {
-      halt: { exitCode: 2, message: listed.error || 'Cannot resolve team base ref.', teamParliament },
+      halt: { exitCode: 2, message: teamParliament.message, teamParliament },
       teamParliament,
       changedPaths,
     };
@@ -302,6 +269,17 @@ export function runTeamPreflight({ root, args, config, policyDelta, teamBase }) 
   return { halt: null, teamParliament, changedPaths };
 }
 
+/** `--changed` / `--persona touch|contributor|agent` without a resolvable merge base. */
+export function changedNeedsBaseMessage(args) {
+  const flag = args?.persona ? `--persona ${args.persona}` : '--changed';
+  return `${flag} needs a git merge base to know which files changed, and none was found (tried ${TEAM_BASE_CANDIDATES.join(', ')}; or this is not a git repository). Pass --base <ref> (for example --base HEAD or --base origin/main), or run without ${flag} for a full-tree check.`;
+}
+
+export function contractDiffNeedsBaseMessage(args) {
+  const flag = args?.persona ? `--persona ${args.persona}` : '--contract-diff';
+  return `${flag} compares the contract and .ark-baseline.json against a git base, and none was found (tried ${TEAM_BASE_CANDIDATES.join(', ')}; or this is not a git repository). Pass --base <ref> (for example --base origin/main), or run a plain full-tree check without ${flag}.`;
+}
+
 export function ungovernedDumpMessage(dumped) {
   return `New ungoverned source in this diff: ${dumped.slice(0, 8).join(', ')}${dumped.length > 8 ? '…' : ''}. Classify via /ark-adopt (contract session) or move into a governed layer.`;
 }
@@ -310,6 +288,29 @@ export function filterChangedGovernedFiles(allGovernedFiles, root, changedPaths,
   if (!changedPaths?.length) return allGovernedFiles;
   const changedSet = new Set(changedPaths);
   return allGovernedFiles.filter((abs) => changedSet.has(normalizeRel(path.relative(root, abs))));
+}
+
+/**
+ * `--changed` scans a subset, so a layer whose files were not touched looks empty to the
+ * kernel. Keep CONFIG_LAYER_PATTERN_NO_MATCHES only when the FULL governed tree has no
+ * match either (a real typo). `loadFullFiles` is lazy: the full walk runs only when needed.
+ */
+export function pruneScopedPatternWarnings(warnings, root, loadFullFiles) {
+  const isNoMatch = (w) =>
+    (w?.ruleId ?? w?.code) === 'CONFIG_LAYER_PATTERN_NO_MATCHES' && typeof w.pattern === 'string';
+  if (!Array.isArray(warnings) || !warnings.some(isNoMatch)) return warnings;
+  const rels = loadFullFiles().map((abs) => path.relative(root, abs).split(path.sep).join('/'));
+  for (let i = warnings.length - 1; i >= 0; i -= 1) {
+    if (!isNoMatch(warnings[i])) continue;
+    let expression;
+    try {
+      expression = globToRegExp(warnings[i].pattern);
+    } catch {
+      continue;
+    }
+    if (rels.some((rel) => expression.test(rel))) warnings.splice(i, 1);
+  }
+  return warnings;
 }
 
 export function applyAgainstRatchet({

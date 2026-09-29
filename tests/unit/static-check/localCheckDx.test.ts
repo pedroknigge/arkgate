@@ -146,7 +146,7 @@ describe('LC01 local check DX', () => {
     expect(body.cheap).toBe(true);
     expect(body.local).toBe(true);
     expect(body.scope).toBe('changed');
-    expect(body.analysisRoot).toBe(fs.realpathSync(root));
+    expect(fs.realpathSync(body.analysisRoot!)).toBe(fs.realpathSync(root));
 
     const noGit = mk('ark-local-dx-nongit-');
     writeProject(noGit);
@@ -202,8 +202,8 @@ describe('LC01 local check DX', () => {
     expect(rightJson.ok).toBe(true);
     expect(leftJson.local).toBe(true);
     expect(rightJson.local).toBe(true);
-    expect(leftJson.analysisRoot).toBe(fs.realpathSync(a));
-    expect(rightJson.analysisRoot).toBe(fs.realpathSync(b));
+    expect(fs.realpathSync(leftJson.analysisRoot!)).toBe(fs.realpathSync(a));
+    expect(fs.realpathSync(rightJson.analysisRoot!)).toBe(fs.realpathSync(b));
     expect(leftJson.analysisRoot).not.toBe(rightJson.analysisRoot);
   });
 });
