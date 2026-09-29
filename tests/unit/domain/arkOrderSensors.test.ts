@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { evaluateArkOrderSensors } from '../../../src/domain/arkOrderSensors';
+import {
+  ARKORDER_TIER1_SENSOR_IDS,
+  evaluateArkOrderEditorSensors,
+  evaluateArkOrderSensors,
+} from '../../../src/domain/arkOrderSensors';
 import type { ArkConfigArkOrder } from '../../../src/domain/configTypes';
 import { globToRegExp } from '../../../src/domain/layerMatch';
 
@@ -55,6 +59,45 @@ describe('evaluateArkOrderSensors', () => {
     });
     expect(result.findings.map((item) => item.ruleId)).toEqual(['ARKORDER_XI_FIELD_WRITE']);
     expect(result.findings[0]?.target).toBe('plan');
+  });
+
+  it('every advertised tier-1 sensor has an emitter (xi-ttl, information-budget)', () => {
+    const result = evaluateArkOrderSensors({
+      arkOrder: extra,
+      layers: [],
+      planeCalls: [],
+      genericUpdates: [{ file: 'src/main.ts', line: 3, method: 'update' }],
+      planeRootHits: [{ file: 'src/main.ts', matchedRoot: 'src/main.ts', hasPlaneFactory: true }],
+      xiTtlKeys: [{ file: 'src/main.ts', line: 7, key: 'ttl' }],
+      budgetLeaks: [{ file: 'src/main.ts', line: 5, kind: 'LedgerRead' }],
+      dependencies: [],
+      layerForFile: () => 'ApplicationOrchestration',
+      classification: { governedPercent: 100, populatedLayerCount: 2 },
+    });
+    const sensors = result.findings.map((item) => item.sensor);
+    expect(sensors).toContain('arkorder-xi-ttl');
+    expect(sensors).toContain('arkorder-information-budget');
+    expect(result.findings.find((item) => item.sensor === 'arkorder-xi-ttl')?.failsStrict).toBe(true);
+    expect(ARKORDER_TIER1_SENSOR_IDS).toContain('arkorder-xi-ttl');
+    expect(ARKORDER_TIER1_SENSOR_IDS).toContain('arkorder-information-budget');
+  });
+
+  it('editor path reports xi-ttl and information-budget from source', () => {
+    const findings = evaluateArkOrderEditorSensors({
+      arkOrder: extra,
+      file: 'src/main.ts',
+      fromLayer: 'ApplicationOrchestration',
+      source: `const plane = createOrderPlane({
+  projector: () => ({ allowedKinds: ['Invoice', 'LedgerRead'], invalidated: [] }),
+  informationBudget: { cannotObserve: ['LedgerRead'] },
+});
+plane.release({ plan: 'free', ttl: 30 });
+`,
+    });
+    expect(findings.map((item) => item.ruleId).sort()).toEqual([
+      'ARKORDER_INFORMATION_BUDGET',
+      'ARKORDER_XI_TTL',
+    ]);
   });
 
   it('stays silent on xi field writes when xiKeys is empty', () => {

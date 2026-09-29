@@ -9,6 +9,7 @@
  */
 
 import { findClassDeclarations, scanClassMembers } from './class-source-scan.mjs';
+import { sourceHasPersistenceWrite, sourceImportsPersistenceDriverText } from './persistence-write-hint.mjs';
 /** Keep in lockstep with arkRulesTypes.ARK_RULE_TIER2_SENSOR_IDS (self-contained for CLI gen). */
 const ARK_RULE_TIER2_SENSOR_IDS = ['no-anemic-model'];
 /**
@@ -467,24 +468,11 @@ export function collectEmptyInvariantCatalogFindings(input) {
         },
     ];
 }
-/** IO / ORM import evidence. postgres and drizzle-orm include package subpaths. Keep in lockstep with arkOrderFacts. */
-const IO_IMPORT_HINT_RE = /\bfrom\s+['"](?:@?prisma\/client|@supabase\/|drizzle-orm(?:\/[^'"]+)?|postgres(?:\/[^'"]+)?|typeorm|knex|mongodb|pg|mysql2|mongoose|better-sqlite3|ioredis|redis|kysely|sequelize)['"]|require\(\s*['"](?:@?prisma\/client|pg|postgres(?:\/[^'"]+)?|drizzle-orm(?:\/[^'"]+)?|knex|typeorm|mongoose)/;
-/**
- * Path-alias / local db module (`@/lib/db`) without resolving tsconfig.
- * Keep in lockstep with arkOrderFacts.
- */
-const IO_ALIAS_IMPORT_RE = /\bfrom\s+['"](?:@\/|~\/)?(?:[\w.-]+\/)*(?:db|database|prisma|drizzle)(?:\.[cm]?[jt]sx?)?['"]|require\(\s*['"](?:@\/|~\/)?(?:[\w.-]+\/)*(?:db|database|prisma|drizzle)/;
-/**
- * Write tokens that skip the aggregate when paired with a persistence driver import.
- * Callee must be db|tx|client|prisma|drizzle (PrismaClient included); not repo.update(.
- * Keep in lockstep with arkOrderFacts.
- */
-const PERSISTENCE_WRITE_HINT_RE = /\b(?:db|tx|client|prisma(?:Client)?|drizzle)\b(?:\s*\.\s*[A-Za-z_]\w*)*\s*\.\s*(?:insert(?:One|Many)?|update(?:One|Many)?|upsert|delete(?:One|Many)?|createMany|create|replaceOne|findOneAnd(?:Update|Delete|Replace))\s*\(|\bINSERT\s+INTO\b|\bUPDATE\s+[A-Za-z_][\w.]*\s+SET\b|\bDELETE\s+FROM\b/i;
 export function isPersistenceDriverLayer(layer) {
     return layer === 'PersistenceAdapters';
 }
 export function sourceImportsPersistenceDriver(content, resolvedImports) {
-    if (IO_IMPORT_HINT_RE.test(content) || IO_ALIAS_IMPORT_RE.test(content))
+    if (sourceImportsPersistenceDriverText(content))
         return true;
     if (!resolvedImports)
         return false;
@@ -495,7 +483,7 @@ export function sourceImportsPersistenceDriver(content, resolvedImports) {
         if (!specifier)
             continue;
         const synthetic = `from '${specifier}'`;
-        if (IO_IMPORT_HINT_RE.test(synthetic) || IO_ALIAS_IMPORT_RE.test(synthetic))
+        if (sourceImportsPersistenceDriverText(synthetic))
             return true;
     }
     return false;
@@ -514,7 +502,7 @@ export function deriveArkRuleFileHints(_file, content, resolvedImports) {
     if (!content)
         return null;
     const hasIo = sourceImportsPersistenceDriver(content, resolvedImports);
-    const persistenceWrite = hasIo && PERSISTENCE_WRITE_HINT_RE.test(content);
+    const persistenceWrite = hasIo && sourceHasPersistenceWrite(content);
     // Orchestration/adapter heuristics need a longer window; writes still fire on short probes.
     if (content.length < 40) {
         return persistenceWrite ? { persistenceWrite: true } : null;

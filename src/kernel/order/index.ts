@@ -12,12 +12,14 @@ export {
 } from '../../domain/arkOrderInvariants';
 export { CAPACITY_OPS, DEFAULT_MAX_XI_KEYS } from '../../domain/arkOrderTypes';
 export type {
+  ArkOrderErrorCode,
   CapacityConstraint,
   CapacityOp,
   ConstraintPack,
   EscalationTarget,
   FieldEvent,
   InformationBudget,
+  IngestAbsorb,
   IngestEscalate,
   IngestEscalateUp,
   IngestHold,
@@ -29,6 +31,8 @@ export type {
   ProposeResult,
   Release,
   SigmaRecord,
+  XiPrimitive,
+  XiPropertySchema,
   XiRecord,
   XiSchema,
 } from '../../domain/arkOrderTypes';

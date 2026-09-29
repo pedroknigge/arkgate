@@ -41,7 +41,9 @@
         "bin/lib/ark-order-sensors.mjs",
         "bin/lib/ark-order-invariants.mjs",
         "bin/lib/ark-order-error.mjs",
-        "bin/lib/ark-order-types.mjs"
+        "bin/lib/ark-order-types.mjs",
+        "bin/lib/stable-hash.mjs",
+        "bin/lib/persistence-write-hint.mjs"
       ],
       "intentPrefixes": ["Domain."],
       "forbiddenGlobals": ["fetch", "process", "Date.now", "Math.random"]

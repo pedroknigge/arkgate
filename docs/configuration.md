@@ -175,7 +175,11 @@ Top-level fields:
   at least one glob. Membership ids and recomputable statuses such as `paid` /
   `overdue` are not keys. Factory options `informationBudget`, `sigmaMaxAgeMs`,
   `store` (`ReleaseStore`), and capacity packs belong on `createOrderPlane`, not this
-  extra object. Later ξ is `proposeRelease` then `apply`; `refreshSigma`; ingest
+  extra object. Literal evidence of either still reports statically: a ttl/freshUntil/maxAge
+  key in a plane `release` / `proposeRelease` ξ literal (`ARKORDER_XI_TTL`), and a literal
+  `allowedKinds` entry denied by a literal `cannotObserve` (`ARKORDER_INFORMATION_BUDGET`).
+  Later ξ is `proposeRelease` then `apply` (a stale proposal fails
+  `ARKORDER_STALE_PROPOSAL`); `refreshSigma`; ingest
   residual `absorb | escalate_up | hold`. Demotion or deletion is a policy-delta
   **weakening**. Field ingest never mints a pattern.
 

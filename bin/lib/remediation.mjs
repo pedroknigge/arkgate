@@ -555,6 +555,7 @@ export function enrichViolationWithFixClass(violation) {
         case 'ARKORDER_XI_TTL':
         case 'ARKORDER_STALE_SIGMA':
         case 'ARKORDER_UNVALVED_RELEASE':
+        case 'ARKORDER_STALE_PROPOSAL':
             enriched.fixClass = 'arkorder-usage';
             enriched.effort = 'medium';
             enriched.enthusiastHint =
@@ -576,7 +577,9 @@ export function enrichViolationWithFixClass(violation) {
                                                 ? 'Refresh σ. ξ does not expire.'
                                                 : violation.ruleId === 'ARKORDER_UNVALVED_RELEASE'
                                                     ? 'The choice is already frozen. proposeRelease then apply — do not call release() again with a different value.'
-                                                    : 'Call createOrderPlane from arkgate/order in a listed plane root so the app actually freezes a pattern.';
+                                                    : violation.ruleId === 'ARKORDER_STALE_PROPOSAL'
+                                                        ? 'That proposal was computed against an older pattern. Propose again, review the new blast radius, then apply.'
+                                                        : 'Call createOrderPlane from arkgate/order in a listed plane root so the app actually freezes a pattern.';
             break;
         default:
             enriched.fixClass = 'review-contract';

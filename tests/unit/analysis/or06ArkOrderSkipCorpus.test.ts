@@ -40,6 +40,39 @@ const CASES = [
     tree: 'trees/too-many-params',
     expected: ['ARKORDER_TOO_MANY_PARAMS'],
   },
+  {
+    // README one-liner: `new PrismaClient().billing.update({ data: { plan } })`.
+    id: 'xi-field-write-inline-client',
+    tree: 'trees/xi-field-write-inline-client',
+    expected: ['ARKORDER_XI_FIELD_WRITE'],
+  },
+  {
+    id: 'xi-field-write-renamed-client',
+    tree: 'trees/xi-field-write-renamed-client',
+    expected: ['ARKORDER_XI_FIELD_WRITE'],
+  },
+  {
+    // Constructor-injected client: `constructor(private readonly orm: PrismaClient)`.
+    id: 'xi-field-write-injected-client',
+    tree: 'trees/xi-field-write-injected-client',
+    expected: ['ARKORDER_XI_FIELD_WRITE'],
+  },
+  {
+    // Map.set in the plane root stays silent; (billingPlane as T).update elsewhere denies.
+    id: 'generic-update-named-plane',
+    tree: 'trees/generic-update-named-plane',
+    expected: ['ARKORDER_GENERIC_UPDATE'],
+  },
+  {
+    id: 'xi-ttl',
+    tree: 'trees/xi-ttl',
+    expected: ['ARKORDER_XI_TTL'],
+  },
+  {
+    id: 'information-budget',
+    tree: 'trees/information-budget',
+    expected: ['ARKORDER_INFORMATION_BUDGET'],
+  },
 ] as const;
 
 function readJson(relativePath: string): Record<string, unknown> {
@@ -160,20 +193,22 @@ export function ScheduleMilestoneTrialView(): void {
     expect(orderIds(advisory.ir.warnings)).not.toContain('ARKORDER_GENERIC_UPDATE');
   });
 
-  it('EOSF5-001: plane.set / orderPlane.update still deny when enforced', async () => {
+  it('EOSF5-001: plane.set / orderPlane.update deny when enforced (ArkOrder evidence in the file)', async () => {
     const writeDenies = (root: string) => {
       const dir = path.join(root, 'src/application');
       fs.mkdirSync(dir, { recursive: true });
       fs.writeFileSync(
         path.join(dir, 'plane-set.ts'),
-        `export function bump(plane: { set(xi: object): void }): void {
-  plane.set({ plan: 'pro' });
+        `import type { OrderPlane } from 'arkgate/order';
+export function bump(plane: OrderPlane): void {
+  (plane as unknown as { set(xi: object): void }).set({ plan: 'pro' });
 }
 `
       );
       fs.writeFileSync(
         path.join(dir, 'order-plane-update.ts'),
-        `export function bump(orderPlane: { update(xi: object): void }): void {
+        `import type {} from 'arkgate/order';
+export function bump(orderPlane: { update(xi: object): void }): void {
   orderPlane.update({ plan: 'pro' });
 }
 `
@@ -183,8 +218,76 @@ export function ScheduleMilestoneTrialView(): void {
     const enforcedRoot = copyTree('trees/unvalved-release');
     writeDenies(enforcedRoot);
     const enforced = await analyzeRoot(enforcedRoot, configFor('enforced'));
-    expect(orderIds(enforced.ir.violations)).toContain('ARKORDER_GENERIC_UPDATE');
+    const files = enforced.ir.violations
+      .filter((item) => item.ruleId === 'ARKORDER_GENERIC_UPDATE')
+      .map((item) => item.file)
+      .sort();
+    expect(files).toEqual([
+      'src/application/order-plane-update.ts',
+      'src/application/plane-set.ts',
+    ]);
     expect(enforced.valid).toBe(false);
+  });
+
+  it('precision: a `*Plane` name with no ArkOrder evidence is not a plane (clipPlane / controlPlane)', async () => {
+    const root = copyTree('trees/unvalved-release');
+    const dir = path.join(root, 'src/application');
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(
+      path.join(dir, 'other.ts'),
+      `export function clip(clipPlane: { set(a: number, b: number): void }): void {
+  clipPlane.set(1, 0);
+}
+export function scale(controlPlane: { update(x: object): void }): void {
+  controlPlane.update({ replicas: 3 });
+}
+`
+    );
+    const enforced = await analyzeRoot(root, configFor('enforced'));
+    const hits = [...enforced.ir.violations, ...enforced.ir.warnings].filter(
+      (item) => item.ruleId === 'ARKORDER_GENERIC_UPDATE' && item.file === 'src/application/other.ts'
+    );
+    expect(hits).toEqual([]);
+  });
+
+  it('precision: residual bindings, repo writes, σ freshness, and lock leases stay silent', async () => {
+    const writeQuiet = (root: string) => {
+      fs.writeFileSync(
+        path.join(root, 'src/main.ts'),
+        `import { createOrderPlane } from 'arkgate/order';
+
+export function boot(): void {
+  const plane = createOrderPlane({
+    projector: () => ({ allowedKinds: ['InvoicePosted'], invalidated: [] }),
+  });
+  plane.release({ plan: 'free' }, { freshUntil: 1500 });
+  const currentResidual = plane.ingest({ kind: 'InvoicePosted' });
+  const patternResult = plane.ingest({ kind: 'InvoicePosted' });
+  const lock = { release(_: object): void {} };
+  lock.release({ ttl: 5 });
+  void currentResidual;
+  void patternResult;
+}
+`
+      );
+      const dir = path.join(root, 'src/application');
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(
+        path.join(dir, 'save.ts'),
+        `import { PrismaClient } from '@prisma/client';
+
+export async function savePlan(repo: { update(x: object): Promise<void> }): Promise<void> {
+  void PrismaClient;
+  await repo.update({ plan: 'pro' });
+}
+`
+      );
+    };
+    const enforcedRoot = copyTree('trees/unvalved-release');
+    writeQuiet(enforcedRoot);
+    const enforced = await analyzeRoot(enforcedRoot, configFor('enforced'));
+    expect(orderIds(enforced.ir.violations)).toEqual([]);
+    expect(enforced.valid).toBe(true);
   });
 
   it('unvalved second freeze is runtime fail-closed, not a lexical skip (LV02)', async () => {

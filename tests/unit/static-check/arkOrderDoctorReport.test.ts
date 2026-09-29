@@ -131,7 +131,7 @@ describe('ArkOrder doctor / deny label', () => {
     expect(doctor.raw).toMatch(/billing plan/);
     expect(doctor.raw).toMatch(/seat count/);
     expect(doctor.raw).toMatch(/valve, not a generic update/);
-    expect(doctor.raw).toContain('examples/arkorder-billing');
+    expect(doctor.raw).toContain('github.com/pedroknigge/arkgate/tree/main/examples/arkorder-billing');
     expect(doctor.raw).toContain('/ark-adopt');
     expect(doctor.raw).toContain('/ark-order');
     expect(doctor.raw).not.toMatch(/\[ArkOrder\]\s+ARKORDER_/);
@@ -142,7 +142,7 @@ describe('ArkOrder doctor / deny label', () => {
     expect(inactive).toContain('data-advisory="arkOrder"');
     expect(inactive).toMatch(/silent/i);
     expect(inactive).toMatch(/Layers stop a bad import/);
-    expect(inactive).toContain('examples/arkorder-billing');
+    expect(inactive).toContain('github.com/pedroknigge/arkgate/tree/main/examples/arkorder-billing');
     expect(inactive).toContain('/ark-order');
 
     const section = summarizeArkOrderSection({

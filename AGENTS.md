@@ -177,6 +177,8 @@ or `dist/` except `ark-mcp` loading the built library. Shared CLI logic lives in
 | `src/domain/sourcePolicy.ts` | `bin/lib/source-policy.mjs` | (same `cli-pure` scripts); intent prefixes + runtime layer-flow resolvability |
 | `src/domain/arkOrderDoctor.ts` | `bin/lib/ark-order-doctor.mjs` | (same `cli-pure` scripts); doctor/status/report arkOrder (notAScore) |
 | `src/domain/arkOrderTypes.ts` | `bin/lib/ark-order-types.mjs` | (same `cli-pure` scripts); ArkOrder vocabulary |
+| `src/domain/stableHash.ts` | `bin/lib/stable-hash.mjs` | (same `cli-pure` scripts); FNV-1a + stable serialize (imported by ArkOrder invariants) |
+| `src/domain/persistenceWriteHint.ts` | `bin/lib/persistence-write-hint.mjs` | (same `cli-pure` scripts); receiver-bound persistence write evidence shared by ArkRules + ArkOrder |
 | `src/domain/arkOrderError.ts` | `bin/lib/ark-order-error.mjs` | (same `cli-pure` scripts) |
 | `src/domain/arkOrderInvariants.ts` | `bin/lib/ark-order-invariants.mjs` | (same `cli-pure` scripts); Haken freeze/ingest/blast |
 | `src/domain/arkOrderFacts.ts` | `bin/lib/ark-order-facts.mjs` | (same `cli-pure` scripts); ADR 0029 |

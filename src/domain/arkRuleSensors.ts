@@ -7,6 +7,7 @@
 
 import type { EffectiveArkRules, EffectiveStructureRule, ArkRuleSensorId } from './arkRulesTypes';
 import { findClassDeclarations, scanClassMembers } from './classSourceScan';
+import { sourceHasPersistenceWrite, sourceImportsPersistenceDriverText } from './persistenceWriteHint';
 
 /** Keep in lockstep with arkRulesTypes.ARK_RULE_TIER2_SENSOR_IDS (self-contained for CLI gen). */
 const ARK_RULE_TIER2_SENSOR_IDS = ['no-anemic-model'] as const;
@@ -690,25 +691,12 @@ export function collectEmptyInvariantCatalogFindings(
   ];
 }
 
-/** IO / ORM import evidence. postgres and drizzle-orm include package subpaths. Keep in lockstep with arkOrderFacts. */
-const IO_IMPORT_HINT_RE =
-  /\bfrom\s+['"](?:@?prisma\/client|@supabase\/|drizzle-orm(?:\/[^'"]+)?|postgres(?:\/[^'"]+)?|typeorm|knex|mongodb|pg|mysql2|mongoose|better-sqlite3|ioredis|redis|kysely|sequelize)['"]|require\(\s*['"](?:@?prisma\/client|pg|postgres(?:\/[^'"]+)?|drizzle-orm(?:\/[^'"]+)?|knex|typeorm|mongoose)/;
-
 /**
- * Path-alias / local db module (`@/lib/db`) without resolving tsconfig.
- * Keep in lockstep with arkOrderFacts.
+ * IO / ORM import evidence and receiver-bound write tokens live in
+ * persistenceWriteHint (shared with ArkOrder — one definition, not lockstep copies).
+ * Callee must be a persistence client (db|tx|client|prisma|drizzle, `new PrismaClient()`,
+ * or a name bound to a driver constructor); not repo.update(.
  */
-const IO_ALIAS_IMPORT_RE =
-  /\bfrom\s+['"](?:@\/|~\/)?(?:[\w.-]+\/)*(?:db|database|prisma|drizzle)(?:\.[cm]?[jt]sx?)?['"]|require\(\s*['"](?:@\/|~\/)?(?:[\w.-]+\/)*(?:db|database|prisma|drizzle)/;
-
-/**
- * Write tokens that skip the aggregate when paired with a persistence driver import.
- * Callee must be db|tx|client|prisma|drizzle (PrismaClient included); not repo.update(.
- * Keep in lockstep with arkOrderFacts.
- */
-const PERSISTENCE_WRITE_HINT_RE =
-  /\b(?:db|tx|client|prisma(?:Client)?|drizzle)\b(?:\s*\.\s*[A-Za-z_]\w*)*\s*\.\s*(?:insert(?:One|Many)?|update(?:One|Many)?|upsert|delete(?:One|Many)?|createMany|create|replaceOne|findOneAnd(?:Update|Delete|Replace))\s*\(|\bINSERT\s+INTO\b|\bUPDATE\s+[A-Za-z_][\w.]*\s+SET\b|\bDELETE\s+FROM\b/i;
-
 /** Optional resolved-import facts when the collector already classified the specifier. */
 export type ResolvedPersistenceImportFact = {
   specifier?: string;
@@ -724,14 +712,14 @@ export function sourceImportsPersistenceDriver(
   content: string,
   resolvedImports?: readonly ResolvedPersistenceImportFact[]
 ): boolean {
-  if (IO_IMPORT_HINT_RE.test(content) || IO_ALIAS_IMPORT_RE.test(content)) return true;
+  if (sourceImportsPersistenceDriverText(content)) return true;
   if (!resolvedImports) return false;
   for (const imp of resolvedImports) {
     if (isPersistenceDriverLayer(imp.layer)) return true;
     const specifier = imp.specifier;
     if (!specifier) continue;
     const synthetic = `from '${specifier}'`;
-    if (IO_IMPORT_HINT_RE.test(synthetic) || IO_ALIAS_IMPORT_RE.test(synthetic)) return true;
+    if (sourceImportsPersistenceDriverText(synthetic)) return true;
   }
   return false;
 }
@@ -766,7 +754,7 @@ export function deriveArkRuleFileHints(
   if (!content) return null;
 
   const hasIo = sourceImportsPersistenceDriver(content, resolvedImports);
-  const persistenceWrite = hasIo && PERSISTENCE_WRITE_HINT_RE.test(content);
+  const persistenceWrite = hasIo && sourceHasPersistenceWrite(content);
   // Orchestration/adapter heuristics need a longer window; writes still fire on short probes.
   if (content.length < 40) {
     return persistenceWrite ? { persistenceWrite: true } : null;

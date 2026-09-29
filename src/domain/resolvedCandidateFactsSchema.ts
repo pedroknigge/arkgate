@@ -416,6 +416,32 @@ export const RESOLVED_CANDIDATE_FACTS_SCHEMA = {
         },
       },
     },
+    arkOrderXiTtlKeys: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['file', 'line', 'key'],
+        properties: {
+          file: projectPathSchema,
+          line: lineSchema,
+          key: textSchema,
+        },
+      },
+    },
+    arkOrderBudgetLeaks: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['file', 'line', 'kind'],
+        properties: {
+          file: projectPathSchema,
+          line: lineSchema,
+          kind: textSchema,
+        },
+      },
+    },
     factsHash: textSchema,
   },
   allOf: [

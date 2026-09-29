@@ -43,11 +43,13 @@ import {
   extractArkRunManagedNewsFromSource,
 } from './ark-run-facts.mjs';
 import {
+  extractArkOrderBudgetLeaksFromSource,
   extractArkOrderGenericUpdatesFromSource,
   extractArkOrderIngestWritesXiFromSource,
   extractArkOrderPlaneCallsFromSource,
   extractArkOrderReleaseKeyCountsFromSource,
   extractArkOrderXiFieldWritesFromSource,
+  extractArkOrderXiTtlKeysFromSource,
 } from './ark-order-facts.mjs';
 import {
   collectGovernedFiles,
@@ -1170,6 +1172,8 @@ export function resolveCandidateFacts({
   const arkOrderXiFieldWrites = [];
   const arkOrderIngestWritesXi = [];
   const arkOrderReleaseKeyCounts = [];
+  const arkOrderXiTtlKeys = [];
+  const arkOrderBudgetLeaks = [];
   const arkRunActive = config.arkRun != null && typeof config.arkRun === 'object';
   const arkOrderActive = config.arkOrder != null && typeof config.arkOrder === 'object';
   const arkRulesActive =
@@ -1300,7 +1304,9 @@ export function resolveCandidateFacts({
         }
         try {
           arkOrderGenericUpdates.push(
-            ...extractArkOrderGenericUpdatesFromSource(candidate.path, candidate.content)
+            ...extractArkOrderGenericUpdatesFromSource(candidate.path, candidate.content, {
+              planeRoots: planeRootPatterns,
+            })
           );
         } catch {
           // Never fail the resolver for ArkOrder generic-update extraction.
@@ -1325,6 +1331,22 @@ export function resolveCandidateFacts({
           );
         } catch {
           // Never fail the resolver for ArkOrder release key-count extraction.
+        }
+        try {
+          arkOrderXiTtlKeys.push(
+            ...extractArkOrderXiTtlKeysFromSource(candidate.path, candidate.content, {
+              planeRoots: planeRootPatterns,
+            })
+          );
+        } catch {
+          // Never fail the resolver for ArkOrder ξ-TTL extraction.
+        }
+        try {
+          arkOrderBudgetLeaks.push(
+            ...extractArkOrderBudgetLeaksFromSource(candidate.path, candidate.content)
+          );
+        } catch {
+          // Never fail the resolver for ArkOrder information-budget extraction.
         }
       }
     }
@@ -1541,6 +1563,8 @@ export function resolveCandidateFacts({
     arkOrderXiFieldWrites,
     arkOrderIngestWritesXi,
     arkOrderReleaseKeyCounts,
+    arkOrderXiTtlKeys,
+    arkOrderBudgetLeaks,
   });
 }
 

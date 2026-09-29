@@ -411,6 +411,13 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
     'release() already froze the big choice. A later release() with a different value does not land. First freeze is release(); later change is proposeRelease then apply.',
     'Change the choice with proposeRelease then apply. release() is only the first freeze. Never mechanical-safe.'
   ),
+  entry(
+    'ARKORDER_STALE_PROPOSAL',
+    'arkorder',
+    'Proposal is not bound to the current Release',
+    'apply() got a ProposeResult computed against another Release (another apply landed first), one missing its base binding, or one whose reviewed blast radius is not the transition that would commit. The binding is data, not a capability: a proposal that states the current base and the exact transition applies whoever built it.',
+    'Run proposeRelease again against the current Release, review the new blast radius, then apply that proposal. Never mechanical-safe.'
+  ),
 
   // ── atomic preflight / change set ────────────────────────────────────────
   entry(

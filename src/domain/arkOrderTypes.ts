@@ -5,6 +5,9 @@
  */
 export const DEFAULT_MAX_XI_KEYS = 7;
 
+/** ξ keys that name freshness. Freshness is σ, never ξ (runtime and static sensor share this). */
+export const XI_TTL_KEY_RE = /^(ttl|freshUntil|fresh_until|maxAge|max_age)$/i;
+
 export type XiPrimitive = string | number | boolean | null;
 export type XiRecord = Readonly<Record<string, XiPrimitive>>;
 export type SigmaRecord = Readonly<Record<string, XiPrimitive>>;
@@ -73,6 +76,13 @@ export type ProposeResult = {
   readonly nextXi: XiRecord;
   readonly blastRadius: readonly string[];
   readonly invalidations: readonly string[];
+  /**
+   * The Release this proposal was computed against (ADR 0034 D1). apply() rejects a
+   * proposal whose base is not the current Release (ARKORDER_STALE_PROPOSAL). Plain
+   * data, so a proposal survives JSON for human review.
+   */
+  readonly baseXiHash: string;
+  readonly baseVersion: number;
 };
 
 export type Projector = (release: Release, sigma: SigmaRecord) => Projection;
@@ -126,4 +136,5 @@ export type ArkOrderErrorCode =
   | 'ARKORDER_INFORMATION_BUDGET'
   | 'ARKORDER_XI_TTL'
   | 'ARKORDER_STALE_SIGMA'
-  | 'ARKORDER_UNVALVED_RELEASE';
+  | 'ARKORDER_UNVALVED_RELEASE'
+  | 'ARKORDER_STALE_PROPOSAL';

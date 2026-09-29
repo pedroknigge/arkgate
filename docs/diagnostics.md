@@ -64,6 +64,7 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 | [`ARKORDER_TOO_MANY_PARAMS`](#ARKORDER_TOO_MANY_PARAMS) | arkorder | Too many slow keys |
 | [`ARKORDER_INGEST_WRITES_XI`](#ARKORDER_INGEST_WRITES_XI) | arkorder | ingest assigned into ξ |
 | [`ARKORDER_UNVALVED_RELEASE`](#ARKORDER_UNVALVED_RELEASE) | arkorder | Second freeze without the valve |
+| [`ARKORDER_STALE_PROPOSAL`](#ARKORDER_STALE_PROPOSAL) | arkorder | Proposal is not bound to the current Release |
 | [`INVALID_CHANGE_PATH`](#INVALID_CHANGE_PATH) | preflight | Unsafe change path |
 | [`DUPLICATE_CHANGE_PATH`](#DUPLICATE_CHANGE_PATH) | preflight | Duplicate path in change set |
 | [`DELETE_TARGET_MISSING`](#DELETE_TARGET_MISSING) | preflight | Delete target missing |
@@ -482,7 +483,7 @@ Haken slaving: few slow keys (ξ) determine derived fast state. Field ingest nev
 
 **Generic update of ξ**
 
-- **Why:** A call to update/patch/set on the order plane rewrites the slow pattern. Haken slaving forbids generic ξ mutation.
+- **Why:** A call to update/patch/set on the order plane rewrites the slow pattern. Haken slaving forbids generic ξ mutation. The static sensor only reports a receiver that is a plane on direct evidence: an identifier bound to `createOrderPlane(...)` in the same file, annotated `: OrderPlane`, a `plane` / `*Plane` named import from a declared `planeRoots` module, or a `plane` / `*Plane` name in a file that imports `arkgate/order` (also through `?.`, `!`, or `(x as T)`). A name alone is not evidence: `clipPlane.set(...)` / `controlPlane.update(...)` with no ArkOrder import stay silent, and so do `new Map().set(...)` or `prisma.x.update(...)` in the plane-root file.
 - **Fix:** Use release() for the first freeze of ξ. Later pattern change is proposeRelease then apply(ProposeResult). Never update/patch/set. Never mechanical-safe.
 
 <a id="ARKORDER_TOO_MANY_PARAMS"></a>
@@ -500,7 +501,7 @@ Haken slaving: few slow keys (ξ) determine derived fast state. Field ingest nev
 
 **ingest assigned into ξ**
 
-- **Why:** An ingest() result is written into a Release or ξ store. ingest may absorb, escalate_up, or hold; it never mints a pattern.
+- **Why:** An ingest() result is written into a Release or ξ store. ingest may absorb, escalate_up, or hold; it never mints a pattern. Static evidence is a whole-word `xi` / `release` / `pattern` / `house` / `current` holder, an `xi` camelCase head (`xiNext`), or a `…Xi` / `…Release` / `…Pattern` tail (`nextXi`, `currentRelease`), as a binding or a property write such as `store.xi =` / `this.nextXi =`. Names that only start with those words (`currentResidual`, `patternResult`, `releaseState`) and comparisons (`===`) are not evidence — a deliberate false negative.
 - **Fix:** Keep ingest results as absorb/escalate_up/hold only. Change ξ with proposeRelease then apply(ProposeResult). Never mechanical-safe.
 
 <a id="ARKORDER_XI_FIELD_WRITE"></a>
@@ -509,7 +510,7 @@ Haken slaving: few slow keys (ξ) determine derived fast state. Field ingest nev
 
 **Slow key written around the order plane**
 
-- **Why:** A managed-layer file imports a persistence driver and writes a declared arkOrder.xiKeys name. Field events absorb or escalate; they do not PATCH the slow pattern.
+- **Why:** A managed-layer file imports a persistence driver and writes a declared arkOrder.xiKeys name. Field events absorb or escalate; they do not PATCH the slow pattern. The write must go through a persistence client: `db` / `tx` / `client` / `prisma` / `drizzle`, an inline `new PrismaClient()` / `drizzle(...)`, a name bound in the file to a driver constructor (`const orm = new PrismaClient()`, a class field, or `this.orm = ...`), a name annotated with a driver client type (`constructor(private readonly orm: PrismaClient)`), or a named import from a local `db` / `database` / `prisma` / `drizzle` / `orm` module. `repo.update(...)` and a client from any other module name are not evidence.
 - **Fix:** Keep invoices, seats, hours, and logs on ingest. Change the slow key with proposeRelease then apply(ProposeResult), then preflight again. Never mechanical-safe.
 
 <a id="ARKORDER_INFORMATION_BUDGET"></a>
@@ -518,7 +519,7 @@ Haken slaving: few slow keys (ξ) determine derived fast state. Field ingest nev
 
 **Projection observes a forbidden kind**
 
-- **Why:** h(ξ) allowedKinds includes a kind listed in informationBudget.cannotObserve. A scale may not look at what it was told not to see.
+- **Why:** h(ξ) allowedKinds includes a kind listed in informationBudget.cannotObserve. A scale may not look at what it was told not to see. Static sensor (`arkorder-information-budget`): a literal `allowedKinds: [...]` entry that a literal `cannotObserve: [...]` denies, in a file that calls createOrderPlane; computed arrays stay silent. Runtime: release, proposeRelease, apply, refreshSigma, and restore throw before the Release is offered or persisted; project and ingest re-check.
 - **Fix:** Cut that kind from the projector or from cannotObserve, then preflight again. Never mechanical-safe.
 
 <a id="ARKORDER_XI_TTL"></a>
@@ -527,7 +528,7 @@ Haken slaving: few slow keys (ξ) determine derived fast state. Field ingest nev
 
 **Slow key carries a freshness field**
 
-- **Why:** ξ named ttl/freshUntil/maxAge. Freshness belongs on σ. A slow parameter that expires per transaction is not slow.
+- **Why:** ξ named ttl/freshUntil/maxAge. Freshness belongs on σ. A slow parameter that expires per transaction is not slow. Static sensor (`arkorder-xi-ttl`): such a key (including shorthand `{ plan, ttl }`) in the ξ literal (first argument) of `plane.release({...})` / `plane.proposeRelease({...})` on a plane receiver (same evidence as `ARKORDER_GENERIC_UPDATE`); σ (second argument) may carry freshUntil. The runtime plane throws the same code.
 - **Fix:** Move freshness onto σ (freshUntil) and keep ξ stable, then preflight again. Never mechanical-safe.
 
 <a id="ARKORDER_STALE_SIGMA"></a>
@@ -536,7 +537,7 @@ Haken slaving: few slow keys (ξ) determine derived fast state. Field ingest nev
 
 **σ is stale**
 
-- **Why:** ingest ran after σ.freshUntil (or sigmaMaxAgeMs). ξ does not TTL.
+- **Why:** ingest ran after σ.freshUntil (or sigmaMaxAgeMs). ξ does not TTL. A numeric σ.freshUntil is honored on its own and wins over sigmaMaxAgeMs. Runtime only: ingest returns `hold` with reason `stale-sigma`; this is not a static sensor and `arkOrder.mode` does not promote it.
 - **Fix:** Call refreshSigma and ingest again, or proposeRelease then apply(ProposeResult) if the pattern changed. Never mechanical-safe.
 
 <a id="ARKORDER_UNVALVED_RELEASE"></a>
@@ -547,6 +548,17 @@ Haken slaving: few slow keys (ξ) determine derived fast state. Field ingest nev
 
 - **Why:** release() already froze the big choice. A later release() with a different value does not land. First freeze is release(); later change is proposeRelease then apply.
 - **Fix:** Change the choice with proposeRelease then apply. release() is only the first freeze. Never mechanical-safe.
+
+`restore()` raises the same code on a live plane when the Release would change ξ or carry a version other than the current one or the next one (no rollback, no jump).
+
+<a id="ARKORDER_STALE_PROPOSAL"></a>
+
+### `ARKORDER_STALE_PROPOSAL`
+
+**Proposal is not bound to the current Release**
+
+- **Why:** apply() got a ProposeResult computed against another Release (another apply landed first), one missing its base binding, or one whose reviewed blast radius is not the transition that would commit. The binding is data, not a capability: a proposal that states the current base and the exact transition applies whoever built it. Runtime only.
+- **Fix:** Run proposeRelease again against the current Release, review the new blast radius, then apply that proposal. Never mechanical-safe.
 
 ## Atomic preflight and change sets
 

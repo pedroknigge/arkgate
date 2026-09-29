@@ -158,6 +158,12 @@ function canonicalResolvedFactsInput(
   const arkOrderReleaseKeyCounts = (input.arkOrderReleaseKeyCounts ?? [])
     .map((fact) => ({ ...fact }))
     .sort(compareCanonical);
+  const arkOrderXiTtlKeys = (input.arkOrderXiTtlKeys ?? [])
+    .map((fact) => ({ ...fact }))
+    .sort(compareCanonical);
+  const arkOrderBudgetLeaks = (input.arkOrderBudgetLeaks ?? [])
+    .map((fact) => ({ ...fact }))
+    .sort(compareCanonical);
   const candidateTree = input.files
     .map(({ path, contentHash }) => ({ path, contentHash }))
     .sort((left, right) =>
@@ -195,6 +201,8 @@ function canonicalResolvedFactsInput(
     arkOrderXiFieldWrites,
     arkOrderIngestWritesXi,
     arkOrderReleaseKeyCounts,
+    arkOrderXiTtlKeys,
+    arkOrderBudgetLeaks,
   };
 }
 
@@ -362,6 +370,8 @@ function parseResolvedFactsInput(
       'arkOrderXiFieldWrites',
       'arkOrderIngestWritesXi',
       'arkOrderReleaseKeyCounts',
+      'arkOrderXiTtlKeys',
+      'arkOrderBudgetLeaks',
       ...(withDerivedIdentities ? ['candidateTreeHash', 'factsHash'] : []),
     ],
     '$'
@@ -784,6 +794,32 @@ function parseResolvedFactsInput(
       keyCount: requiredPositiveInteger(entry, 'keyCount', at),
     };
   });
+  const arkOrderXiTtlKeysRaw =
+    record.arkOrderXiTtlKeys === undefined ? [] : requiredArray(record, 'arkOrderXiTtlKeys', '$');
+  const arkOrderXiTtlKeys = arkOrderXiTtlKeysRaw.map((value, index) => {
+    const at = `$.arkOrderXiTtlKeys[${index}]`;
+    const entry = asRecord(value, at);
+    assertOnlyKeys(entry, ['file', 'line', 'key'], at);
+    return {
+      file: requiredProjectPath(entry, 'file', at),
+      line: requiredPositiveInteger(entry, 'line', at),
+      key: requiredText(entry, 'key', at),
+    };
+  });
+  const arkOrderBudgetLeaksRaw =
+    record.arkOrderBudgetLeaks === undefined
+      ? []
+      : requiredArray(record, 'arkOrderBudgetLeaks', '$');
+  const arkOrderBudgetLeaks = arkOrderBudgetLeaksRaw.map((value, index) => {
+    const at = `$.arkOrderBudgetLeaks[${index}]`;
+    const entry = asRecord(value, at);
+    assertOnlyKeys(entry, ['file', 'line', 'kind'], at);
+    return {
+      file: requiredProjectPath(entry, 'file', at),
+      line: requiredPositiveInteger(entry, 'line', at),
+      kind: requiredText(entry, 'kind', at),
+    };
+  });
   const arkRunDeclarations: ResolvedArkRunDeclarationFact[] = arkRunDeclarationsRaw.map(
     (value, index) => {
       const at = `$.arkRunDeclarations[${index}]`;
@@ -815,6 +851,8 @@ function parseResolvedFactsInput(
     ['$.arkOrderXiFieldWrites', arkOrderXiFieldWrites],
     ['$.arkOrderIngestWritesXi', arkOrderIngestWritesXi],
     ['$.arkOrderReleaseKeyCounts', arkOrderReleaseKeyCounts],
+    ['$.arkOrderXiTtlKeys', arkOrderXiTtlKeys],
+    ['$.arkOrderBudgetLeaks', arkOrderBudgetLeaks],
   ] as const) {
     for (const fact of facts) {
       if (!filePaths.has(fact.file)) {
@@ -895,6 +933,8 @@ function parseResolvedFactsInput(
     arkOrderXiFieldWrites,
     arkOrderIngestWritesXi,
     arkOrderReleaseKeyCounts,
+    arkOrderXiTtlKeys,
+    arkOrderBudgetLeaks,
   };
 }
 
