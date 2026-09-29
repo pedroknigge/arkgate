@@ -234,7 +234,10 @@ describe('help and install output truth', () => {
     const help = setupUsageAll();
     const toolsLine = help.split('\n').find((line) => line.trimStart().startsWith('--tools'));
     for (const tool of KNOWN_TOOLS) expect(toolsLine).toContain(tool);
-    expect(help).toMatch(/unknown host is rejected \(exit 2\)/);
+    // start accepts exactly one host; a comma list is refused, so help must not invite one.
+    expect(toolsLine).toMatch(/One active agent host for start/);
+    expect(toolsLine).not.toMatch(/comma-separated|host\(s\)/);
+    expect(help).toMatch(/a list or an unknown host is rejected \(exit 2\)/);
     expect(help).not.toMatch(/unknown host creates only the shared compact router/);
   });
 

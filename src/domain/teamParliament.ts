@@ -41,9 +41,7 @@ export type TeamGateReasonId =
   | 'mixed-law-and-product'
   | 'law-in-feature'
   | 'steward-only-loosen'
-  | 'steward-only-baseline-grow'
-  /** Tooling fail-closed: steward-locked law changed in a session but no policy delta classified it. */
-  | 'policy-unclassified';
+  | 'steward-only-baseline-grow';
 
 export type TeamGateVerdict = {
   deny: boolean;
@@ -471,30 +469,6 @@ export function evaluateTeamGate(input: {
   }
 
   return { deny: false, reasonId: 'ok', message: '', kinds };
-}
-
-/**
- * Fail closed: a steward-locked law change inside a contract session that no policy delta
- * classified (policyKind null) must not pass as if it were not a loosening.
- */
-export function failClosedUnclassifiedLaw(
-  verdict: TeamGateVerdict,
-  input: {
-    hasLaw: boolean;
-    contractSession: boolean;
-    stewardCount: number;
-    policyKind: ContractDiffKind | null;
-    baseRef?: string | null;
-  }
-): TeamGateVerdict {
-  if (verdict.deny || !input.hasLaw || !input.contractSession) return verdict;
-  if (input.stewardCount === 0 || input.policyKind != null) return verdict;
-  return {
-    deny: true,
-    reasonId: 'policy-unclassified',
-    message: `Cannot classify the contract change against ${input.baseRef || 'the team base'}; steward-locked law needs a policy delta — pass --contract-diff --base <ref>.`,
-    kinds: [],
-  };
 }
 
 export function formatVsBaseLine(facts: VsBaseFacts): string {

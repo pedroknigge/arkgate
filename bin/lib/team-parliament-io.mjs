@@ -12,7 +12,6 @@ import {
   classifyBaselineKeyDelta,
   classifyChangeSet,
   evaluateTeamGate,
-  failClosedUnclassifiedLaw,
   formatVsBaseLine,
   isTeamPersona,
   mapPolicyClassToKind,
@@ -195,8 +194,10 @@ export function bindTeamBaseRefs(args, root) {
       next.against = teamBase;
     }
     // A contract session must classify the law change, or loosening skips steward/ack checks.
+    // policyBaseFromTeam: a base without the contract yet is adoption (no predecessor), not an error.
     if (!next.policyBaseRef && (next.contractDiff || next.changed || next.against || next.contractSession)) {
       next.policyBaseRef = teamBase;
+      next.policyBaseFromTeam = true;
     }
     if (!next.baseRef && next.failOnNewSmells) next.baseRef = teamBase;
   }
@@ -263,10 +264,14 @@ export function runTeamPreflight({ root, args, config, policyDelta, teamBase }) 
     baselineKeysFromDocument(localBaselineRaw)
   );
   const policyKind = mapPolicyClassToKind(policyDelta?.classification ?? null);
-  const [stewards, contractSession, author] = [teamStewardsFromConfig(config), contractSessionFrom(args), resolveTeamAuthor(args)];
-  const gate = { changeSet, contractSession, policyKind, baselineGrowCount: baselineDelta.grow.length, stewards, author };
-  const unclassified = { hasLaw: changeSet.hasLaw, contractSession, stewardCount: stewards.length, policyKind, baseRef: againstRef };
-  const verdict = failClosedUnclassifiedLaw(evaluateTeamGate(gate), unclassified);
+  const verdict = evaluateTeamGate({
+    changeSet,
+    contractSession: contractSessionFrom(args),
+    policyKind,
+    baselineGrowCount: baselineDelta.grow.length,
+    stewards: teamStewardsFromConfig(config),
+    author: resolveTeamAuthor(args),
+  });
   const teamParliament = {
     baseRef: againstRef,
     changeSet,

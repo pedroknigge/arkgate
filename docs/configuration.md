@@ -631,7 +631,7 @@ type than product source:
 | `ark-check --changed --base origin/dev` | Layer check on touched sources only. A CSS/i18n PR pays almost nothing. |
 | `ark-check --against origin/dev` | New violation keys vs **that ref's** baseline (not only HEAD). |
 | `ark-check --contract-diff --base origin/dev` | Classifies tighten / loosen / reclassify / baseline-grow. |
-| `--contract-session --author <id>` | Law-only PR. Mixed law+product still fails. Loosen/grow need a session even with an empty `stewards[]`; a non-empty list also needs a matching listed author. A session always classifies the law change against the team base (`--base`, or the discovered `main`/`dev`), including under `--strict-merge`; a steward-locked law change that cannot be classified fails closed (`policy-unclassified`). |
+| `--contract-session --author <id>` | Law-only PR. Mixed law+product still fails. Loosen/grow need a session even with an empty `stewards[]`; a non-empty list also needs a matching listed author. A session always classifies the law change against the team base (`--base`, or the discovered `main`/`dev`), including under `--strict-merge`. If that base has no contract yet (the adoption PR that adds `ark.config.json`), there is nothing to loosen and the session proceeds; an explicit `--policy-base-ref` without a contract at that ref still exits 2. |
 | `--persona touch\|contributor\|agent\|steward` | Budget presets for the same teeth. |
 | `ark status --vs origin/dev` | One line: pin / contract / baseline drift vs that ref. |
 

@@ -6,6 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   applyFrameworkLayoutOverlays,
+  cloneArchetypeForLayer,
   createElevenLayerConfig,
   DEFAULT_DOMAIN_FORBIDDEN_GLOBALS,
   discoverRepoUnits,
@@ -14,7 +15,6 @@ import {
   resolveIncludeRoots,
 } from '../ark-shared.mjs';
 import { withArkConfigMetadata } from './config-contract.mjs';
-import { cloneArchetypeForLayer } from './arkrules-starter-ids.mjs';
 
 const PRESETS_DIR = path.dirname(fileURLToPath(import.meta.url));
 const ARKRULES_TEMPLATES_DIR = path.join(PRESETS_DIR, '../../templates/arkrules');

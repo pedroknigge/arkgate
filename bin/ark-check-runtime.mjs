@@ -3,7 +3,6 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { configInvalidJsonEnvelope } from './lib/config-invalid-envelope.mjs';
 
 const __arkCheckCli = fileURLToPath(new URL('./ark-check.mjs', import.meta.url));
 
@@ -107,7 +106,7 @@ import {
   normalize,
   walk,
 } from './lib/scan-files.mjs';
-import { configWarning } from './lib/config-warnings.mjs';
+import { configInvalidJsonEnvelope, configWarning } from './lib/config-warnings.mjs';
 import { runArchitectureScan } from './lib/architecture-scan.mjs';
 import {
   ANALYSIS_COMPLETENESS,
@@ -1334,6 +1333,7 @@ async function main() {
     strictMerge: args.strictMerge || args.contractDiff,
     basePath: args.policyBase,
     baseRef: args.policyBaseRef,
+    adoptMissingBase: args.policyBaseFromTeam === true,
     acknowledgementPath: args.policyAck,
   });
   const preflight = runTeamPreflight({

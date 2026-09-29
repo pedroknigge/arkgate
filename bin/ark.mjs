@@ -21,7 +21,6 @@ import {
   shouldSkipArkgateInstall,
 } from './ark-shared.mjs';
 import { FALSE_GREEN_GAP_ID } from './lib/field-install.mjs';
-import { ensureProjectArkgateDependency, pinArkgateForSetup } from './lib/setup-pin.mjs';
 
 export { ensureProjectArkgateDependency };
 import { validateHardWriteRequest } from './lib/enforcement-profiles.mjs';
@@ -33,7 +32,9 @@ import {
   renderStartPreview,
 } from './lib/start-preview.mjs';
 import {
+  ensureProjectArkgateDependency,
   formatStartPackageInstallFailure,
+  pinArkgateForSetup,
   runStartPackageInstall,
 } from './lib/start-install-recovery.mjs';
 import { runUpgradeCommand } from './lib/upgrade-command.mjs';
@@ -89,7 +90,11 @@ function runDashboard(passthroughArgs) {
  * `ark.config.json` exists — **before** agent docs, skills, CI templates, or cleanups.
  * Idempotent: origin is written only once (`--report` archive semantics).
  */
-/** Day-zero HTML lives inside the gitignored reports folder — never a stray root artifact. */
+/**
+ * Day-zero HTML lives under `.ark/reports/`, never as a stray root artifact. The report
+ * writer appends an `.ark/` rule only to an existing `.gitignore` (EH03); a fresh project
+ * without one still sees `.ark/` as untracked.
+ */
 const DAY_ZERO_REPORT_PATH = path.join('.ark', 'reports', 'latest.html');
 
 function freezeDayZeroOrigin(root) {
