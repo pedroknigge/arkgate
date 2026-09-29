@@ -212,6 +212,24 @@ import { createOrderPlane, hashOf } from 'arkgate/order';
 
 One install: `npm install arkgate`. `@arkgate/runtime` is deprecated.
 
+**Types for ESM and CommonJS consumers.** Every code entry (`arkgate`, `arkgate/eslint`,
+`arkgate/order`, `arkgate/runtime`, `arkgate/nestjs`) maps `import` to `index.js` +
+`index.d.ts` and `require` to `index.cjs` + `index.d.cts`, and the package ships both
+declaration sets. A CommonJS TypeScript project (`.cts`, or `module` / `moduleResolution`
+`node16` without `"type": "module"`, the usual NestJS shape) type-checks `require` /
+`import x = require(...)` against the CJS declarations. `typesVersions` maps the subpaths for
+legacy `moduleResolution: node10`. Through 4.8.23 the tarball dropped `*.d.cts`, so those
+consumers got TS1471 / TS1479 / TS2307 although runtime `require()` worked.
+
+### MCP server via npx and the MCP Registry
+
+`npx arkgate@<version> <args>` always runs the bin named after the package, `arkgate`. So
+`arkgate mcp [--root <dir>] [--config <path>] [--hook]` starts the same stdio MCP server as
+`arkgate-mcp`, and forwards every flag to it. The MCP Registry descriptor (`server.json`) launches
+`npx arkgate@<version> mcp --root . --config ark.config.json`. `arkgate arkgate-mcp` and
+`arkgate ark-mcp` are accepted too, because registry entries published through 4.8.23 pass
+that spelling.
+
 ---
 
 ## Installing from git
