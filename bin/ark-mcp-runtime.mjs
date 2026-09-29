@@ -115,7 +115,10 @@ import {
   formatDesignDeltaBlock,
 } from './lib/design-delta.mjs';
 import { attachPolicyAdrNote } from './lib/adr-path.mjs';
-import { resolvePolicyDeltaArkRules } from './lib/policy-delta-io.mjs';
+import {
+  candidateArkRulesMatchProject,
+  resolvePolicyDeltaArkRules,
+} from './lib/policy-delta-io.mjs';
 
 const arkCheckBin = fileURLToPath(new URL('./ark-check.mjs', import.meta.url));
 const arkMcpLauncher = fileURLToPath(new URL('./ark-mcp.mjs', import.meta.url));
@@ -2028,7 +2031,8 @@ export async function runArkMcp({ hookInput } = {}) {
             type: 'object',
             description:
               'Candidate ArkRules catalog as data, same shape. Defaults to the files on disk when ' +
-              'candidateConfig is omitted or equals the project contract.',
+              'candidateConfig is omitted or maps the same arkRules files as the project contract ' +
+              '(the project ark.config.json passed verbatim counts).',
           },
           acknowledgement: {
             type: 'object',
@@ -2500,9 +2504,7 @@ export async function runArkMcp({ hookInput } = {}) {
         root: args.root,
         baseConfig,
         candidateConfig,
-        candidateIsProjectConfig:
-          suppliedCandidate === undefined ||
-          stableSerialize(suppliedCandidate) === stableSerialize(config),
+        candidateIsProjectConfig: candidateArkRulesMatchProject(suppliedCandidate, config),
         baseArkRuleFiles: params?.arguments?.baseArkRuleFiles,
         candidateArkRuleFiles: params?.arguments?.candidateArkRuleFiles,
       });

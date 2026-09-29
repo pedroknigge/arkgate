@@ -167,7 +167,7 @@ describe('policy delta reads base ArkRules from the base ref (arkrules cluster)'
     fs.rmSync(path.join(baseDir, 'arkrules'), { recursive: true });
     expect(() =>
       transition(project, { baseRef: undefined, basePath: path.join(baseDir, 'ark.config.json') })
-    ).toThrow(/Policy base ArkRules could not be loaded/);
+    ).toThrow(/Policy base ArkRules could not be loaded[\s\S]*copy the base catalog[\s\S]*--policy-base-ref/);
   });
 
   it('ark-check --policy-base-ref reports the demotion as weakening', () => {

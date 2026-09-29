@@ -1,7 +1,8 @@
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { analyzePolicyDelta } from './analysis-engine.mjs';
+import { analyzePolicyDelta, stableSerialize } from './analysis-engine.mjs';
+import { loadArkConfigContract } from './config-contract.mjs';
 import {
   directoryArkRulesReader,
   loadEffectiveArkRules,
@@ -201,8 +202,12 @@ export function loadBaseArkRules(base) {
   });
   if (loaded.errors.length > 0) {
     const message = loaded.errors.map((issue) => `- ${issue.path}: ${issue.message}`).join('\n');
+    const remedy =
+      base.ref == null
+        ? `\nA --policy-base file reads its ArkRules next to it: copy the base catalog to the same relative paths under ${path.dirname(base.source)}, or compare against a git ref with --policy-base-ref.`
+        : '';
     throw new Error(
-      `Policy base ArkRules could not be loaded (${base.source}); ArkRules transitions cannot be classified:\n${message}`
+      `Policy base ArkRules could not be loaded (${base.source}); ArkRules transitions cannot be classified:\n${message}${remedy}`
     );
   }
   return loaded.arkRules;
@@ -217,6 +222,30 @@ function loadedOrThrow(loaded, label) {
   if (loaded.errors.length === 0) return loaded.arkRules;
   const message = loaded.errors.map((issue) => `- ${issue.path}: ${issue.message}`).join('\n');
   throw new Error(`${label} ArkRules could not be loaded:\n${message}`);
+}
+
+function normalizedArkRulesMap(config) {
+  let normalized = config;
+  try {
+    normalized = loadArkConfigContract(config, 'candidateConfig').config;
+  } catch {
+    // An invalid candidate is reported by analyzePolicyDelta; compare it as given.
+  }
+  return stableSerialize(hasArkRulesMap(normalized) ? normalized.arkRules : null);
+}
+
+/**
+ * True when a supplied `candidateConfig` names the same ArkRules catalog files as the
+ * loaded project config, so the candidate catalog is the one on disk. Both sides are
+ * normalised first: the project config in memory carries loader defaults (`$schema`,
+ * upgraded `schemaVersion`), so passing `ark.config.json` verbatim must still match.
+ */
+export function candidateArkRulesMatchProject(candidateConfig, projectConfig) {
+  if (candidateConfig === undefined) return true;
+  if (!candidateConfig || typeof candidateConfig !== 'object' || Array.isArray(candidateConfig)) {
+    return false;
+  }
+  return normalizedArkRulesMap(candidateConfig) === normalizedArkRulesMap(projectConfig);
 }
 
 /**
@@ -264,7 +293,7 @@ export function resolvePolicyDeltaArkRules({
     );
   } else if (hasArkRulesMap(candidateConfig)) {
     throw new Error(
-      'candidateConfig maps arkRules and differs from the project contract: pass candidateArkRuleFiles ' +
+      'candidateConfig maps different arkRules files than the project contract: pass candidateArkRuleFiles ' +
         'as { "<path from candidateConfig.arkRules>": <ArkRules file JSON> }.'
     );
   } else {
