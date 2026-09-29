@@ -124,7 +124,11 @@ the same files or weaken the gate.
      `appendDecisionTape`. Shadow / compare / replay that snapshot in-memory (not a bus, not
      durable). This is still **[ArkRun]** — do not turn the tape into an ArkOrder skill.
    - In-memory stores lose state on restart — **not** production durability. Note bounded history
-     (`maxHistorySize` 1000) if the hand-rolled version retained everything.
+     (`maxHistorySize` 1000 — history, trace, audit, and the default event buffer) if the
+     hand-rolled version retained everything.
+   - `createStrictArkKernelFromConfig` needs `layers[].intentPrefixes` on every deny-rule layer
+     (else `ArkKernelConfigError`). Enforced declarations accept a literal or a same-file
+     `define(..)` creator as the call name.
 6. **Delete the hand-rolled version** once call sites are moved — the point is
    less code, not a second parallel system. Deleting code is a destructive move:
    confirm with the user before removing the old implementation, and never delete

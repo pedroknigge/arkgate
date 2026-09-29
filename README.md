@@ -320,9 +320,11 @@ queue monitors:
 
 Poll those facts from the dual bins **`ark-dashboard`** / **`arkgate-dashboard`**
 (`bin/ark-dashboard.mjs`). ANSI + polling only (no React/Ink/Blessed). Point
-`--url` / `-u` at the inspector snapshot (default
-`http://127.0.0.1:3000/snapshot`); the dashboard also fetches sibling `/outbox`
-and `/workflows`. `--interval` / `-i` is clamped to 200–60000 ms (default 2000).
+`--url` / `-u` at the inspector (`handle.url` or `handle.snapshotUrl`); the dashboard
+also fetches sibling `/outbox` and `/workflows`. `startInspector()` binds a random port
+unless you pass `{ port }`, so the fallback `http://127.0.0.1:3000/snapshot` (or
+`ARK_DASHBOARD_URL`) only matches `startInspector({ port: 3000 })`. `--interval` / `-i`
+is clamped to 200–60000 ms (default 2000); `--once`, `--help`, `--version` are supported.
 Also available as `ark dashboard` / `arkgate dashboard` (passthrough to the same bin). Kernel stays
 JSON-only; presentation stays in `bin/`.
 

@@ -36,6 +36,7 @@ import {
 import { provePortProofInject } from './port-proof.mjs';
 import { extractClassShapesFromSource } from './arkrules-sensors.mjs';
 import {
+  createArkRunKernelRootSpecifierMatcher,
   extractArkRunDeclarationsFromSource,
   extractArkRunKernelCallsFromSource,
   extractArkRunManagedNewsFromSource,
@@ -1178,6 +1179,10 @@ export function resolveCandidateFacts({
   const compositionRootPatterns = arkRunActive
     ? [...(config.arkRun?.compositionRoots ?? [])]
     : [];
+  // Identifiers imported from a kernel root module are traced kernel receivers.
+  const kernelRootPatterns = arkRunActive
+    ? [...(config.arkRun?.kernelRoots ?? config.arkRun?.compositionRoots ?? [])]
+    : [];
   const planeRootPatterns = arkOrderActive ? [...(config.arkOrder?.planeRoots ?? [])] : [];
 
   const seedPathSet = new Set(candidateFiles.map((file) => file.path));
@@ -1276,7 +1281,12 @@ export function resolveCandidateFacts({
       if (arkRunActive) {
         try {
           arkRunKernelCalls.push(
-            ...extractArkRunKernelCallsFromSource(candidate.path, candidate.content)
+            ...extractArkRunKernelCallsFromSource(candidate.path, candidate.content, {
+              isKernelRootSpecifier: createArkRunKernelRootSpecifierMatcher(
+                candidate.path,
+                kernelRootPatterns
+              ),
+            })
           );
         } catch {
           // Never fail the resolver for ArkRun call extraction.

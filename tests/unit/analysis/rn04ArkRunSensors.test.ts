@@ -61,6 +61,10 @@ describe('RN04 ArkRun tier-1 sensors through resolved analysis', () => {
     ['undeclared-handle', 'ARKRUN_UNDECLARED_HANDLE'],
     ['undeclared-depend', 'ARKRUN_UNDECLARED_DEPEND'],
     ['transport-bypass', 'ARKRUN_TRANSPORT_BYPASS'],
+    // arkgate/nestjs re-exports the kernel: a Domain import is kernel-in-domain.
+    ['kernel-in-domain-nestjs', 'ARKRUN_KERNEL_IN_DOMAIN'],
+    // A define()'d creator resolves to its literal (ADR 0023 D2) and is checked.
+    ['typed-send-red', 'ARKRUN_UNDECLARED_EMIT'],
   ] as const)('%s fixture emits %s; advisory does not flip valid; enforced blocks', async (name, ruleId) => {
     const enforcedRoot = copyCase(name);
     const enforcedConfig = JSON.parse(
@@ -85,6 +89,26 @@ describe('RN04 ArkRun tier-1 sensors through resolved analysis', () => {
     const { result } = await analyzeCase(root, config);
     expect(arkRunIds(result.ir.violations)).toEqual([]);
     expect(arkRunIds(result.ir.warnings)).toEqual([]);
+    expect(result.valid).toBe(true);
+  });
+
+  it.each([
+    // res.send / require.resolve / subject.subscribe are not kernel calls.
+    'http-noise',
+    // Typed API: ark.send(define()'d creator), this.kernel.send, eventBus.subscribe.
+    'typed-send-green',
+    // ArkModule.forRoot / forRootAsync (arkgate/nestjs) and createLenientArkKernel roots.
+    'nest-root-green',
+  ])('%s enforced fixture stays valid and complete', async (name) => {
+    const root = copyCase(name);
+    const config = JSON.parse(fs.readFileSync(path.join(root, 'ark.config.json'), 'utf8'));
+    const { result } = await analyzeCase(root, config);
+    expect(arkRunIds(result.ir.violations)).toEqual([]);
+    expect(arkRunIds(result.ir.warnings)).toEqual([]);
+    expect(
+      (result.completenessReasons ?? []).filter((reason) => reason.code.startsWith('ARKRUN_'))
+    ).toEqual([]);
+    expect(result.completeness).toBe('complete');
     expect(result.valid).toBe(true);
   });
 

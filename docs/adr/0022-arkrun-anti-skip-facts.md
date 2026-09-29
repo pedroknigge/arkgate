@@ -27,10 +27,10 @@ and never fakes green for enforced ArkRun.
 
 | Sensor id | Tier | Evidence | Default |
 |---|---|---|---|
-| `arkrun-missing-root` | 1 | No `createArkKernel` / `createStrictArkKernel` / `createArkKernelFromConfig` / `createStrictArkKernelFromConfig` in `compositionRoots` | advisory, promotable |
-| `arkrun-kernel-in-domain` | 1 | Domain-role layer imports `@arkgate/runtime` or kernel types | advisory, promotable |
+| `arkrun-missing-root` | 1 | No `createArkKernel` / `createStrictArkKernel` / `createLenientArkKernel` / their `*FromConfig` variants, or `ArkModule.forRoot` / `forRootAsync` imported from `arkgate/nestjs`, in `compositionRoots` | advisory, promotable |
+| `arkrun-kernel-in-domain` | 1 | Domain-role layer imports `arkgate/runtime`, `arkgate/nestjs`, `@arkgate/runtime`, or kernel types | advisory, promotable |
 | `arkrun-direct-new` | 1 | `new` of a type registered/admitted for kernel creation, outside an admitted factory | advisory, promotable |
-| `arkrun-undeclared-emit` | 1 | `publisher` / `publish` / `raise*` / `send*` call with a name not in `raises`/`sends` | advisory, promotable |
+| `arkrun-undeclared-emit` | 1 | `publisher` / `publish` / `raise*` / `send*` call **on a receiver traced to the kernel** with a name (literal or same-file `define`/`defineIntent` creator) not in `raises`/`sends` | advisory, promotable |
 | `arkrun-undeclared-handle` | 1 | `subscribe` / `registerHandler` name not in `reactsTo` | advisory, promotable |
 | `arkrun-undeclared-depend` | 1 | `resolve` / `resolveSingleton` name not in `uses` | advisory, promotable |
 | `arkrun-transport-bypass` | 1 | Forbidden broker/queue/emitter import in `managedLayers` (closed specifier list + capability reuse) | advisory, promotable |

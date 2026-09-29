@@ -142,6 +142,16 @@ Top-level fields:
   is a policy-delta **weakening**. Enforced extra teeth share the CLI / MCP / hook /
   preflight / CI verdict and arm only when the layer plane is classified (same ≥50%
   governed and ≥1 populated-layer floor as ArkRules).
+  Kernel factories in a root: `createArkKernel` / `createStrictArkKernel` /
+  `createLenientArkKernel`, their `*FromConfig` variants, or `ArkModule.forRoot()` /
+  `forRootAsync()` imported from `arkgate/nestjs`. Undeclared-* sensors count only calls
+  whose receiver is traced to the kernel (factory-bound local, import from a root module,
+  a binding typed `ArkKernel` / `EventBus` / publisher from `arkgate/runtime` or
+  `arkgate/nestjs`, its `.eventBus`, a `publisher(..)` result) — `res.send` or
+  `require.resolve` never count. Call names are a string literal or a same-file
+  `define(..)` / `defineIntent(..)` creator (or string constant); anything else in
+  `enforced` mode reports `ARKRUN_INTERACTION_NAME_INCOMPLETE` (partial). See
+  [diagnostics](diagnostics.md#ARKRUN_MISSING_ROOT).
 - **`arkOrder`** (optional, schema `1.3+`) — inline ArkOrder extra (`mode`, `planeRoots`,
   `managedLayers`, `maxXiKeys`, **`xiKeys`**, optional **`appliesTo`**). Absence is silent.
   Unknown keys fail closed. Import `createOrderPlane` from `arkgate/order` (same package).
@@ -230,6 +240,11 @@ That sentence is product copy. Not “Rich domain model, business rules, and dom
 ```
 
 - `intentPrefixes`, `forbiddenGlobals`, `mayImportInfrastructure`, `optional`
+  — `intentPrefixes` is how the ArkRun kernel maps an intent name to a layer at runtime.
+  `createStrictArkKernelFromConfig` / `createArkKernelFromConfig` (hard observed-layer-flow)
+  throw `ArkKernelConfigError` (`ARKRUN_LAYER_FLOW_UNRESOLVABLE`) when a layer named in an
+  `allowed: false` rule has no `intentPrefixes`, instead of silently enforcing nothing. Add
+  the prefixes, or pass `enforceObservedLayerFlow: 'soft' | 'off'` explicitly.
 - `reserved` / `allowEmpty` — future houses whose globs match nothing yet. `--strict-config` does not fail; `CONFIG_LAYER_PATTERN_NO_MATCHES` (typo warning) is skipped. A typo warning fires only when the glob is not reserved.
 - `capabilities: { deny: [...] }` — opt-in effect walls over the seven capability ids
   (`network`, `filesystem`, `clock`, `randomness`, `environment`, `process`, `persistence`);

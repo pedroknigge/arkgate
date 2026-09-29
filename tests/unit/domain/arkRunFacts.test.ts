@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   ARKRUN_KERNEL_FACTORY_CALLEES,
   ARKRUN_KERNEL_INTERACTION_CALLEES,
+  createArkRunKernelRootSpecifierMatcher,
   arkRunKernelCallKind,
   extractArkRunDeclarationsFromSource,
   extractArkRunKernelCallsFromSource,
@@ -157,6 +158,109 @@ export function createArkKernel() { return ark; }
     expect(calls.some((call) => call.kind === 'factory' && call.callee === 'createArkKernel')).toBe(
       false
     );
+  });
+
+  it('ignores send/resolve/subscribe on receivers not traced to the kernel', () => {
+    const source = `
+export function handle(res, body, subject, socket) {
+  res.send('ok');
+  res.send(body);
+  subject.subscribe('x');
+  socket.send('hello');
+  const emitter = { publish(name) { return name; } };
+  emitter.publish('local');
+  require.resolve('some-package');
+}
+`;
+    expect(extractArkRunKernelCallsFromSource('src/application/http.ts', source)).toEqual([]);
+  });
+
+  it('traces kernel receivers through types, members, destructuring, and chained publishers', () => {
+    const source = `
+import type { ArkKernel as Kernel } from 'arkgate/nestjs';
+import { createStrictArkKernel } from 'arkgate/runtime';
+const ark = createStrictArkKernel();
+const bus = ark.eventBus;
+const { resolve } = ark;
+export class Svc {
+  constructor(private readonly kernel: Kernel) {}
+  go() { return this.kernel.send(X, {}); }
+}
+bus.subscribe('Domain.A');
+resolve('Clock');
+ark.eventBus.publish('Domain.B');
+ark.publisher('Application.S').send('Domain.C', {});
+`;
+    const calls = extractArkRunKernelCallsFromSource('src/application/svc.ts', source);
+    const summary = calls
+      .filter((call) => call.kind !== 'factory')
+      .map((call) => `${call.kind}:${call.receiver ?? '-'}:${call.nameLiteral ?? '-'}`);
+    expect(summary).toEqual([
+      'send:kernel:-',
+      'subscribe:bus:Domain.A',
+      'resolve:-:Clock',
+      'publish:eventBus:Domain.B',
+      'publisher:ark:Application.S',
+      'send:publisher:Domain.C',
+    ]);
+  });
+
+  it('resolves define()/defineIntent() creators and string constants to call-site names', () => {
+    const source = `
+import { createStrictArkKernel, defineIntent } from 'arkgate/runtime';
+const ark = createStrictArkKernel();
+const PLACED = 'Domain.Order.Placed' as const;
+const Placed = ark.registry.define<typeof PLACED, { id: string }>(PLACED);
+const Shipped = defineIntent('Domain.Order.Shipped');
+ark.send(Placed, { id: '1' });
+ark.eventBus.subscribe(Shipped, () => undefined);
+ark.send(Imported, {});
+`;
+    const names = extractArkRunKernelCallsFromSource('src/application/a.ts', source)
+      .filter((call) => call.kind !== 'factory')
+      .map((call) => call.nameLiteral ?? null);
+    expect(names).toEqual(['Domain.Order.Placed', 'Domain.Order.Shipped', null]);
+  });
+
+  it('admits lenient factories and ArkModule.forRoot/forRootAsync from arkgate/nestjs only', () => {
+    const source = `
+import { ArkModule as Ark } from 'arkgate/nestjs';
+import { createLenientArkKernel } from 'arkgate/runtime';
+import { ConfigModule } from '@nestjs/config';
+Ark.forRoot();
+Ark.forRootAsync({ useFactory: () => k });
+ConfigModule.forRoot();
+createLenientArkKernel();
+other.createArkKernel();
+`;
+    const factories = extractArkRunKernelCallsFromSource('src/app.module.ts', source)
+      .filter((call) => call.kind === 'factory')
+      .map((call) => call.callee);
+    expect(factories).toEqual(['forRoot', 'forRootAsync', 'createLenientArkKernel']);
+    expect(isArkRunKernelModuleSpecifier('arkgate/nestjs')).toBe(true);
+  });
+
+  it('traces identifiers imported from a kernel root module', () => {
+    const matcher = createArkRunKernelRootSpecifierMatcher('src/application/a.ts', [
+      'src/main.ts',
+      'src/boot/**',
+    ]);
+    expect(matcher('../main')).toBe(true);
+    expect(matcher('../main.js')).toBe(true);
+    expect(matcher('../boot/kernel')).toBe(true);
+    expect(matcher('./main')).toBe(false);
+    expect(matcher('arkgate/runtime')).toBe(false);
+    const source = `
+import { ark } from '../main';
+import { other } from './other';
+ark.send(A, {});
+other.send('x');
+`;
+    const withRoots = extractArkRunKernelCallsFromSource('src/application/a.ts', source, {
+      isKernelRootSpecifier: matcher,
+    });
+    expect(withRoots.map((call) => call.receiver)).toEqual(['ark']);
+    expect(extractArkRunKernelCallsFromSource('src/application/a.ts', source)).toEqual([]);
   });
 
   it('extracts new of admitted types and skips builtins', () => {

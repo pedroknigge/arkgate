@@ -57,7 +57,7 @@ describe('EventBus interceptors', () => {
     ]);
     expect(ark.eventBus.getTrace().map((record) => record.type)).toContain('event.intercepted');
     expect(await ark.auditTrail.query({ type: 'event.intercepted' })).toHaveLength(1);
-    expect((await ark.outbox.list('pending'))[0].event.payload).toEqual({
+    expect((await ark.outbox.list('dispatched'))[0].event.payload).toEqual({
       id: 'o1',
       provider: 'stripe',
     });

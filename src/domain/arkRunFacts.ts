@@ -16,9 +16,38 @@ import type {
 export const ARKRUN_KERNEL_FACTORY_CALLEES = [
   'createArkKernel',
   'createStrictArkKernel',
+  'createLenientArkKernel',
   'createArkKernelFromConfig',
   'createStrictArkKernelFromConfig',
+  'createLenientArkKernelFromConfig',
 ] as const;
+
+/**
+ * NestJS adapter factory sites: `ArkModule.forRoot()` / `ArkModule.forRootAsync()`
+ * count as a kernel factory only when `ArkModule` is imported from a kernel module
+ * (`arkgate/nestjs`). A bare `.forRoot(` on any other receiver never counts.
+ */
+export const ARKRUN_NEST_KERNEL_MODULE = 'ArkModule';
+export const ARKRUN_NEST_FACTORY_METHODS = ['forRoot', 'forRootAsync'] as const;
+
+/**
+ * Kernel types whose annotated bindings (`ark: ArkKernel`, constructor-injected
+ * `private readonly ark: ArkKernel`) are traced as kernel receivers when the type
+ * is imported from a kernel module.
+ */
+export const ARKRUN_KERNEL_RECEIVER_TYPES = [
+  'ArkKernel',
+  'EventBus',
+  'EventPublisher',
+  'ArkRunPublisher',
+] as const;
+
+/** Kernel members that still reach the kernel's interaction API (`ark.eventBus.publish`). */
+const KERNEL_TRANSIT_MEMBERS = new Set(['eventBus']);
+/** Members whose value is a kernel-bound interaction object (`const pub = ark.publisher(..)`). */
+const KERNEL_DERIVED_MEMBERS = new Set(['publisher', 'eventBus']);
+const NEST_FACTORY_METHODS = new Set<string>(ARKRUN_NEST_FACTORY_METHODS);
+const RECEIVER_TYPES = new Set<string>(ARKRUN_KERNEL_RECEIVER_TYPES);
 
 /** Closed interaction callees from ADR 0022 undeclared-emit/handle/depend. */
 export const ARKRUN_KERNEL_INTERACTION_CALLEES = [
@@ -102,8 +131,51 @@ export function isArkRunKernelModuleSpecifier(specifier: string): boolean {
     specifier === '@arkgate/runtime' ||
     specifier.startsWith('@arkgate/runtime/') ||
     specifier === 'arkgate/runtime' ||
-    specifier.startsWith('arkgate/runtime/')
+    specifier.startsWith('arkgate/runtime/') ||
+    // NestJS adapter re-exports the kernel (ArkModule, InjectArk, ArkKernel).
+    specifier === 'arkgate/nestjs' ||
+    specifier.startsWith('arkgate/nestjs/')
   );
+}
+
+function stripScriptExtension(path: string): string {
+  return path.replace(/\.(?:[cm]?[jt]sx?)$/i, '');
+}
+
+function joinRelative(fromFile: string, specifier: string): string {
+  const parts = fromFile.replace(/\\/g, '/').split('/');
+  parts.pop();
+  for (const piece of specifier.split('/')) {
+    if (piece === '' || piece === '.') continue;
+    if (piece === '..') parts.pop();
+    else parts.push(piece);
+  }
+  return parts.join('/');
+}
+
+/**
+ * Pure predicate: does a relative `specifier` imported from `fromFile` point at
+ * one of the ArkRun kernel/composition roots? Identifiers imported from such a
+ * module are traced as kernel receivers (`import { ark } from '../main'`).
+ */
+export function createArkRunKernelRootSpecifierMatcher(
+  fromFile: string,
+  roots: readonly string[]
+): (specifier: string) => boolean {
+  return (specifier) => {
+    if (!specifier.startsWith('.')) return false;
+    const target = stripScriptExtension(joinRelative(fromFile, specifier));
+    return roots.some((root) => {
+      const pattern = root.replace(/\\/g, '/');
+      const star = pattern.indexOf('*');
+      if (star >= 0) {
+        const prefix = pattern.slice(0, star).replace(/\/$/, '');
+        return prefix.length > 0 && (target === prefix || target.startsWith(`${prefix}/`));
+      }
+      const exact = stripScriptExtension(pattern);
+      return exact === target || exact === `${target}/index`;
+    });
+  };
 }
 
 /**
@@ -346,12 +418,248 @@ function importedFromForName(content: string, localName: string): string | undef
   return found;
 }
 
+/** Locals of kernel receiver types imported (value or type-only) from a kernel module. */
+function collectKernelTypeNames(source: string): Set<string> {
+  const out = new Set<string>();
+  const importRe = /\bimport\s+(?:type\s+)?([\s\S]*?)\s+from\s*['"]([^'"]+)['"]/g;
+  let match: RegExpExecArray | null;
+  while ((match = importRe.exec(source)) !== null) {
+    if (!isArkRunKernelModuleSpecifier(match[2] ?? '')) continue;
+    const braced = /\{([^}]*)\}/.exec(match[1] ?? '');
+    if (!braced?.[1]) continue;
+    for (const part of braced[1].split(',')) {
+      const piece = part.trim().replace(/^type\s+/, '');
+      const alias = /^([A-Za-z_$][\w$]*)\s+as\s+([A-Za-z_$][\w$]*)$/.exec(piece);
+      const original = alias?.[1] ?? piece;
+      const local = alias?.[2] ?? piece;
+      if (RECEIVER_TYPES.has(original)) out.add(local);
+    }
+  }
+  return out;
+}
+
+type KernelReceiverTrace = {
+  /** Local identifiers bound to the kernel or a kernel interaction object. */
+  receivers: Set<string>;
+  /** Destructured interaction functions (`const { send } = ark`). */
+  calleeBindings: Set<string>;
+};
+
+function isFactoryCalleeExpression(expression: string, bindings: KernelImportBindings): boolean {
+  const parts = expression.split('.');
+  if (parts.length === 2) {
+    return bindings.namespaces.has(parts[0]!) && FACTORY_CALLEES.has(parts[1]!);
+  }
+  if (parts.length !== 1) return false;
+  const original = bindings.named.get(parts[0]!);
+  return original !== undefined && FACTORY_CALLEES.has(original);
+}
+
+function addRootModuleImports(
+  source: string,
+  isKernelRootSpecifier: (specifier: string) => boolean,
+  receivers: Set<string>
+): void {
+  parseValueImportClause(source, (clause, specifier) => {
+    if (!isKernelRootSpecifier(specifier)) return;
+    const namespace = /\*\s+as\s+([A-Za-z_$][\w$]*)/.exec(clause);
+    if (namespace?.[1]) receivers.add(namespace[1]);
+    const defaultIdent = /^([A-Za-z_$][\w$]*)\s*(?:,|$)/.exec(clause.trim());
+    if (defaultIdent?.[1]) receivers.add(defaultIdent[1]);
+    const braced = /\{([^}]*)\}/.exec(clause);
+    for (const part of braced?.[1]?.split(',') ?? []) {
+      const piece = part.trim();
+      if (!piece || piece.startsWith('type ')) continue;
+      const local = /([A-Za-z_$][\w$]*)$/.exec(piece)?.[1];
+      if (local) receivers.add(local);
+    }
+  });
+}
+
+/** Derived bindings to a fixpoint: `const pub = ark.publisher(..)`, `{ eventBus, send } = ark`. */
+function addDerivedReceivers(source: string, trace: KernelReceiverTrace): void {
+  const { receivers, calleeBindings } = trace;
+  const derived =
+    /\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*(?::[^=;]+)?=\s*(?:await\s+)?(?:this\s*\.\s*)?([A-Za-z_$][\w$]*)\s*\.\s*([A-Za-z_$][\w$]*)\b/g;
+  const destructured =
+    /\b(?:const|let|var)\s*\{([^}]*)\}\s*=\s*(?:this\s*\.\s*)?([A-Za-z_$][\w$]*)\s*[;\n)]/g;
+  let match: RegExpExecArray | null;
+  for (let changed = true; changed; ) {
+    changed = false;
+    derived.lastIndex = 0;
+    while ((match = derived.exec(source)) !== null) {
+      if (!receivers.has(match[2]!) || !KERNEL_DERIVED_MEMBERS.has(match[3]!)) continue;
+      if (receivers.has(match[1]!)) continue;
+      receivers.add(match[1]!);
+      changed = true;
+    }
+    destructured.lastIndex = 0;
+    while ((match = destructured.exec(source)) !== null) {
+      if (!receivers.has(match[2]!)) continue;
+      for (const part of match[1]!.split(',')) {
+        const pair = /^\s*([A-Za-z_$][\w$]*)\s*(?::\s*([A-Za-z_$][\w$]*))?\s*$/.exec(part);
+        if (!pair) continue;
+        const member = pair[1]!;
+        const local = pair[2] ?? member;
+        if (KERNEL_TRANSIT_MEMBERS.has(member)) {
+          if (receivers.has(local)) continue;
+          receivers.add(local);
+          changed = true;
+        } else if (arkRunKernelCallKind(member) && !FACTORY_CALLEES.has(member)) {
+          calleeBindings.add(local);
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Deterministic kernel-receiver trace (ADR 0022 D1): a non-factory interaction is
+ * a kernel call only when its receiver provably reaches the kernel. Matching on a
+ * method name alone (`res.send`, `require.resolve`, `subject.subscribe`) is not
+ * evidence.
+ */
+function traceKernelReceivers(
+  source: string,
+  bindings: KernelImportBindings,
+  isKernelRootSpecifier: ((specifier: string) => boolean) | undefined
+): KernelReceiverTrace {
+  const trace: KernelReceiverTrace = { receivers: new Set(), calleeBindings: new Set() };
+  if (isKernelRootSpecifier) addRootModuleImports(source, isKernelRootSpecifier, trace.receivers);
+  const factoryBound =
+    /\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*(?::[^=;]+)?=\s*(?:await\s+)?((?:[A-Za-z_$][\w$]*\s*\.\s*)?[A-Za-z_$][\w$]*)\s*(?:<[^>]*>)?\s*\(/g;
+  let match: RegExpExecArray | null;
+  while ((match = factoryBound.exec(source)) !== null) {
+    if (isFactoryCalleeExpression(match[2]!.replace(/\s+/g, ''), bindings)) {
+      trace.receivers.add(match[1]!);
+    }
+  }
+  const typeNames = collectKernelTypeNames(source);
+  if (typeNames.size > 0) {
+    const annotated = /([A-Za-z_$][\w$]*)\s*\??\s*:\s*(?:Readonly\s*<\s*)?([A-Za-z_$][\w$]*)\b/g;
+    while ((match = annotated.exec(source)) !== null) {
+      if (typeNames.has(match[2]!)) trace.receivers.add(match[1]!);
+    }
+  }
+  addDerivedReceivers(source, trace);
+  return trace;
+}
+
+/** Index of the `(` matching the `)` at `closeIndex`, or -1. */
+function matchingOpenParen(source: string, closeIndex: number): number {
+  let depth = 0;
+  for (let i = closeIndex; i >= 0; i -= 1) {
+    const ch = source[i];
+    if (ch === ')') depth += 1;
+    else if (ch === '(') {
+      depth -= 1;
+      if (depth === 0) return i;
+    }
+  }
+  return -1;
+}
+
+type ReceiverChain = { parts: string[]; viaPublisherCall: boolean };
+
+function chainParts(text: string): string[] {
+  const parts = text
+    .split('.')
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0);
+  return parts[0] === 'this' ? parts.slice(1) : parts;
+}
+
+/**
+ * Member chain before a call (`this.ark.eventBus.publish(` → [ark, eventBus]).
+ * A chained `ark.publisher('S').send(..)` yields the `publisher` call's chain.
+ */
+function receiverChainBefore(source: string, index: number): ReceiverChain | undefined {
+  const head = source.slice(Math.max(0, index - 400), index);
+  const dotted = /((?:[A-Za-z_$][\w$]*\s*\??\.\s*)+)$/.exec(head);
+  if (dotted?.[1]) {
+    const before = head.slice(0, head.length - dotted[1].length);
+    // `a[0].send(` / `fn().send(`: the chain root is not a plain identifier.
+    if (/[)\]]\s*$/.test(before) || /\.\s*$/.test(before)) {
+      return { parts: ['<expr>'], viaPublisherCall: false };
+    }
+    return { parts: chainParts(dotted[1].replace(/\?/g, '')), viaPublisherCall: false };
+  }
+  const chained = /\)\s*\??\.\s*$/.exec(head);
+  if (!chained) return undefined;
+  const closeIndex = index - head.length + chained.index;
+  const openIndex = matchingOpenParen(source, closeIndex);
+  if (openIndex < 0) return { parts: ['<expr>'], viaPublisherCall: false };
+  const calleeHead = source.slice(Math.max(0, openIndex - 400), openIndex);
+  const callee = /((?:[A-Za-z_$][\w$]*\s*\??\.\s*)+)publisher\s*(?:<[^>]*>)?\s*$/.exec(calleeHead);
+  if (!callee?.[1]) return { parts: ['<expr>'], viaPublisherCall: false };
+  return { parts: chainParts(callee[1].replace(/\?/g, '')), viaPublisherCall: true };
+}
+
+function chainReachesKernel(
+  chain: ReceiverChain,
+  bindings: KernelImportBindings,
+  trace: KernelReceiverTrace
+): boolean {
+  const [root, ...rest] = chain.parts;
+  if (!root) return false;
+  if (rest.length === 0 && bindings.namespaces.has(root)) return true;
+  // Backstop: ambient receivers are never the kernel, even if shadowed by a trace.
+  if (SKIP_INTERACTION_RECEIVERS.has(root) || !trace.receivers.has(root)) return false;
+  return rest.every((member) => KERNEL_TRANSIT_MEMBERS.has(member));
+}
+
+/**
+ * Same-file intent names: `const X = ark.registry.define('N')` / `defineIntent('N')`,
+ * `define(N_CONST)`, and `const N = 'Name'` constants (ADR 0023 D2: define names
+ * count as call-site names). Imported creators stay unresolved (honest partial).
+ */
+function collectDefinedIntentNames(source: string): Map<string, string> {
+  const constants = new Map<string, string>();
+  const constRe =
+    /\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*(?::[^=;]+)?=\s*(['"])((?:\\.|[^\\])*?)\2\s*(?:as\s+const\s*)?[;\n,)]/g;
+  let match: RegExpExecArray | null;
+  while ((match = constRe.exec(source)) !== null) {
+    if (match[3]) constants.set(match[1]!, match[3]);
+  }
+  const defined = new Map<string, string>(constants);
+  const defineRe =
+    /\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*(?::[^=;]+)?=\s*(?:[A-Za-z_$][\w$]*\s*\.\s*)*(?:define|defineIntent)\s*(?:<[^>]*>)?\s*\(\s*(?:(['"])((?:\\.|[^\\])*?)\2|([A-Za-z_$][\w$]*)\s*[,)])/g;
+  while ((match = defineRe.exec(source)) !== null) {
+    const name = match[3] ?? (match[4] ? constants.get(match[4]) : undefined);
+    if (name) defined.set(match[1]!, name);
+  }
+  return defined;
+}
+
+function firstIdentifierArg(content: string, openParenEnd: number): string | undefined {
+  return /^\s*([A-Za-z_$][\w$]*)\s*[,)]/.exec(content.slice(openParenEnd))?.[1];
+}
+
+export type ExtractArkRunKernelCallsOptions = {
+  /**
+   * Relative specifiers that resolve to a kernel/composition root module
+   * (see {@link createArkRunKernelRootSpecifierMatcher}); identifiers imported
+   * from them are traced as kernel receivers.
+   */
+  isKernelRootSpecifier?: (specifier: string) => boolean;
+};
+
+function receiverName(chain: ReceiverChain | undefined): string | undefined {
+  if (!chain) return undefined;
+  if (chain.viaPublisherCall) return 'publisher';
+  const last = chain.parts[chain.parts.length - 1];
+  return last === '<expr>' ? undefined : last;
+}
+
 export function extractArkRunKernelCallsFromSource(
   file: string,
-  content: string
+  content: string,
+  options: ExtractArkRunKernelCallsOptions = {}
 ): ResolvedArkRunKernelCallFact[] {
   const source = stripCommentsPreservingLines(content);
   const bindings = collectKernelImportBindings(source);
+  const trace = traceKernelReceivers(source, bindings, options.isKernelRootSpecifier);
+  const definedNames = collectDefinedIntentNames(source);
   const facts: ResolvedArkRunKernelCallFact[] = [];
   const callRe = /\b([A-Za-z_][A-Za-z0-9_]*)\s*(?:<[^>]*>)?\s*\(/g;
   let match: RegExpExecArray | null;
@@ -359,18 +667,35 @@ export function extractArkRunKernelCallsFromSource(
     const callee = match[1]!;
     const index = match.index;
     if (keywordBefore(source, index, 'function') || keywordBefore(source, index, 'class')) continue;
-    const dotted = source.slice(0, index).match(/([A-Za-z_][A-Za-z0-9_]*)\s*\.\s*$/);
-    const receiver = dotted?.[1];
+    const chain = receiverChainBefore(source, index);
+    const receiver = receiverName(chain);
     const original = bindings.named.get(callee) ?? callee;
-    const kind = arkRunKernelCallKind(original) ?? arkRunKernelCallKind(callee);
-    if (!kind) continue;
-    const viaImport =
-      bindings.named.has(callee) || (receiver !== undefined && bindings.namespaces.has(receiver));
-    if (kind !== 'factory') {
-      if (!viaImport && receiver === undefined) continue;
-      if (receiver && SKIP_INTERACTION_RECEIVERS.has(receiver) && !viaImport) continue;
+    let kind = arkRunKernelCallKind(original) ?? arkRunKernelCallKind(callee);
+    let viaImport =
+      bindings.named.has(callee) ||
+      trace.calleeBindings.has(callee) ||
+      (chain?.parts.length === 1 && bindings.namespaces.has(chain.parts[0]!));
+    if (
+      !kind &&
+      NEST_FACTORY_METHODS.has(callee) &&
+      chain?.parts.length === 1 &&
+      bindings.named.get(chain.parts[0]!) === ARKRUN_NEST_KERNEL_MODULE
+    ) {
+      kind = 'factory';
+      viaImport = true;
     }
-    const nameLiteral = firstStringLiteralArg(source, index + match[0].length);
+    if (!kind) continue;
+    if (kind === 'factory') {
+      // `obj.createArkKernel()` on an arbitrary receiver is not the kernel factory.
+      if (chain !== undefined && !viaImport) continue;
+    } else if (chain === undefined ? !viaImport : !chainReachesKernel(chain, bindings, trace)) {
+      continue;
+    }
+    const argStart = index + match[0].length;
+    const identifierArg = firstIdentifierArg(source, argStart);
+    const nameLiteral =
+      firstStringLiteralArg(source, argStart) ??
+      (identifierArg ? definedNames.get(identifierArg) : undefined);
     facts.push({
       file,
       line: lineAt(content, index),
