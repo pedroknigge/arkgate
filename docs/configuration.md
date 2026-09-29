@@ -74,7 +74,9 @@ Invalid ArkGate config (/repo/ark.config.json):
 - $.layers[0].forbiddenGlobal: unknown field
 ```
 
-The same input cannot pass CI while being silently ignored by MCP or ESLint. Invalid JSON, wrong
+The same input cannot pass CI while being silently ignored by MCP or ESLint. In ESLint an
+invalid contract (root config or a referenced ArkRules file) is one `configInvalid` error per
+linted file with the same validator text; it does not crash the lint run. Invalid JSON, wrong
 types, empty required strings, duplicate string-array entries, negative safety thresholds, and
 unsupported schema versions also fail before scanning begins.
 
@@ -353,7 +355,10 @@ Rule fields:
   It does not ignore the key. No published release through 4.8.22 accepts
   `sliceAliases`. Ship a config that sets it only on a release that includes
   this field. The write hook, ESLint, snippet analysis, ark-check, and CI all
-  see the per-edge decision.
+  see the per-edge decision. In ESLint an error-level crossing reports on
+  `ark/no-domain-infra-imports` and an advisory (warning) crossing reports on the
+  warn-level `ark/architecture-advisory`, because ESLint severity is per rule id
+  ([ai-gates — ESLint](ai-gates.md#eslint-editor-feedback--bounded-parity-envelope)).
 
   Doctor may suggest moving a flat file that sits at universe level when
   exactly one child slice imports it. The card names the file, that child, and
@@ -464,7 +469,8 @@ other choice deliberately, not so slices can drift into a mesh.
 runtime coupling. They still appear on the **violations** list with `typeOnly: true`,
 `failsStrict: false`, and adapter diagnostic **severity: warning** so doctor/HTML keep
 `violations.typeOnly` / `typeEdgePolicy` honest — but they **do not** fail merge/exit, library
-`valid`, or preflight the way **value** edges do. **Exception:** `peerIsolation` slice
+`valid`, or preflight the way **value** edges do. ESLint reports them as warnings on
+`ark/architecture-advisory`, not as errors. **Exception:** `peerIsolation` slice
 boundaries stay hard even for type-only. A value import of a pure-type barrel is still a value
 edge (not soft-skipped). Prefer placing shared types in a **SharedTypes** (or owning) layer
 both sides may import. Optional starter: [`templates/layers/shared-types.starter.json`](../templates/layers/shared-types.starter.json)

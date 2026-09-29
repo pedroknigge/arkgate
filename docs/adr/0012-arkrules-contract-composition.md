@@ -78,6 +78,9 @@ rules is demotion/ack through policy-delta, not a free-form severity enum in v1.
 
 - Consumers without `arkRules` keep current behavior after the additive migration.
 - Tooling surfaces (CLI, MCP, ESLint) share one Effective Contract; no per-surface parsers.
+  ESLint resolves it with the same `resolveEffectiveContract` (an invalid reference is a
+  fail-closed `configInvalid` error) and runs the file-local structure sensors only;
+  invariant coverage and catalog findings stay CLI / MCP / CI (see ai-gates ESLint section).
 - Weakening (delete/demote) an ArkRule is a hash-bound policy-delta transition (ADR 0014 /
   AR11 deepen this ladder).
 - Executable predicate engines stay out of core (ADR 0016).
