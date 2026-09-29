@@ -31,10 +31,7 @@ import { placementDescriptionFields } from './lib/layer-description.mjs';
 import { loadArkConfigContract } from './lib/config-contract.mjs';
 import { loadEffectiveArkRulesFromDisk } from './lib/effective-contract-load.mjs';
 import { loadArkRulesContract } from './lib/arkrules-contract.mjs';
-import {
-  buildRulesInventory,
-  inventoryToExtractionCard,
-} from './lib/rules-inventory.mjs';
+import { buildRulesInventoryPayload } from './lib/rules-under-contract.mjs';
 import { ARK_ANALYSIS_RESULT_SCHEMA, createAdapterResult } from './lib/adapter-contract.mjs';
 import {
   ARK_PROJECT_IDENTITY_SCHEMA,
@@ -64,8 +61,18 @@ function arkRulesCatalogForManifest(snapshot) {
     sourceFile: r.provenance?.sourceFile,
     coverage: r.coverage,
   }));
-  if (structure.length === 0 && invariants.length === 0) return {};
-  return { arkRulesCatalog: { structure, invariants } };
+  // ADR 0012 D2: an unreferenced arkrules/*.json is visible drift (advisory).
+  const unreferencedFiles = (snapshot.warnings ?? []).map((w) => w.path).filter(Boolean);
+  if (structure.length === 0 && invariants.length === 0 && unreferencedFiles.length === 0) {
+    return {};
+  }
+  return {
+    arkRulesCatalog: {
+      structure,
+      invariants,
+      ...(unreferencedFiles.length > 0 ? { unreferencedFiles } : {}),
+    },
+  };
 }
 import { loadTypeScript } from './lib/typescript-host.mjs';
 import { validateSnippetAnalysis } from './lib/snippet-analysis.mjs';
@@ -111,6 +118,10 @@ import {
   formatDesignDeltaBlock,
 } from './lib/design-delta.mjs';
 import { attachPolicyAdrNote } from './lib/adr-path.mjs';
+import {
+  candidateArkRulesMatchProject,
+  resolvePolicyDeltaArkRules,
+} from './lib/policy-delta-io.mjs';
 
 const arkCheckBin = fileURLToPath(new URL('./ark-check.mjs', import.meta.url));
 const arkMcpLauncher = fileURLToPath(new URL('./ark-mcp.mjs', import.meta.url));
@@ -2268,6 +2279,20 @@ export async function runArkMcp({ hookInput } = {}) {
             type: 'object',
             description: 'Candidate complete config; defaults to the current project contract.',
           },
+          baseArkRuleFiles: {
+            type: 'object',
+            description:
+              'Base ArkRules catalog as data: { "<path from baseConfig.arkRules>": <ArkRules file JSON> }. ' +
+              'Required when baseConfig maps arkRules; otherwise the call is refused rather than ' +
+              'classifying ArkRule demotions/deletions as neutral.',
+          },
+          candidateArkRuleFiles: {
+            type: 'object',
+            description:
+              'Candidate ArkRules catalog as data, same shape. Defaults to the files on disk when ' +
+              'candidateConfig is omitted or maps the same arkRules files as the project contract ' +
+              '(the project ark.config.json passed verbatim counts).',
+          },
           acknowledgement: {
             type: 'object',
             description:
@@ -2740,11 +2765,24 @@ export async function runArkMcp({ hookInput } = {}) {
     }
     try {
       const acknowledgement = params?.arguments?.acknowledgement;
+      const suppliedCandidate = params?.arguments?.candidateConfig;
+      const candidateConfig = suppliedCandidate ?? config;
+      // ArkRules are part of the policy: classify their transition too, or refuse.
+      const { baseArkRules, candidateArkRules } = resolvePolicyDeltaArkRules({
+        root: args.root,
+        baseConfig,
+        candidateConfig,
+        candidateIsProjectConfig: candidateArkRulesMatchProject(suppliedCandidate, config),
+        baseArkRuleFiles: params?.arguments?.baseArkRuleFiles,
+        candidateArkRuleFiles: params?.arguments?.candidateArkRuleFiles,
+      });
       const result = attachPolicyAdrNote(
         ark.analyzePolicyDelta({
           baseConfig,
-          candidateConfig: params?.arguments?.candidateConfig ?? config,
+          candidateConfig,
           acknowledgement,
+          baseArkRules,
+          candidateArkRules,
         }),
         { root: args.root, acknowledgement, failClosed: true }
       );
@@ -2997,50 +3035,13 @@ export async function runArkMcp({ hookInput } = {}) {
 
   function runRulesInventoryTool() {
     try {
-      const governed = collectGovernedFiles(args.root, config);
-      const fileContents = {};
-      const fileLayers = {};
-      for (const file of governed.slice(0, 400)) {
-        const rel = path.relative(args.root, file).split(path.sep).join('/');
-        try {
-          fileContents[rel] = fs.readFileSync(file, 'utf8');
-          const layer = layerForFile(args.root, file, config.layers);
-          if (layer) fileLayers[rel] = layer;
-        } catch {
-          /* skip */
-        }
-      }
-      const contracted = [];
-      for (const rule of effectiveArkRulesSnapshot.arkRules?.structure ?? []) {
-        contracted.push(rule.id);
-      }
-      for (const inv of effectiveArkRulesSnapshot.arkRules?.invariants ?? []) {
-        contracted.push(inv.id);
-      }
-      const inventory = buildRulesInventory({
-        fileContents,
-        fileLayers,
-        layerContexts: (config.layers ?? []).map((layer) => ({
-          name: layer.name,
-          intentPrefixes: layer.intentPrefixes ?? [],
-        })),
-        contractedRuleIds: contracted,
-      });
-      const nextPilot =
-        inventory.candidates[0] != null
-          ? inventoryToExtractionCard(inventory.candidates[0])
-          : null;
-      const payload = {
-        ok: true,
-        rulesInventory: inventory,
-        rulesMigration: {
-          inventoried: inventory.inventoried,
-          underContract: inventory.underContract,
-          frozen: inventory.frozen,
-          notAScore: true,
-        },
-        nextPilot,
-      };
+      // Same helper and keys as `ark-check --rules-inventory --json` (incl. coverageEvidence).
+      const { payload: inventoryPayload } = buildRulesInventoryPayload(
+        args.root,
+        config,
+        collectGovernedFiles(args.root, config)
+      );
+      const payload = { ok: true, ...inventoryPayload };
       return {
         content: [{ type: 'text', text: JSON.stringify(payload, null, 2) }],
         structuredContent: payload,

@@ -172,11 +172,13 @@ export {
   ARK_RULES_SCHEMA,
   ARK_RULES_SCHEMA_VERSION,
   ARK_RULE_SENSORS,
+  ArkRulesValidationError,
   buildEffectiveArkRules,
   emptyEffectiveArkRules,
   loadArkRulesContract,
   parseArkRulesJson,
   type ArkRulesFile,
+  type ArkRulesIssue,
   type EffectiveArkRules,
 } from './domain/arkRulesContract';
 

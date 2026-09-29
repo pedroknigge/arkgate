@@ -839,6 +839,7 @@ function parseResolvedFactsInput(
         'hasStaticFactory',
         'mutatingMethods',
         'dataOnly',
+        'truncatedUntil',
       ],
       at
     );
@@ -861,6 +862,9 @@ function parseResolvedFactsInput(
       hasStaticFactory: requiredBoolean(entry, 'hasStaticFactory', at),
       mutatingMethods,
       ...(entry.dataOnly === undefined ? {} : { dataOnly: requiredBoolean(entry, 'dataOnly', at) }),
+      ...(entry.truncatedUntil === undefined
+        ? {}
+        : { truncatedUntil: requiredInteger(entry, 'truncatedUntil', at) }),
     };
   });
   return {

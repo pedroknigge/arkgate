@@ -1648,81 +1648,16 @@ async function main() {
   }
 
   if (args.rulesInventory) {
-    const { buildRulesInventory, inventoryToExtractionCard } = await import('./lib/rules-inventory.mjs');
-    const fileContents = {};
-    const fileLayers = {};
-    for (const file of files.slice(0, 400)) {
-      const rel = normalize(path.relative(root, file));
-      try {
-        fileContents[rel] = fs.readFileSync(file, 'utf8');
-        const layer = layerForFile(root, file, config.layers);
-        if (layer) fileLayers[rel] = layer;
-      } catch {
-        /* skip unreadable */
-      }
-    }
-    const contracted = [];
-    if (config.arkRules) {
-      try {
-        const { loadEffectiveArkRulesFromDisk } = await import('./lib/effective-contract-load.mjs');
-        const loaded = loadEffectiveArkRulesFromDisk(root, config);
-        for (const rule of loaded.arkRules.structure ?? []) contracted.push(rule.id);
-        for (const inv of loaded.arkRules.invariants ?? []) contracted.push(inv.id);
-      } catch {
-        /* advisory inventory still useful */
-      }
-    }
-    const inventory = buildRulesInventory({
-      fileContents,
-      fileLayers,
-      layerContexts: (config.layers ?? []).map((layer) => ({
-        name: layer.name,
-        intentPrefixes: layer.intentPrefixes ?? [],
-      })),
-      contractedRuleIds: contracted,
-    });
-    const nextPilot =
-      inventory.candidates[0] != null
-        ? inventoryToExtractionCard(inventory.candidates[0])
-        : null;
-    let evidenceLines = [];
-    let coverageEvidence = null;
-    if (config.arkRules && Object.keys(config.arkRules).length > 0) {
-      try {
-        const { summarizeRulesUnderContract, formatArkRulesEvidenceLines } = await import(
-          './lib/rules-under-contract.mjs'
-        );
-        const section = summarizeRulesUnderContract(root, config, {
-          files: files.map((file) => ({ path: normalize(path.relative(root, file)) })),
-        });
-        evidenceLines = formatArkRulesEvidenceLines(section);
-        if (section.active === true) {
-          coverageEvidence = {
-            symbolEvidence: section.symbolEvidence ?? [],
-            discarded: section.coverageStats?.discarded ?? null,
-          };
-        }
-      } catch {
-        /* inventory still useful when coverage cannot be read */
-      }
-    }
-    const payload = {
-      rulesInventory: inventory,
-      rulesMigration: {
-        inventoried: inventory.inventoried,
-        underContract: inventory.underContract,
-        frozen: inventory.frozen,
-        notAScore: true,
-      },
-      nextPilot: nextPilot,
-      ...(coverageEvidence ? { coverageEvidence } : {}),
-    };
+    // Same helper as MCP ark_rules_inventory and doctor.rulesMigration (AR15).
+    const { buildRulesInventoryPayload, formatRulesMigrationCounts } = await import(
+      './lib/rules-under-contract.mjs'
+    );
+    const { payload, evidenceLines } = buildRulesInventoryPayload(root, config, files);
+    const { rulesInventory: inventory, nextPilot } = payload;
     if (args.json) {
       console.log(JSON.stringify(payload, null, 2));
     } else {
-      console.log(
-        `Rules inventory: ${inventory.inventoried} inventoried, ${inventory.underContract} under contract, ${inventory.frozen} frozen (not a score).`
-      );
+      console.log(`Rules inventory: ${formatRulesMigrationCounts(payload.rulesMigration)}.`);
       for (const c of inventory.candidates.slice(0, 12)) {
         console.log(`  - [${c.confidence}] ${c.kind} @ ${c.file}:${c.line} — ${c.message}`);
       }

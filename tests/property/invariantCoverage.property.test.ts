@@ -24,7 +24,7 @@ function evidence(
 describe('invariant coverage promote honesty properties', () => {
   /**
    * DF04 — promotion gate never invents green: ok only when coverage is present,
-   * non-partial, and covered. Partial / uncovered / missing always refuse.
+   * non-partial, covered, and carries at least one evidence kind. Partial / uncovered / missing always refuse.
    */
   it('refuses promotion unless coverage is complete and covered', () => {
     runFuzz(
@@ -60,6 +60,12 @@ describe('invariant coverage promote honesty properties', () => {
             expect(gate.ok).toBe(false);
             expect(gate.reason).toMatch(new RegExp(invariantId));
             expect(gate.reason).toMatch(/uncovered/i);
+            return;
+          }
+          if (kinds.length === 0) {
+            // covered with zero evidence (test:false opt-out) never promotes
+            expect(gate.ok).toBe(false);
+            expect(gate.reason).toMatch(/declares no evidence/i);
             return;
           }
           expect(gate.ok).toBe(true);

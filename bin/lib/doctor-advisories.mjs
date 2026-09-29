@@ -328,6 +328,10 @@ export function computeDoctorAdvisories(root, config, cov, rules, files, ts, par
     // P1M: pass classification so extraMergeTeeth cannot arm at 0% governed.
     stewardNudge: collectStewardNudge(root, config),
     rulesUnderContract,
+    // AR15: doctor.rulesMigration — inventoried / under contract / frozen (not a score).
+    ...(rulesUnderContract?.rulesMigration
+      ? { rulesMigration: rulesUnderContract.rulesMigration }
+      : {}),
     arkRun,
     arkOrder,
   };

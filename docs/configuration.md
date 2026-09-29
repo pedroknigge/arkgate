@@ -134,7 +134,10 @@ Top-level fields:
   certify a test the project never declared a runner root for.
 - **`arkRules`** (optional, schema `1.1+`) — map of layer name → project-relative path to an
   ArkRules file (e.g. `"DomainModel": "arkrules/DomainModel.json"`). Keys must match a declared
-  layer. Missing/invalid referenced files **fail closed**.
+  layer. Missing/invalid referenced files **fail closed**. A `arkrules/*.json` file the map
+  does not reference (or any such file when the map is absent) is advisory drift:
+  `ARKRULE_FILE_UNREFERENCED` in check `warnings`, `rulesUnderContract.unreferencedFiles` in
+  doctor, and `arkRulesCatalog.unreferencedFiles` in MCP `ark_manifest`. It never fails the check.
 - **`arkRun`** (optional, schema `1.2+`) — inline ArkRun extra (`mode`, `kernelRoots`
   (`compositionRoots` alias), `managedLayers`, `requireDeclarations`). Absence is silent. Unknown keys fail closed.
   `managedLayers` must name existing `layers[].name` values. Empty `compositionRoots` in
@@ -602,8 +605,8 @@ Each `arkrules/<Layer>.json` may declare:
 
 | Section | Purpose | Modes | What it really enforces |
 |---------|---------|--------|-------------------------|
-| `structure[]` | Closed sensor ids (e.g. `orchestration-only`, `thin-adapter`, `writes-via-aggregate`, `aggregate-private-state`, `always-valid-factory`, `domain-event-on-mutation`, `no-anemic-model`) | `advisory` (default) or `enforced` | **Heuristics of module shape** — not proof that logic was extracted to Domain. `writes-via-aggregate` is driver-import + write-token in the declaring layer (ADR 0032). Tier-2 sensors (`no-anemic-model`) stay advisory-only (cannot promote to enforced). |
-| `invariants[]` | Stable ids + description + `coverage` (`test` / `symbol`) + optional `appliesTo` globs | `advisory` or `enforced` | **Named policy + evidence.** `coverage.symbol` means a declaration of that identifier in a non-test file (witness path `symbolEvidenceFile`; additive `shape`: `function`, `class`, `const`, `method`, `type`, `interface`, or `enum`). Imports and test calls do not count. A `describe` / `it` / `test` / `context` title may also name the invariant id. A comment, string, or other bare mention does not. Does **not** execute tests or business logic and does **not** replace behavior/property tests. Doctor and `--rules-inventory` print the witness path and discard counts on green runs too. A declaration match is not “the tests pass.” |
+| `structure[]` | Closed sensor ids (e.g. `orchestration-only`, `thin-adapter`, `writes-via-aggregate`, `aggregate-private-state`, `always-valid-factory`, `domain-event-on-mutation`, `no-anemic-model`) | `advisory` (default) or `enforced` | **Heuristics of module shape** — not proof that logic was extracted to Domain. `writes-via-aggregate` is driver-import + write-token in the declaring layer (ADR 0032). Tier-2 sensors (`no-anemic-model`) stay advisory-only (cannot promote to enforced). Class shapes come from a tokenizer that skips strings, comments, template literals and regex literals; a class it cannot walk to its end is reported as `shape analysed until character N` (an error under an enforced sensor), never passed in silence. |
+| `invariants[]` | Stable ids + description + `coverage` (`test` / `symbol`) + optional `appliesTo` globs | `advisory` or `enforced` | **Named policy + evidence.** `coverage.symbol` means a declaration of that identifier in a non-test file (witness path `symbolEvidenceFile`, project-relative; additive `shape`: `function`, `class`, `const`, `method`, `type`, `interface`, or `enum`). A `Class.member` symbol (e.g. `Order.ensureInvariants`) requires a member with that name inside the body of `class Class`, a `const Class = class { … }` expression, a `namespace Class { … }` (function or const), or a top-level key of a `const Class = { … }` object literal; a member of another container, a nested object key, a free function, or a file that only mentions the class name does not count. The search is not restricted to the invariant's layer. `coverage.test: false` without a `coverage.symbol` declares no evidence: it is advisory-only (an enforced invariant with that shape reports `INVARIANT_UNCOVERED` and fails strict; the rest of the catalog still evaluates) and cannot be promoted. Imports and test calls do not count. A `describe` / `it` / `test` / `context` title may also name the invariant id. A comment, string, or other bare mention does not. Does **not** execute tests or business logic and does **not** replace behavior/property tests. Doctor and `--rules-inventory` print the witness path and discard counts on green runs too. A declaration match is not “the tests pass.” |
 
 **Reporting:** diagnostics carry `evidence.arkruleId` + `evidence.arkruleSource`. Label residual
 **`[Layer]`** vs **`[ArkRules]`** in agent output. Doctor / HTML: `rulesUnderContract` (catalog +
@@ -646,6 +649,14 @@ For local or non-Git automation, supply a committed config file or Git ref:
 npx ark-check --strict-config --policy-base ./before.ark.config.json --json
 npx ark-check --strict-merge --policy-base-ref origin/main
 ```
+
+ArkRules are part of the policy. With a Git ref, the base `arkrules/*.json` files are read from
+that same ref (a file the base config references but the ref does not contain yet counts as an
+empty layer). With `--policy-base <file>`, the base ArkRules paths resolve next to that file (keep
+a copy of the base `arkrules/` beside it; the error names that directory and the
+`--policy-base-ref` alternative). A base ArkRules file that cannot be read or parsed fails
+closed, because comparing the candidate catalog with itself would read every demotion or
+deletion as neutral.
 
 The additive JSON result includes `policyDelta`: both policy hashes, the overall classification,
 stable findings, and `blockingFindingIds`. Supported comparisons cover governed include/exclude
@@ -756,5 +767,11 @@ verdict.
 
 MCP clients can call `ark_policy_delta` with the previous `baseConfig`, an optional candidate
 contract (the current project contract is the default), and the same optional acknowledgement.
+When `baseConfig` maps `arkRules`, pass the base catalog as data in `baseArkRuleFiles`
+(`{ "<path from baseConfig.arkRules>": <ArkRules file JSON> }`); without it the call is refused
+instead of returning a config-only verdict. The candidate catalog is read from disk when the
+candidate is omitted or maps the same `arkRules` files as the project contract (after the loader's
+normalisation, so the project `ark.config.json` passed verbatim counts); otherwise pass
+`candidateArkRuleFiles` in the same shape.
 It invokes the public classifier directly, is read-only, and marks a blocking result as an MCP
 error without maintaining separate adapter policy.

@@ -121,6 +121,8 @@ export type ResolvedClassShapeFact = {
     referencesGuardOrPublish: boolean;
   }[];
   dataOnly?: boolean;
+  /** Source offset where the class-shape scan stopped (unwalkable body/header). */
+  truncatedUntil?: number;
 };
 
 export type ResolvedDependencyFact = {

@@ -245,6 +245,14 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
     'Raise coverage.maxFiles in ark.config.json (this cap also bounds structural-hint preload; --doctor names the coupling) so hinted/governed counts match, then re-run with --strict-config. An enforced hint sensor that cannot see its scope fails strict.'
   ),
   entry(
+    'ARKRULE_FILE_UNREFERENCED',
+    'arkrules',
+    'ArkRules file not referenced',
+    'A JSON file under arkrules/ is not referenced by the arkRules map in ark.config.json (or no map exists), so none of its rules are enforced or reported. Drift looks like governance until someone notices.',
+    'Reference the file from arkRules ("<Layer>": "arkrules/<file>.json"), or delete it. Advisory only: it never fails the check.',
+    { oftenAdvisory: true }
+  ),
+  entry(
     'INVARIANT_CATALOG_EMPTY',
     'arkrules',
     'Domain invariant catalog is empty',

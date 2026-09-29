@@ -102,14 +102,14 @@ describe('policy-delta I/O direct coverage', () => {
         configPath: 'ark.config.json',
         basePath: 'base.json',
       })
-    ).toEqual({ config: BASE_CONFIG, source: absolute, ref: null });
+    ).toMatchObject({ config: BASE_CONFIG, source: absolute, ref: null, readArkRulesFile: expect.any(Function) });
     expect(
       resolvePolicyBaseConfig({
         root,
         configPath: 'ark.config.json',
         basePath: absolute,
       })
-    ).toEqual({ config: BASE_CONFIG, source: absolute, ref: null });
+    ).toMatchObject({ config: BASE_CONFIG, source: absolute, ref: null, readArkRulesFile: expect.any(Function) });
 
     fs.writeFileSync(absolute, '{');
     expect(() =>
