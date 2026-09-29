@@ -321,7 +321,9 @@ baseline. Do not `--reset-origin` unless the user explicitly wants a new baselin
 reset) and refreshes `latest.*`; it skips only the timestamped JSON file under
 `.ark/reports/history/`.
 `--report` applies the committed `.ark-baseline.json` by default (the same freeze `--doctor`
-reads), so `latest.json` and `ark status` count frozen debt as frozen, not active. Only
+reads), so `latest.json` and `ark status` count frozen debt as frozen, not active. Under
+`--strict` / `--strict-merge` / `--contract-diff` the implicit freeze is not applied (pass
+`--baseline` explicitly), so `--report` never changes a merge verdict. Only
 `--report` refreshes that snapshot; a plain check or `--doctor` does not.
 Snapshots record best-effort, shell-free Git provenance (`HEAD`, attached branch, and dirty
 worktree state). Evolution keeps raw metrics visible across ArkGate upgrades, but an Ark score

@@ -255,6 +255,53 @@ describe('diff-scoped checks: missing base ref', () => {
     expect(outside.out).toMatch(/needs a git merge base/);
   });
 
+  it('--contract-diff / --persona steward without a base exit 2 with an actionable reason', () => {
+    const halted = runTeamPreflight({
+      root: '/tmp',
+      args: { contractDiff: true, persona: 'steward' },
+      config: {},
+      policyDelta: null,
+      teamBase: undefined,
+    });
+    expect(halted.halt?.exitCode).toBe(2);
+    expect(halted.teamParliament).toMatchObject({ reasonId: 'contract-diff-needs-base', deny: false });
+    expect(halted.halt?.message).toMatch(/--persona steward .*Pass --base <ref>/);
+
+    const trunk = mk();
+    writePackage(trunk);
+    initRepo(trunk, 'trunk');
+    for (const flags of [['--persona', 'steward'], ['--contract-diff']]) {
+      const result = check(trunk, [...flags, '--json']);
+      expect(result.code, flags.join(' ')).toBe(2);
+      const json = JSON.parse(result.out.slice(result.out.indexOf('{'), result.out.lastIndexOf('}') + 1));
+      expect(json.ok).toBe(false);
+      expect(json.teamParliament.reasonId).toBe('contract-diff-needs-base');
+      expect(json.teamParliament.message).toMatch(/--base <ref>/);
+    }
+    // With a base, the clean steward run passes and the explicit diff is not a false baseline-grow.
+    expect(check(trunk, ['--persona', 'steward', '--base', 'trunk']).code).toBe(0);
+    expect(check(trunk, ['--contract-diff', '--base', 'trunk']).code).toBe(0);
+  });
+
+  it('a failed listing against an explicit bad ref is exit 2, never labelled ok', () => {
+    const root = mk();
+    writePackage(root);
+    initRepo(root);
+    const halted = runTeamPreflight({
+      root,
+      args: { changed: true },
+      config: {},
+      policyDelta: null,
+      teamBase: 'no-such-ref',
+    });
+    expect(halted.halt?.exitCode).toBe(2);
+    expect(halted.teamParliament).toMatchObject({ reasonId: 'changed-paths-unavailable', deny: false });
+    expect(halted.halt?.message).toMatch(/Pass --base <ref>/);
+    const result = check(root, ['--changed', '--base', 'no-such-ref']);
+    expect(result.code).toBe(2);
+    expect(result.out).not.toMatch(/Ark check passed/);
+  });
+
   it('a local master branch with no remote is discovered as the base', () => {
     const root = mk();
     writePackage(root);
@@ -312,6 +359,12 @@ describe('report / status / doctor agree on the committed baseline', () => {
     expect(effectiveBaselineName({ report: 'r.html' }, '/r', yes)).toBe('.ark-baseline.json');
     expect(effectiveBaselineName({ report: 'r.html' }, '/r', no)).toBeNull();
     expect(effectiveBaselineName({ report: 'r.html', against: 'main' }, '/r', yes)).toBeNull();
+    // A merge verdict never inherits the implicit freeze through a reporting flag.
+    expect(effectiveBaselineName({ report: 'r.html', strictMerge: true }, '/r', yes)).toBeNull();
+    expect(effectiveBaselineName({ report: 'r.html', contractDiff: true }, '/r', yes)).toBeNull();
+    expect(effectiveBaselineName({ report: 'r.html', strictMerge: true, baseline: 'b.json' }, '/r', yes)).toBe(
+      'b.json'
+    );
     expect(effectiveBaselineName({}, '/r', yes)).toBeNull();
   });
 
@@ -331,6 +384,14 @@ describe('report / status / doctor agree on the committed baseline', () => {
     expect(status.stdout).not.toMatch(/fix-active-violations/);
     // A plain check without --baseline still fails: the CI / exit-code contract is unchanged.
     expect(check(root, []).code).toBe(1);
+    // Adding --report to a merge verdict must not flip it green via the implicit freeze.
+    expect(check(root, ['--install-agent-gates']).code).toBe(0);
+    for (const flags of [['--strict-merge'], ['--strict']]) {
+      const merge = check(root, [...flags, '--report', 'ark-report.html']);
+      expect(merge.code, flags.join(' ')).toBe(1);
+      expect(merge.out).not.toMatch(/suppressed by baseline/);
+    }
+    expect(check(root, ['--strict-merge', '--report', 'ark-report.html', '--baseline']).code).toBe(0);
   });
 
   it('status next actions name the only command that refreshes the snapshot', () => {

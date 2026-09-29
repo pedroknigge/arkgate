@@ -37,7 +37,9 @@ export const UPDATE_BASELINE_SCOPE_MESSAGE =
  */
 export function effectiveBaselineName(args, root, exists = fs.existsSync) {
   if (args?.baseline) return args.baseline;
-  if (!args?.report || args.against) return null;
+  // A merge verdict (--strict / --strict-merge / --contract-diff) never inherits the
+  // committed freeze implicitly: adding --report must not flip a fail-closed run to pass.
+  if (!args?.report || args.against || args.strictMerge || args.contractDiff) return null;
   return exists(path.join(root, '.ark-baseline.json')) ? '.ark-baseline.json' : null;
 }
 

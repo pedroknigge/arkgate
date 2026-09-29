@@ -919,7 +919,9 @@ freeze with only that subset.
 `ark-check --report` applies the committed `.ark-baseline.json` by default (the same file
 `--doctor` reads), so the report, `.ark/reports/latest.json`, and `ark status` agree with
 doctor on what is active versus frozen. A plain `ark-check` without `--baseline` is
-unchanged. Only `--report` refreshes the `ark status` last-check snapshot; a plain check or
+unchanged, and so is a merge verdict: with `--strict` / `--strict-merge` / `--contract-diff`,
+`--report` does **not** apply the implicit freeze (pass `--baseline` explicitly), so adding a
+reporting flag can never turn a failing merge run green. Only `--report` refreshes the `ark status` last-check snapshot; a plain check or
 `--doctor` does not write it.
 
 `--update-baseline` also patches existing check **invocations** so CI keeps using the

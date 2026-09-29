@@ -645,9 +645,16 @@ How the changed-file set is computed (`--changed`, `--local`, `--against`, `--pe
 - Without `--base` / `--against`, the base is the first of `origin/dev`, `origin/main`,
   `origin/master`, `dev`, `main`, `master` that exists. When none exists (or the root is
   not a git repository), `--changed` and a non-steward `--persona` stop with **exit 2**
-  (`reasonId: changed-needs-base`; `--local` uses `local-needs-base`). Pass `--base <ref>`
-  or run a full check. A diff that could not be computed never counts as "no changes".
-- Any failed git listing (bad ref, timeout, output too large) is exit 2, never a pass.
+  (`reasonId: changed-needs-base`; `--local` uses `local-needs-base`). `--contract-diff`
+  and `--persona steward` (which implies it) also stop with **exit 2**
+  (`reasonId: contract-diff-needs-base`): the contract and baseline diff has nothing to
+  compare against. Pass `--base <ref>` or run a plain full check. A diff that could not be
+  computed never counts as "no changes".
+- Any failed git listing (bad ref, timeout, output too large) is exit 2
+  (`reasonId: changed-paths-unavailable`), never a pass.
+- `--report` applies the committed `.ark-baseline.json` implicitly, except under
+  `--strict` / `--strict-merge` / `--contract-diff` / `--against`: a merge verdict uses a
+  baseline only when `--baseline` is passed.
 - `--update-baseline` always freezes the whole tree: it refuses `--changed` / `--local`
   (exit 2) and ignores `ARK_CHECK_LOCAL=1`, so a partial scan can never truncate
   `.ark-baseline.json`.

@@ -188,11 +188,18 @@ export function runTeamPreflight({ root, args, config, policyDelta, teamBase }) 
     return { halt: null, teamParliament: null, changedPaths: [] };
   }
   const againstRef = args.against || teamBase;
-  if ((args.local || args.changed) && !againstRef) {
+  if ((args.local || args.changed || args.contractDiff) && !againstRef) {
+    const reasonId = args.local
+      ? 'local-needs-base'
+      : args.changed
+        ? 'changed-needs-base'
+        : 'contract-diff-needs-base';
     const message = args.local
       ? '--local needs a git merge base so it can reuse --changed. Pass --base <ref> (for example --base HEAD or --base origin/main). The merge gate stays --strict-merge.'
-      : changedNeedsBaseMessage(args);
-    const teamParliament = { deny: false, reasonId: args.local ? 'local-needs-base' : 'changed-needs-base', message };
+      : args.changed
+        ? changedNeedsBaseMessage(args)
+        : contractDiffNeedsBaseMessage(args);
+    const teamParliament = { deny: false, reasonId, message };
     return {
       halt: { exitCode: 2, message, teamParliament },
       teamParliament,
@@ -235,8 +242,12 @@ export function runTeamPreflight({ root, args, config, policyDelta, teamBase }) 
     changedPathError: listed.ok ? null : listed.error,
   };
   if (!listed.ok && (args.changed || args.against || args.contractDiff)) {
+    // The verdict above ran over an uncomputed diff: never label it `ok`.
+    teamParliament.deny = false;
+    teamParliament.reasonId = 'changed-paths-unavailable';
+    teamParliament.message = `${listed.error || 'Cannot list changed paths.'} Pass --base <ref> or fix the git error, or run a full check without diff flags.`;
     return {
-      halt: { exitCode: 2, message: listed.error || 'Cannot resolve team base ref.', teamParliament },
+      halt: { exitCode: 2, message: teamParliament.message, teamParliament },
       teamParliament,
       changedPaths,
     };
@@ -262,6 +273,11 @@ export function runTeamPreflight({ root, args, config, policyDelta, teamBase }) 
 export function changedNeedsBaseMessage(args) {
   const flag = args?.persona ? `--persona ${args.persona}` : '--changed';
   return `${flag} needs a git merge base to know which files changed, and none was found (tried ${TEAM_BASE_CANDIDATES.join(', ')}; or this is not a git repository). Pass --base <ref> (for example --base HEAD or --base origin/main), or run without ${flag} for a full-tree check.`;
+}
+
+export function contractDiffNeedsBaseMessage(args) {
+  const flag = args?.persona ? `--persona ${args.persona}` : '--contract-diff';
+  return `${flag} compares the contract and .ark-baseline.json against a git base, and none was found (tried ${TEAM_BASE_CANDIDATES.join(', ')}; or this is not a git repository). Pass --base <ref> (for example --base origin/main), or run a plain full-tree check without ${flag}.`;
 }
 
 export function ungovernedDumpMessage(dumped) {
