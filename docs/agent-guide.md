@@ -1325,8 +1325,9 @@ The strongest place to constrain an AI agent is the moment it writes a file, not
 `arkgate-mcp` / `ark-mcp` exposes ArkGate over MCP (JSON-RPC over stdio; it prefers a usable
 project TypeScript API, then exact `typescript-ark-host@6.0.3`) so a host can gate
 the write path. `arkgate mcp` / `ark mcp` starts the same server; that is the form
-`npx arkgate@<version> mcp --root . --config ark.config.json` and the MCP Registry use, since npx
-runs the bin named after the package:
+`npx arkgate@<version> mcp --root .` and the MCP Registry use, since npx runs the bin named
+after the package. Without `--config` the server reads `ark.config.json` when it exists and still
+starts in a fresh project; an explicit `--config` that points at a missing file exits 1:
 
 For a complete multi-file candidate, use `ark preflight --changes changes.json --json` or MCP
 `ark_prepare_change`. Add `--change-map map.json` (or MCP `changeMap`) only for an explicit schema

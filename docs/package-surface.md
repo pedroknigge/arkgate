@@ -226,9 +226,11 @@ consumers got TS1471 / TS1479 / TS2307 although runtime `require()` worked.
 `npx arkgate@<version> <args>` always runs the bin named after the package, `arkgate`. So
 `arkgate mcp [--root <dir>] [--config <path>] [--hook]` starts the same stdio MCP server as
 `arkgate-mcp`, and forwards every flag to it. The MCP Registry descriptor (`server.json`) launches
-`npx arkgate@<version> mcp --root . --config ark.config.json`. `arkgate arkgate-mcp` and
-`arkgate ark-mcp` are accepted too, because registry entries published through 4.8.23 pass
-that spelling.
+`npx arkgate@<version> mcp --root .` with no `--config`, so it starts in a fresh project too
+(the server reads `ark.config.json` when present; an explicit `--config` to a missing file exits
+1). `arkgate arkgate-mcp` and `arkgate ark-mcp` are accepted as well. Registry entries published
+through 4.8.23 pin arkgate versions that have no `mcp` route, so they keep failing until the
+descriptor is republished for a version that has it.
 
 ---
 

@@ -26,7 +26,17 @@ describe('MCP Registry descriptor', () => {
     expect(isMcpCommand(first.value)).toBe(true);
   });
 
-  it('keeps the spellings used by registry entries published through 4.8.23', () => {
+  it('names no file that a fresh project may not have yet', () => {
+    // An explicit --config / --manifest that is missing makes the server exit 1 before
+    // initialize; left out, the server falls back to ark.config.json when present.
+    const entry = JSON.parse(read('server.json')).packages[0];
+    const named = entry.packageArguments
+      .filter((arg: { type: string }) => arg.type === 'named')
+      .map((arg: { name: string }) => arg.name);
+    expect(named).toEqual(['--root']);
+  });
+
+  it('keeps the older `arkgate-mcp` / `ark-mcp` first-argument spellings routable', () => {
     expect(MCP_COMMANDS).toEqual(['mcp', 'arkgate-mcp', 'ark-mcp']);
     for (const command of [...MCP_COMMANDS, 'dashboard', 'report']) {
       expect(isPassthroughCommand(command), command).toBe(true);

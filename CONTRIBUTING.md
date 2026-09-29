@@ -181,10 +181,14 @@ Older notes live under [docs/releases/](docs/releases/).
 - MCP registry, website sync, leftover `@arkgate/runtime` republish — after npm
   `latest` if you want them. Not required to ship a patch.
 - MCP Registry: `mcp-publisher validate server.json && mcp-publisher publish server.json`.
-  The descriptor launches `npx arkgate@X.Y.Z mcp --root . --config ark.config.json`
-  (npx runs the bin named after the package); `tests/publish/pack-restore.test.ts`
-  starts that exact argv from the packed tarball. Entries published through 4.8.23
-  pass `arkgate-mcp` instead, which `arkgate` also accepts.
+  The descriptor launches `npx arkgate@X.Y.Z mcp --root .` (npx runs the bin named
+  after the package; no `--config`, so a fresh project without `ark.config.json` still
+  starts); `tests/publish/pack-restore.test.ts` starts that exact argv from the packed
+  tarball, with and without a config. **Republish the descriptor after the first npm
+  release that has the `mcp` route.** Entries already on the registry pin arkgate
+  versions through 4.8.23, which have no route: `npx arkgate@4.8.23 arkgate-mcp` still
+  ends in "Unknown command" whatever a later tarball accepts. Check with
+  `curl -s 'https://registry.modelcontextprotocol.io/v0/servers?search=io.github.pedroknigge/arkgate'`.
 - Signed tags (`git tag -s`) — still accepted. Set
   `ARK_REQUIRE_SIGNED_RELEASE_TAG=true` on the publish workflow only if you want
   signed-only again.
@@ -204,4 +208,7 @@ npm view @arkgate/runtime deprecated dist-tags --json   # check
 Moving `latest` to the last build (`0.1.0-experimental.2`, same as `experimental`)
 means a bare `npm i @arkgate/runtime` gets the last build and the migration message,
 not the first build and npm's generic "no longer supported" text. No new version of
-the companion is published.
+the companion is published, so the `description` and README "Migrate" block in
+`packages/runtime/` stay in git only; the `npm deprecate` message is the one users see.
+Until a maintainer runs these commands, the registry still shows the generic text and
+`latest` → `0.1.0-experimental.0`.

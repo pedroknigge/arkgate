@@ -4,9 +4,11 @@
  *
  * `mcp` exists because `npx arkgate@<version> <args>` always runs the bin named after the
  * package (`arkgate`), never `arkgate-mcp`. The MCP Registry descriptor (`server.json`) is
- * launched exactly that way, so `arkgate mcp --root . --config ark.config.json` must start the
- * stdio MCP server. `arkgate-mcp` / `ark-mcp` stay accepted as the first argument because
- * registry descriptors published before 4.8.24 pass that spelling.
+ * launched exactly that way, so `arkgate mcp --root .` must start the stdio MCP server.
+ * `arkgate-mcp` / `ark-mcp` are also accepted as the first argument, so a descriptor or host
+ * config that spells the bin name still reaches the server. That does not repair registry
+ * entries already published: each pins the arkgate version it was published with, and
+ * versions through 4.8.23 have no passthrough. Only a republished descriptor fixes those.
  */
 import { spawn, spawnSync } from 'node:child_process';
 import path from 'node:path';

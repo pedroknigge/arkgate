@@ -194,11 +194,11 @@ describe('publish manifest', () => {
       if (arg.type === 'positional') argv.push(arg.value);
       else argv.push(arg.name, arg.value);
     }
+    // A registry client launches in whatever directory the host picked: often a fresh project
+    // with no ark.config.json yet. The descriptor must not name a file that may be absent
+    // (an explicit --config that is missing exits 1 before initialize).
     const consumer = packedConsumer('consumer-mcp');
-    fs.writeFileSync(
-      path.join(consumer, 'ark.config.json'),
-      '{"include":["src"],"layers":[],"rules":[]}\n'
-    );
+    expect(fs.existsSync(path.join(consumer, 'ark.config.json'))).toBe(false);
     const initialize = `${JSON.stringify({
       jsonrpc: '2.0',
       id: 1,
@@ -212,12 +212,20 @@ describe('publish manifest', () => {
         encoding: 'utf8',
         timeout: 60_000,
       });
-    // Registry entries published through 4.8.23 pass `arkgate-mcp` as the first argument.
-    for (const args of [argv, ['arkgate-mcp', ...argv.slice(1)]]) {
+    const expectInitialized = (args: string[]) => {
       const result = launch(args);
       expect(result.stdout, `${args.join(' ')}\n${result.stderr}`).toContain('"serverInfo"');
       const response = JSON.parse(result.stdout.split('\n').find((line) => line.includes('"id":1')) ?? '{}');
       expect(response.result?.serverInfo).toEqual({ name: 'arkgate', version: inner.version });
-    }
+    };
+    // The old `arkgate-mcp` first-argument spelling routes to the same server.
+    const spellings = [argv, ['arkgate-mcp', ...argv.slice(1)]];
+    // Fresh project (no ark.config.json), then a project that has one: both answer initialize.
+    for (const args of spellings) expectInitialized(args);
+    fs.writeFileSync(
+      path.join(consumer, 'ark.config.json'),
+      '{"include":["src"],"layers":[],"rules":[]}\n'
+    );
+    for (const args of spellings) expectInitialized(args);
   }, 120_000);
 });
