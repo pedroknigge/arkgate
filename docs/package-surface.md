@@ -141,6 +141,8 @@ are grouped below.
 | Design delta contract | `ARK_DESIGN_DELTA_SCHEMA_VERSION` |
 | Analysis IR + resolved facts | `ANALYSIS_IR_SCHEMA_VERSION`, `RESOLVED_CANDIDATE_FACTS_SCHEMA_VERSION`, `RESOLVED_CANDIDATE_FACTS_SCHEMA`, `createResolvedCandidateFacts`, `loadResolvedCandidateFacts`, `resolvedFactsEvidenceRequirementsHash`, `deterministicHash`, `stableSerialize` |
 | Config contract | `ARK_CONFIG_SCHEMA`, `ARK_CONFIG_SCHEMA_VERSION`, `loadArkConfigContract`, `parseArkConfigJson` |
+| ArkRules contract | `ARK_RULES_SCHEMA`, `ARK_RULES_SCHEMA_VERSION`, `ARK_RULE_SENSORS`, `ArkRulesValidationError`, `buildEffectiveArkRules`, `emptyEffectiveArkRules`, `loadArkRulesContract`, `parseArkRulesJson` (`parseArkRulesJson` / `loadArkRulesContract` throw `ArkRulesValidationError` with `.issues: ArkRulesIssue[]`) |
+| Effective contract | `EffectiveContractError`, `effectiveContractPolicyPayload`, `resolveEffectiveContract` |
 
 The type-only root exports are also semver-supported:
 
@@ -178,6 +180,7 @@ The type-only root exports are also semver-supported:
   `AnalysisFile`, `AnalysisImportEdge`, `AnalysisCapabilityUse`, `AnalysisEvidence`,
   `AnalysisViolation`, `AnalysisIr`.
 - Config contract: `ArkConfig`, `ArkConfigLoadResult`.
+- ArkRules contract: `ArkRulesFile`, `ArkRulesIssue`, `EffectiveArkRules`.
 
 Runtime-kernel factories, `CAPABILITY_IDS`, `collectCapabilityUses`, and Domain capability mapping
 helpers are deliberately absent from this root. Use `arkgate/runtime` for the
