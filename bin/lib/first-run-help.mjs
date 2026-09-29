@@ -3,6 +3,7 @@
  */
 
 import { NORTH_STAR_ONE_LINE } from './product-copy.mjs';
+import { KNOWN_TOOLS } from './skill-install.mjs';
 
 export function setupUsage() {
   return `arkgate (alias ark) — Write. Check. Ship.
@@ -96,8 +97,8 @@ Options:
                Valid ids: crud-product, api-backend, frontend-surface, library-sdk, cli-utility,
                worker-pipeline, event-coordinator, integration-bridge, multi-app-workspace, prototype-spike,
                vertical-slice-product, ddd-bounded-contexts.
-  --tools      One active agent host for start (claude,cursor,codex,grok,antigravity,windsurf,cline,copilot,kiro,roo,continue,gemini).
-               Omit to use the active host; an unknown host creates only the shared compact router.
+  --tools      Agent host(s) for start, comma-separated (${KNOWN_TOOLS.join(',')}).
+               Omit to use the active host; an unknown host is rejected (exit 2).
   --remove-host <host>
                Preview or apply removal of that compact host integration; re-add it with --tools <host>.
   --require-write-hook <host>

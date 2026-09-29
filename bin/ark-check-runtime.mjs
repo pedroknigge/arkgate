@@ -3,6 +3,7 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { configInvalidJsonEnvelope } from './lib/config-invalid-envelope.mjs';
 
 const __arkCheckCli = fileURLToPath(new URL('./ark-check.mjs', import.meta.url));
 
@@ -1865,6 +1866,7 @@ async function main() {
       ? renderBeginnerHtmlReport(reportPayload)
       : renderHtmlReport(reportPayload);
     const reportPath = path.isAbsolute(args.report) ? args.report : path.join(root, args.report);
+    fs.mkdirSync(path.dirname(reportPath), { recursive: true });
     fs.writeFileSync(reportPath, html);
 
     const archive = archiveReportSnapshots(root, {
@@ -2087,6 +2089,8 @@ async function main() {
 }
 
 main().catch((error) => {
+  const envelope = configInvalidJsonEnvelope(error, process.argv);
+  if (envelope) console.log(envelope);
   console.error(
     process.env.ARK_DEBUG_STACK === '1' && error instanceof Error
       ? error.stack

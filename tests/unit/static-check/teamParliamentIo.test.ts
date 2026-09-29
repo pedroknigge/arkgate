@@ -228,6 +228,71 @@ describe('team parliament I/O', () => {
     expect(changed.args.policyBaseRef).toBe('main');
   });
 
+  it('binds the policy base for a contract session so loosening is classified', () => {
+    const root = mkRepo();
+    const session = bindTeamBaseRefs({ strictMerge: true, contractSession: true }, root);
+    expect(session.args.policyBaseRef).toBe('main');
+  });
+
+  it('steward lock holds for --strict-merge --contract-session with --base, auto base, or --base-ref', () => {
+    const root = mkRepo();
+    fs.mkdirSync(path.join(root, 'src/domain'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'src/application'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src/domain/a.ts'), 'export const a = 1;\n');
+    fs.writeFileSync(path.join(root, 'src/application/b.ts'), 'export const b = 1;\n');
+    const law = {
+      include: ['src'],
+      stewards: ['alice'],
+      layers: [
+        { name: 'DomainModel', patterns: ['src/domain/**'] },
+        { name: 'ApplicationOrchestration', patterns: ['src/application/**'] },
+      ],
+      rules: [{ from: 'DomainModel', to: 'ApplicationOrchestration', allowed: false }],
+    };
+    fs.writeFileSync(path.join(root, 'ark.config.json'), `${JSON.stringify(law, null, 2)}\n`);
+    writeSemanticGateArtifacts(root);
+    git(root, ['add', '.']);
+    git(root, ['commit', '-m', 'law']);
+    git(root, ['checkout', '-b', 'loosen']);
+    const loosened = { ...law, rules: [{ ...law.rules[0], allowed: true }] };
+    fs.writeFileSync(path.join(root, 'ark.config.json'), `${JSON.stringify(loosened, null, 2)}\n`);
+    git(root, ['commit', '-am', 'loosen']);
+    const bypassForms = [
+      ['--strict-merge', '--base', 'main', '--contract-session', '--author', 'bob'],
+      ['--strict-merge', '--contract-session', '--author', 'bob'],
+      ['--strict-merge', '--base-ref', 'main', '--contract-session', '--author', 'bob'],
+    ];
+    for (const form of bypassForms) {
+      const run = spawnSync(
+        process.execPath,
+        [path.resolve('bin/ark-check.mjs'), '--root', root, '--config', 'ark.config.json', '--no-cache', '--json', ...form],
+        { cwd: root, encoding: 'utf8', env: { ...process.env, ARK_POLICY_BASE_REF: '' } }
+      );
+      expect(run.status, `${form.join(' ')}\n${run.stdout}${run.stderr}`).toBe(1);
+      expect(JSON.parse(run.stdout).teamParliament).toMatchObject({
+        deny: true,
+        reasonId: 'steward-only-loosen',
+      });
+    }
+  });
+
+  it('fails closed when a steward-locked law change in a session cannot be classified', () => {
+    const root = mkRepo();
+    fs.writeFileSync(path.join(root, 'ark.config.json'), '{}\n');
+    git(root, ['add', '.']);
+    git(root, ['commit', '-m', 'law']);
+    fs.writeFileSync(path.join(root, 'ark.config.json'), '{"x":1}\n');
+    const halted = runTeamPreflight({
+      root,
+      args: { contractSession: true, author: 'bob' },
+      config: { stewards: ['alice'] },
+      policyDelta: undefined,
+      teamBase: 'HEAD',
+    });
+    expect(halted.halt?.exitCode).toBe(1);
+    expect(halted.teamParliament).toMatchObject({ deny: true, reasonId: 'policy-unclassified' });
+  });
+
   it('filters changed files, dumps ungoverned names, and nudges stewards', () => {
     const root = mkRepo();
     fs.writeFileSync(path.join(root, 'CODEOWNERS'), '* @alice\n');

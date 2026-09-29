@@ -4,7 +4,7 @@
   "layer": "PresentationAdapters",
   "structure": [
     {
-      "id": "thin-adapter",
+      "id": "thin-presentation-adapter",
       "sensor": "thin-adapter",
       "mode": "advisory",
       "description": "Adapters stay thin: map I/O and delegate; avoid domain branching + persistence here."

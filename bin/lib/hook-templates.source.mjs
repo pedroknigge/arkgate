@@ -271,6 +271,65 @@ export function mergeCursorArkHook(existingText, generatedText) {
   return `${JSON.stringify(next, null, 2)}\n`;
 }
 
+const ARK_HOOK_COMMAND = /(?:^|[\s/])(?:arkgate-mcp|ark-mcp)(?:\.mjs)?(?:\s|$)/;
+const ARK_HOOK_MODE = /\s--(?:hook|session-context)(?:\s|$)/;
+
+function isArkHookCommand(entry) {
+  return (
+    Boolean(entry) &&
+    typeof entry === 'object' &&
+    typeof entry.command === 'string' &&
+    ARK_HOOK_COMMAND.test(` ${entry.command} `) &&
+    ARK_HOOK_MODE.test(` ${entry.command} `)
+  );
+}
+
+/**
+ * Upsert Ark's SessionStart / PreToolUse groups into an existing Claude-style hooks file
+ * (`.claude/settings.json`, `.codex/hooks.json`). Keeps every other top-level key
+ * (permissions, env, model, …), every other hook event, and every non-Ark hook entry;
+ * replaces only earlier Ark `arkgate-mcp --hook` / `--session-context` commands.
+ * Idempotent: merging twice returns the same text. Returns null when unreadable.
+ */
+export function mergeClaudeStyleArkHooks(existingText, generatedText) {
+  let existing;
+  let generated;
+  try {
+    existing = existingText && existingText.trim() ? JSON.parse(existingText) : {};
+    generated = JSON.parse(generatedText);
+  } catch {
+    return null;
+  }
+  if (!existing || typeof existing !== 'object' || Array.isArray(existing)) return null;
+  if (!generated || typeof generated !== 'object' || Array.isArray(generated)) return null;
+  const generatedHooks = generated.hooks;
+  if (!generatedHooks || typeof generatedHooks !== 'object') return null;
+  if (
+    existing.hooks !== undefined &&
+    (!existing.hooks || typeof existing.hooks !== 'object' || Array.isArray(existing.hooks))
+  ) {
+    return null;
+  }
+  const hooks = { ...(existing.hooks ?? {}) };
+  for (const [event, arkGroups] of Object.entries(generatedHooks)) {
+    if (!Array.isArray(arkGroups)) continue;
+    const current = hooks[event];
+    if (current !== undefined && !Array.isArray(current)) return null;
+    const kept = [];
+    for (const group of current ?? []) {
+      if (!group || typeof group !== 'object' || !Array.isArray(group.hooks)) {
+        kept.push(group);
+        continue;
+      }
+      const userHooks = group.hooks.filter((entry) => !isArkHookCommand(entry));
+      if (userHooks.length === group.hooks.length) kept.push(group);
+      else if (userHooks.length > 0) kept.push({ ...group, hooks: userHooks });
+    }
+    hooks[event] = [...kept, ...arkGroups];
+  }
+  return `${JSON.stringify({ ...existing, hooks }, null, 2)}\n`;
+}
+
 /**
  * Upsert only the `ark-write-gate` named hook into an existing Antigravity hooks map.
  * Preserves sibling named hooks and unknown top-level keys. Returns null if unreadable.

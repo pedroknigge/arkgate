@@ -207,6 +207,13 @@ npx ark status --json
 npx ark status --json --expected-root /abs/project/root
 ```
 
+`--config <file>` reads a non-default contract (same for `ark agents-md --config <file>`).
+When the resolved config fails the shared contract validator, status adds
+`contract: { valid: false, errors: [...] }` and the next action is `fix-config` — the same
+config every enforcing surface refuses is never reported as ready. `ark-check --json` (and
+`--doctor --json`) print `{ "ok": false, "error": "CONFIG_INVALID", "configPath", "messages" }`
+on stdout for that case (exit 2), so a JSON consumer always gets the reason.
+
 MCP parity tool: **`ark_status`** (same envelope; pass `project.expectedRoot` after `ark_identity`).
 Schema: `arkgate/schema/status-manifest`. Never prompts; under `CI=1` JSON is forced. **Not a
 score** — counts, honesty modes, and residual ids only. Write-path interpretation of activation vs
@@ -312,8 +319,19 @@ npx ark-check --ratchet-cores                   # require populated core layers 
 npx ark-check --watch                           # debounced re-check when governed files change
 ```
 
+**Package pin:** `ark start` and `ark init` both pin `arkgate` in `package.json`
+`devDependencies` (and install it unless `--skip-package-manager`) before writing the CI workflow
+and host hooks, because those call the local `ark-check` / `arkgate-mcp` bins. `--no-install`
+skips the pin; without a `package.json` setup prints a warning instead. `start --remove-host`
+never runs the package manager. An explicit `--archetype` / `--preset` on `ark start` is the
+contract that is written (not only a way past the shape-confidence gate), and re-running
+`ark start --apply` on a project that already has `ark.config.json` keeps that contract and is not
+re-gated on detected shape confidence (so the `--remove-host` restore command works).
+The generated `typecheck` script and CI step are added only when `typescript` is a dependency
+(or resolves from the project root); otherwise setup prints a note.
+
 **Day-zero origin (2.12+):** `ark init` freezes `.ark/reports/origin.*` before writing agent
-docs or CI templates. Compact `ark start` previews first and keeps the applied setup small
+docs or CI templates (the day-zero HTML is written under `.ark/reports/`, not the project root). Compact `ark start` previews first and keeps the applied setup small
 (budget: 8 files / 32 KB including project `.mcp.json`);
 run `ark-check --report ark-report.html` explicitly when you want to establish an origin/evolution
 baseline. Do not `--reset-origin` unless the user explicitly wants a new baseline.
@@ -625,7 +643,9 @@ Plan by default — there is no `--dry-run` anywhere in `bin/`. `--apply` needs
 one named rule id: `--promote <ruleId> --apply`, or `--promote=<ruleId>` when
 the id starts with `-`. It refuses a bare `--promote --apply` rather than
 rewriting the contract in bulk behind a single flag, refuses an id declared in
-two documents rather than silently writing the first, and refuses to make a
+two documents rather than silently writing the first (starter ids are unique:
+`thin-persistence-adapter` / `thin-presentation-adapter`, and a layer that clones
+another layer's archetype gets its ids prefixed with its kebab-cased name), and refuses to make a
 contract change on a cost this run did not measure. `--promote` cannot be
 combined with a mode that answers first (`--sensors`, `--coverage`, `--plan`,
 `--doctor`, …) — that printed the report and exited 0 having written nothing —

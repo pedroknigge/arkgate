@@ -240,6 +240,28 @@
         }
       }
     },
+    "contract": {
+      "type": "object",
+      "description": "Present only when the resolved config fails the shared contract validator (the same fail-closed rules ark-check, MCP and ESLint apply).",
+      "additionalProperties": false,
+      "required": [
+        "valid",
+        "errors"
+      ],
+      "properties": {
+        "valid": {
+          "const": false
+        },
+        "errors": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
     "improvementCompass": {
       "type": "object",
       "description": "Thin improvement-compass residual ids with honesty mode (notAScore). full | subset | unavailable. Never a gate input; full lenses on doctor JSON. When full, residual ids ⊆ doctor residual for the same facts. unavailable never invents green residual.",

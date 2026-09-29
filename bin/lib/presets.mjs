@@ -14,6 +14,7 @@ import {
   resolveIncludeRoots,
 } from '../ark-shared.mjs';
 import { withArkConfigMetadata } from './config-contract.mjs';
+import { cloneArchetypeForLayer } from './arkrules-starter-ids.mjs';
 
 const PRESETS_DIR = path.dirname(fileURLToPath(import.meta.url));
 const ARKRULES_TEMPLATES_DIR = path.join(PRESETS_DIR, '../../templates/arkrules');
@@ -371,11 +372,8 @@ export function buildArkRulesTemplateForLayer(layerName, role = resolveLayerSens
     const sourcePath = path.join(ARKRULES_TEMPLATES_DIR, archetype);
     if (fs.existsSync(sourcePath)) {
       try {
-        const parsed = JSON.parse(fs.readFileSync(sourcePath, 'utf8'));
-        return {
-          ...parsed,
-          layer: layerName,
-        };
+        // Unique ids across arkrules/*.json so `--promote <id> --apply` works on the starter.
+        return cloneArchetypeForLayer(JSON.parse(fs.readFileSync(sourcePath, 'utf8')), layerName);
       } catch {
         // Fall through to generic mold.
       }

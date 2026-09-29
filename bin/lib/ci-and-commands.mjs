@@ -243,10 +243,11 @@ ${rows}`;
  * Load project layers for AGENTS generation. Returns null when config is absent/invalid
  * so callers fall back to the stock 11-layer table.
  * @param {string} root
+ * @param {string} [configPath] contract file (defaults to `<root>/ark.config.json`)
  */
-export function loadConfigLayersForAgents(root) {
+export function loadConfigLayersForAgents(root, configPath = path.join(root, 'ark.config.json')) {
   try {
-    const cfgPath = path.join(root, 'ark.config.json');
+    const cfgPath = configPath;
     if (!fs.existsSync(cfgPath)) return null;
     const cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
     if (!Array.isArray(cfg?.layers) || cfg.layers.length === 0) return null;

@@ -160,11 +160,17 @@ describe('enforcement profile policy', () => {
         })
       );
       expect(hasHardWriteHook(root, 'cursor')).toBe(false);
+      // Mergeable JSON: install upserts the fail-closed Ark entry, so no --force is needed.
+      expect(validateHardWriteRequest({ root, host: 'cursor', tools: 'cursor' })).toMatchObject({
+        ok: true,
+        host: 'cursor',
+      });
+      fs.writeFileSync(path.join(root, '.cursor', 'hooks.json'), '{ not json');
       expect(validateHardWriteRequest({ root, host: 'cursor', tools: 'cursor' })).toEqual({
         ok: false,
         error:
-          '.cursor/hooks.json already exists without an Ark hard-write hook and would be preserved. ' +
-          'Use --force to replace that host file, or omit --require-write-hook for merge-only enforcement.',
+          '.cursor/hooks.json already exists but is not a JSON object Ark can merge into, so it would be preserved. ' +
+          'Fix that file (or use --force to replace it), or omit --require-write-hook for merge-only enforcement.',
       });
     } finally {
       fs.rmSync(root, { recursive: true, force: true });

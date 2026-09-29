@@ -250,7 +250,11 @@ After edits run: npx ark-check --root . --config ark.config.json --strict
 ```
 
 The hook belongs in the **project's** `.claude/settings.json` (that's what
-`--install-agent-gates` generates). It is also safe by construction if you prefer it in
+`--install-agent-gates` generates). An existing `.claude/settings.json` (or `.codex/hooks.json`)
+is **merged**, not skipped or replaced: Ark upserts only its own `SessionStart` / `PreToolUse`
+`arkgate-mcp` entries and keeps `permissions`, `env`, other hook events, and your own hook
+entries; re-running is a no-op. Only a file that is not a JSON object is left untouched (and
+`--require-write-hook` then refuses until you fix it or pass `--force`). It is also safe by construction if you prefer it in
 your global settings: without an `ark.config.json` in the project, `--session-context`
 prints nothing and exits 0, so non-Ark projects are untouched.
 
