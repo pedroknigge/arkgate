@@ -6,8 +6,11 @@ import path from 'node:path';
 import { summarizeParseHealth } from './parse-health.mjs';
 import {
   analyzeTrustedResolvedProject,
+  configVersionFloors,
   loadContract,
 } from './analysis-engine.mjs';
+import { pathUnderSharedRoot, sharedImportsSliceMode } from '../ark-layer-match.mjs';
+import { collectArkgatePins, runningArkgateVersion } from './arkgate-pins.mjs';
 import { effectiveAnalysisConfig } from './analysis-policy.mjs';
 import { resolveCandidateFacts } from './resolved-candidate-facts.mjs';
 import { loadEffectiveArkRulesFromDisk } from './effective-contract-load.mjs';
@@ -64,6 +67,28 @@ function fileLocalScope(root, files, config, { changed = false } = {}) {
   // `--changed` is already a bounded envelope — do not re-walk the include tree (#205).
   if (!changed && config && coversGovernedSet(root, scoped, config)) return null;
   return scoped;
+}
+
+/**
+ * `--changed` resolves the touched files plus their forward import closure.
+ * The deny-cross-parent pass attributes a finding to the slice file that
+ * imports a shared root, so an edit to a shared file alone can complete a new
+ * cross-universe path whose importer is outside that closure. When a touched
+ * file sits under such a rule's sharedRoots, the graph runs full-tree.
+ */
+function changedSharedRootNeedsFullGraph(scoped, rules) {
+  if (!scoped) return false;
+  const walls = (rules ?? []).filter(
+    (rule) =>
+      rule?.allowed === false &&
+      rule.peerIsolation === true &&
+      sharedImportsSliceMode(rule.sharedImportsSlice) === 'deny-cross-parent'
+  );
+  if (walls.length === 0) return false;
+  for (const file of scoped) {
+    if (walls.some((rule) => pathUnderSharedRoot(file, rule.sharedRoots))) return true;
+  }
+  return false;
 }
 
 function coversGovernedSet(root, scoped, config) {
@@ -155,15 +180,17 @@ export function resolveArchitectureSnapshot({
   const scoped = fileLocalScope(root, files, effectiveConfig, {
     changed: args?.changed === true,
   });
+  // File-local sensors stay on `scoped`; only the graph widens (see helper).
+  const graphScope = changedSharedRootNeedsFullGraph(scoped, effectiveConfig.rules) ? null : scoped;
   const facts = resolveCandidateFacts({
     root,
     config: effectiveConfig,
     ts,
     ...(args?.tsconfig ? { tsconfig: args.tsconfig } : {}),
     observeInput,
-    ...(scoped
-      ? { scopeFiles: [...scoped] }
-      : args?.changed
+    ...(graphScope
+      ? { scopeFiles: [...graphScope] }
+      : args?.changed && !scoped
         ? { scopeFiles: [] }
         : {}),
   });
@@ -212,9 +239,17 @@ export function resolveArchitectureSnapshot({
   const rootsPresent = catalogHasEnforcedInvariant(arkRulesLoad.arkRules?.invariants)
     ? declaredCoverageRootsPresent(root, effectiveConfig.coverage)
     : true;
+  // Version floor evidence (#338): zero extra I/O unless a floored key is in use.
+  const pinEvidence = configVersionFloors(effectiveConfig.rules)
+    ? {
+        arkgatePins: collectArkgatePins(root, { observeInput }),
+        runningArkgateVersion: runningArkgateVersion(),
+      }
+    : {};
   const analyzed = analyzeTrustedResolvedProject({
     contract: analysisContract,
     facts,
+    ...pinEvidence,
     ...(adopted ? { adopted: true } : {}),
     ...(adopted && pathPresent === false ? { invariantTestsPathPresent: false } : {}),
     ...(rootsPresent === false ? { coverageRootsPresent: false } : {}),

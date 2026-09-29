@@ -4,6 +4,7 @@
  * Declarations only — the C02 entry point src/kernel/analysis.ts re-exports
  * everything here, so consumer import paths never change.
  */
+import type { ArkgatePinEvidence } from '../domain/configVersionFloor';
 import type {
   AnalysisCompilerOptions,
   AnalysisFileChange,
@@ -61,6 +62,10 @@ export type AnalysisResult = {
 export type AnalyzeResolvedProjectInput = {
   contract: AnalysisContract;
   facts: unknown;
+  /** Tooling FS evidence of arkgate pins. Omitted: version-floor warnings stay silent. */
+  arkgatePins?: readonly ArkgatePinEvidence[];
+  /** The running arkgate version, for the version-floor nextAction. */
+  runningArkgateVersion?: string;
   /**
    * D0 adopted or --require-gates / --strict-merge. When true, a missing
    * domain-invariant tests path fails closed. Omitted stays silent.
@@ -287,6 +292,13 @@ export type CollectAnalysisConfigWarningsInput = {
   config: ArkConfig;
   rules: ArkConfig['rules'];
   files: readonly string[];
+  /**
+   * Tooling FS evidence of arkgate pins in this repo (package.json, lockfile,
+   * installed copy, hook scripts, CI). Omitted: version-floor warnings stay silent.
+   */
+  arkgatePins?: readonly ArkgatePinEvidence[];
+  /** The running arkgate version. The version-floor nextAction targets it when newer. */
+  runningArkgateVersion?: string;
   manifest?: {
     architecture?: { layers?: readonly { name?: string; prefixes?: readonly string[] }[] };
   };

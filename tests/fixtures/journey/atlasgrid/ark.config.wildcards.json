@@ -411,6 +411,8 @@
     }
   ],
   "exclude": [
-    "src/lib/compliance/uses-management.ts"
+    "src/lib/compliance/uses-management.ts",
+    "src/lib/shared/composition/register-all.ts",
+    "src/lib/features/projects/rfi/rfi-deps.ts"
   ]
 }

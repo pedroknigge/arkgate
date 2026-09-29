@@ -8,6 +8,7 @@
  * Pure CLI helper (bin/lib/remediation.mjs). Zero Node I/O.
  */
 
+import { sliceReasonHint } from './diagnostic-catalog.mjs';
 export const REMEDIATION_CLASSES = [
     'mechanical-safe',
     'judgment',
@@ -68,6 +69,10 @@ export function classifyLayerImportKind(target, extra) {
     return 'unknown';
 }
 export function layerImportNextAction(violation) {
+    // A nested-wall reason has its own fix. It wins over the generic peer text.
+    const hint = sliceReasonHint(typeof violation.reasonId === 'string' ? violation.reasonId : undefined);
+    if (hint)
+        return `${hint.fix} Then preflight again.`;
     if (violation.typeOnly || violation.targetTypeOnlyExports || violation.namedBindingsTypeOnly) {
         return 'Move the referenced type to a mutually allowed layer, use `import type`, then preflight again.';
     }
@@ -198,6 +203,11 @@ export function deterministicNextAction(violation) {
     switch (violation.ruleId) {
         case 'LAYER_IMPORT_VIOLATION':
             return layerImportNextAction(violation);
+        case 'CONFIG_CHILD_SLICES_VERSION':
+            // The finding already names the pinned file and the version to bump to.
+            return typeof violation.nextAction === 'string' && violation.nextAction.length > 0
+                ? violation.nextAction
+                : 'Bump the pinned arkgate named in the finding to the version it gives, then run Ark again.';
         case 'FORBIDDEN_GLOBAL':
             return `Inject ${violation.target ?? 'the capability'} through a port, test at the public interface, then preflight again.`;
         case 'CAPABILITY_VIOLATION':
@@ -423,11 +433,13 @@ export function enrichViolationWithFixClass(violation) {
                         ? 'The imported module only exports types — use `import type` and place the type in a layer both sides may share.'
                         : 'This is a type-only import — move the type to a layer both sides may share, or relocate the file to match its role.';
             }
-            else if (violation.peerIsolation) {
+            else if (violation.peerIsolation || sliceReasonHint(violation.reasonId)) {
+                const hint = sliceReasonHint(violation.reasonId);
                 enriched.fixClass = 'cross-slice-boundary';
                 enriched.effort = 'medium';
-                enriched.enthusiastHint =
-                    'Cross-slice import blocked (peerIsolation). Do not import another feature/context directly — extract shared code to a shared layer, or coordinate via events/ports. Moving code across slices is a judgment call, not a mechanical auto-fix.';
+                enriched.enthusiastHint = hint
+                    ? `${hint.why} ${hint.fix}`
+                    : 'Cross-slice import blocked (peerIsolation). Do not import another feature/context directly — extract shared code to a shared layer, or coordinate via events/ports. Moving code across slices is a judgment call, not a mechanical auto-fix.';
             }
             else {
                 const kind = classifyLayerImportKind(typeof violation.target === 'string' ? violation.target : '', {

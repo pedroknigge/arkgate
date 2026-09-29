@@ -41,6 +41,7 @@ export function buildJudgmentBrief(violations) {
       targetTypeOnlyExports: v.targetTypeOnlyExports,
       namedBindingsTypeOnly: v.namedBindingsTypeOnly,
       peerIsolation: v.peerIsolation ?? v.details?.peerIsolation,
+      reasonId: v.reasonId ?? v.details?.reasonId,
       edgeKind: v.edgeKind ?? v.details?.importKind,
       fromLayer: v.fromLayer,
       toLayer: v.toLayer,

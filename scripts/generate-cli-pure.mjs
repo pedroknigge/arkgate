@@ -5,6 +5,7 @@
  * Canonical → derived (committed for zero-build CLI on npm):
  *   src/domain/remediation.ts  → bin/lib/remediation.mjs
  *   src/domain/baselineKey.ts  → bin/lib/baseline-key.mjs
+ *   src/domain/configContractSlices.ts → bin/lib/config-contract-slices.mjs
  *   src/domain/configContract.ts → bin/lib/config-contract.mjs
  *                                → schemas/ark.config.schema.json
  *   src/domain/configExtras.ts   → bin/lib/config-extras.mjs
@@ -66,6 +67,11 @@ const MODULES = [
     canonical: 'src/domain/configExtras.ts',
     derived: 'bin/lib/config-extras.mjs',
     label: 'opt-in arkRun / arkOrder extra defaults + schema $defs',
+  },
+  {
+    canonical: 'src/domain/configContractSlices.ts',
+    derived: 'bin/lib/config-contract-slices.mjs',
+    label: 'slice-wall config contract (childSlices / sharedImportsSlice schema + validators)',
   },
   {
     canonical: 'src/domain/configContract.ts',

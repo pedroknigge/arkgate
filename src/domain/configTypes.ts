@@ -67,7 +67,8 @@ export type ArkConfigRule = {
   sliceFolders?: string[];
   /**
    * How a starred `sliceFolders` prefix is named.
-   * Absent and `path` keep today's ids. `stars` is the last literal plus the star bindings.
+   * Absent and `path` keep today's ids. `stars` is the last literal plus every
+   * star binding (a star before the last literal is kept too).
    */
   sliceIdentity?: ArkConfigSliceIdentity;
   /** Roots the repo declares shared on purpose — evidence, not unclassifiable. */
@@ -78,8 +79,10 @@ export type ArkConfigRule = {
    * `"deny"` blocks a shared root from importing a slice.
    * `"deny-cross-parent"` leaves that hop allowed and asks the whole-graph
    * check to report a slice that reaches another universe through shared.
+   * The object form carries `stopAt`: composition roots the walk never
+   * passes through.
    */
-  sharedImportsSlice?: 'deny' | 'deny-cross-parent';
+  sharedImportsSlice?: ArkConfigSharedImportsSlice;
   /**
    * Optional inner wall. Absent keeps today's universe-wall output.
    * `siblings` defaults to deny. An object keeps that default and lists enforced subtrees.
@@ -88,15 +91,27 @@ export type ArkConfigRule = {
   childSlices?: ArkConfigChildSlices;
 };
 
+export type ArkConfigSharedImportsSlice =
+  | 'deny'
+  | 'deny-cross-parent'
+  | { mode: 'deny-cross-parent'; stopAt: string[] };
+
 export type ArkConfigChildSlices = {
   sliceFolders: string[];
   sliceIdentity?: ArkConfigSliceIdentity;
   commonFolders?: string[];
+  /**
+   * `ratchet` on the object form: absent turns the anti-growth ratchet on only
+   * when the baseline already records an advisory crossing of this rule;
+   * `true` always; `false` measures only.
+   */
   siblings?:
     | 'deny'
     | 'advisory'
-    | { default: 'deny' | 'advisory'; enforce?: string[] };
+    | { default: 'deny' | 'advisory'; enforce?: string[]; ratchet?: boolean };
   parentMayImportChild?: boolean;
+  /** Text for inner-wall findings (sibling, common → child). Absent: ArkGate default, never the rule message. */
+  message?: string;
   /**
    * Directed child-slice allowances. `*` is one whole path segment.
    * Clears a sibling crossing only. The universe `allowedCrossSlice` does not read this list.

@@ -14,7 +14,7 @@ import type {
 } from '../domain/analysis';
 import { capabilityForModuleSpecifier } from '../domain/capabilities';
 import type { ArkConfig } from '../domain/configTypes';
-import { findDeniedEdgeRule } from '../domain/layerMatch';
+import { findDeniedEdgeDecision, sliceConsumerMessage } from '../domain/layerMatch';
 
 export function normalizePath(value: string): string {
   const segments: string[] = [];
@@ -354,15 +354,18 @@ export function violationsFor(
   const violations: AnalysisViolation[] = [];
   for (const edge of edges) {
     if (!edge.to || !edge.fromLayer || !edge.toLayer) continue;
-    const rule = findDeniedEdgeRule(config.rules, edge.fromLayer, edge.toLayer, {
+    const decision = findDeniedEdgeDecision(config.rules, edge.fromLayer, edge.toLayer, {
       fromPath: edge.from,
       toPath: edge.to,
       layers: config.layers,
     });
-    if (!rule) continue;
+    if (!decision) continue;
+    const rule = decision.rule;
     violations.push({
       ruleId: `layer-dependency:${rule.from}->${rule.to}`,
-      message: rule.message ?? `${rule.from} must not depend on ${rule.to}.`,
+      // Inner-wall findings never reuse the universe rule message.
+      message:
+        sliceConsumerMessage(rule, decision.sliceVerdict) ?? `${rule.from} must not depend on ${rule.to}.`,
       edge,
       evidence: edge.evidence,
     });

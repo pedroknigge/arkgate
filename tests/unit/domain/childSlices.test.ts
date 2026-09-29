@@ -239,10 +239,8 @@ describe('nested slice wall', () => {
       [mismatched],
       ['src/lib/features/projects/rfi/load-rfi.ts']
     );
-    expect(findings.map((row) => row.ruleId)).toEqual([
-      'CONFIG_CHILD_SLICES_VERSION',
-      'CONFIG_CHILD_SLICE_EXTENDS',
-    ]);
+    // #338: no version warning from config shape alone; it needs pin evidence.
+    expect(findings.map((row) => row.ruleId)).toEqual(['CONFIG_CHILD_SLICE_EXTENDS']);
     expect(findings.every((row) => row.failsStrict === false)).toBe(true);
   });
 
@@ -264,7 +262,7 @@ describe('nested slice wall', () => {
     expect(sliceCountReport([{ reasonId: 'LAYER_IMPORT_VIOLATION' }])).toBeNull();
   });
 
-  it('leaves reasonId out of the baseline key and ratchets only unrecorded advisory siblings', () => {
+  it('leaves reasonId out of the baseline key and ratchets only unrecorded advisory siblings (auto: recorded advisory exists)', () => {
     const violation = {
       ruleId: 'LAYER_IMPORT_VIOLATION',
       file: 'src/a.ts',
@@ -293,7 +291,7 @@ describe('nested slice wall', () => {
     expect(held[0]?.failsStrict).toBe(false);
   });
 
-  it('keeps an enforced sibling as an error and still ratchets a new advisory sibling', () => {
+  it('keeps an enforced sibling as an error; a recorded enforced crossing does not switch the advisory ratchet on (#336)', () => {
     const enforced = {
       ruleId: 'LAYER_IMPORT_VIOLATION',
       file: 'src/enforced.ts',
@@ -309,10 +307,25 @@ describe('nested slice wall', () => {
       failsStrict: false as const,
       severity: 'warning',
     };
-    const promoted = applyAdvisorySiblingRatchet(
+    const auto = applyAdvisorySiblingRatchet(
       [enforced, advisory],
       [baselineKey(enforced), baselineKey(advisory)],
       new Set([baselineKey(enforced)])
+    );
+    expect(auto[0]).toEqual(enforced);
+    expect(auto[1]?.failsStrict).toBe(false);
+    const strictRule: EdgeRule = {
+      ...childRule,
+      childSlices: {
+        ...childRule.childSlices!,
+        siblings: { default: 'advisory', ratchet: true },
+      },
+    };
+    const promoted = applyAdvisorySiblingRatchet(
+      [enforced, advisory],
+      [baselineKey(enforced), baselineKey(advisory)],
+      new Set([baselineKey(enforced)]),
+      { rules: [strictRule] }
     );
     expect(promoted[0]).toEqual(enforced);
     expect(promoted[1]).toMatchObject({ failsStrict: true, severity: 'error' });
@@ -522,7 +535,12 @@ describe('slice aliases', () => {
   it('lists the alias as an owed move and does not call the files finished', () => {
     const report = sliceAliasReport(
       [aliasRule, aliasRule],
-      ['src/lib/compliance/policy.ts', 'src/lib/other/nope.ts', 'src/lib/compliance/hold.ts']
+      [
+        'src/lib/compliance/policy.ts',
+        'src/lib/other/nope.ts',
+        'src/lib/compliance/hold.ts',
+        'src/lib/features/projects/rfi/load-rfi.ts',
+      ]
     );
     expect(report).toEqual({
       notAScore: true,

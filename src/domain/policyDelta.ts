@@ -1,4 +1,5 @@
 import { loweredLayerCoverage } from './capabilities';
+import { sharedImportsSliceMode, sharedImportsSliceStopAt, siblingRatchetMode } from './layerMatch';
 import type { ArkConfig, ArkConfigLayer, ArkConfigRule } from './configContract';
 import type { EffectiveArkRules, EffectiveInvariantRule, EffectiveStructureRule } from './arkRulesTypes';
 import {
@@ -423,9 +424,10 @@ function compareRules(
       'Directed cross-slice edges are no longer declared and deny again.'
     );
 
-    if ((previous.sharedImportsSlice ?? null) !== (candidate.sharedImportsSlice ?? null)) {
-      const beforeMode = previous.sharedImportsSlice ?? null;
-      const afterMode = candidate.sharedImportsSlice ?? null;
+    // Normalize first: the object form carries the mode plus composition-root stops.
+    const beforeMode = sharedImportsSliceMode(previous.sharedImportsSlice) ?? null;
+    const afterMode = sharedImportsSliceMode(candidate.sharedImportsSlice) ?? null;
+    if (beforeMode !== afterMode) {
       const strengthening = sharedImportsSliceRank(afterMode) > sharedImportsSliceRank(beforeMode);
       addFinding(findings, {
         kind: 'shared-imports-slice',
@@ -435,6 +437,16 @@ function compareRules(
         before: beforeMode,
         after: afterMode,
       });
+    } else if (afterMode === 'deny-cross-parent') {
+      compareDeclaredExceptions(
+        findings,
+        `${path}.sharedImportsSlice.stopAt`,
+        'shared-walk-stop',
+        stopAtKeys(previous.sharedImportsSlice),
+        stopAtKeys(candidate.sharedImportsSlice),
+        'Composition roots now stop the cross-parent walk. Paths through them are no longer reported.',
+        'Composition roots no longer stop the cross-parent walk. Paths through them are reported again.'
+      );
     }
 
     compareChildSlices(findings, path, previous, candidate);
@@ -451,7 +463,24 @@ function childSliceFoldersKey(rule: ArkConfigRule): string {
   ]);
 }
 
-type SiblingPolicy = { mode: 'deny' | 'advisory'; enforce: string[] };
+type SiblingPolicy = {
+  mode: 'deny' | 'advisory';
+  enforce: string[];
+  ratchet: 'auto' | 'always' | 'never';
+};
+
+function stopAtKeys(setting: unknown): string[] {
+  return sortedUnique(
+    sharedImportsSliceStopAt(setting).map((entry) =>
+      trimTrailingSlashes(entry.trim().replace(/\\/g, '/')).toLowerCase()
+    )
+  );
+}
+
+/** Ratchet strength order for advisory siblings: never < auto < always. */
+function siblingRatchetRank(mode: SiblingPolicy['ratchet']): number {
+  return mode === 'always' ? 2 : mode === 'auto' ? 1 : 0;
+}
 
 function enforceKeys(entries: readonly string[] | undefined): string[] {
   return sortedUnique(
@@ -468,10 +497,14 @@ function enforceKeys(entries: readonly string[] | undefined): string[] {
 function childSliceSiblingPolicy(rule: ArkConfigRule): SiblingPolicy | null {
   if (!rule.childSlices) return null;
   const siblings = rule.childSlices.siblings;
-  if (siblings == null || siblings === 'deny') return { mode: 'deny', enforce: [] };
-  if (siblings === 'advisory') return { mode: 'advisory', enforce: [] };
-  if (siblings.default === 'deny') return { mode: 'deny', enforce: [] };
-  return { mode: 'advisory', enforce: enforceKeys(siblings.enforce) };
+  if (siblings == null || siblings === 'deny') return { mode: 'deny', enforce: [], ratchet: 'auto' };
+  if (siblings === 'advisory') return { mode: 'advisory', enforce: [], ratchet: 'auto' };
+  if (siblings.default === 'deny') return { mode: 'deny', enforce: [], ratchet: 'auto' };
+  return {
+    mode: 'advisory',
+    enforce: enforceKeys(siblings.enforce),
+    ratchet: siblingRatchetMode(siblings),
+  };
 }
 
 /**
@@ -543,6 +576,21 @@ function compareChildSlices(
       before.enforce,
       after.enforce
     );
+    if (before.ratchet !== after.ratchet) {
+      const strengthening = siblingRatchetRank(after.ratchet) > siblingRatchetRank(before.ratchet);
+      addFinding(findings, {
+        kind: 'child-slices-siblings-ratchet',
+        path: `${path}.childSlices.siblings.ratchet`,
+        classification: strengthening ? 'strengthening' : 'weakening',
+        message: strengthening
+          ? 'New advisory sibling crossings past the baseline fail in more cases.'
+          : after.ratchet === 'never'
+            ? 'Advisory sibling crossings are measured only and never fail.'
+            : 'New advisory sibling crossings past the baseline fail in fewer cases.',
+        before: before.ratchet,
+        after: after.ratchet,
+      });
+    }
   }
   const previousParent = previous.childSlices?.parentMayImportChild === true;
   const candidateParent = candidate.childSlices?.parentMayImportChild === true;

@@ -55,13 +55,9 @@
         ],
         "siblings": "deny",
         "parentMayImportChild": false,
-        "sliceAliases": [
-          {
-            "from": "lib/compliance/**",
-            "to": "features/projects/compliance"
-          }
-        ]
-      }
+        "message": "Inner wall (atlasgrid): import universe common, not a sibling feature."
+      },
+      "message": "Universe wall (atlasgrid): do not import another universe."
     },
     {
       "from": "Presentation",
@@ -86,14 +82,9 @@
           "domain"
         ],
         "siblings": "deny",
-        "parentMayImportChild": false,
-        "sliceAliases": [
-          {
-            "from": "lib/compliance/**",
-            "to": "features/projects/compliance"
-          }
-        ]
-      }
+        "parentMayImportChild": false
+      },
+      "message": "Universe wall (atlasgrid): do not import another universe."
     },
     {
       "from": "Presentation",
@@ -118,14 +109,9 @@
           "domain"
         ],
         "siblings": "deny",
-        "parentMayImportChild": false,
-        "sliceAliases": [
-          {
-            "from": "lib/compliance/**",
-            "to": "features/projects/compliance"
-          }
-        ]
-      }
+        "parentMayImportChild": false
+      },
+      "message": "Universe wall (atlasgrid): do not import another universe."
     },
     {
       "from": "Application",
@@ -150,14 +136,9 @@
           "domain"
         ],
         "siblings": "deny",
-        "parentMayImportChild": false,
-        "sliceAliases": [
-          {
-            "from": "lib/compliance/**",
-            "to": "features/projects/compliance"
-          }
-        ]
-      }
+        "parentMayImportChild": false
+      },
+      "message": "Universe wall (atlasgrid): do not import another universe."
     },
     {
       "from": "Application",
@@ -183,13 +164,9 @@
         ],
         "siblings": "deny",
         "parentMayImportChild": false,
-        "sliceAliases": [
-          {
-            "from": "lib/compliance/**",
-            "to": "features/projects/compliance"
-          }
-        ]
-      }
+        "message": "Inner wall (atlasgrid): import universe common, not a sibling feature."
+      },
+      "message": "Universe wall (atlasgrid): do not import another universe."
     },
     {
       "from": "Application",
@@ -214,14 +191,9 @@
           "domain"
         ],
         "siblings": "deny",
-        "parentMayImportChild": false,
-        "sliceAliases": [
-          {
-            "from": "lib/compliance/**",
-            "to": "features/projects/compliance"
-          }
-        ]
-      }
+        "parentMayImportChild": false
+      },
+      "message": "Universe wall (atlasgrid): do not import another universe."
     },
     {
       "from": "Persistence",
@@ -246,14 +218,9 @@
           "domain"
         ],
         "siblings": "deny",
-        "parentMayImportChild": false,
-        "sliceAliases": [
-          {
-            "from": "lib/compliance/**",
-            "to": "features/projects/compliance"
-          }
-        ]
-      }
+        "parentMayImportChild": false
+      },
+      "message": "Universe wall (atlasgrid): do not import another universe."
     },
     {
       "from": "Persistence",
@@ -278,14 +245,9 @@
           "domain"
         ],
         "siblings": "deny",
-        "parentMayImportChild": false,
-        "sliceAliases": [
-          {
-            "from": "lib/compliance/**",
-            "to": "features/projects/compliance"
-          }
-        ]
-      }
+        "parentMayImportChild": false
+      },
+      "message": "Universe wall (atlasgrid): do not import another universe."
     },
     {
       "from": "Persistence",
@@ -310,19 +272,15 @@
           "domain"
         ],
         "siblings": "deny",
-        "parentMayImportChild": false,
-        "sliceAliases": [
-          {
-            "from": "lib/compliance/**",
-            "to": "features/projects/compliance"
-          }
-        ]
-      }
+        "parentMayImportChild": false
+      },
+      "message": "Universe wall (atlasgrid): do not import another universe."
     }
   ],
   "exclude": [
     "src/lib/features/projects/scm/scm-uses-d2d.ts",
     "src/components/features/projects/rfi/rfi-uses-d2d.tsx",
+    "src/lib/compliance/uses-management.ts",
     "src/lib/shared/composition/register-all.ts",
     "src/lib/features/projects/rfi/rfi-deps.ts"
   ]

@@ -98,9 +98,12 @@ export type EdgeRule = {
    * `"deny"`: a shared root may not import a slice. `"deny-cross-parent"` leaves
    * that hop allowed; a whole-graph pass then reports a slice that reaches
    * another universe only through shared. Absent keeps the hop allowed.
-   * `allowedCrossSlice` does not excuse `"deny"`.
+   * `allowedCrossSlice` does not excuse `"deny"`. The object form
+   * `{ mode: "deny-cross-parent", stopAt }` names composition roots the walk
+   * never starts at or passes through. Read it through
+   * {@link sharedImportsSliceMode} / {@link sharedImportsSliceStopAt}.
    */
-  sharedImportsSlice?: 'deny' | 'deny-cross-parent';
+  sharedImportsSlice?: SharedImportsSliceSetting;
   /**
    * Optional inner wall under this rule's universe wall. Absent: the universe
    * wall is the whole decision and check output stays byte-identical.
@@ -134,6 +137,8 @@ export type ChildSlices = {
   commonFolders?: string[];
   siblings?: ChildSliceSiblings;
   parentMayImportChild?: boolean;
+  /** Text for inner-wall findings (sibling, common → child). Absent: ArkGate default, never the rule message. */
+  message?: string;
   /** Directed child allowances. `*` matches one whole segment. Never a universe excuse. */
   allowedCrossSlice?: CrossSliceEdge[];
   /** Unclassified files governed as this child. Debt, not a destination. */
@@ -150,15 +155,41 @@ export type ChildSliceSiblingsMode = 'deny' | 'advisory';
 export type ChildSliceSiblingsEnforce = {
   default: ChildSliceSiblingsMode;
   enforce?: string[];
+  /**
+   * Anti-growth for advisory crossings against a baseline. Absent: on only when
+   * the baseline already records an advisory crossing of this rule. `true`:
+   * always when a baseline is in use. `false`: measure only.
+   */
+  ratchet?: boolean;
 };
 
 export type ChildSliceSiblings = ChildSliceSiblingsMode | ChildSliceSiblingsEnforce;
 
-/**
- * Last published arkgate that rejects `childSlices`. The rule schema sets
- * `additionalProperties: false`, so 4.8.22 and older refuse the whole config.
- */
-export const CHILD_SLICES_REJECTED_THROUGH = '4.8.22';
+/** `sharedImportsSlice` string modes. */
+export type SharedImportsSliceMode = 'deny' | 'deny-cross-parent';
+
+/** String mode, or the object form that carries composition-root stops. */
+export type SharedImportsSliceSetting =
+  | SharedImportsSliceMode
+  | { mode: 'deny-cross-parent'; stopAt: string[] };
+
+/** The mode of a `sharedImportsSlice` value. Never compare the raw value to a string. */
+export function sharedImportsSliceMode(setting: unknown): SharedImportsSliceMode | undefined {
+  if (setting === 'deny' || setting === 'deny-cross-parent') return setting;
+  if (setting !== null && typeof setting === 'object') {
+    const mode = (setting as { mode?: unknown }).mode;
+    if (mode === 'deny-cross-parent') return mode;
+  }
+  return undefined;
+}
+
+/** Composition roots the deny-cross-parent walk stops at. Empty for the string forms. */
+export function sharedImportsSliceStopAt(setting: unknown): readonly string[] {
+  if (setting === null || typeof setting !== 'object') return [];
+  const stopAt = (setting as { stopAt?: unknown }).stopAt;
+  if (!Array.isArray(stopAt)) return [];
+  return stopAt.filter((entry): entry is string => typeof entry === 'string' && entry.length > 0);
+}
 
 /** A directed slice-to-slice edge the repo declares on purpose (peerIsolation). */
 export type CrossSliceEdge = {
@@ -471,8 +502,10 @@ function anchoredSliceId(
  *
  * `path` returns every bound segment (literal prefix plus star bindings), so
  * a parallel tree (`components` / `features` / `*` / `*`) gets a different
- * id. `stars` drops the literal prefix before the last literal and keeps
- * that literal plus the star bindings.
+ * id. `stars` drops only the literals before the last literal. It keeps that
+ * literal and every star binding, including a star before it: `modules` /
+ * `*` / `api` / `*` binds `orders/api/v1`, never a bare `api/v1` that two
+ * modules would share.
  */
 function bindAnchoredSlice(
   parts: string[],
@@ -481,6 +514,7 @@ function bindAnchoredSlice(
   identity: SliceIdentity = 'path'
 ): string | undefined {
   const bound: string[] = [];
+  const fromStar: boolean[] = [];
   let lastLiteralAt = -1;
   let index = offset;
   for (let pi = 0; pi < pattern.length; pi += 1) {
@@ -493,21 +527,41 @@ function bindAnchoredSlice(
         break;
       }
       bound.push(parts[index].toLowerCase());
+      fromStar.push(true);
       index += 1;
       continue;
     }
     if (segment === '**' || index >= parts.length) return undefined;
     if (parts[index].toLowerCase() !== segment) return undefined;
     bound.push(parts[index].toLowerCase());
+    fromStar.push(false);
     lastLiteralAt = bound.length - 1;
     index += 1;
   }
   if (bound.length === 0) return undefined;
   if (identity === 'stars') {
     if (lastLiteralAt < 0) return undefined;
-    return bound.slice(lastLiteralAt).join('/');
+    return bound.filter((_, at) => at >= lastLiteralAt || fromStar[at]).join('/');
   }
   return bound.join('/');
+}
+
+/**
+ * Indexes of the pattern segments a `stars` id keeps: every `*`, the last
+ * literal, and everything after it. Literals before the last literal drop.
+ * Returns null when the pattern has no literal.
+ */
+export function starsKeptSegmentIndexes(segments: readonly string[]): number[] | null {
+  let lastLiteral = -1;
+  for (let at = 0; at < segments.length; at += 1) {
+    if (segments[at] !== '*') lastLiteral = at;
+  }
+  if (lastLiteral < 0) return null;
+  const kept: number[] = [];
+  for (let at = 0; at < segments.length; at += 1) {
+    if (at >= lastLiteral || segments[at] === '*') kept.push(at);
+  }
+  return kept;
 }
 
 /** Two starred prefixes that bind as the same id under `sliceIdentity: "stars"`. */
@@ -560,23 +614,20 @@ export function sliceIdentityCollisions(
   return out;
 }
 
-/** Last literal plus the stars that follow it. `**` never forms a stem. */
+/**
+ * The segments a `stars` id keeps: every star, the last literal, and the stars
+ * after it. Literals before the last literal drop. `**` never forms a stem.
+ */
 function starsIdentityStem(raw: string): string | undefined {
   if (!isAnchoredSliceEntry(raw)) return undefined;
   const segments = raw
     .split(/[/\\]/)
     .filter((part) => part.length > 0)
     .map((part) => part.toLowerCase());
-  let lastLiteral = -1;
-  for (let i = 0; i < segments.length; i += 1) {
-    const part = segments[i] ?? '';
-    if (part === '**') return undefined;
-    if (part !== '*') lastLiteral = i;
-  }
-  if (lastLiteral < 0) return undefined;
-  const tail = segments.slice(lastLiteral);
-  if (tail.some((part, index) => index > 0 && part !== '*')) return undefined;
-  return tail.join('/');
+  if (segments.some((part) => part === '**')) return undefined;
+  const kept = starsKeptSegmentIndexes(segments);
+  if (!kept) return undefined;
+  return kept.map((at) => segments[at]).join('/');
 }
 
 function formatSliceIdentityCollision(
@@ -823,7 +874,7 @@ export type PeerIsolationInput = {
   /** The rule declares this directed slice→slice edge. */
   crossSliceAllowed?: boolean;
   /** `"deny"` blocks a shared root importing a slice. `"deny-cross-parent"` does not. */
-  sharedImportsSlice?: 'deny' | 'deny-cross-parent';
+  sharedImportsSlice?: SharedImportsSliceMode;
 };
 
 /**
@@ -895,6 +946,13 @@ export type SliceAliasMove = {
   to: string;
   destination: string;
   files: string[];
+  /**
+   * Present when no scanned file outside the aliases resolves to the target's
+   * universe id: most likely a typo. Config load checks only the shape.
+   */
+  unknownUniverse?: true;
+  /** One sentence for doctor when `unknownUniverse` is set. */
+  advisory?: string;
 };
 
 export type SliceAliasReport = {
@@ -908,14 +966,34 @@ function aliasGlobPattern(glob: string): string {
   return trimTrailingSlashes(glob.trim().replace(/\\/g, '/')).toLowerCase();
 }
 
-/** Existing path glob matcher. Also accepts a leading src/ or app/. */
+/** Existing path glob matcher. Also accepts a leading src/ or app/, and a plain folder covers its subtree. */
 function aliasGlobMatches(glob: string, relPath: string): boolean {
   const pattern = aliasGlobPattern(glob);
   if (!pattern || pattern === '*' || pattern === '**') return false;
   const file = String(relPath).replace(/\\/g, '/').replace(/^\/+/, '').toLowerCase();
   const rooted = stripSrcOrApp(file);
   const re = globToRegExp(pattern);
-  return re.test(file) || (rooted !== file && re.test(rooted));
+  // A folder form (no wildcard in the last segment) also covers its subtree,
+  // as sharedRoots does: `lib/compliance` matches `lib/compliance/x.ts`.
+  const last = pattern.split('/').pop() ?? '';
+  const under = last.includes('*') ? null : globToRegExp(`${pattern}/**`);
+  const hit = (candidate: string): boolean => re.test(candidate) || (under !== null && under.test(candidate));
+  return hit(file) || (rooted !== file && hit(rooted));
+}
+
+/**
+ * Does `relPath` match a `sharedImportsSlice.stopAt` entry? An entry matches
+ * the way a shared root does (anchored, optional leading src/ or app/, a plain
+ * folder covers its subtree) or the way an alias glob does (`kernel/registrations/**`
+ * against `src/kernel/registrations/x.ts`). A blanket `*` / `**` never matches.
+ */
+export function pathMatchesSharedWalkStop(
+  relPath: string | undefined,
+  stopAt: readonly string[] | undefined
+): boolean {
+  if (!relPath || !stopAt?.length) return false;
+  if (pathUnderSharedRoot(relPath, [...stopAt])) return true;
+  return stopAt.some((glob) => typeof glob === 'string' && aliasGlobMatches(glob, relPath));
 }
 
 function splitAliasTarget(to: string): { universeId: string; childId: string } | null {
@@ -965,18 +1043,15 @@ function childPatternDirectory(
   if (segments.length === 0 || idParts.length === 0) return null;
   if (segments.some((part) => part === '**' || (part.includes('*') && part !== '*'))) return null;
   if (identity === 'stars') {
-    let lastLiteral = -1;
-    for (let index = 0; index < segments.length; index += 1) {
-      if (segments[index] !== '*') lastLiteral = index;
+    const kept = starsKeptSegmentIndexes(segments);
+    if (!kept || kept.length !== idParts.length) return null;
+    const dir = [...segments];
+    for (let index = 0; index < kept.length; index += 1) {
+      const at = kept[index] ?? 0;
+      if (segments[at] !== '*' && segments[at] !== idParts[index]) return null;
+      dir[at] = idParts[index] ?? '';
     }
-    if (lastLiteral < 0) return null;
-    const tail = segments.slice(lastLiteral);
-    if (tail.length !== idParts.length) return null;
-    for (let index = 0; index < tail.length; index += 1) {
-      if (tail[index] === '*') continue;
-      if (tail[index] !== idParts[index]) return null;
-    }
-    return [...segments.slice(0, lastLiteral), ...idParts].join('/');
+    return dir.join('/');
   }
   if (segments.length !== idParts.length) return null;
   for (let index = 0; index < segments.length; index += 1) {
@@ -1049,9 +1124,45 @@ export function sliceAliasReport(
       }
     }
   }
-  const listed = [...moves.values()].map((move) => ({ ...move, files: [...move.files].sort() }));
+  const universes = knownUniverseIds(rules, files);
+  const listed = [...moves.values()].map((move) => {
+    const target = splitAliasTarget(move.to);
+    const unknown = universes !== null && target !== null && !universes.has(target.universeId);
+    return {
+      ...move,
+      files: [...move.files].sort(),
+      ...(unknown
+        ? {
+            unknownUniverse: true as const,
+            advisory: `alias target ${move.to} names universe ${target.universeId}, which no file belongs to. Check for a typo.`,
+          }
+        : {}),
+    };
+  });
   listed.sort((left, right) => left.from.localeCompare(right.from) || left.to.localeCompare(right.to));
   return { notAScore: true, finished: false, debt: SLICE_ALIAS_DEBT, moves: listed };
+}
+
+/**
+ * Universe ids that real (non-aliased) files resolve to, across rules that set
+ * sliceAliases. Null when a rule has no explicit sliceFolders (the universe
+ * would come from layer patterns this report does not see): no claim then.
+ */
+function knownUniverseIds(
+  rules: readonly EdgeRule[] | undefined,
+  files: readonly string[]
+): Set<string> | null {
+  const ids = new Set<string>();
+  for (const rule of rules ?? []) {
+    if (!rule?.childSlices?.sliceAliases?.length) continue;
+    if (!rule.sliceFolders?.length) return null;
+    for (const file of files) {
+      if (typeof file !== 'string') continue;
+      const id = sliceIdForPath(file, rule.sliceFolders, rule.sliceIdentity);
+      if (id) ids.add(id.toLowerCase());
+    }
+  }
+  return ids;
 }
 
 /**
@@ -1108,25 +1219,19 @@ export function universePairLabel(sliceId: string | undefined): string | undefin
   return parts.length > 0 ? parts[parts.length - 1] : undefined;
 }
 
-function directorySegments(relPath: string): string[] {
-  const parts = String(relPath).split(/[/\\]/).filter(Boolean);
-  return parts.slice(0, -1);
-}
-
-function pathHasCommonFolder(relPath: string, commonFolders: string[] | undefined): boolean {
-  if (!commonFolders?.length) return false;
-  const names = new Set<string>();
-  for (const raw of commonFolders) {
-    if (typeof raw === 'string' && raw.length > 0) names.add(raw.toLowerCase());
-  }
-  if (names.size === 0) return false;
-  return directorySegments(relPath).some((part) => names.has(part.toLowerCase()));
+function isCommonFolderName(segment: string | undefined, commonFolders: string[] | undefined): boolean {
+  if (!segment || !commonFolders?.length) return false;
+  const want = segment.toLowerCase();
+  return commonFolders.some((raw) => typeof raw === 'string' && raw.length > 0 && raw.toLowerCase() === want);
 }
 
 /**
- * Child id for one path. A common folder and a flat file (the starred id does
- * not grow past the universe id) are universe common. A child id that does not
- * extend the universe id is not used; the caller warns.
+ * Child id for one path. A flat file (the starred id does not grow past the
+ * universe id) is universe common. So is a `commonFolders` directory, but only
+ * at the child position: the segment directly under the universe id
+ * (`features/projects/domain/**`). A folder of the same name inside a child
+ * (`features/projects/rfi/domain/**`) belongs to that child. A child id that
+ * does not extend the universe id is not used; the caller warns.
  */
 export function resolveChildSliceId(
   relPath: string | undefined,
@@ -1134,14 +1239,15 @@ export function resolveChildSliceId(
   child: ChildSlices | undefined
 ): { childId?: string; mismatched?: { childId: string; universeId: string } } {
   if (!relPath || !child?.sliceFolders?.length) return {};
-  if (pathHasCommonFolder(relPath, child.commonFolders)) return {};
   const raw = sliceIdForPath(relPath, child.sliceFolders, child.sliceIdentity);
   if (!raw || !universeId) return {};
   const childKey = raw.toLowerCase();
   const universeKey = universeId.toLowerCase();
   if (childKey === universeKey) return {};
-  if (childKey.startsWith(`${universeKey}/`)) return { childId: raw };
-  return { mismatched: { childId: raw, universeId } };
+  if (!childKey.startsWith(`${universeKey}/`)) return { mismatched: { childId: raw, universeId } };
+  const firstChildSegment = childKey.slice(universeKey.length + 1).split('/')[0];
+  if (isCommonFolderName(firstChildSegment, child.commonFolders)) return {};
+  return { childId: raw };
 }
 
 function siblingEntryKey(entry: string): string {
@@ -1295,7 +1401,7 @@ export function evaluateNestedSliceWall(input: {
     fromShared: input.fromShared,
     toShared: input.toShared,
     crossSliceAllowed: input.crossSliceAllowed,
-    sharedImportsSlice: input.rule.sharedImportsSlice,
+    sharedImportsSlice: sharedImportsSliceMode(input.rule.sharedImportsSlice),
   });
   if (universe.denied) {
     const crossParent = Boolean(input.rule.childSlices) && universe.reason === 'cross-slice';
@@ -1360,10 +1466,29 @@ export function evaluateNestedSliceWall(input: {
   return allowSameUniverse;
 }
 
+/** Did the child (inner) wall produce this finding, not the universe wall? */
+export function isChildWallCrossing(verdict: SliceVerdict | undefined): boolean {
+  return verdict?.crossing === 'cross-sibling' || verdict?.crossing === 'parent-imports-child';
+}
+
+/**
+ * The consumer text for one slice finding. `rule.message` is the universe-wall
+ * text. `childSlices.message` is the inner-wall text. An inner-wall finding
+ * never falls back to the rule message; undefined means "use ArkGate's default".
+ */
+export function sliceConsumerMessage(
+  rule: { message?: string; childSlices?: { message?: string } } | undefined,
+  verdict: SliceVerdict | undefined
+): string | undefined {
+  return isChildWallCrossing(verdict) ? rule?.childSlices?.message : rule?.message;
+}
+
 /**
  * Finding message. Import sites always append the explanation. Intent sites
  * keep today's wording when there is no reasonId: a plain cross-slice deny
  * does not gain a clause, and any other universe-wall reason does.
+ * `ruleMessage` is only used for universe-wall findings; an inner-wall finding
+ * uses `childMessage` or ArkGate's default text.
  */
 export function composeSliceDenialMessage(input: {
   surface: 'import' | 'intent';
@@ -1374,23 +1499,28 @@ export function composeSliceDenialMessage(input: {
   fromPath?: string;
   toPath?: string;
   ruleMessage?: string;
+  /** Inner-wall text (`childSlices.message`). */
+  childMessage?: string;
   defaultMessage?: string;
 }): string {
   const explanation = input.verdict.explanation;
+  const inner = isChildWallCrossing(input.verdict);
+  const consumer = inner ? input.childMessage : input.ruleMessage;
   if (input.surface === 'intent') {
     const defaultMessage =
       input.defaultMessage ?? `${input.fromLayer} must not reference ${input.toLayer} intent.`;
+    if (inner && explanation) return `${input.childMessage ?? defaultMessage} ${explanation}`;
     if (input.verdict.reasonId && explanation) return `${defaultMessage} ${explanation}`;
     if (explanation && input.verdict.peerIsolationReason !== 'cross-slice') {
       return `${defaultMessage} ${explanation}`;
     }
-    if (input.ruleMessage) {
-      return explanation ? `${input.ruleMessage} (${explanation})` : input.ruleMessage;
+    if (consumer) {
+      return explanation ? `${consumer} (${explanation})` : consumer;
     }
     return defaultMessage;
   }
-  if (input.ruleMessage) {
-    return explanation ? `${input.ruleMessage} (${explanation})` : input.ruleMessage;
+  if (consumer) {
+    return explanation ? `${consumer} (${explanation})` : consumer;
   }
   if (explanation) {
     const kind = input.kind ?? 'import';
@@ -1472,11 +1602,52 @@ export function sliceCountReport(
   };
 }
 
+export type SharedWalkHub = { file: string; count: number; share: number };
+
+export type SharedWalkHubReport = {
+  notAScore: true;
+  total: number;
+  hubs: SharedWalkHub[];
+  nextAction: string;
+};
+
+/**
+ * Doctor advisory: a shared file that sits on many CROSS_PARENT_VIA_SHARED
+ * paths is often a composition root. Null below `minFindings` findings or when
+ * no file reaches `minShare` of them. Not a finding and not in the baseline.
+ */
+export function crossParentViaSharedHubs(
+  violations: readonly { reasonId?: unknown; via?: unknown }[] | undefined,
+  options?: { minFindings?: number; minShare?: number }
+): SharedWalkHubReport | null {
+  const minFindings = options?.minFindings ?? 10;
+  const minShare = options?.minShare ?? 0.5;
+  let total = 0;
+  const counts = new Map<string, number>();
+  for (const row of violations ?? []) {
+    if (row?.reasonId !== 'CROSS_PARENT_VIA_SHARED') continue;
+    total += 1;
+    if (!Array.isArray(row.via)) continue;
+    const once = new Set(row.via.filter((file): file is string => typeof file === 'string'));
+    for (const file of once) counts.set(file, (counts.get(file) ?? 0) + 1);
+  }
+  if (total < minFindings) return null;
+  const hubs = [...counts.entries()]
+    .map(([file, count]) => ({ file, count, share: Math.round((count / total) * 100) / 100 }))
+    .filter((hub) => hub.count / total >= minShare)
+    .sort((left, right) => right.count - left.count || left.file.localeCompare(right.file));
+  if (hubs.length === 0) return null;
+  const first = hubs[0]?.file ?? '';
+  return {
+    notAScore: true,
+    total,
+    hubs,
+    nextAction: `If ${first} is a composition root, add it to sharedImportsSlice.stopAt. Otherwise these findings are real.`,
+  };
+}
+
 export type ChildSliceConfigFinding = {
-  ruleId:
-    | 'CONFIG_CHILD_SLICES_VERSION'
-    | 'CONFIG_CHILD_SLICE_EXTENDS'
-    | 'CONFIG_CHILD_SLICE_CROSS_UNIVERSE';
+  ruleId: 'CONFIG_CHILD_SLICE_EXTENDS' | 'CONFIG_CHILD_SLICE_CROSS_UNIVERSE';
   message: string;
   failsStrict: false;
   path?: string;
@@ -1485,28 +1656,20 @@ export type ChildSliceConfigFinding = {
 };
 
 /**
- * One version warning when any rule sets childSlices, plus one warning per
- * directed rule when a path's child id does not extend its universe id.
+ * One warning per directed rule when a path's child id does not extend its
+ * universe id, and one per child allowance that spans universes. The version
+ * floor lives in configVersionFloor.ts and needs pin evidence (#338).
  */
 export function childSliceConfigFindings(
   rules: readonly EdgeRule[] | undefined,
   files: readonly string[]
 ): ChildSliceConfigFinding[] {
   const out: ChildSliceConfigFinding[] = [];
-  let versionWarned = false;
   const seenMismatch = new Set<string>();
   const seenSpan = new Set<string>();
   for (const rule of rules ?? []) {
     if (!rule?.childSlices) continue;
-    if (!versionWarned) {
-      versionWarned = true;
-      out.push({
-        ruleId: 'CONFIG_CHILD_SLICES_VERSION',
-        failsStrict: false,
-        message: `childSlices needs an arkgate newer than ${CHILD_SLICES_REJECTED_THROUGH}. Version ${CHILD_SLICES_REJECTED_THROUGH} and older reject the key because the rule schema sets additionalProperties: false.`,
-      });
-    }
-    if (!rule.peerIsolation) continue;
+    if (!rule.peerIsolation || rule.allowed !== false) continue;
     for (const file of files) {
       const universeId = sliceIdForPath(file, rule.sliceFolders, rule.sliceIdentity);
       const resolved = resolveChildSliceId(file, universeId, rule.childSlices);
@@ -1541,30 +1704,103 @@ export function childSliceConfigFindings(
   return out;
 }
 
+/** How the anti-growth ratchet treats advisory sibling crossings for one rule. */
+export type SiblingRatchetMode = 'auto' | 'always' | 'never';
+
+/** `ratchet: true` → always, `ratchet: false` → never, anything else → auto. */
+export function siblingRatchetMode(siblings: unknown): SiblingRatchetMode {
+  if (siblings !== null && typeof siblings === 'object') {
+    const ratchet = (siblings as { ratchet?: unknown }).ratchet;
+    if (ratchet === true) return 'always';
+    if (ratchet === false) return 'never';
+  }
+  return 'auto';
+}
+
+type RatchetRule = {
+  from?: string;
+  to?: string;
+  allowed?: boolean;
+  peerIsolation?: boolean;
+  childSlices?: { siblings?: unknown } | null;
+};
+
 /**
- * Advisory sibling crossings above the recorded baseline count become blocking.
- * The key is the existing baseline identity (ruleId, file, layers, target) —
- * reasonId is not part of it. No baseline means there is no recorded count,
- * so advisory stays non-blocking. Recorded crossings stay advisory.
+ * Advisory sibling crossings past the recorded baseline become blocking, per
+ * directed rule. Only advisory (`failsStrict: false`) crossings count; an
+ * enforced crossing never switches the ratchet on. For each rule:
+ *
+ * - `ratchet` absent (every string form too): on only when the baseline
+ *   already records at least one current advisory crossing of that rule, and
+ *   only when that rule's advisory count grew past what is recorded. An empty
+ *   baseline, or one frozen before the child wall, promotes nothing.
+ * - `ratchet: true`: any unrecorded advisory crossing of the rule is promoted.
+ * - `ratchet: false`: never promoted.
+ *
+ * The key is the existing baseline identity (ruleId, file, layers, target);
+ * reasonId is not part of it. Recorded crossings stay advisory. Callers run
+ * this only when a baseline (or an `--against` base) is in use.
  */
 export function applyAdvisorySiblingRatchet<
-  T extends { reasonId?: string; failsStrict?: boolean; severity?: string },
->(violations: readonly T[], occurrenceKeys: readonly string[], recordedKeys: ReadonlySet<string>): T[] {
-  const indexes: number[] = [];
+  T extends {
+    reasonId?: string;
+    failsStrict?: boolean;
+    severity?: string;
+    fromLayer?: string;
+    toLayer?: string;
+    message?: string;
+  },
+>(
+  violations: readonly T[],
+  occurrenceKeys: readonly string[],
+  recordedKeys: ReadonlySet<string>,
+  options?: { rules?: readonly RatchetRule[] | null }
+): T[] {
+  const groups = new Map<string, number[]>();
   for (let index = 0; index < violations.length; index += 1) {
-    if (violations[index]?.reasonId === 'CROSS_SIBLING_SLICE') indexes.push(index);
+    const row = violations[index];
+    if (row?.reasonId !== 'CROSS_SIBLING_SLICE' || row.failsStrict !== false) continue;
+    const key = `${row.fromLayer ?? ''}\0${row.toLayer ?? ''}`;
+    const list = groups.get(key);
+    if (list) list.push(index);
+    else groups.set(key, [index]);
   }
-  if (indexes.length === 0) return [...violations];
-  let recorded = 0;
-  for (const index of indexes) {
-    if (recordedKeys.has(occurrenceKeys[index] ?? '')) recorded += 1;
+  if (groups.size === 0) return [...violations];
+  const promote = new Set<number>();
+  for (const indexes of groups.values()) {
+    const first = violations[indexes[0] ?? 0];
+    const rule = (options?.rules ?? []).find(
+      (candidate) =>
+        candidate &&
+        candidate.from === first?.fromLayer &&
+        candidate.to === first?.toLayer &&
+        candidate.allowed === false &&
+        candidate.peerIsolation === true &&
+        candidate.childSlices != null
+    );
+    const mode = siblingRatchetMode(rule?.childSlices?.siblings);
+    if (mode === 'never') continue;
+    let recorded = 0;
+    for (const index of indexes) {
+      if (recordedKeys.has(occurrenceKeys[index] ?? '')) recorded += 1;
+    }
+    if (mode === 'auto' && (recorded === 0 || indexes.length <= recorded)) continue;
+    for (const index of indexes) {
+      if (!recordedKeys.has(occurrenceKeys[index] ?? '')) promote.add(index);
+    }
   }
-  if (indexes.length <= recorded) return [...violations];
+  if (promote.size === 0) return [...violations];
   return violations.map((violation, index) => {
-    if (violation.reasonId !== 'CROSS_SIBLING_SLICE') return violation;
-    if (recordedKeys.has(occurrenceKeys[index] ?? '')) return violation;
-    if (violation.failsStrict !== false) return violation;
-    return { ...violation, failsStrict: true, severity: 'error' };
+    if (!promote.has(index)) return violation;
+    const from = violation.fromLayer ?? '?';
+    const to = violation.toLayer ?? '?';
+    const why = `New advisory sibling crossing past the recorded baseline for ${from} → ${to}. Set childSlices.siblings.ratchet: false to measure only.`;
+    return {
+      ...violation,
+      failsStrict: true,
+      severity: 'error',
+      ...(typeof violation.message === 'string' ? { message: `${violation.message} ${why}` } : {}),
+    };
   });
 }
 
@@ -1683,7 +1919,7 @@ export function findSharedImportsSliceBridge(
   for (const rule of rules ?? []) {
     if (rule.from !== from || rule.to !== to) continue;
     if (rule.allowed !== false || !rule.peerIsolation) continue;
-    if (rule.sharedImportsSlice === 'deny') continue;
+    if (sharedImportsSliceMode(rule.sharedImportsSlice) === 'deny') continue;
     const folders = resolveSliceFolders(rule, from, options?.layers);
     const fromSlice = resolveGovernedSlice(fromPath, rule, folders).universeId;
     const toSlice = resolveGovernedSlice(toPath, rule, folders).universeId;

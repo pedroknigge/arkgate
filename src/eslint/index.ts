@@ -505,6 +505,7 @@ export const noDomainInfraImports: ArkRule = {
                 fromPath: relFile,
                 toPath: relTarget,
                 ruleMessage: deniedRule?.message,
+                childMessage: deniedRule?.childSlices?.message,
               })
             : deniedRule?.message ?? `${fromLayer} must not ${edgeKind} ${toLayer}.`;
           reportAdapterDiagnostic(

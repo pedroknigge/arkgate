@@ -269,19 +269,27 @@ Rule fields:
   off that prefix (`src/app/api/projects/...`) is not that slice.
 - `sliceIdentity` is `path` or `stars`. Absent and `path` are the same: today's ids,
   byte for byte, so baselines and `allowedCrossSlice` keep working with no migration.
-  `stars` names a starred prefix as the last literal plus the star bindings.
+  `stars` names a starred prefix as the last literal plus every star binding. It
+  drops only the literals before the last literal; a star before it is kept, so
+  `modules/*/api/*` binds `orders/api/v1` and `users/api/v1`, never one shared `api/v1`.
   `lib/features/*/*` and `lib/repositories/features/*/*` both yield
   `features/projects/rfi`, so one feature has one id across parallel trees. Bare names
   (`features`) are unchanged. Doctor warns when two different prefixes bind as the
   same id, and the warning names both paths (`admin/features/*` and `public/features/*`
   both bind as `features/*`). That warning is advisory. Unrelated trees that share a
   last folder name should stay on `path`.
-- `childSlices` is an optional inner wall on a `peerIsolation` rule. Absent means today's
+- `childSlices` is an optional inner wall on a `peerIsolation` rule. It needs
+  `peerIsolation: true` and `allowed: false` on the same rule; config load rejects it
+  otherwise (`requires peerIsolation: true and allowed: false`), because a child wall on a
+  classic rule would enforce nothing. Absent means today's
   universe wall, byte for byte: no `reasonId`, same messages, same doctor output.
   `sliceFolders` names the children (`lib/features/*/*` under a universe id `features/projects`).
-  `sliceIdentity` is the same `path` | `stars` choice. `commonFolders` (directory names such as
-  `domain`) and a flat file whose child id does not grow past the universe id are universe
-  common. A child may import that common code. Common code may import a child only when
+  `sliceIdentity` is the same `path` | `stars` choice. A flat file whose child id does not grow
+  past the universe id is universe common. So is a `commonFolders` directory (a name such as
+  `domain`) **directly under the universe**: `lib/features/projects/domain/**`. A folder of
+  that name inside a child (`lib/features/projects/rfi/domain/**`) belongs to that child, so a
+  sibling that imports it is `CROSS_SIBLING_SLICE` and the child's own `domain/` may import
+  its own feature. A child may import universe common code. Common code may import a child only when
   `parentMayImportChild` is true (default false). `siblings` is `deny` (default, also when the
   key is omitted), `advisory`, or `{ "default": "deny" | "advisory", "enforce": [...] }`.
   The universe wall runs first. A denied cross-universe edge is
@@ -293,15 +301,40 @@ Rule fields:
   (`lib/features/projects/rfi` or `src/lib/features/projects/rfi`). A child id matches that
   importer's child id. A path matches when the importer file sits in that directory.
   Bare names do not match. `*` is not a wildcard on this list. `default: "deny"` denies every
-  sibling crossing; the list cannot loosen it. A new advisory crossing past the recorded
-  baseline still fails, the same ratchet as a string `advisory`. An enforce list does not
-  change that function. The baseline key stays `ruleId|file|fromLayer|toLayer|target` and does
+  sibling crossing; the list cannot loosen it. Advisory is advisory on day 1: with
+  `--baseline` (or an `--against` base), the anti-growth ratchet is judged **per rule** and
+  only over advisory crossings. `siblings.ratchet` on the object form picks it:
+  absent — on only when the baseline in use already records at least one advisory
+  crossing of that rule, and then only a crossing past that recorded count fails (an empty
+  baseline, or one frozen before the child wall, promotes nothing); `true` — any unrecorded
+  advisory crossing fails whenever a baseline is in use (the durable lock); `false` — measure
+  only, never fails (doctor `slices.crossSibling` still counts). A recorded enforced crossing
+  never switches the advisory ratchet on. A promoted finding says why and names
+  `ratchet: false`. `enforce` importers and `default: "deny"` stay errors either way. Doctor
+  `productHonesty` applies the same ratchet as `ark-check --baseline`. `ratchet: false` is a
+  weakening policy delta and `ratchet: true` a strengthening one. arkgate 4.8.23 and older
+  reject `ratchet` (`unknown field` at `$.rules[n].childSlices.siblings.ratchet`).
+  `childSlices.message` is the text for inner-wall findings (`CROSS_SIBLING_SLICE` and
+  universe common importing a child). The rule `message` stays the universe-wall text
+  (`CROSS_PARENT_SLICE` and the fail-closed denies). Without `childSlices.message`, an
+  inner-wall finding gets ArkGate's own default text; it never reuses the rule message.
+  Every surface uses the same choice: ark-check / CI, the write hook, MCP `validate_code`,
+  ESLint, and `analyzeProject` / prepare-change. Editing it is not a policy delta. arkgate
+  4.8.23 and older reject it (`unknown field` at `$.rules[n].childSlices.message`). The baseline key stays `ruleId|file|fromLayer|toLayer|target` and does
   not include `reasonId`. `productHonesty.finished` stays false while any child wall is
   advisory, including `{ "default": "advisory", "enforce": [...] }`. The list does not finish
   the house. Doctor `slices` is `{ crossParent, crossSibling, pairs }` for the directed universe
   pairs that occur. A child id that does not extend its universe id warns
   `CONFIG_CHILD_SLICE_EXTENDS` and is treated as universe common. arkgate 4.8.22 and older
-  reject `childSlices` (`CONFIG_CHILD_SLICES_VERSION`). A build that still types `siblings` as
+  reject `childSlices`. Ark warns `CONFIG_CHILD_SLICES_VERSION` only when the repo pins such
+  an older arkgate: an exact `package.json` dependency, the installed `node_modules/arkgate`,
+  `package-lock.json`, a `scripts/*hook*` / `.husky` / host hook command, or a CI workflow
+  (`pedroknigge/arkgate@vX.Y.Z` or its `version:` input). The finding points at that file and
+  line and says which version to bump to. Without such evidence it is silent. Ranges
+  (`^4.8.0`) are not evidence; pnpm/yarn lockfiles are read through the installed copy. The
+  same check covers `sliceIdentity` (4.8.21), `sharedImportsSlice` (4.8.20),
+  `"deny-cross-parent"` (4.8.23), and the keys added after 4.8.23 (`stopAt`,
+  `childSlices.message`, `siblings.ratchet`). A build that still types `siblings` as
   the string enum `deny | advisory` rejects the object at config load
   (`must be one of deny, advisory` at `$.rules[n].childSlices.siblings`). It does not ignore
   the object. No published release through 4.8.22 accepts `{ default, enforce }`. Ship that
@@ -326,10 +359,14 @@ Rule fields:
   Ship it only on a release that includes this field.
   `childSlices.sliceAliases` maps files that sit outside every slice folder onto
   a child that already exists: `{ "from": "lib/compliance/**", "to": "features/projects/compliance" }`.
-  `to` is the universe id the universe wall already knows, plus one child segment.
-  A bare name, that universe id alone, an unknown universe, and a wildcard in `to`
-  are rejected at config load (`child of an existing universe`). The source glob
-  may cover only files the slice folders do not already classify. Overlap with a
+  A `from` without a wildcard in its last segment is a folder form and also covers
+  everything under it, as `sharedRoots` does (`lib/compliance` equals `lib/compliance/**`).
+  `to` must match a universe `sliceFolders` shape of the rule, plus one child segment.
+  A bare name, a universe id alone, a target outside every universe shape, and a
+  wildcard in `to` are rejected at config load (`child of a universe shape`). Config
+  load cannot see the tree, so it checks only the shape: doctor marks an alias move
+  whose target universe no scanned file belongs to (`unknownUniverse`, "check for a
+  typo"). The source glob may cover only files the slice folders do not already classify. Overlap with a
   universe `sliceFolders` entry or a child `sliceFolders` entry is rejected
   (`overlaps a slice folder`). Two aliases that can match one file are rejected
   (`two slice aliases match the same file`). An aliased file takes the target
@@ -359,7 +396,11 @@ Rule fields:
   exactly one child slice imports it. The card names the file, that child, and
   a destination folder inside the child that keeps the file's layer. It is a
   suggestion. It is not a config field, not a finding, and not an ark-check
-  result. A file two children import stays where it is.
+  result. The importers come from the same resolved graph ark-check uses (tsconfig
+  path aliases included). A file two children import stays where it is, and so
+  does a file that anything outside that one child imports (universe common, a
+  shared root, another universe, another layer). A move that the walls would deny
+  for any recorded importer is never suggested.
 
 ```jsonc
 {
@@ -437,6 +478,26 @@ is evidence:
   That pass runs in `ark-check` and CI. The write hook and ESLint see one edge at a time
   and do not block it. arkgate 4.8.22 and older reject the value at config load (`must be
   one of deny`). They do not ignore it and they do not treat it as `"deny"`.
+  A universe edge the importer's rule declares in `allowedCrossSlice` (directed) is not
+  reported through a shared root either: it is the same dependency the direct wall
+  already allows. `childSlices.allowedCrossSlice` still never clears it.
+  In a DI app the composition root (bootstrap, registrations) has to sit under
+  `sharedRoots`, and every slice that asks the root for a service then "reaches" every
+  universe the root registers. Name those files in the object form:
+  `"sharedImportsSlice": { "mode": "deny-cross-parent", "stopAt": ["kernel/bootstrap.ts",
+  "kernel/registrations/**", "lib/feature-registrations.ts"] }`. The walk never starts at
+  or passes through a stop file, so a path through it is not a crossing. A `stopAt` entry
+  matches like a shared root (anchored, optional leading `src/` or `app/`, a plain folder
+  covers its subtree) or like an alias glob (`kernel/registrations/**` against
+  `src/kernel/registrations/x.ts`); a blanket `*` / `**` is rejected. A stop file must still
+  sit under `sharedRoots`; `stopAt` does not classify files and does not silence the direct
+  `SHARED_IMPORTS_SLICE` warning. A slice destination that matches a stop is still reported.
+  Each finding carries `via` (the shared hops). Doctor `sharedWalkHubs` names a shared file
+  that sits on at least half of ten or more such findings — a likely composition root. That
+  is advisory, not a finding. Adding stops is a weakening policy delta
+  (`shared-walk-stop-added`), removing them strengthens, both together need a judgment. The
+  string forms are unchanged. arkgate 4.8.23 and older reject the object at config load
+  (`must be one of deny, deny-cross-parent`).
 - `allowedCrossSlice` entries match a full slice id (`features/catalog`) or a bare slice name
   (`catalog`), and only in the direction written. The reverse edge still denies. A bare name
   matches that name under **any** slice folder, so in a repo with several slice parents
@@ -448,6 +509,8 @@ is evidence:
   about your code) versus `unclassifiable path (src/widgets/x.tsx)` (a fact about our evidence).
   `no slice folders` and `no path evidence` are the two remaining evidence reasons. A rule-level
   `message` override no longer hides it: the reason is appended to your text, not replaced by it.
+  The write hook and MCP `validate_code` say the same, and for an evidence reason their fix
+  asks you to move the file into a slice or declare its root in `sharedRoots`.
 - Both declarations are **weakening** changes in `ark policy-delta`
   (`shared-roots-added`, `cross-slice-allowance-added`), so a policy review sees them. Both are
   inert on a rule without `peerIsolation: true`, and policy-delta stays silent about them until
@@ -645,7 +708,10 @@ worktree has its own root); there is no machine-wide analysis lock.
 include tree. File-local ArkRules sensors (class shape, orchestration-only, thin-adapter,
 writes-via-aggregate) and hint preload stay on the touched set. Layer and cycle sensors
 see that closure, so a new illegal import or a cycle the change can complete still
-fails. Untouched files outside the closure are left to the full-tree CI check. Same
+fails. When a touched file sits under the `sharedRoots` of a `"deny-cross-parent"` rule,
+the graph runs full-tree: the finding belongs to the slice that imports the shared root,
+which may be outside the closure. A `CROSS_PARENT_VIA_SHARED` path counts as part of the
+change when any file on it changed. Untouched files outside the closure are left to the full-tree CI check. Same
 engine; not a second analysis path. A `--changed` pass is not a full-tree structural
 verdict.
 

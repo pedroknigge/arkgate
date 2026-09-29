@@ -6,6 +6,7 @@ import {
 } from '../domain/analysis';
 import type { AnalysisContract, ResolvedAnalysisResult } from './analysisTypes';
 import { analyzeCanonicalResolvedProject } from './resolvedAnalysis';
+import type { ArkgatePinEvidence } from '../domain/configVersionFloor';
 
 const trustedResolvedFacts = new WeakSet<ResolvedCandidateFacts>();
 
@@ -31,6 +32,8 @@ export function analyzeTrustedResolvedProject(input: {
   adopted?: boolean;
   invariantTestsPathPresent?: boolean;
   coverageRootsPresent?: boolean;
+  arkgatePins?: readonly ArkgatePinEvidence[];
+  runningArkgateVersion?: string;
   coverageInputs?: {
     fileContents: Readonly<Record<string, string>>;
     testFiles?: readonly string[];
@@ -58,3 +61,5 @@ export function analyzeTrustedResolvedProject(input: {
 }
 
 export * from './analysis';
+// Tooling reads pin files; the pure parser and floor table stay in Domain.
+export { configVersionFloors, parseArkgatePins } from '../domain/configVersionFloor';

@@ -15,6 +15,7 @@ import {
   layersMissingRequiredOwners,
   missingLayerOwnersNextAction,
 } from '../domain/configContract';
+import { configVersionPinFindings } from '../domain/configVersionFloor';
 import type {
   ArchitectureEngineViolation,
   CollectAnalysisConfigWarningsInput,
@@ -239,6 +240,22 @@ export function collectAnalysisConfigWarnings(
         ...(finding.path ? { file: finding.path } : {}),
         ...(finding.fromLayer ? { fromLayer: finding.fromLayer } : {}),
         ...(finding.toLayer ? { toLayer: finding.toLayer } : {}),
+      })
+    );
+  }
+
+  // Version floor: only with evidence of an older pinned arkgate (#338).
+  for (const finding of configVersionPinFindings({
+    rules,
+    pins: input.arkgatePins,
+    runningVersion: input.runningArkgateVersion,
+  })) {
+    warnings.push(
+      configWarning(finding.ruleId, finding.message, {
+        failsStrict: false,
+        file: finding.path,
+        line: finding.line,
+        nextAction: finding.nextAction,
       })
     );
   }

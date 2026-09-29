@@ -109,6 +109,14 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
     'Move the reference to an allowed layer or introduce a port/event boundary, then re-run the snippet gate.'
   ),
   entry(
+    'SHARED_IMPORTS_SLICE',
+    'layer',
+    'A shared root imports a slice',
+    'A declared shared root imports a slice directly. That hop is allowed while sharedImportsSlice is unset or "deny-cross-parent", so this is advisory: the universe wall is direct-only.',
+    'Move the code the shared root needs into the shared root, or invert the dependency. Set sharedImportsSlice: "deny" to make these edges errors. With "deny-cross-parent", a slice that reaches another universe through a shared root is reported as LAYER_IMPORT_VIOLATION with reasonId CROSS_PARENT_VIA_SHARED. This warning does not fail the check.',
+    { oftenAdvisory: true }
+  ),
+  entry(
     'CIRCULAR_DEPENDENCY',
     'layer',
     'Dependency cycle',
@@ -687,9 +695,9 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
   entry(
     'CONFIG_CHILD_SLICES_VERSION',
     'config',
-    'childSlices needs a newer arkgate',
-    'The rule schema sets additionalProperties to false. arkgate 4.8.22 and older reject a config that contains childSlices instead of ignoring the key.',
-    'Pin arkgate newer than 4.8.22 before shipping a config that sets childSlices. This warning does not fail the check.',
+    'Config needs a newer arkgate than a pinned copy',
+    'ark.config.json uses a slice key (childSlices, sharedImportsSlice "deny-cross-parent" or its object form, sliceIdentity, sharedImportsSlice, childSlices.message, siblings.ratchet) that an arkgate pinned in this repo rejects at config load. Emitted only with evidence of that pin: an exact package.json dependency, the installed node_modules/arkgate, package-lock.json, a scripts/*hook* or host hook command, or a CI workflow. Silent otherwise.',
+    'Bump the named file to the version the finding gives (or newer), then run Ark again. This warning does not fail the check.',
     { oftenAdvisory: true }
   ),
   entry(
@@ -834,14 +842,14 @@ export const SLICE_REASON_HINTS: readonly SliceReasonHint[] = Object.freeze([
     ruleId: 'LAYER_IMPORT_VIOLATION',
     title: 'Cross-sibling slice',
     why: 'This import crosses two feature slices inside one universe.',
-    fix: 'Import universe-common code, or move the shared piece into the feature that owns it. An enforce list makes those importer subtrees errors. Other sibling crossings stay warnings, and a new one past the baseline still fails.',
+    fix: 'Import universe-common code, or move the shared piece into the feature that owns it. An enforce list makes those importer subtrees errors. Other sibling crossings stay warnings. A new one fails only when the baseline already records an advisory crossing of this rule, or when siblings.ratchet is true; ratchet false measures only. The rule message describes the universe wall; set childSlices.message for this finding\'s text.',
   }),
   Object.freeze({
     reasonId: 'CROSS_PARENT_VIA_SHARED',
     ruleId: 'LAYER_IMPORT_VIOLATION',
     title: 'Cross-universe through a shared root',
     why: 'A slice reaches another universe only through a shared root. ark-check and CI report this path. The write hook and ESLint see one edge at a time and do not block it.',
-    fix: 'Stop the shared root from importing the other universe, or move that import into the universe that owns it. A shared hop that stays inside one universe is allowed.',
+    fix: 'Stop the shared root from importing the other universe, or move that import into the universe that owns it. A shared hop that stays inside one universe is allowed. If the shared hop is a composition root (bootstrap, DI registrations), list it in sharedImportsSlice.stopAt; a path through a stop is not a crossing.',
   }),
 ]);
 

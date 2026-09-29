@@ -24,7 +24,9 @@ import {
 import {
   composeSliceDenialMessage,
   findDeniedEdgeDecision,
+  sliceConsumerMessage,
   sliceFindingExtras,
+  type PeerIsolationDenyReason,
 } from '../../domain/layerMatch';
 import { collectCapabilityUses } from '../capabilityAnalysis';
 import { classifyPublishFacts, looksLikeArkIntent } from '../../domain/sourcePolicy';
@@ -126,6 +128,21 @@ function violation(
   extra?: Partial<AICodeGateViolation>
 ): AICodeGateViolation {
   return { ruleId, code: ruleId, message, ...extra };
+}
+
+/** Fix hint for an import deny. Fail-closed evidence reasons ask for placement, not extraction. */
+function peerSuggestion(peer: boolean, reason: PeerIsolationDenyReason | undefined): string {
+  if (!peer) {
+    return 'Depend on a port/interface owned by an inner layer instead, or move this code to a layer allowed to make this import.';
+  }
+  if (reason === 'unclassifiable-path' || reason === 'missing-path') {
+    return "Move the file into a slice, or declare its root in the rule's sharedRoots.";
+  }
+  if (reason === 'no-slice-folders') return 'Set sliceFolders on the peerIsolation rule.';
+  if (reason === 'shared-imports-slice') {
+    return 'Move the code the shared root needs into the shared root, or invert the dependency.';
+  }
+  return 'Extract shared code to a shared layer, or coordinate slices via events/ports — do not import across feature/context slices.';
 }
 
 interface StringMatch {
@@ -651,17 +668,24 @@ export function createAICodeGate<Context = AICodeGateContext>(
               continue;
             }
             const peer = Boolean(blocked.peerIsolation);
-            const extras = sliceFindingExtras(decision.sliceVerdict);
+            const verdict = decision.sliceVerdict;
+            const extras = sliceFindingExtras(verdict);
+            // The rule message is the universe-wall text. An inner-wall finding
+            // uses childSlices.message or the default, never the rule message.
             const base =
-              blocked.message ??
+              sliceConsumerMessage(blocked, verdict) ??
               (peer
                 ? `Layer "${contextLayer}" must not import across slices into "${targetLayer}".`
                 : `Layer "${contextLayer}" must not import "${targetLayer}".`);
-            // Keep today's sentence when there is no reasonId. A child-only deny
-            // (universe common importing a child) still names that fact.
+            // Keep today's sentence only for a plain cross-slice deny. Every other
+            // slice reason names its fact: the child wall, CROSS_PARENT_SLICE, and
+            // the fail-closed evidence reasons (unclassifiable path, no slice
+            // folders, missing path, shared root importing a slice).
             const explanation =
-              extras.reasonId || (peer && !decision.peerIsolationReason)
-                ? decision.sliceVerdict?.explanation
+              peer &&
+              verdict?.explanation &&
+              (extras.reasonId || decision.peerIsolationReason !== 'cross-slice')
+                ? verdict.explanation
                 : undefined;
             violations.push(
               violation('LAYER_IMPORT_VIOLATION', explanation ? `${base} ${explanation}` : base, {
@@ -671,12 +695,12 @@ export function createAICodeGate<Context = AICodeGateContext>(
                 filePath,
                 fromLayer: contextLayer,
                 toLayer: targetLayer,
+                ...(peer ? { peerIsolation: true } : {}),
                 ...(extras.reasonId ? { reasonId: extras.reasonId } : {}),
+                ...(extras.universeFrom ? { universeFrom: extras.universeFrom } : {}),
+                ...(extras.universeTo ? { universeTo: extras.universeTo } : {}),
                 ...(extras.failsStrict === false ? { failsStrict: false } : {}),
-                suggestion: peer
-                  ? 'Extract shared code to a shared layer, or coordinate slices via events/ports — do not import across feature/context slices.'
-                  : 'Depend on a port/interface owned by an inner layer instead, or move this ' +
-                    'code to a layer allowed to make this import.',
+                suggestion: peerSuggestion(peer, decision.peerIsolationReason),
                 details: {
                   importKind: specifier.kind,
                   peerIsolation: peer,
@@ -793,6 +817,7 @@ export function createAICodeGate<Context = AICodeGateContext>(
                   toLayer: targetLayer,
                   fromPath: typeof filePath === 'string' ? filePath : undefined,
                   ruleMessage: blocked.rule.message,
+                  childMessage: blocked.rule.childSlices?.message,
                   defaultMessage,
                 })
               : (blocked.rule.message ?? defaultMessage);

@@ -45,7 +45,9 @@ let packedTarball;
 export async function journey(fixture, steps, options = {}) {
   assertFixtureName(fixture);
   assertSteps(steps);
-  const runRoot = fs.mkdtempSync(path.join(os.tmpdir(), `ark-journey-${fixture}-`));
+  // realpath: on macOS os.tmpdir() is a /var symlink to /private/var, and CLI
+  // output names the real path, which the <project> placeholder must still match.
+  const runRoot = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), `ark-journey-${fixture}-`)));
   const project = path.join(runRoot, 'project');
   const home = path.join(runRoot, 'home');
   const tmp = path.join(runRoot, 'tmp');
@@ -394,7 +396,7 @@ function configRejectionView(stderr) {
 function projectFixture(fixture, step, parsed) {
   const views = FIXTURE_VIEWS[fixture] ?? { check: checkView, doctor: doctorView };
   const project = step.includes('--doctor') ? views.doctor : views.check;
-  if (fixture === 'atlasgrid' && step.includes('--doctor')) return project(parsed, step);
+  if (fixture === 'atlasgrid') return project(parsed, step);
   return project(parsed);
 }
 
@@ -474,12 +476,19 @@ function doctorView(parsed) {
   };
 }
 
-function atlasgridCheckView(parsed) {
+function atlasgridCheckView(parsed, step = '') {
   requireFields(parsed, ['valid', 'ok', 'completeness', 'violations'], 'check');
   if (!Array.isArray(parsed.violations)) {
     throw new JourneyError('view', 'check JSON violations must be an array');
   }
-  const violations = parsed.violations.map((row) => projectSliceViolation(row));
+  // Messages are pinned only where the case is about the text (#337).
+  const withMessage = stepIncludes(step, 'wall-messages');
+  const withVia = stepIncludes(step, 'stop-at');
+  const violations = parsed.violations.map((row) => ({
+    ...projectSliceViolation(row),
+    ...(withMessage ? { message: String(row.message ?? '') } : {}),
+    ...(withVia && Array.isArray(row.via) ? { via: row.via.map(String) } : {}),
+  }));
   violations.sort(compareRows(['ruleId', 'file', 'target', 'reasonId', 'severity']));
   return {
     valid: parsed.valid === true,
@@ -662,7 +671,29 @@ function evaluateJourneyCases(fixture, steps) {
   return specs.map((spec) => evaluateJourneyCase(spec, steps));
 }
 
+function caseResult(spec, judged) {
+  return {
+    id: spec.id,
+    owner: spec.owner,
+    expect: spec.expect,
+    status: caseStatus(spec.expect, judged.met),
+    met: judged.met,
+    note: spec.note,
+    ...(judged.want ? { want: judged.want } : {}),
+    ...(judged.got !== undefined ? { got: judged.got } : {}),
+  };
+}
+
 function evaluateJourneyCase(spec, steps) {
+  const pick = (config, doctor = false) =>
+    selectStep(steps, { doctor, hierarchy: false, config })?.output ?? null;
+  if (spec.kind === 'stop-at') return caseResult(spec, judgeStopAt(spec, pick('stop-at')));
+  if (spec.kind === 'legacy-baseline') {
+    const step = steps.find((entry) => !entry.command.includes('--doctor') && entry.command.includes('baseline.legacy'));
+    return caseResult(spec, judgeLegacyBaseline(spec, step?.output ?? null, step?.exitCode ?? null));
+  }
+  if (spec.kind === 'wall-messages') return caseResult(spec, judgeWallMessages(spec, pick('wall-messages')));
+  if (spec.kind === 'version-silent') return caseResult(spec, judgeVersionSilent(spec, steps));
   if (spec.kind === 'pr6-doctor') {
     const check = selectStep(steps, { doctor: false, hierarchy: false, config: 'doctor-pilot' });
     const doctor = selectStep(steps, { doctor: true, hierarchy: false, config: 'doctor-pilot' });
@@ -924,6 +955,101 @@ function judgeLaundering(spec, check) {
       (row) => row && row.ruleId === spec.want.ruleId && row.severity === spec.want.severity
     );
   return { met, want: spec.want, got };
+}
+
+function judgeStopAt(spec, check) {
+  const violations = check?.violations ?? [];
+  const hits = violations.filter((row) => row.reasonId === spec.want.reasonId);
+  const kept = spec.edges.filter((edge) =>
+    hits.some(
+      (row) =>
+        row.file === edge.file &&
+        row.target === edge.target &&
+        Array.isArray(row.via) &&
+        row.via.length > 0
+    )
+  ).length;
+  const rootWarnings = (check?.warnings ?? [])
+    .filter((group) => group.ruleId === 'SHARED_IMPORTS_SLICE')
+    .flatMap((group) => group.edges ?? [])
+    .filter((edge) => edge.file === spec.compositionRoot).length;
+  const got = {
+    count: hits.length,
+    kept,
+    fromStopFile: hits.filter((row) => row.file === spec.stopFile).length,
+    rootWarnings,
+  };
+  const met =
+    got.count === spec.want.count &&
+    kept === spec.want.count &&
+    got.fromStopFile === spec.want.fromStopFile &&
+    got.rootWarnings === spec.want.rootWarnings;
+  return { met, want: spec.want, got };
+}
+
+function judgeLegacyBaseline(spec, check, exitCode) {
+  const violations = check?.violations ?? [];
+  const advisoryWarnings = spec.advisory.filter((edge) =>
+    violations.some(
+      (row) =>
+        row.file === edge.file &&
+        row.target === edge.target &&
+        row.reasonId === 'CROSS_SIBLING_SLICE' &&
+        row.severity === 'warning'
+    )
+  ).length;
+  const got = {
+    ok: check?.ok === true,
+    exitCode,
+    advisoryWarnings,
+    errors: violations.filter((row) => row.severity === 'error').length,
+  };
+  const met =
+    got.ok === spec.want.ok &&
+    exitCode === 0 &&
+    got.advisoryWarnings === spec.want.advisoryWarnings &&
+    got.errors === spec.want.errors;
+  return { met, want: spec.want, got };
+}
+
+function judgeWallMessages(spec, check) {
+  const violations = check?.violations ?? [];
+  const crossParent = violations.filter((row) => row.reasonId === 'CROSS_PARENT_SLICE');
+  const inner = violations.filter(
+    (row) =>
+      row.reasonId === 'CROSS_SIBLING_SLICE' ||
+      (row.file === spec.commonEdge.file && row.target === spec.commonEdge.target)
+  );
+  const text = (row) => String(row.message ?? '');
+  const defaultRow = inner.find((row) => row.file === spec.defaultRow.file);
+  const got = {
+    crossParent: crossParent.length,
+    crossParentWithUniverseText: crossParent.filter((row) => text(row).startsWith(spec.universeText)).length,
+    innerRows: inner.length,
+    innerWithUniverseText: inner.filter((row) => text(row).includes(spec.universeText)).length,
+    innerWithInnerText: inner.filter((row) => text(row).startsWith(spec.innerText)).length,
+    defaultRowPrefix: defaultRow ? text(defaultRow).startsWith(spec.defaultRow.prefix) : false,
+  };
+  const met =
+    got.crossParent === spec.want.crossParent &&
+    got.crossParentWithUniverseText === spec.want.crossParentWithUniverseText &&
+    got.innerRows === spec.want.innerRows &&
+    got.innerWithUniverseText === spec.want.innerWithUniverseText &&
+    got.innerWithInnerText === spec.want.innerRows - 1 &&
+    got.defaultRowPrefix === true;
+  return { met, want: spec.want, got };
+}
+
+function judgeVersionSilent(spec, steps) {
+  const childSteps = steps.filter(
+    (step) => !step.command.includes('--doctor') && /child-slices|subtree|wall-messages|aliases\.json|doctor-pilot/.test(step.command)
+  );
+  const versionWarnings = childSteps
+    .flatMap((step) => step.output?.warnings ?? [])
+    .filter((group) => group.ruleId === 'CONFIG_CHILD_SLICES_VERSION')
+    .reduce((sum, group) => sum + (group.count ?? 0), 0);
+  const got = { versionWarnings, childSteps: childSteps.length };
+  return { met: versionWarnings === spec.want.versionWarnings && childSteps.length > 0, want: spec.want, got };
 }
 
 function judgeSubtree(spec, check) {
