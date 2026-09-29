@@ -11,6 +11,7 @@ import type {
   ResolvedArkRunManagedNewFact,
   ResolvedDependencyFact,
 } from './resolvedCandidateFactsTypes';
+import { looksLikeArkIntent } from './sourcePolicy';
 
 /** Closed factory names from ADR 0022 `arkrun-missing-root`. */
 export const ARKRUN_KERNEL_FACTORY_CALLEES = [
@@ -483,9 +484,22 @@ function addDerivedReceivers(source: string, trace: KernelReceiverTrace): void {
     /\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*(?::[^=;]+)?=\s*(?:await\s+)?(?:this\s*\.\s*)?([A-Za-z_$][\w$]*)\s*\.\s*([A-Za-z_$][\w$]*)\b/g;
   const destructured =
     /\b(?:const|let|var)\s*\{([^}]*)\}\s*=\s*(?:this\s*\.\s*)?([A-Za-z_$][\w$]*)\s*[;\n)]/g;
+  // Plain aliasing: `const kernel = ark;`, `this.kernel = ark;`, `kernel = this.ark;`.
+  const aliased =
+    /(?:\b(?:const|let|var)\s+|\bthis\s*\.\s*|(?:^|[;{}\n])\s*)([A-Za-z_$][\w$]*)\s*(?::[^=;]+)?(?<![=!<>])=(?![=>])\s*(?:this\s*\.\s*)?([A-Za-z_$][\w$]*)\s*(?:as\s+[A-Za-z_$][\w$.<>]*\s*)?(?=[;\n,)])/g;
+  // `kernel: typeof ark` (parameters, fields) — the binding has the kernel's type.
+  const typeofBound = /([A-Za-z_$][\w$]*)\s*\??\s*:\s*typeof\s+([A-Za-z_$][\w$]*)\b/g;
   let match: RegExpExecArray | null;
   for (let changed = true; changed; ) {
     changed = false;
+    for (const re of [aliased, typeofBound]) {
+      re.lastIndex = 0;
+      while ((match = re.exec(source)) !== null) {
+        if (!receivers.has(match[2]!) || receivers.has(match[1]!)) continue;
+        receivers.add(match[1]!);
+        changed = true;
+      }
+    }
     derived.lastIndex = 0;
     while ((match = derived.exec(source)) !== null) {
       if (!receivers.has(match[2]!) || !KERNEL_DERIVED_MEMBERS.has(match[3]!)) continue;
@@ -614,20 +628,32 @@ function chainReachesKernel(
  * count as call-site names). Imported creators stay unresolved (honest partial).
  */
 function collectDefinedIntentNames(source: string): Map<string, string> {
+  // Not scope-aware: an identifier bound to two different names anywhere in the
+  // file is ambiguous (a function-local shadow could differ), so it resolves to
+  // nothing and the call stays an honest partial instead of a false green.
+  const ambiguous = new Set<string>();
+  const bind = (map: Map<string, string>, id: string, name: string) => {
+    const prior = map.get(id);
+    if (prior !== undefined && prior !== name) ambiguous.add(id);
+    else map.set(id, name);
+  };
   const constants = new Map<string, string>();
   const constRe =
     /\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*(?::[^=;]+)?=\s*(['"])((?:\\.|[^\\])*?)\2\s*(?:as\s+const\s*)?[;\n,)]/g;
   let match: RegExpExecArray | null;
   while ((match = constRe.exec(source)) !== null) {
-    if (match[3]) constants.set(match[1]!, match[3]);
+    if (match[3]) bind(constants, match[1]!, match[3]);
   }
+  for (const id of ambiguous) constants.delete(id);
   const defined = new Map<string, string>(constants);
   const defineRe =
     /\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*(?::[^=;]+)?=\s*(?:[A-Za-z_$][\w$]*\s*\.\s*)*(?:define|defineIntent)\s*(?:<[^>]*>)?\s*\(\s*(?:(['"])((?:\\.|[^\\])*?)\2|([A-Za-z_$][\w$]*)\s*[,)])/g;
   while ((match = defineRe.exec(source)) !== null) {
     const name = match[3] ?? (match[4] ? constants.get(match[4]) : undefined);
-    if (name) defined.set(match[1]!, name);
+    if (name) bind(defined, match[1]!, name);
+    else if (ambiguous.has(match[4] ?? '') || defined.has(match[1]!)) ambiguous.add(match[1]!);
   }
+  for (const id of ambiguous) defined.delete(id);
   return defined;
 }
 
@@ -649,6 +675,58 @@ function receiverName(chain: ReceiverChain | undefined): string | undefined {
   if (chain.viaPublisherCall) return 'publisher';
   const last = chain.parts[chain.parts.length - 1];
   return last === '<expr>' ? undefined : last;
+}
+
+/**
+ * A receiver the trace cannot follow (untyped parameter, cross-file hop the
+ * resolver did not see) still counts when the call names a kernel-valid intent
+ * (`Domain.…`, `Application.…` — the only names a kernel accepts). `res.send('ok')`
+ * or `require.resolve('pkg')` never carry such a name; ambient receivers never count.
+ */
+function untracedKernelNameEvidence(
+  chain: ReceiverChain | undefined,
+  stringArg: string | undefined
+): boolean {
+  if (!chain || stringArg === undefined || !looksLikeArkIntent(stringArg)) return false;
+  const root = chain.parts[0];
+  return root !== undefined && root !== '<expr>' && !SKIP_INTERACTION_RECEIVERS.has(root);
+}
+
+/**
+ * Does this module re-export a kernel root (`export { ark } from '../main'`,
+ * `export * from './main'`, or `import { ark } from '../main'; export { ark }` /
+ * `export const kernel = ark` / `export default ark`)? The resolver uses it to
+ * treat barrels as kernel roots, to a fixpoint.
+ */
+export function reexportsArkRunKernelRoot(
+  content: string,
+  isKernelRootSpecifier: (specifier: string) => boolean
+): boolean {
+  const source = stripCommentsPreservingLines(content);
+  const reexport =
+    /\bexport\s+(?!type\b)(?:\*|\{[^}]*\}|\*\s+as\s+[A-Za-z_$][\w$]*)\s*from\s*['"]([^'"]+)['"]/g;
+  let found: RegExpExecArray | null;
+  while ((found = reexport.exec(source)) !== null) {
+    if (isKernelRootSpecifier(found[1] ?? '')) return true;
+  }
+  const imported = new Set<string>();
+  addRootModuleImports(source, isKernelRootSpecifier, imported);
+  if (imported.size === 0) return false;
+  const exportedLocal = [
+    /\bexport\s*\{([^}]*)\}\s*(?!\s*from)/g,
+    /\bexport\s+default\s+([A-Za-z_$][\w$]*)\s*[;\n]/g,
+    /\bexport\s+(?:const|let|var)\s+[A-Za-z_$][\w$]*\s*(?::[^=;]+)?=\s*([A-Za-z_$][\w$]*)\s*[;\n]/g,
+  ];
+  for (const re of exportedLocal) {
+    let match: RegExpExecArray | null;
+    while ((match = re.exec(source)) !== null) {
+      const names = (match[1] ?? '')
+        .split(',')
+        .map((part) => part.trim().split(/\s+as\s+/)[0]?.trim() ?? '');
+      if (names.some((name) => imported.has(name))) return true;
+    }
+  }
+  return false;
 }
 
 export function extractArkRunKernelCallsFromSource(
@@ -688,14 +766,19 @@ export function extractArkRunKernelCallsFromSource(
     if (kind === 'factory') {
       // `obj.createArkKernel()` on an arbitrary receiver is not the kernel factory.
       if (chain !== undefined && !viaImport) continue;
-    } else if (chain === undefined ? !viaImport : !chainReachesKernel(chain, bindings, trace)) {
-      continue;
     }
     const argStart = index + match[0].length;
+    const stringArg = firstStringLiteralArg(source, argStart);
+    if (
+      kind !== 'factory' &&
+      (chain === undefined ? !viaImport : !chainReachesKernel(chain, bindings, trace)) &&
+      !untracedKernelNameEvidence(chain, stringArg)
+    ) {
+      continue;
+    }
     const identifierArg = firstIdentifierArg(source, argStart);
     const nameLiteral =
-      firstStringLiteralArg(source, argStart) ??
-      (identifierArg ? definedNames.get(identifierArg) : undefined);
+      stringArg ?? (identifierArg ? definedNames.get(identifierArg) : undefined);
     facts.push({
       file,
       line: lineAt(content, index),

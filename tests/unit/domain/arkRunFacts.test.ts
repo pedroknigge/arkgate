@@ -10,6 +10,7 @@ import {
   forEachArkRunValueImportClause,
   isArkRunKernelModuleSpecifier,
   isArkRunTransportBypassSpecifier,
+  reexportsArkRunKernelRoot,
 } from '../../../src/domain/arkRunFacts';
 import {
   RESOLVED_CANDIDATE_FACTS_SCHEMA,
@@ -261,6 +262,78 @@ other.send('x');
     });
     expect(withRoots.map((call) => call.receiver)).toEqual(['ark']);
     expect(extractArkRunKernelCallsFromSource('src/application/a.ts', source)).toEqual([]);
+  });
+
+  it('traces plain aliasing and typeof-typed bindings of a kernel receiver', () => {
+    const source = `
+import { ark } from '../main';
+const kernel = ark;
+let later;
+later = kernel;
+export function viaParam(bus: typeof ark) { return bus.send('Undeclared.A', {}); }
+kernel.send('Undeclared.B', {});
+later.send('Undeclared.C', {});
+`;
+    const calls = extractArkRunKernelCallsFromSource('src/application/a.ts', source, {
+      isKernelRootSpecifier: (specifier) => specifier === '../main',
+    });
+    expect(calls.map((call) => `${call.receiver}:${call.nameLiteral}`)).toEqual([
+      'bus:Undeclared.A',
+      'kernel:Undeclared.B',
+      'later:Undeclared.C',
+    ]);
+  });
+
+  it('counts an untraced receiver only when the name is a kernel-valid intent', () => {
+    const source = `
+export async function viaParam(k, res) {
+  await k.send('Application.Order.Place', {});
+  await k.send('hello', {});
+  res.send('ok');
+  console.publish('Domain.Order.Placed');
+}
+`;
+    const calls = extractArkRunKernelCallsFromSource('src/application/a.ts', source);
+    expect(calls.map((call) => `${call.receiver}:${call.nameLiteral}`)).toEqual([
+      'k:Application.Order.Place',
+    ]);
+  });
+
+  it('does not resolve a creator bound to two different names in one file', () => {
+    const source = `
+import { createStrictArkKernel } from 'arkgate/runtime';
+const ark = createStrictArkKernel();
+const Placed = ark.registry.define('Domain.Order.Placed');
+ark.send(Placed, {});
+function later() {
+  const Placed = ark.registry.define('Domain.Order.Other');
+  return Placed;
+}
+const N = 'Domain.A';
+function shadow() { const N = 'Domain.B'; return N; }
+ark.send(N, {});
+`;
+    const names = extractArkRunKernelCallsFromSource('src/application/a.ts', source)
+      .filter((call) => call.kind !== 'factory')
+      .map((call) => call.nameLiteral ?? null);
+    expect(names).toEqual([null, null]);
+  });
+
+  it('detects barrels that re-export a kernel root', () => {
+    const isRoot = (specifier: string) => specifier === '../main';
+    expect(reexportsArkRunKernelRoot(`export { ark } from '../main';`, isRoot)).toBe(true);
+    expect(reexportsArkRunKernelRoot(`export * from '../main';`, isRoot)).toBe(true);
+    expect(
+      reexportsArkRunKernelRoot(`import { ark } from '../main';\nexport { ark as kernel };`, isRoot)
+    ).toBe(true);
+    expect(
+      reexportsArkRunKernelRoot(`import { ark } from '../main';\nexport const k = ark;\n`, isRoot)
+    ).toBe(true);
+    expect(reexportsArkRunKernelRoot(`export type { Kernel } from '../main';`, isRoot)).toBe(false);
+    expect(reexportsArkRunKernelRoot(`export { util } from './util';`, isRoot)).toBe(false);
+    expect(
+      reexportsArkRunKernelRoot(`import { ark } from '../main';\nexport const x = 1;\n`, isRoot)
+    ).toBe(false);
   });
 
   it('extracts new of admitted types and skips builtins', () => {

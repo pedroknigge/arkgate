@@ -357,10 +357,13 @@ Live adapters specialize `nextAction` with the call-site name or specifier when 
 
 The undeclared-* sensors only count a call whose receiver is **traced to the kernel**: a local
 bound from a kernel factory, an identifier imported from a `kernelRoots` / `compositionRoots`
-module, a binding typed `ArkKernel` / `EventBus` / `EventPublisher` / `ArkRunPublisher` imported
+module (resolved through tsconfig `paths`, and through barrels that re-export a root), a plain
+alias (`const kernel = ark`) or `typeof ark` binding, a binding typed `ArkKernel` / `EventBus` / `EventPublisher` / `ArkRunPublisher` imported
 from `arkgate/runtime` or `arkgate/nestjs` (including `this.ark` constructor injection), its
 `.eventBus`, a `publisher(..)` result, or destructured kernel members. `res.send`,
-`require.resolve`, `subject.subscribe`, and other same-named methods are not kernel calls.
+`require.resolve`, `subject.subscribe`, and other same-named methods are not kernel calls — unless
+the receiver cannot be traced (an untyped parameter) **and** the literal name is a kernel-valid
+intent (`Domain.…`, `Application.…`, the only names a kernel accepts); then it counts.
 The call name is a string literal or a same-file `define(..)` / `defineIntent(..)` creator
 (or string constant). When an enforced call names neither (for example an imported creator),
 analysis reports completeness reason `ARKRUN_INTERACTION_NAME_INCOMPLETE` (partial, never green).

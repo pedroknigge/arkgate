@@ -109,8 +109,8 @@
       "targets": [
         {
           "file": "bin/lib/resolved-candidate-facts.mjs",
-          "startLine": 736,
-          "endLine": 786
+          "startLine": 737,
+          "endLine": 787
         }
       ]
     },

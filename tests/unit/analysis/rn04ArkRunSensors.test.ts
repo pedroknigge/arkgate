@@ -112,6 +112,24 @@ describe('RN04 ArkRun tier-1 sensors through resolved analysis', () => {
     expect(result.valid).toBe(true);
   });
 
+  it('traces kernel receivers through tsconfig paths, barrels, aliasing, typeof, and kernel-valid names', async () => {
+    const root = copyCase('receiver-trace-red');
+    const config = JSON.parse(fs.readFileSync(path.join(root, 'ark.config.json'), 'utf8'));
+    const { result } = await analyzeCase(root, config);
+    const flagged = result.ir.violations
+      .filter((violation) => violation.ruleId === 'ARKRUN_UNDECLARED_EMIT')
+      .map((violation) => (violation as { fromPath?: string; file?: string }).fromPath ?? (violation as { file?: string }).file)
+      .sort();
+    expect(flagged).toEqual([
+      'src/application/b_alias.ts',
+      'src/application/c_barrel.ts',
+      'src/application/d_param.ts',
+      'src/application/e_reassign.ts',
+      'src/application/f_typeof.ts',
+    ]);
+    expect(result.valid).toBe(false);
+  });
+
   it('glob compositionRoots with one factory among many files stays green', async () => {
     const root = copyCase('glob-root-with-factory');
     const config = JSON.parse(fs.readFileSync(path.join(root, 'ark.config.json'), 'utf8'));
