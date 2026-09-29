@@ -314,26 +314,35 @@ function sliceRuleBasenames(config) {
 
 /** `arkrules.<Layer>.json` beside a governed file or one of its parents. Not a repo-wide search. */
 function unreferencedSliceRuleWarnings(canonicalRoot, referenced, files, basenames) {
-  const warnings = [];
-  const seen = new Set();
+  const wanted = new Set(basenames);
+  if (wanted.size === 0) return [];
+  const dirs = new Set();
   for (const rel of files) {
-    const parts = String(rel).split('/');
-    parts.pop();
-    while (parts.length > 0) {
-      const dir = parts.join('/');
-      for (const name of basenames) {
-        const candidate = `${dir}/${name}`;
-        if (seen.has(candidate) || referenced.has(candidate)) continue;
-        seen.add(candidate);
-        const absolute = path.join(canonicalRoot, ...candidate.split('/'));
-        if (!fs.existsSync(absolute) || !fs.statSync(absolute).isFile()) continue;
-        warnings.push({
-          path: candidate,
-          message: `ArkRules file ${JSON.stringify(candidate)} is not referenced by arkRules and will not be enforced`,
-          severity: 'advisory',
-        });
-      }
-      parts.pop();
+    let end = String(rel).lastIndexOf('/');
+    while (end > 0) {
+      const dir = String(rel).slice(0, end);
+      if (dirs.has(dir)) break;
+      dirs.add(dir);
+      end = dir.lastIndexOf('/');
+    }
+  }
+  const warnings = [];
+  for (const dir of dirs) {
+    let names;
+    try {
+      names = fs.readdirSync(path.join(canonicalRoot, ...dir.split('/')));
+    } catch {
+      continue;
+    }
+    for (const name of names) {
+      if (!wanted.has(name)) continue;
+      const candidate = `${dir}/${name}`;
+      if (referenced.has(candidate)) continue;
+      warnings.push({
+        path: candidate,
+        message: `ArkRules file ${JSON.stringify(candidate)} is not referenced by arkRules and will not be enforced`,
+        severity: 'advisory',
+      });
     }
   }
   return warnings;

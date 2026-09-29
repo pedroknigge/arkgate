@@ -67,15 +67,15 @@ const config = {
     // decisions. The load pin includes the new call. JSON.parse is 1111.
     // The slice-wall split (configContractSlices.ts) moved them to 557-643; one
     // validateSliceContract call replaces the three slice validators.
-    'src/domain/configContract.ts:557-560',
-    'src/domain/configContract.ts:562-563',
-    'src/domain/configContract.ts:583-584',
-    'src/domain/configContract.ts:589-590',
-    'src/domain/configContract.ts:599-601',
-    'src/domain/configContract.ts:612-612',
-    'src/domain/configContract.ts:619-619',
-    'src/domain/configContract.ts:628-632',
-    'src/domain/configContract.ts:643-643',
+    'src/domain/configContract.ts:597-600',
+    'src/domain/configContract.ts:602-603',
+    'src/domain/configContract.ts:623-624',
+    'src/domain/configContract.ts:629-630',
+    'src/domain/configContract.ts:639-641',
+    'src/domain/configContract.ts:651-651',
+    'src/domain/configContract.ts:658-658',
+    'src/domain/configContract.ts:667-672',
+    'src/domain/configContract.ts:683-683',
     // DF04 — selective pure truth islands (fail-closed / ack / promote honesty).
     // peerIsolationDecision is the killable fail-closed core; findDeniedEdgeDecision wires it.
     // #297 inserted the shared-imports-slice hop. Slice-id JSDoc and #308
@@ -87,7 +87,7 @@ const config = {
     // #335/#336 mode, stop, and ratchet types above it moved it to 895-922; the
     // stars-identity JSDoc correction moved it to 897-924; the memory pass
     // sliceFolders parse cache moved it to 923-950.
-    'src/domain/layerMatch.ts:950-977',
+    'src/domain/layerMatch.ts:959-986',
     // AP02 (#264) shifted the helper; sharedImportsSlice and #308 sliceIdentity
     // compares shifted it again. Same policyDeltaAcknowledgementMatches body.
     // #326 compareChildSlices shifted the same function by 93 lines.
@@ -95,7 +95,7 @@ const config = {
     // #326 PR4 child allowance widening compare shifted it to 1207-1236.
     // #326 PR5 compareSliceAliases shifted it to 1250-1279.
     // #335 stopAt and #336 ratchet compares shifted it to 1298-1327.
-    'src/domain/policyDelta.ts:1298-1327',
+    'src/domain/policyDelta.ts:1345-1374',
     // #291 declaration witness shifted formatCoverageDiscards / budgetDetail /
     // canPromoteInvariant. #307/#310 classifyCoverage shifted them again.
     // #322 declaration-miss shifted them once more.
