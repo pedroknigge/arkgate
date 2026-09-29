@@ -66,9 +66,24 @@ export type BuildRulesInventoryInput = {
   layerContexts?: readonly RulesInventoryLayerContext[];
   /** Invariant / structure ids already under contract (to compute underContract count). */
   contractedRuleIds?: readonly string[];
-  /** Baseline keys currently frozen for arkrule residual. */
+  /**
+   * Declared structure rules as (layer, sensor). A structure suggestion is under
+   * contract when its layer declares a rule on the same sensor, whatever the
+   * author called the rule id.
+   */
+  contractedStructure?: readonly { layer: string; sensor: string }[];
+  /**
+   * Raw baseline keys (`ruleId|file|…`). Only ArkRules-plane keys (ruleId
+   * `ARKRULE_*` / `INVARIANT_*`) count as frozen residual; others are ignored.
+   */
   frozenKeys?: readonly string[];
 };
+
+/** Baseline key belongs to the ArkRules plane (structure sensors or invariants). */
+export function isArkRulesFrozenKey(key: string): boolean {
+  const ruleId = key.split('|', 1)[0] ?? '';
+  return ruleId.startsWith('ARKRULE_') || ruleId.startsWith('INVARIANT_');
+}
 
 function lineOf(content: string, index: number): number {
   return content.slice(0, index).split('\n').length;
@@ -411,17 +426,29 @@ export function buildRulesInventory(input: BuildRulesInventoryInput): RulesInven
       a.kind.localeCompare(b.kind) ||
       a.id.localeCompare(b.id)
   );
-  const underContract = candidates.filter(
-    (c) =>
-      (c.suggestedArkRule?.invariantId && contracted.has(c.suggestedArkRule.invariantId)) ||
-      (c.suggestedArkRule?.structureId && contracted.has(c.suggestedArkRule.structureId))
-  ).length;
+  const contractedSensors = new Set(
+    (input.contractedStructure ?? []).map((rule) => `${rule.layer}\u0000${rule.sensor}`)
+  );
+  const underContract = candidates.filter((c) => {
+    const suggestion = c.suggestedArkRule;
+    if (!suggestion) return false;
+    if (suggestion.invariantId && contracted.has(suggestion.invariantId)) return true;
+    if (!suggestion.structureId) return false;
+    // Structure suggestions: the sensor on that layer is what enforces, not the id string.
+    if (
+      suggestion.sensor &&
+      contractedSensors.has(`${suggestion.layer}\u0000${suggestion.sensor}`)
+    ) {
+      return true;
+    }
+    return contracted.has(suggestion.structureId);
+  }).length;
 
   return {
     candidates,
     inventoried: candidates.length,
     underContract,
-    frozen: (input.frozenKeys ?? []).length,
+    frozen: (input.frozenKeys ?? []).filter(isArkRulesFrozenKey).length,
     notAScore: true,
   };
 }

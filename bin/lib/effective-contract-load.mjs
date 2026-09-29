@@ -210,6 +210,23 @@ function unreferencedArkRulesWarnings(canonicalRoot, referenced) {
   return warnings;
 }
 
+export const ARKRULE_FILE_UNREFERENCED = 'ARKRULE_FILE_UNREFERENCED';
+
+/**
+ * Loader drift warnings as advisory check warnings (never fail --strict-config).
+ * @param {Array<{path:string,message:string}>} warnings
+ */
+export function arkRulesDriftWarnings(warnings) {
+  return (warnings ?? []).map((warning) => ({
+    ruleId: ARKRULE_FILE_UNREFERENCED,
+    file: warning.path,
+    line: 1,
+    message: warning.message,
+    severity: 'warning',
+    failsStrict: false,
+  }));
+}
+
 /**
  * @param {string} root
  * @param {Record<string, unknown>} config loaded ark.config.json object

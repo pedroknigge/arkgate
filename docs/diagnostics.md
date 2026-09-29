@@ -44,6 +44,7 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 | [`ARKRULE_INVARIANT`](#ARKRULE_INVARIANT) | arkrules | ArkRule invariant failed |
 | [`ARKRULE_SCOPE_EMPTY`](#ARKRULE_SCOPE_EMPTY) | arkrules | ArkRule appliesTo matched zero files |
 | [`ARKRULE_HINT_BUDGET_EXHAUSTED`](#ARKRULE_HINT_BUDGET_EXHAUSTED) | arkrules | Structural-hint budget exhausted |
+| [`ARKRULE_FILE_UNREFERENCED`](#ARKRULE_FILE_UNREFERENCED) | arkrules | ArkRules file not referenced |
 | [`INVARIANT_CATALOG_EMPTY`](#INVARIANT_CATALOG_EMPTY) | arkrules | Domain invariant catalog is empty |
 | [`INVARIANT_UNCOVERED`](#INVARIANT_UNCOVERED) | arkrules | Invariant without coverage evidence |
 | [`INVARIANT_COVERAGE_OUTSIDE_ROOTS`](#INVARIANT_COVERAGE_OUTSIDE_ROOTS) | arkrules | Covering test outside the declared coverage roots |
@@ -298,6 +299,15 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 
 - **Why:** `orchestration-only`, `thin-adapter`, and `writes-via-aggregate` only evaluate files the hint loader preloaded. When eligible governed files exceed that budget (`coverage.maxFiles`, default `400` — there is no `arkrules.hintBudget`), those sensors never saw the rest of their scope. Enforced + unreviewed is not green. The finding names exact hinted/governed counts and per-sensor reviewed N/M of scope.
 - **Fix:** Raise `coverage.maxFiles` in ark.config.json (this cap also bounds structural-hint preload; `--doctor` names the coupling) so hinted/governed counts match, then re-run with `--strict-config`. An enforced hint sensor that cannot see its scope fails strict.
+
+<a id="ARKRULE_FILE_UNREFERENCED"></a>
+
+### `ARKRULE_FILE_UNREFERENCED`
+
+**ArkRules file not referenced** · often advisory
+
+- **Why:** A JSON file under `arkrules/` is not referenced by the `arkRules` map in ark.config.json (or no map exists), so none of its rules are enforced or reported. Drift looks like governance until someone notices.
+- **Fix:** Reference the file from `arkRules` (`"<Layer>": "arkrules/<file>.json"`), or delete it. Advisory only: it never fails the check.
 
 <a id="INVARIANT_CATALOG_EMPTY"></a>
 

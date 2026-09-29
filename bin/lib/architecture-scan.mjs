@@ -10,7 +10,10 @@ import {
 } from './analysis-engine.mjs';
 import { effectiveAnalysisConfig } from './analysis-policy.mjs';
 import { resolveCandidateFacts } from './resolved-candidate-facts.mjs';
-import { loadEffectiveArkRulesFromDisk } from './effective-contract-load.mjs';
+import {
+  arkRulesDriftWarnings,
+  loadEffectiveArkRulesFromDisk,
+} from './effective-contract-load.mjs';
 import {
   coverageOptionsFromConfig,
   invariantIdsFromCatalog,
@@ -229,7 +232,8 @@ export function resolveArchitectureSnapshot({
   );
   const result = {
     violations: analyzed.ir.violations,
-    warnings: analyzed.ir.warnings,
+    // ADR 0012 D2: an unreferenced arkrules/*.json is advisory drift, never a failure.
+    warnings: [...analyzed.ir.warnings, ...arkRulesDriftWarnings(arkRulesLoad.warnings)],
     safety: analyzed.safety,
     parseHealth,
     completeness: analyzed.completeness,

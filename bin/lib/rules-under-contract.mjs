@@ -4,8 +4,12 @@
  * Summary includes per-layer + structure/invariant detail so showcase HTML /ark-explain
  * can teach what is under contract, not only aggregate numbers.
  */
+import fs from 'node:fs';
 import path from 'node:path';
 import { loadEffectiveArkRulesFromDisk } from './effective-contract-load.mjs';
+import { buildRulesInventory, inventoryToExtractionCard } from './rules-inventory.mjs';
+import { collectGovernedFiles } from './scan-files.mjs';
+import { readBaseline } from './violations.mjs';
 import { evaluateInvariantCoverage, formatCoverageDiscards } from './invariant-coverage.mjs';
 import {
   coverageOptionsFromConfig,
@@ -18,7 +22,7 @@ import {
   demoteExtraPlaneTeethUnderClassificationFloor,
 } from './extra-merge-teeth.mjs';
 import { collectEmptyInvariantCatalogFindings } from './arkrules-sensors.mjs';
-import { layerForRelativePath } from '../ark-layer-match.mjs';
+import { layerForFile, layerForRelativePath } from '../ark-layer-match.mjs';
 import {
   ARKRULES_EMPTY_CATALOG_NEXT,
   ARKRULES_FIRST_CONTACT_NEXT,
@@ -96,9 +100,26 @@ function arkOrderMergeInput(config, residualCount = 0) {
   };
 }
 
-export function summarizeRulesUnderContract(root, config, facts, classification) {
+/** ADR 0012 D2 drift: arkrules/*.json no arkRules entry references (advisory). */
+function unreferencedArkRulesFiles(loaded) {
+  const files = (loaded?.warnings ?? []).map((w) => w.path).filter(Boolean);
+  return files.length > 0 ? { unreferencedFiles: files } : {};
+}
+
+/**
+ * @param {{ rulesMigration?: boolean }} [options] rulesMigration:false skips the
+ *   migration counts (the inventory payload computes them itself).
+ */
+export function summarizeRulesUnderContract(root, config, facts, classification, options = {}) {
   if (!config?.arkRules || Object.keys(config.arkRules).length === 0) {
+    let drift = {};
+    try {
+      drift = unreferencedArkRulesFiles(loadEffectiveArkRulesFromDisk(root, config));
+    } catch {
+      drift = {};
+    }
     return {
+      ...drift,
       active: false,
       structureRules: 0,
       invariants: 0,
@@ -266,6 +287,14 @@ export function summarizeRulesUnderContract(root, config, facts, classification)
       coveredSample,
       coveredTruncated,
       symbolEvidence,
+      ...unreferencedArkRulesFiles(loaded),
+      // AR15: inventoried / under contract / frozen — same helper as --rules-inventory.
+      ...(options.rulesMigration === false
+        ? {}
+        : {
+            rulesMigration: buildRulesMigration({ root, config, arkRules: loaded.arkRules })
+              .rulesMigration,
+          }),
       ...(coverageInputs.stats ? { coverageStats: coverageInputs.stats } : {}),
       mergePlanes,
       notAScore: true,
@@ -314,9 +343,19 @@ export function formatArkRulesEvidenceLines(section) {
  * @param {ReturnType<typeof summarizeRulesUnderContract>|null|undefined} section
  * @returns {string[]}
  */
+function unreferencedFilesLine(section) {
+  const files = Array.isArray(section?.unreferencedFiles) ? section.unreferencedFiles : [];
+  if (files.length === 0) return [];
+  const shown = files.slice(0, 3).join(', ');
+  const more = files.length > 3 ? ` (+${files.length - 3} more)` : '';
+  return [
+    `ArkRules: ${shown}${more} not referenced by arkRules — nothing in it is enforced (ARKRULE_FILE_UNREFERENCED, advisory).`,
+  ];
+}
+
 export function formatArkRulesDoctorLines(section) {
   if (!section || typeof section !== 'object') return [];
-  if (section.active !== true) return [];
+  if (section.active !== true) return unreferencedFilesLine(section);
 
   if (Array.isArray(section.loadErrors) && section.loadErrors.length > 0) {
     const first = section.loadErrors[0];
@@ -362,6 +401,10 @@ export function formatArkRulesDoctorLines(section) {
     lines.push(`ArkRules: ${section.note}`);
   }
   lines.push(...formatArkRulesEvidenceLines(section));
+  if (section.rulesMigration) {
+    lines.push(`ArkRules migration: ${formatRulesMigrationCounts(section.rulesMigration)}.`);
+  }
+  lines.push(...unreferencedFilesLine(section));
   return lines;
 }
 
@@ -560,6 +603,11 @@ export function formatRulesUnderContractHtml(section, esc) {
     ${uncoveredBlock}
     ${coveredBlock}
     ${
+      section.rulesMigration
+        ? `<p class="muted" style="margin-top:.35rem;font-size:.84rem">Rules migration: ${escape(formatRulesMigrationCounts(section.rulesMigration))}</p>`
+        : ''
+    }
+    ${
       formatArkRulesEvidenceLines(section)
         .map((line) => `<p class="muted" style="margin-top:.35rem;font-size:.84rem">${escape(line)}</p>`)
         .join('')
@@ -571,4 +619,130 @@ export function formatRulesUnderContractHtml(section, esc) {
     }
     ${note}
   </section>`;
+}
+
+export const RULES_INVENTORY_MAX_FILES = 400;
+
+/**
+ * Brownfield rules migration (AR13/AR15): one code path for `--rules-inventory`,
+ * MCP `ark_rules_inventory`, doctor, and the HTML report. Honest counts, never a score:
+ * - inventoried: candidates the heuristic inventory found (first 400 governed files);
+ * - underContract: candidates whose suggested ArkRule is declared — structure
+ *   suggestions by (layer, sensor), invariant suggestions by id;
+ * - frozen: ArkRules-plane keys (`ARKRULE_*` / `INVARIANT_*`) in .ark-baseline.json.
+ * @param {{ root: string, config: Record<string, any>, files?: string[], arkRules?: any }} input
+ *   `files` defaults to the governed walk; `arkRules` to the catalog on disk.
+ */
+export function buildRulesMigration({ root, config, files, arkRules }) {
+  const governed = Array.isArray(files) ? files : collectGovernedFiles(root, config);
+  const fileContents = {};
+  const fileLayers = {};
+  for (const file of governed.slice(0, RULES_INVENTORY_MAX_FILES)) {
+    const absolute = path.isAbsolute(file) ? file : path.resolve(root, file);
+    const rel = path.relative(root, absolute).split(path.sep).join('/');
+    try {
+      fileContents[rel] = fs.readFileSync(absolute, 'utf8');
+      const layer = layerForFile(root, absolute, config.layers);
+      if (layer) fileLayers[rel] = layer;
+    } catch {
+      /* skip unreadable */
+    }
+  }
+  let catalog = arkRules;
+  if (catalog === undefined && config?.arkRules) {
+    try {
+      const loaded = loadEffectiveArkRulesFromDisk(root, config);
+      catalog = loaded.errors.length > 0 ? null : loaded.arkRules;
+    } catch {
+      catalog = null; // the advisory inventory is still useful
+    }
+  }
+  const contractedRuleIds = [];
+  const contractedStructure = [];
+  for (const rule of catalog?.structure ?? []) {
+    contractedRuleIds.push(rule.id);
+    const layer = rule.provenance?.layer ?? rule.layer;
+    if (layer && rule.sensor) contractedStructure.push({ layer, sensor: rule.sensor });
+  }
+  for (const inv of catalog?.invariants ?? []) contractedRuleIds.push(inv.id);
+  let frozenKeys = [];
+  try {
+    frozenKeys = [...readBaseline(root, '.ark-baseline.json').keys];
+  } catch {
+    frozenKeys = []; // an unreadable baseline freezes nothing
+  }
+  const inventory = buildRulesInventory({
+    fileContents,
+    fileLayers,
+    layerContexts: (config.layers ?? []).map((layer) => ({
+      name: layer.name,
+      intentPrefixes: layer.intentPrefixes ?? [],
+    })),
+    contractedRuleIds,
+    contractedStructure,
+    frozenKeys,
+  });
+  return {
+    inventory,
+    rulesMigration: {
+      inventoried: inventory.inventoried,
+      underContract: inventory.underContract,
+      frozen: inventory.frozen,
+      notAScore: true,
+    },
+    nextPilot:
+      inventory.candidates[0] != null ? inventoryToExtractionCard(inventory.candidates[0]) : null,
+  };
+}
+
+/** `N inventoried, N under contract, N frozen (not a score)` — shared CLI/doctor wording. */
+export function formatRulesMigrationCounts(rulesMigration) {
+  if (!rulesMigration || typeof rulesMigration !== 'object') return '';
+  return `${rulesMigration.inventoried} inventoried, ${rulesMigration.underContract} under contract, ${rulesMigration.frozen} frozen (not a score)`;
+}
+
+/**
+ * Full `--rules-inventory` / `ark_rules_inventory` payload (same keys on both surfaces).
+ * @param {string} root
+ * @param {Record<string, any>} config
+ * @param {string[]} [files] governed files (absolute or root-relative)
+ */
+export function buildRulesInventoryPayload(root, config, files) {
+  const governed = Array.isArray(files) ? files : collectGovernedFiles(root, config);
+  const migration = buildRulesMigration({ root, config, files: governed });
+  let evidenceLines = [];
+  let coverageEvidence = null;
+  if (config?.arkRules && Object.keys(config.arkRules).length > 0) {
+    try {
+      const section = summarizeRulesUnderContract(
+        root,
+        config,
+        {
+          files: governed.map((file) => ({
+            path: path.relative(root, path.resolve(root, file)).split(path.sep).join('/'),
+          })),
+        },
+        undefined,
+        { rulesMigration: false }
+      );
+      evidenceLines = formatArkRulesEvidenceLines(section);
+      if (section.active === true) {
+        coverageEvidence = {
+          symbolEvidence: section.symbolEvidence ?? [],
+          discarded: section.coverageStats?.discarded ?? null,
+        };
+      }
+    } catch {
+      /* inventory still useful when coverage cannot be read */
+    }
+  }
+  return {
+    payload: {
+      rulesInventory: migration.inventory,
+      rulesMigration: migration.rulesMigration,
+      nextPilot: migration.nextPilot,
+      ...(coverageEvidence ? { coverageEvidence } : {}),
+    },
+    evidenceLines,
+  };
 }

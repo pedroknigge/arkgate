@@ -132,7 +132,10 @@ Top-level fields:
   certify a test the project never declared a runner root for.
 - **`arkRules`** (optional, schema `1.1+`) — map of layer name → project-relative path to an
   ArkRules file (e.g. `"DomainModel": "arkrules/DomainModel.json"`). Keys must match a declared
-  layer. Missing/invalid referenced files **fail closed**.
+  layer. Missing/invalid referenced files **fail closed**. A `arkrules/*.json` file the map
+  does not reference (or any such file when the map is absent) is advisory drift:
+  `ARKRULE_FILE_UNREFERENCED` in check `warnings`, `rulesUnderContract.unreferencedFiles` in
+  doctor, and `arkRulesCatalog.unreferencedFiles` in MCP `ark_manifest`. It never fails the check.
 - **`arkRun`** (optional, schema `1.2+`) — inline ArkRun extra (`mode`, `kernelRoots`
   (`compositionRoots` alias), `managedLayers`, `requireDeclarations`). Absence is silent. Unknown keys fail closed.
   `managedLayers` must name existing `layers[].name` values. Empty `compositionRoots` in
