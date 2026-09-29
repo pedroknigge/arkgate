@@ -627,13 +627,32 @@ type than product source:
 
 | Check | What it does |
 |-------|----------------|
-| `ark-check --local --base origin/dev` | Opt-in local / multi-worktree cheap check. Same engine as `--changed`. Refused with `--strict-merge`. `ARK_CHECK_LOCAL=1` is the same unless CI or a full-tree report mode is on. |
+| `ark-check --local --base origin/dev` | Opt-in local / multi-worktree cheap check. Same engine as `--changed`. Refused with `--strict-merge` and with `--update-baseline`. `ARK_CHECK_LOCAL=1` is the same unless CI, a full-tree report mode, or `--update-baseline` is on. |
 | `ark-check --changed --base origin/dev` | Layer check on touched sources only. A CSS/i18n PR pays almost nothing. |
 | `ark-check --against origin/dev` | New violation keys vs **that ref's** baseline (not only HEAD). |
 | `ark-check --contract-diff --base origin/dev` | Classifies tighten / loosen / reclassify / baseline-grow. |
 | `--contract-session --author <id>` | Law-only PR. Mixed law+product still fails. Loosen/grow need a session even with an empty `stewards[]`; a non-empty list also needs a matching listed author. |
 | `--persona touch\|contributor\|agent\|steward` | Budget presets for the same teeth. |
 | `ark status --vs origin/dev` | One line: pin / contract / baseline drift vs that ref. |
+
+How the changed-file set is computed (`--changed`, `--local`, `--against`, `--persona`):
+
+- Paths are relative to `--root`, even when that root is a package inside a monorepo
+  (`git diff --relative`; base-ref files are read as `<ref>:./<path>`). Changes outside the
+  root are not part of that package's diff.
+- Committed changes since the merge base, staged, unstaged, and untracked files all count.
+  File names with spaces, quotes, or non-ASCII characters are kept exactly.
+- Without `--base` / `--against`, the base is the first of `origin/dev`, `origin/main`,
+  `origin/master`, `dev`, `main`, `master` that exists. When none exists (or the root is
+  not a git repository), `--changed` and a non-steward `--persona` stop with **exit 2**
+  (`reasonId: changed-needs-base`; `--local` uses `local-needs-base`). Pass `--base <ref>`
+  or run a full check. A diff that could not be computed never counts as "no changes".
+- Any failed git listing (bad ref, timeout, output too large) is exit 2, never a pass.
+- `--update-baseline` always freezes the whole tree: it refuses `--changed` / `--local`
+  (exit 2) and ignores `ARK_CHECK_LOCAL=1`, so a partial scan can never truncate
+  `.ark-baseline.json`.
+- Layer-pattern typo warnings (`CONFIG_LAYER_PATTERN_NO_MATCHES`) under `--changed` are
+  judged against the full governed tree, so an untouched layer is not reported as a typo.
 
 Write-gate ApplyPatch denies a batch that mixes law files with product source. Humans who
 never hit PreToolUse are unchanged. Local `pnpm` gates should call `--local --base` or

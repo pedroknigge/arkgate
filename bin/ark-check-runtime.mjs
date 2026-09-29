@@ -124,6 +124,7 @@ import {
   applyAgainstRatchet,
   bindTeamBaseRefs,
   contractSessionFrom,
+  pruneScopedPatternWarnings,
   runTeamPreflight,
   ungovernedDumpMessage,
 } from './lib/team-parliament-io.mjs';
@@ -135,7 +136,9 @@ import {
   resolveEffectiveProjectRoot,
 } from './lib/project-root.mjs';
 import { demoteArkRuleTeethUnderClassificationFloor } from './lib/rules-under-contract.mjs';
-import { localCheckEnvelope, parseArgs, resolveDesignDeltaBaseRef } from './lib/check-args.mjs';
+import {
+  effectiveBaselineName, localCheckEnvelope, parseArgs, resolveDesignDeltaBaseRef, UPDATE_BASELINE_SCOPE_MESSAGE,
+} from './lib/check-args.mjs';
 import { detectConfig, proposeForUncovered } from './lib/check-config-detect.mjs';
 import { runWatchMode } from './lib/check-watch.mjs';
 
@@ -1447,6 +1450,7 @@ async function main() {
     args,
   });
 
+  if (args.changed) pruneScopedPatternWarnings(warnings, root, loadGovernedFiles);
   // Align merge with extraMergeTeeth stamp: demote enforced ArkRules under classification floor.
   const preCov = computeCoverage(root, config, files, rules);
   const populatedLayerCount = Array.isArray(preCov.layers)
@@ -1515,6 +1519,8 @@ async function main() {
   }
 
   if (args.updateBaseline) {
+    // A persona can turn on --changed after parseArgs; a subset scan must never rewrite the baseline.
+    if (args.changed) { console.error(UPDATE_BASELINE_SCOPE_MESSAGE); process.exitCode = 2; return; }
     if (!contractSessionFrom(args)) {
       console.error('Growing the baseline requires --contract-session. Freeze in a law-only PR.');
       process.exitCode = 1;
@@ -1590,8 +1596,8 @@ async function main() {
     });
     activeViolations = ratcheted.activeViolations;
     suppressed = ratcheted.suppressed;
-  } else if (args.baseline) {
-    const baseline = readBaseline(root, args.baseline);
+  } else if (effectiveBaselineName(args, root)) {
+    const baseline = readBaseline(root, effectiveBaselineName(args, root));
     if (baseline.exists) {
       const occurrenceKeys = baselineOccurrenceKeys(violations);
       const judged = applyAdvisorySiblingRatchet(violations, occurrenceKeys, baseline.keys);

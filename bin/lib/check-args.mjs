@@ -1,6 +1,7 @@
 /**
  * ark-check CLI flag parsing.
  */
+import fs from 'node:fs';
 import path from 'node:path';
 import { discoverLocalBaseRef, normalizePolicyBaseRef } from './policy-delta-io.mjs';
 
@@ -23,7 +24,22 @@ export const LOCAL_STRICT_MERGE_MESSAGE =
   '--local cannot be combined with --strict-merge: CI stays the full fail-closed check. Use --local (or ARK_CHECK_LOCAL=1) only on the local / pre-push path.';
 
 export const LOCAL_TREE_MODE_MESSAGE =
-  '--local cannot be combined with report modes that need the whole tree (--doctor, --coverage, --plan, --report, --promote). Use --local --base <ref> for the cheap local check.';
+  '--local cannot be combined with report modes that need the whole tree (--doctor, --coverage, --plan, --report, --promote) or with --update-baseline. Use --local --base <ref> for the cheap local check.';
+
+export const UPDATE_BASELINE_SCOPE_MESSAGE =
+  '--update-baseline cannot be combined with a changed-files scope (--changed, --local, or a --persona that implies --changed): the baseline is a whole-tree record, and a changed-files scan would overwrite it with only that subset and delete every other frozen key. Drop the scope flag (ARK_CHECK_LOCAL=1 is ignored for a baseline update) and re-run.';
+
+/**
+ * Baseline file that suppresses frozen findings for this run, or null.
+ * Explicit `--baseline` always wins. `--report` (without `--against`) applies the committed
+ * `.ark-baseline.json` by default, the same file `--doctor` reads, so report, `ark status`
+ * and doctor agree on what is active vs frozen.
+ */
+export function effectiveBaselineName(args, root, exists = fs.existsSync) {
+  if (args?.baseline) return args.baseline;
+  if (!args?.report || args.against) return null;
+  return exists(path.join(root, '.ark-baseline.json')) ? '.ark-baseline.json' : null;
+}
 
 export function localCheckEnvelope(args, root) {
   if (!args?.local) return {};
@@ -48,6 +64,7 @@ export function applyLocalCheckMode(args, env = process.env) {
     args.plan && '--plan',
     args.report && '--report',
     args.promote && '--promote',
+    args.updateBaseline && '--update-baseline',
   ].filter(Boolean);
   if (args.strictMerge) {
     if (explicit) throw new Error(LOCAL_STRICT_MERGE_MESSAGE);
@@ -287,6 +304,9 @@ export function parseArgs(argv, env = process.env) {
         `--promote cannot be combined with ${narrowing.join(', ')}: the promotion cost must be measured over the whole governed tree, and a narrowed or baselined scope would report an undercount as the price.`
       );
     }
+  }
+  if (args.updateBaseline && (args.changed || args.local)) {
+    throw new Error(UPDATE_BASELINE_SCOPE_MESSAGE);
   }
   return applyLocalCheckMode(args, env);
 }

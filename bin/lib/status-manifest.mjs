@@ -205,19 +205,19 @@ export function resolveStatusNextAction(facts, binding, activation, lastCheck, r
     if (lastCheck.verdict === 'fail' || (lastCheck.activeViolations ?? 0) > 0) {
         return {
             id: 'fix-active-violations',
-            summary: `Clear ${lastCheck.activeViolations ?? 'active'} blocking architecture finding(s), then re-run ark-check (or ark-check --doctor).`,
+            summary: `Clear ${lastCheck.activeViolations ?? 'active'} blocking architecture finding(s), then re-run ark-check --report to refresh the last-check snapshot (a plain check or --doctor does not update .ark/reports/latest.json).`,
         };
     }
     if (lastCheck.verdict === 'incomplete') {
         return {
             id: 'restore-complete-analysis',
-            summary: 'Last check was incomplete — restore TypeScript/analysis inputs and re-run ark-check.',
+            summary: 'Last check was incomplete — restore TypeScript/analysis inputs and re-run ark-check --report to refresh the snapshot.',
         };
     }
     if (lastCheck.verdict == null && lastCheck.at == null) {
         return {
             id: 'run-ark-check',
-            summary: 'No last-check snapshot yet — run ark-check --report (or --doctor) to freeze session evidence.',
+            summary: 'No last-check snapshot yet — run ark-check --report to freeze session evidence (--doctor does not write the snapshot).',
         };
     }
     if (activation.writePath === 'unavailable') {
@@ -433,7 +433,7 @@ export function unavailableStatusImprovementCompass(input = {}) {
         topResidual: [],
         reasonCode: input.reasonCode ?? STATUS_COMPASS_REASON_CODES.NO_SESSION_SNAPSHOT,
         reason: input.reason ??
-            'No session compass facts yet — run ark-check --doctor or --report for residual lenses. Status never invents green.',
+            'No session compass facts yet — run ark-check --report to write the session snapshot (--doctor shows full lenses but does not write it). Status never invents green.',
         factsSource: 'none',
         contractHash: input.contractHash,
     });

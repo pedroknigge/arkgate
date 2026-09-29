@@ -158,7 +158,7 @@ export function statusCompassFromSnapshot(latest, opts = {}) {
     return unavailableStatusImprovementCompass({
       reasonCode: 'NO_SESSION_SNAPSHOT',
       reason:
-        'No session report snapshot yet — run ark-check --doctor or --report for residual lenses. Status never invents green.',
+        'No session report snapshot yet — run ark-check --report to write the session snapshot (--doctor shows full lenses but does not write it). Status never invents green.',
       contractHash,
     });
   }
@@ -189,7 +189,7 @@ export function statusCompassFromSnapshot(latest, opts = {}) {
       reasonCode: complete ? undefined : 'FACTS_PARTIAL',
       reason: complete
         ? undefined
-        : 'Session snapshot residual is partial — re-run doctor/report for full compass.',
+        : 'Session snapshot residual is partial — re-run ark-check --report for full compass.',
       factsSource: 'report-snapshot',
       contractHash,
     });
@@ -198,7 +198,7 @@ export function statusCompassFromSnapshot(latest, opts = {}) {
   return unavailableStatusImprovementCompass({
     reasonCode: 'NO_SESSION_SNAPSHOT',
     reason:
-      'Session snapshot has no improvement compass facts — run ark-check --doctor or --report. Status never invents green.',
+      'Session snapshot has no improvement compass facts — run ark-check --report to refresh the session snapshot. Status never invents green.',
     contractHash,
   });
 }
