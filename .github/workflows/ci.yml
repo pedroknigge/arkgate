@@ -147,6 +147,14 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm run test:adapter-parity
+      - name: Real ESLint run (eslint + @typescript-eslint/parser, outside the repo tree)
+        env:
+          ARK_ESLINT_DEPS: ${{ runner.temp }}/real-eslint
+          ARK_REQUIRE_REAL_ESLINT: '1'
+        run: |
+          mkdir -p "$ARK_ESLINT_DEPS"
+          npm install --prefix "$ARK_ESLINT_DEPS" --no-save --no-audit --no-fund eslint@9.39.5 @typescript-eslint/parser@8.71.0 typescript@6.0.3
+          npx vitest run tests/unit/eslint/realEslint.test.ts
 
   workspace-portability:
     name: Workspace portability / ${{ matrix.os }}
