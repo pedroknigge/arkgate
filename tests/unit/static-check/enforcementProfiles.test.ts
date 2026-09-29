@@ -6,6 +6,7 @@ import {
   HOST_ENFORCEMENT_SUPPORT,
   WRITE_PROFILE_HOSTS,
   hasHardWriteHook,
+  hostHookFileMergeable,
   validateHardWriteRequest,
   validateSelectedTools,
 } from '../../../bin/lib/enforcement-profiles.mjs';
@@ -201,6 +202,26 @@ describe('enforcement profile policy', () => {
           force: true,
         })
       ).toMatchObject({ ok: true, host: 'grok' });
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+  it('answers hostHookFileMergeable for merge, non-merge, unreadable, and unmergeable files', () => {
+    const root = mk();
+    try {
+      const cursorHook = path.join(root, '.cursor', 'hooks.json');
+      fs.mkdirSync(path.dirname(cursorHook), { recursive: true });
+      fs.writeFileSync(cursorHook, JSON.stringify({ version: 1, hooks: {} }));
+      expect(hostHookFileMergeable(root, 'cursor', cursorHook)).toBe(true);
+      fs.writeFileSync(cursorHook, '{ not json');
+      expect(hostHookFileMergeable(root, 'cursor', cursorHook)).toBe(false);
+      // Hosts without a merge strategy never merge, even over a readable file.
+      expect(hostHookFileMergeable(root, 'grok', cursorHook)).toBe(false);
+      // A file that cannot be read (here: a directory) is not mergeable; it must not throw.
+      const unreadable = path.join(root, '.claude', 'settings.json');
+      fs.mkdirSync(unreadable, { recursive: true });
+      expect(hostHookFileMergeable(root, 'claude', unreadable)).toBe(false);
+      expect(hostHookFileMergeable(root, 'claude', path.join(root, 'missing.json'))).toBe(false);
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
     }

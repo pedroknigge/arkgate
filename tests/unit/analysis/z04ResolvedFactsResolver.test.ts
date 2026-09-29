@@ -11,6 +11,7 @@ import { loadTypeScript } from '../../../bin/lib/typescript-host.mjs';
 import {
   canonicalizeCandidateChanges,
   resolveCandidateFacts,
+  resolvedCompilerInputPaths,
 } from '../../../bin/lib/resolved-candidate-facts.mjs';
 import { prepareChangeFromRoot } from '../../../bin/lib/prepare-change.mjs';
 
@@ -754,5 +755,44 @@ describe('Z04 shipped resolved candidate facts resolver', () => {
       completenessReasons: [expect.objectContaining({ code: 'TSCONFIG_PARSE_FAILURE' })],
     });
     expect(JSON.stringify(missing.completenessReasons)).not.toContain(firstLayout.root);
+  });
+  it('lists the compiler config closure from the canonical root without reading sources', async () => {
+    const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'ark-z04-closure-')));
+    roots.push(root);
+    const alias = `${root}-alias`;
+    fs.symlinkSync(root, alias, 'dir');
+    roots.push(alias);
+    fs.mkdirSync(path.join(root, 'src'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'config'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src/order.ts'), 'export const order = 1;\n');
+    fs.writeFileSync(
+      path.join(root, 'tsconfig.json'),
+      JSON.stringify({ extends: './config/base.json', compilerOptions: { module: 'esnext' } })
+    );
+    fs.writeFileSync(
+      path.join(root, 'config/base.json'),
+      JSON.stringify({ compilerOptions: { strict: true } })
+    );
+    const config = {
+      include: ['src'],
+      layers: [{ name: 'DomainModel', patterns: ['src/**'] }],
+      rules: [],
+    };
+    const loaded = await loadTypeScript(root);
+    expect(loaded.ts).toBeTruthy();
+    const observed: Array<[string, string]> = [];
+
+    const inputs = resolvedCompilerInputPaths({
+      root: alias,
+      config,
+      ts: loaded.ts,
+      observeInput: (inputPath: string, kind: string) => observed.push([inputPath, kind]),
+    });
+
+    expect(inputs).toEqual(['config/base.json', 'tsconfig.json']);
+    expect(observed[0]).toEqual([path.resolve(alias), 'realpath']);
+    // The closure only needs config inputs: candidate sources are listed, never read.
+    expect(observed.some(([, kind]) => kind === 'source')).toBe(false);
+    expect(resolvedCompilerInputPaths({ root, config, ts: {} })).toEqual([]);
   });
 });

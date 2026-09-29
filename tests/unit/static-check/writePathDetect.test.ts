@@ -69,6 +69,7 @@ describe('detectWritePathCapabilities (shipped write-path-detect.mjs)', () => {
       expect(cap.autoPatch).toBe(false);
       expect(cap.capabilities['merge-gate']).toBe(false);
       expect(cap.gap?.id).toBe('write-path-none');
+      expect(cap.gap?.message).toContain('No Ark CI check was detected either.');
       expect(cap.gap?.fix).toContain(
         '--install-agent-gates --tools claude,grok,antigravity,cursor,codex,opencode'
       );
@@ -189,6 +190,43 @@ describe('detectWritePathCapabilities (shipped write-path-detect.mjs)', () => {
       expect(cap.enforcementState.localWrite.runtimeObserved).toBe(false);
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('treats either inventory boundary alone as write gates when host is unknown', () => {
+    const hookOnly = mk();
+    const mcpOnly = mk();
+    try {
+      fs.mkdirSync(path.join(hookOnly, '.grok', 'hooks'), { recursive: true });
+      fs.writeFileSync(
+        path.join(hookOnly, '.grok', 'hooks', 'ark-write-gate.json'),
+        JSON.stringify({
+          hooks: {
+            PreToolUse: [
+              { hooks: [{ command: 'npx arkgate-mcp --hook --root . --config ark.config.json' }] },
+            ],
+          },
+        })
+      );
+      const hard = detectWritePathCapabilities(hookOnly, 'unknown');
+      expect(hard.inventory.capabilities['hard-write']).toBe(true);
+      expect(hard.inventory.capabilities['advisory-write']).toBe(false);
+      expect(hard.mode).toBe('none');
+      expect(hard.gap).toBeNull();
+
+      fs.mkdirSync(path.join(mcpOnly, '.grok'), { recursive: true });
+      fs.writeFileSync(
+        path.join(mcpOnly, '.grok', 'config.toml'),
+        '[mcp_servers.ark]\ncommand = "npx"\nargs = ["arkgate-mcp"]\n'
+      );
+      const advisory = detectWritePathCapabilities(mcpOnly, 'unknown');
+      expect(advisory.inventory.capabilities['hard-write']).toBe(false);
+      expect(advisory.inventory.capabilities['advisory-write']).toBe(true);
+      expect(advisory.mode).toBe('none');
+      expect(advisory.gap).toBeNull();
+    } finally {
+      fs.rmSync(hookOnly, { recursive: true, force: true });
+      fs.rmSync(mcpOnly, { recursive: true, force: true });
     }
   });
 

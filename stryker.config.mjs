@@ -156,6 +156,9 @@ const config = {
     // Keep .grok/hooks so the mutation dry-run still dogfoods repair-capable write.
     '.grok/skills',
     '.agents/skills',
+    // Local agent worktrees (git-excluded) carry their own symlinked skill
+    // catalogs; copying them into the sandbox dies ENOTSUP.
+    '.claude/worktrees',
   ],
 };
 
