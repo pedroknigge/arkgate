@@ -1,7 +1,7 @@
 {
   "name": "@arkgate/runtime",
   "version": "0.1.0-experimental.2",
-  "description": "DEPRECATED. Use arkgate/runtime from package arkgate. Leftover experimental ArkRun companion.",
+  "description": "DEPRECATED (ADR 0031): install arkgate and import from \"arkgate/runtime\" (Nest adapter: \"arkgate/nestjs\"). Leftover experimental ArkRun companion.",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",

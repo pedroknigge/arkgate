@@ -20,6 +20,17 @@ contract; the kernel lives in the same `arkgate` tarball.
 This companion is not required by the `arkgate` CLI, MCP server, ESLint plugin, hooks, or
 GitHub Action.
 
+## Migrate
+
+```diff
+- npm install @arkgate/runtime
++ npm install arkgate
+- import { createStrictArkKernel } from '@arkgate/runtime';
++ import { createStrictArkKernel } from 'arkgate/runtime';
+- import { ArkModule } from '@arkgate/runtime/nestjs';
++ import { ArkModule } from 'arkgate/nestjs';
+```
+
 ## Factory (per instance — no process-wide singleton)
 
 ```ts

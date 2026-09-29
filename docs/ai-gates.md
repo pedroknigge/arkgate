@@ -822,10 +822,13 @@ but stays advisory.
 **command**. The hard merge boundary is making that job a **required GitHub status context** —
 not “workflow file present.”
 
-Or use the repository's composite Action at a pinned release or commit:
+Or use the repository's composite Action at a pinned release or commit. Pin the tag (or commit
+SHA) that matches the `arkgate` version in your `package.json` and write hook. The Action runs the
+checker from the ref you pin, so an older ref runs an older checker, and that checker rejects newer
+config keys (for example `schemaVersion` 1.3, `childSlices`, `sliceIdentity`) with exit 2:
 
 ```yaml
-- uses: pedroknigge/arkgate@v3.7.0
+- uses: pedroknigge/arkgate@v4.8.23 # same version as the arkgate devDependency
   with:
     root: .
     config: ark.config.json
