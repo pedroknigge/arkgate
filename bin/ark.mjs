@@ -51,17 +51,15 @@ import { runStatusCommand } from './lib/status-command.mjs';
 import { runAgentProjectionCommand } from './lib/agent-projection-command.mjs';
 import { setupUsage, setupUsageAll, upgradeUsage } from './lib/first-run-help.mjs';
 import { runUpstreamReportCommand } from './lib/upstream-report.mjs';
+import { DASHBOARD_HELP as dashboardHelp } from './lib/dashboard-cli.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const arkCheck = path.join(here, 'ark-check.mjs');
 const arkDashboard = path.join(here, 'ark-dashboard.mjs');
-const dashboardHelp = `arkgate dashboard (alias ark dashboard) — observability TUI.
-Usage: arkgate dashboard [--url <snapshot-url>] [--interval <ms>]
-Polls an ArkRun inspector; it does not start the kernel.`;
 
 function withDashboardHelp(text, detailed) {
   const extra = detailed
-    ? '  arkgate dashboard [--url <snapshot-url>] [--interval <ms>]\n  arkgate report  [--root <project>] [--json] [--title <text>] [--finding <ref>] [--submit] [--i-confirm-submit]\n'
+    ? '  arkgate dashboard [--url <inspector-url>] [--interval <ms>] [--once]\n  arkgate report  [--root <project>] [--json] [--title <text>] [--finding <ref>] [--submit] [--i-confirm-submit]\n'
     : '';
   const extraDesc = detailed
     ? '  dashboard  ANSI observability TUI (spawns ark-dashboard).\n  report     Draft an upstream GitHub issue for pedroknigge/arkgate. Create needs --submit plus confirm. --yes does not submit.\n'

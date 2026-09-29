@@ -1,5 +1,5 @@
 import fs from 'node:fs';
-import { defineConfig } from 'tsup';
+import { defineConfig, type Options } from 'tsup';
 
 const pkg = JSON.parse(fs.readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as {
   version: string;
@@ -28,20 +28,14 @@ function patchEslintCjs(): void {
   fs.writeFileSync(file, `${text}\n${ESLINT_CJS_FOOTER}`);
 }
 
-export default defineConfig({
-  entry: {
-    index: 'src/gate.ts',
-    'eslint/index': 'src/eslint/index.ts',
-    'order/index': 'src/kernel/order/index.ts',
-    'runtime/index': 'src/runtime/index.ts',
-    'nestjs/index': 'src/nestjs/index.ts',
-  },
+const shared: Options = {
   format: ['esm', 'cjs'],
   external: ['@nestjs/common'],
   dts: true,
-  splitting: false,
   sourcemap: false,
-  clean: true,
+  // `npm run build` wipes dist/ first (scripts/clean-gate-dist.mjs); the two
+  // builds below write into the same outDir, so neither may clean it.
+  clean: false,
   // npm ships this output alongside readable TypeScript sources in the repository.
   // Compact the duplicate ESM/CJS distribution so stable analysis features stay
   // inside the release artifact budget. keepNames: Nest/kernel reflection.
@@ -53,7 +47,30 @@ export default defineConfig({
   outDir: 'dist',
   // ESLint plugin meta.version (cache key for `eslint --cache` across arkgate upgrades).
   define: { __ARKGATE_VERSION__: JSON.stringify(pkg.version) },
-  onSuccess: async () => {
-    patchEslintCjs();
+};
+
+export default defineConfig([
+  {
+    ...shared,
+    entry: {
+      index: 'src/gate.ts',
+      'eslint/index': 'src/eslint/index.ts',
+      'order/index': 'src/kernel/order/index.ts',
+    },
+    splitting: false,
+    onSuccess: async () => {
+      patchEslintCjs();
+    },
   },
-});
+  {
+    ...shared,
+    // arkgate/runtime and arkgate/nestjs share ONE kernel chunk: an ArkModule
+    // kernel throws the same error classes arkgate/runtime exports (instanceof
+    // works) and module-level state is not duplicated between the two entries.
+    entry: {
+      'runtime/index': 'src/runtime/index.ts',
+      'nestjs/index': 'src/nestjs/index.ts',
+    },
+    splitting: true,
+  },
+]);

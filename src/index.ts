@@ -111,6 +111,7 @@ export {
   UnknownEventSourceError,
   SourceMetadataOverrideError,
   ObservedLayerFlowViolationError,
+  ArkKernelConfigError,
   type PublishPolicyContext,
   type GraphPolicyContext,
   type BuildPublishPolicyContextOptions,
@@ -135,6 +136,7 @@ export {
 export {
   InMemoryOutboxStore,
   InMemoryEventBuffer,
+  type InMemoryEventBufferOptions,
   type OutboxRecord,
   type OutboxStatus,
   type OutboxStore,

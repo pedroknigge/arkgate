@@ -6,12 +6,10 @@ import type {
   AuditTrail,
   CreateAuditTrailOptions,
 } from './types';
-
-let auditSequence = 0;
+import { nextRuntimeId } from '../runtimeIds';
 
 function createAuditId(): string {
-  auditSequence += 1;
-  return `audit-${Date.now()}-${auditSequence}`;
+  return nextRuntimeId('audit');
 }
 
 function matchesQuery(record: AuditRecord, query: AuditQuery): boolean {

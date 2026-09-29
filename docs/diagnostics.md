@@ -376,13 +376,28 @@ Not adopted, no catalogued invariants, or every invariant sets `coverage.test: f
 Live adapters specialize `nextAction` with the call-site name or specifier when present
 (casual `enthusiastHint` + engineer `nextAction`). Catalog **Fix** is the stable no-target form.
 
+The undeclared-* sensors only count a call whose receiver is **traced to the kernel**: a local
+bound from a kernel factory, an identifier imported from a `kernelRoots` / `compositionRoots`
+module (resolved through tsconfig `paths`, and through barrels that re-export a root), a plain
+alias (`const kernel = ark`) or `typeof ark` binding, a binding typed `ArkKernel` / `EventBus` / `EventPublisher` / `ArkRunPublisher` imported
+from `arkgate/runtime` or `arkgate/nestjs` (including `this.ark` constructor injection), its
+`.eventBus`, a `publisher(..)` result, or destructured kernel members. `res.send`,
+`require.resolve`, `subject.subscribe`, and other same-named methods are not kernel calls — unless
+the receiver cannot be traced (an untyped parameter) **and** the literal name is a kernel-valid
+intent (`Domain.…`, `Application.…`, the only names a kernel accepts); then it counts.
+The call name is a string literal or a same-file `define(..)` / `defineIntent(..)` creator
+(or string constant). When an enforced call names neither (for example an imported creator),
+analysis reports completeness reason `ARKRUN_INTERACTION_NAME_INCOMPLETE` (partial, never green).
+A `publisher(source)` binding without a literal is not incomplete — the emitted name is checked
+on the chained `.publish` / `.send`.
+
 <a id="ARKRUN_MISSING_ROOT"></a>
 
 ### `ARKRUN_MISSING_ROOT`
 
 **No kernel factory in composition roots**
 
-- **Why:** The ArkRun extra is on but no createArkKernel / createStrictArkKernel / createArkKernelFromConfig / createStrictArkKernelFromConfig factory was found in arkRun.compositionRoots, so agents can skip the kernel while the write gate stays green.
+- **Why:** The ArkRun extra is on but no kernel factory (createArkKernel / createStrictArkKernel / createLenientArkKernel, their *FromConfig variants, or ArkModule.forRoot / forRootAsync imported from arkgate/nestjs) was found in arkRun.compositionRoots, so agents can skip the kernel while the write gate stays green.
 - **Fix:** Import createStrictArkKernel from arkgate/runtime (same npm package; @arkgate/runtime is deprecated) and call it in a composition root listed in arkRun.compositionRoots, then preflight again. Never mechanical-safe — factory placement is a design decision.
 
 <a id="ARKRUN_KERNEL_IN_DOMAIN"></a>
@@ -391,7 +406,7 @@ Live adapters specialize `nextAction` with the call-site name or specifier when 
 
 **Domain-role layer imports the kernel**
 
-- **Why:** A Domain-role layer imports arkgate/runtime, @arkgate/runtime, or kernel types. Domain stays kernel-free; composition roots and adapters own the factory.
+- **Why:** A Domain-role layer imports arkgate/runtime, arkgate/nestjs, @arkgate/runtime, or kernel types. Domain stays kernel-free; composition roots and adapters own the factory.
 - **Fix:** Move the kernel import out of the Domain-role layer into a composition root or adapter. Import from arkgate/runtime (same npm package; @arkgate/runtime is deprecated), then preflight again. Never mechanical-safe.
 
 <a id="ARKRUN_DIRECT_NEW"></a>
@@ -409,7 +424,7 @@ Live adapters specialize `nextAction` with the call-site name or specifier when 
 
 **Emit name not in raises/sends**
 
-- **Why:** A publisher / publish / raise / send call-site literal is not listed in the file’s raises or sends declaration.
+- **Why:** A publisher / publish / raise / send call on a receiver traced to the kernel names an intent (string literal or same-file define/defineIntent binding) that is not listed in the file’s raises or sends declaration.
 - **Fix:** Add the existing call-site name to raises or sends on the managed component, then preflight again. Mechanical-safe only when that literal already exists and the edit is the declaration list; inventing a new emit stays judgment.
 
 <a id="ARKRUN_UNDECLARED_HANDLE"></a>
@@ -418,7 +433,7 @@ Live adapters specialize `nextAction` with the call-site name or specifier when 
 
 **Handle name not in reactsTo**
 
-- **Why:** A subscribe / registerHandler call-site literal is not listed in the file’s reactsTo declaration.
+- **Why:** A subscribe / registerHandler call on a receiver traced to the kernel names an intent (string literal or same-file define/defineIntent binding) that is not listed in the file’s reactsTo declaration.
 - **Fix:** Add the existing call-site name to reactsTo on the managed component, then preflight again. Mechanical-safe only when that literal already exists and the edit is the declaration list; inventing a new handle stays judgment.
 
 <a id="ARKRUN_UNDECLARED_DEPEND"></a>
@@ -427,7 +442,7 @@ Live adapters specialize `nextAction` with the call-site name or specifier when 
 
 **Depend name not in uses**
 
-- **Why:** A resolve / resolveSingleton call-site literal is not listed in the file’s uses declaration.
+- **Why:** A resolve / resolveSingleton call on a receiver traced to the kernel names a component that is not listed in the file’s uses declaration.
 - **Fix:** Add the existing call-site name to uses on the managed component, then preflight again. Mechanical-safe only when that literal already exists and the edit is the declaration list; inventing a new depend stays judgment.
 
 <a id="ARKRUN_TRANSPORT_BYPASS"></a>

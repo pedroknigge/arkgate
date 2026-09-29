@@ -1030,6 +1030,13 @@ a `Domain.*` event — the publish throws `ObservedLayerFlowViolationError` befo
 reaches history, outbox, or subscribers. Use `'soft'` to record `layer.observedViolation`
 trace/audit records without blocking, or `'off'` to disable. Agents should name the event's
 `source` honestly: it is checked against the layer matrix, not just the intent name.
+Kernels built from `ark.config.json` map intents to layers through `layers[].intentPrefixes`;
+canonical layer names (`DomainModel`, `ApplicationOrchestration`, … as `ark init` writes them)
+without prefixes get the built-in ones. A custom-named deny-rule layer with no prefixes is
+recorded once as a `layer.observedFlowUnresolvable` audit record
+(`ARKRUN_LAYER_FLOW_UNRESOLVABLE`) and listed by `ark doctor`; pass
+`enforceObservedLayerFlow: 'hard'` explicitly to make it throw `ArkKernelConfigError`.
+`peerIsolation` slice walls are not evaluated at runtime (names cannot place a slice).
 
 Strict kernels also require published events to have a registered source intent
 and a matching event contract:
@@ -1550,8 +1557,22 @@ doctor → compact router (and `/ark-autopilot` only after the skill pack).
 | `GET /workflows` | Workflows monitor: counts + `workflows[]` summaries (`id`, `name`, `status`, optional `currentStep` / `error`) |
 
 Dual package bins **`ark-dashboard`** and **`arkgate-dashboard`**
-(`bin/ark-dashboard.mjs`) poll `--url` (default `http://127.0.0.1:3000/snapshot`)
-and sibling `/outbox` + `/workflows` on an interval (`--interval`, 200–60000 ms).
+(`bin/ark-dashboard.mjs`) poll `--url` and sibling `/outbox` + `/workflows` on an
+interval (`--interval` / `--timeout`, clamped to 200–60000 ms). `--url` accepts the
+inspector root (`handle.url`) or `handle.snapshotUrl`. `startInspector()` binds a
+**random port** unless you pass `{ port }`, so pass the URL your app printed (or set
+`ARK_DASHBOARD_URL`); the fallback `http://127.0.0.1:3000/snapshot` only matches
+`startInspector({ port: 3000 })`, and the dashboard prints that hint when it cannot
+connect. `--once` renders one frame and exits (non-zero when unreachable);
+`--help` / `--version` exit 0; unknown flags exit 2 with one line.
+
+The default in-memory event buffer (`InMemoryEventBuffer`) is capped at
+`maxHistorySize` (default 1000) and its records are marked `dispatched` once the kernel
+finishes local delivery, so `/outbox` shows real backlog only. Broker sends are marked
+`dispatched` / `failed` from the handoff outcome, and a failed handoff (awaited or
+fire-and-forget) records an `event.handoffFailed` trace + audit entry. An injected
+`eventBuffer` stays relay-owned: records remain `pending` for your relay's `claim` /
+`markDispatched` (except broker handoffs the kernel performs itself).
 ANSI escape sequences + polling only — no React, Ink, or Blessed. Use
 `ark dashboard` / `arkgate dashboard` (passthrough to `bin/ark-dashboard.mjs`) or the
 dual bins `ark-dashboard` / `arkgate-dashboard`.

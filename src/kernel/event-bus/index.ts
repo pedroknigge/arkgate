@@ -20,4 +20,5 @@ export {
   UnknownEventSourceError,
   SourceMetadataOverrideError,
   ObservedLayerFlowViolationError,
+  ArkKernelConfigError,
 } from './errors';

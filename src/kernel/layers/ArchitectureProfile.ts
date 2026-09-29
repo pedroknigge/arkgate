@@ -11,6 +11,7 @@ import {
   DEFAULT_ARK_CONFIG_RULES,
   withArkConfigMetadata,
 } from '../../domain/configContract';
+import { effectiveIntentPrefixes } from '../../domain/sourcePolicy';
 
 function normalizePrefix(prefix: string): string {
   return prefix.endsWith('.') ? prefix : `${prefix}.`;
@@ -60,7 +61,8 @@ export function createArchitectureProfileFromArkConfig(
     name: options.name ?? config.name ?? 'ark.config.json',
     layers: config.layers.map((layer, index) => ({
       name: layer.name,
-      prefixes: layer.intentPrefixes ?? [],
+      // Declared intentPrefixes, else the canonical 11-layer prefixes for that name.
+      prefixes: [...effectiveIntentPrefixes(layer)],
       description: layer.description,
       trustBoundary: layer.trustBoundary,
       owners: layer.owners,

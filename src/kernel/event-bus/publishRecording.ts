@@ -4,7 +4,7 @@
  */
 import type { DomainEvent, EventMetadata } from '../../domain/types';
 import type { AuditRecordType, AuditTrail } from '../audit';
-import type { EventBufferStore } from '../outbox';
+import type { EventBufferRecord, EventBufferStore } from '../outbox';
 import type { PublishedEventRecord, TraceRecord, TraceSink } from './types';
 
 export type RecordingBuffers = {
@@ -102,6 +102,12 @@ export async function recordRawPublishDiagnostic(
   await recordAudit(buffers, 'event.rawPublish', event, details);
 }
 
+export type SuccessfulPublishRecording = {
+  record: PublishedEventRecord;
+  /** Event-buffer record written for this publish (undefined without a buffer). */
+  bufferRecord?: EventBufferRecord;
+};
+
 /**
  * After policy: write history + outbox + published trace/audit.
  */
@@ -110,14 +116,14 @@ export async function recordSuccessfulPublish(
   event: DomainEvent,
   subscribersNotified: number,
   tx?: unknown
-): Promise<PublishedEventRecord> {
+): Promise<SuccessfulPublishRecording> {
   const record: PublishedEventRecord = {
     event,
     publishedAt: new Date().toISOString(),
     subscribersNotified,
   };
   appendHistory(buffers, record);
-  await buffers.eventBuffer?.enqueue(event, tx);
+  const bufferRecord = await buffers.eventBuffer?.enqueue(event, tx);
 
   appendTrace(buffers, {
     type: 'event.published',
@@ -132,7 +138,64 @@ export async function recordSuccessfulPublish(
     subscribersNotified,
   });
 
-  return record;
+  return { record, bufferRecord: bufferRecord ?? undefined };
+}
+
+/**
+ * Settle an event-buffer record after the kernel itself finished delivery
+ * (local handlers or a broker handoff). Buffer errors never change publish
+ * semantics; they surface as a `hook.error` trace instead.
+ */
+export async function settleBufferRecord(
+  buffers: RecordingBuffers,
+  event: DomainEvent,
+  bufferRecordId: string,
+  outcome: { ok: true } | { ok: false; error: unknown }
+): Promise<void> {
+  const store = buffers.eventBuffer;
+  if (!store) return;
+  try {
+    if (outcome.ok) await store.markDispatched(bufferRecordId);
+    else await store.markFailed(bufferRecordId, outcome.error);
+  } catch (err) {
+    appendTrace(buffers, {
+      type: 'hook.error',
+      timestamp: new Date().toISOString(),
+      intent: event.intent,
+      correlationId: event.metadata.correlationId,
+      traceId: event.metadata.traceId,
+      spanId: event.metadata.spanId,
+      details: {
+        hook: 'eventBuffer',
+        error: err instanceof Error ? err.message : String(err),
+      },
+    });
+  }
+}
+
+/**
+ * Record a failed broker handoff (ADR 0024): trace + audit `event.handoffFailed`.
+ */
+export async function recordHandoffFailure(
+  buffers: RecordingBuffers,
+  event: DomainEvent,
+  error: unknown,
+  transport: string
+): Promise<void> {
+  const details = {
+    transport,
+    error: error instanceof Error ? error.message : String(error),
+  };
+  appendTrace(buffers, {
+    type: 'event.handoffFailed',
+    timestamp: new Date().toISOString(),
+    intent: event.intent,
+    correlationId: event.metadata.correlationId,
+    traceId: event.metadata.traceId,
+    spanId: event.metadata.spanId,
+    details,
+  });
+  await recordAudit(buffers, 'event.handoffFailed', event, details);
 }
 
 export function enrichMetadata(

@@ -74,7 +74,9 @@ describe('Strict Ark kernel phase hardening', () => {
       eventVersion: '1',
     });
 
-    expect(await ark.outbox.list('pending')).toHaveLength(1);
+    // Default in-memory buffer: settled once local delivery finishes (no relay drains it).
+    expect(await ark.outbox.list('dispatched')).toHaveLength(1);
+    expect(await ark.outbox.list('pending')).toHaveLength(0);
     expect(await ark.auditTrail.query({ type: 'event.published' })).toHaveLength(1);
     expect(ark.manifest().toJSON().eventContracts).toHaveLength(1);
   });

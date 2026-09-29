@@ -295,14 +295,14 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
     'ARKRUN_MISSING_ROOT',
     'arkrun',
     'No kernel factory in composition roots',
-    'The ArkRun extra is on but no createArkKernel / createStrictArkKernel / createArkKernelFromConfig / createStrictArkKernelFromConfig factory was found in arkRun.compositionRoots, so agents can skip the kernel while the write gate stays green.',
+    'The ArkRun extra is on but no kernel factory (createArkKernel / createStrictArkKernel / createLenientArkKernel, their *FromConfig variants, or ArkModule.forRoot / forRootAsync imported from arkgate/nestjs) was found in arkRun.compositionRoots, so agents can skip the kernel while the write gate stays green.',
     'Import createStrictArkKernel from arkgate/runtime (same npm package; @arkgate/runtime is deprecated) and call it in a composition root listed in arkRun.compositionRoots, then preflight again. Never mechanical-safe — factory placement is a design decision.'
   ),
   entry(
     'ARKRUN_KERNEL_IN_DOMAIN',
     'arkrun',
     'Domain-role layer imports the kernel',
-    'A Domain-role layer imports arkgate/runtime, @arkgate/runtime, or kernel types. Domain stays kernel-free; composition roots and adapters own the factory.',
+    'A Domain-role layer imports arkgate/runtime, arkgate/nestjs, @arkgate/runtime, or kernel types. Domain stays kernel-free; composition roots and adapters own the factory.',
     'Move the kernel import out of the Domain-role layer into a composition root or adapter. Import from arkgate/runtime (same npm package; @arkgate/runtime is deprecated), then preflight again. Never mechanical-safe.'
   ),
   entry(
@@ -316,21 +316,21 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
     'ARKRUN_UNDECLARED_EMIT',
     'arkrun',
     'Emit name not in raises/sends',
-    'A publisher / publish / raise / send call-site literal is not listed in the file’s raises or sends declaration.',
+    'A publisher / publish / raise / send call on a receiver traced to the kernel names an intent (string literal or same-file define/defineIntent binding) that is not listed in the file’s raises or sends declaration.',
     'Add the existing call-site name to raises or sends on the managed component, then preflight again. Mechanical-safe only when that literal already exists and the edit is the declaration list; inventing a new emit stays judgment.'
   ),
   entry(
     'ARKRUN_UNDECLARED_HANDLE',
     'arkrun',
     'Handle name not in reactsTo',
-    'A subscribe / registerHandler call-site literal is not listed in the file’s reactsTo declaration.',
+    'A subscribe / registerHandler call on a receiver traced to the kernel names an intent (string literal or same-file define/defineIntent binding) that is not listed in the file’s reactsTo declaration.',
     'Add the existing call-site name to reactsTo on the managed component, then preflight again. Mechanical-safe only when that literal already exists and the edit is the declaration list; inventing a new handle stays judgment.'
   ),
   entry(
     'ARKRUN_UNDECLARED_DEPEND',
     'arkrun',
     'Depend name not in uses',
-    'A resolve / resolveSingleton call-site literal is not listed in the file’s uses declaration.',
+    'A resolve / resolveSingleton call on a receiver traced to the kernel names a component that is not listed in the file’s uses declaration.',
     'Add the existing call-site name to uses on the managed component, then preflight again. Mechanical-safe only when that literal already exists and the edit is the declaration list; inventing a new depend stays judgment.'
   ),
   entry(

@@ -36,7 +36,9 @@ import {
 import { provePortProofInject } from './port-proof.mjs';
 import { extractClassShapesFromSource } from './arkrules-sensors.mjs';
 import {
+  createArkRunKernelRootSpecifierMatcher,
   extractArkRunDeclarationsFromSource,
+  reexportsArkRunKernelRoot,
   extractArkRunKernelCallsFromSource,
   extractArkRunManagedNewsFromSource,
 } from './ark-run-facts.mjs';
@@ -1178,6 +1180,10 @@ export function resolveCandidateFacts({
   const compositionRootPatterns = arkRunActive
     ? [...(config.arkRun?.compositionRoots ?? [])]
     : [];
+  // Identifiers imported from a kernel root module are traced kernel receivers.
+  const kernelRootPatterns = arkRunActive
+    ? [...(config.arkRun?.kernelRoots ?? config.arkRun?.compositionRoots ?? [])]
+    : [];
   const planeRootPatterns = arkOrderActive ? [...(config.arkOrder?.planeRoots ?? [])] : [];
 
   const seedPathSet = new Set(candidateFiles.map((file) => file.path));
@@ -1274,13 +1280,8 @@ export function resolveCandidateFacts({
         }
       }
       if (arkRunActive) {
-        try {
-          arkRunKernelCalls.push(
-            ...extractArkRunKernelCallsFromSource(candidate.path, candidate.content)
-          );
-        } catch {
-          // Never fail the resolver for ArkRun call extraction.
-        }
+        // Kernel calls are extracted after every file is parsed, so imports of a
+        // kernel root resolve through tsconfig paths and barrel re-exports.
         try {
           arkRunDeclarations.push(
             ...extractArkRunDeclarationsFromSource(candidate.path, candidate.content)
@@ -1369,6 +1370,32 @@ export function resolveCandidateFacts({
   const extractCandidates = scoped
     ? candidateFiles.filter((file) => seedPathSet.has(file.path))
     : candidateFiles;
+  if (arkRunActive) {
+    const rootMatcherFor = arkRunKernelRootMatchers({
+      parsed,
+      patterns: kernelRootPatterns,
+      resolveTarget: (file, dependency) =>
+        resolveDependency(
+          ts,
+          dependency,
+          file.candidate.absolute,
+          compiler.optionsFor(file.candidate.absolute),
+          host
+        ),
+    });
+    for (const candidate of extractCandidates) {
+      if (!/\.(tsx?|mts|cts)$/i.test(candidate.path)) continue;
+      try {
+        arkRunKernelCalls.push(
+          ...extractArkRunKernelCallsFromSource(candidate.path, candidate.content, {
+            isKernelRootSpecifier: rootMatcherFor(candidate.path),
+          })
+        );
+      } catch {
+        // Never fail the resolver for ArkRun call extraction.
+      }
+    }
+  }
   const admittedTypeNames = new Set(classShapes.map((shape) => shape.className));
   if (arkRunActive) {
     for (const candidate of extractCandidates) {
@@ -1515,4 +1542,58 @@ export function resolveCandidateFacts({
     arkOrderIngestWritesXi,
     arkOrderReleaseKeyCounts,
   });
+}
+
+/**
+ * Per-file predicate: does an import specifier reach an ArkRun kernel root?
+ * Uses real module resolution (tsconfig `paths`, package links) plus the
+ * relative-glob fallback, and treats barrels that re-export a root as roots
+ * (fixpoint), so `import { ark } from '@/main'` or a re-exporting index is traced.
+ */
+function arkRunKernelRootMatchers({ parsed, patterns, resolveTarget }) {
+  const regexes = [];
+  for (const pattern of patterns) {
+    try {
+      regexes.push(globToRegExp(pattern));
+    } catch {
+      // Invalid glob: the relative fallback still applies.
+    }
+  }
+  const roots = new Set([...parsed.keys()].filter((file) => regexes.some((re) => re.test(file))));
+  const targets = new Map();
+  if (patterns.length > 0) {
+    for (const [file, info] of parsed) {
+      const bySpecifier = new Map();
+      for (const dependency of info.dependencies) {
+        if (!dependency.specifier || (dependency.kind !== 'import' && dependency.kind !== 'export')) {
+          continue;
+        }
+        if (bySpecifier.has(dependency.specifier)) continue;
+        const resolved = resolveTarget(info, dependency);
+        if (resolved.resolution === 'resolved-project' && resolved.target) {
+          bySpecifier.set(dependency.specifier, resolved.target);
+        }
+      }
+      targets.set(file, bySpecifier);
+    }
+  }
+  const matcherFor = (file) => {
+    const relative = createArkRunKernelRootSpecifierMatcher(file, patterns);
+    const bySpecifier = targets.get(file);
+    return (specifier) => {
+      const target = bySpecifier?.get(specifier);
+      return target !== undefined ? roots.has(target) : relative(specifier);
+    };
+  };
+  for (let changed = patterns.length > 0; changed; ) {
+    changed = false;
+    for (const [file, info] of parsed) {
+      if (roots.has(file)) continue;
+      if (reexportsArkRunKernelRoot(info.candidate.content, matcherFor(file))) {
+        roots.add(file);
+        changed = true;
+      }
+    }
+  }
+  return matcherFor;
 }

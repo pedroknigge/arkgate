@@ -207,3 +207,31 @@ describe('RN08 ArkRun doctor section', () => {
     expect(printed).not.toContain(ARKRUN_FIRST_CONTACT_NEXT);
   });
 });
+
+describe('ArkRun doctor: runtime layer-flow resolvability', () => {
+  const layerFlow = {
+    layers: [
+      { name: 'DomainModel' },
+      { name: 'Features' },
+      { name: 'App', intentPrefixes: ['Presentation.'] },
+    ],
+    rules: [
+      { from: 'DomainModel', to: 'App', allowed: false },
+      { from: 'Features', to: 'App', allowed: false },
+      { from: 'Features', to: 'Features', allowed: false, peerIsolation: true },
+    ],
+  };
+
+  it('lists custom deny layers without intentPrefixes when the extra is on', () => {
+    const section = summarizeArkRunSection({ arkRun: { mode: 'enforced' }, layerFlow });
+    expect(section.layerFlowUnresolvable).toEqual(['Features']);
+    expect(formatArkRunDoctorLines(section).join('\n')).toMatch(
+      /Runtime layer flow: Features .*ARKRUN_LAYER_FLOW_UNRESOLVABLE/
+    );
+  });
+
+  it('stays silent when the extra is off', () => {
+    const section = summarizeArkRunSection({ layerFlow });
+    expect(section.layerFlowUnresolvable).toEqual([]);
+  });
+});
