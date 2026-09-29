@@ -1,4 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import arkEslint, {
   noDomainInfraImports,
   noForbiddenGlobals,
@@ -30,7 +33,11 @@ describe('Ark ESLint plugin', () => {
       'no-arkrun-transport-bypass',
       'no-arkorder-kernel-in-domain',
       'no-arkorder-generic-update',
+      'arkrules-structure',
+      'architecture-advisory',
     ]);
+    expect(arkEslint.meta).toMatchObject({ name: 'arkgate' });
+    expect(typeof arkEslint.meta.version).toBe('string');
     expect(arkEslint.configs?.recommended).toBeDefined();
     expect(
       (arkEslint.configs?.recommended as { rules: Record<string, string> }).rules
@@ -40,6 +47,8 @@ describe('Ark ESLint plugin', () => {
       'ark/no-arkrun-transport-bypass': 'error',
       'ark/no-arkorder-kernel-in-domain': 'error',
       'ark/no-arkorder-generic-update': 'error',
+      'ark/arkrules-structure': 'error',
+      'ark/architecture-advisory': 'warn',
     });
   });
 
@@ -72,7 +81,12 @@ describe('Ark ESLint plugin', () => {
   });
 
   it('requires publish metadata source', () => {
-    const { context, reports } = createContext('/repo/src/application/placeOrder.ts');
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-eslint-publish-'));
+    fs.writeFileSync(
+      path.join(root, 'ark.config.json'),
+      JSON.stringify({ include: ['src'], layers: [], rules: [] })
+    );
+    const { context, reports } = createContext(path.join(root, 'src/application/placeOrder.ts'));
     const listener = requirePublishSource.create(context);
 
     listener.CallExpression({

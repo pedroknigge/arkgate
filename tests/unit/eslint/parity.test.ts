@@ -8,6 +8,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {
+  architectureAdvisory,
   noDomainInfraImports,
   noDeniedCapabilities,
   noForbiddenGlobals,
@@ -149,12 +150,19 @@ describe('ESLint ↔ ark-check parity', () => {
         .every((d) => d.severity === 'warning')
     ).toBe(true);
 
+    // ESLint severity is per rule id: the warn-level advisory rule carries the placement
+    // debt. Without that rule, the blocking rule reports it tagged advisory, never as its
+    // own forbiddenImport message.
+    const typeOnlyNode = { source: { value: '../infra/db' }, importKind: 'type' };
+    const blocking = createContext(domainFile);
+    noDomainInfraImports.create(blocking.context).ImportDeclaration(typeOnlyNode);
+    expect(blocking.reports.map((r) => r.messageId)).toEqual(['advisoryFallback']);
     const { context, reports } = createContext(domainFile);
-    noDomainInfraImports.create(context).ImportDeclaration({
-      source: { value: '../infra/db' },
-      importKind: 'type',
-    });
-    expect(reports.length).toBeGreaterThanOrEqual(1);
+    architectureAdvisory.create(context).ImportDeclaration(typeOnlyNode);
+    expect(reports).toHaveLength(1);
+    expect(reports[0].messageId).toBe('advisory');
+    expect((reports[0].diagnostic as { severity: string }).severity).toBe('warning');
+    expect((reports[0].data as { message: string }).message).toContain('type placement debt');
   });
 
   it('preserves specifier-level import/export type-only evidence inside the parity envelope', () => {
@@ -177,7 +185,8 @@ describe('ESLint ↔ ark-check parity', () => {
     expect(cliDiagnostics.every((item) => item.evidence?.typeOnly === true)).toBe(true);
 
     const { context, reports } = createContext(domainFile);
-    const listener = noDomainInfraImports.create(context);
+    // Type-only placement debt is non-blocking: it reports on the advisory rule.
+    const listener = architectureAdvisory.create(context);
     const importNode: Record<string, any> = {
       type: 'ImportDeclaration',
       source: { value: '../infra/db' },

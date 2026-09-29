@@ -8,6 +8,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {
+  architectureAdvisory,
   noArkRunDirectNew,
   noArkRunKernelInDomain,
   noArkRunTransportBypass,
@@ -191,17 +192,28 @@ describe('RN06 ESLint ↔ ark-check ArkRun envelope', () => {
     expect(cli).toMatchObject({ severity: 'warning' });
 
     const domainFile = path.join(root, 'src/domain/order.ts');
-    const { context, reports } = createContext(domainFile);
-    noArkRunKernelInDomain.create(context).ImportDeclaration({
+    const importNode = {
       source: { value: '@arkgate/runtime' },
       specifiers: [{ type: 'ImportSpecifier' }],
       loc: { start: { line: 1 } },
-    });
+    };
+    // ESLint severity is per rule, not per report: alone, the blocking rule tags the
+    // finding advisory instead of reporting it as its own blocking message.
+    const blocking = createContext(domainFile);
+    noArkRunKernelInDomain.create(blocking.context).ImportDeclaration(importNode);
+    expect(blocking.reports.map((r) => r.messageId)).toEqual(['advisoryFallback']);
+    // The warn-level advisory rule carries the same finding.
+    const { context, reports } = createContext(domainFile);
+    architectureAdvisory.create(context).ImportDeclaration(importNode);
     expect(reports).toHaveLength(1);
+    expect(reports[0].messageId).toBe('advisory');
     expect(reports[0].diagnostic).toMatchObject({
       ruleId: 'ARKRUN_KERNEL_IN_DOMAIN',
       severity: 'warning',
     });
+    expect((reports[0].data as { message: string }).message).toBe(
+      (cli as { message: string }).message
+    );
   });
 
   it('transport-bypass: ESLint and ark-check share ARKRUN_TRANSPORT_BYPASS', () => {

@@ -1266,8 +1266,14 @@ imports/exports; resolved CLI/preflight is authoritative outside that envelope),
 `ark/no-denied-capabilities` (per-layer capability deny sets),
 `ark/no-arkrun-kernel-in-domain` / `ark/no-arkrun-direct-new` /
 `ark/no-arkrun-transport-bypass` (ArkRun extra; silent when absent; import / `new`
-envelope only), `ark/no-raw-event-publish`, and
-`ark/require-publish-source`. See [ai-gates.md](ai-gates.md).
+envelope only), `ark/no-arkorder-kernel-in-domain` / `ark/no-arkorder-generic-update`
+(ArkOrder extra), `ark/arkrules-structure` (ArkRules structure sensors, file-local),
+`ark/no-raw-event-publish`, and `ark/require-publish-source`. Findings ark-check reports as
+warnings (type-only placement debt, advisory slice walls, advisory extras) report on the
+warn-level `ark/architecture-advisory`, so ESLint errors only where ark-check fails (a
+config without that rule gets them on the blocking rule id, tagged advisory). An
+invalid contract is one `configInvalid` error per file, not a crash. See
+[ai-gates.md](ai-gates.md#eslint-editor-feedback--bounded-parity-envelope).
 
 ## Runtime Observability
 
