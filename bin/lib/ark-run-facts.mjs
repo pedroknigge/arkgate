@@ -143,7 +143,7 @@ function joinRelative(fromFile, specifier) {
 /**
  * Pure predicate: does a relative `specifier` imported from `fromFile` point at
  * one of the ArkRun kernel/composition roots? Identifiers imported from such a
- * module are traced as kernel receivers (`import { ark } from '../main'`).
+ * module are traced as kernel receivers (an `ark` binding imported from a relative `../main`).
  */
 export function createArkRunKernelRootSpecifierMatcher(fromFile, roots) {
     return (specifier) => {
@@ -650,8 +650,8 @@ function untracedKernelNameEvidence(chain, stringArg) {
     return root !== undefined && root !== '<expr>' && !SKIP_INTERACTION_RECEIVERS.has(root);
 }
 /**
- * Does this module re-export a kernel root (`export { ark } from '../main'`,
- * `export * from './main'`, or `import { ark } from '../main'; export { ark }` /
+ * Does this module re-export a kernel root (a named or star re-export of a relative
+ * `main` module, or an `ark` binding imported from it and re-exported /
  * `export const kernel = ark` / `export default ark`)? The resolver uses it to
  * treat barrels as kernel roots, to a fixpoint.
  */

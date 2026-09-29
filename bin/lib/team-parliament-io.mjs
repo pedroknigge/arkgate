@@ -41,13 +41,9 @@ export {
   personaCheckBudget,
   resolveStewardHandle,
   suggestStewards,
-  SPAWN_TIMEOUT_MS,
-  TEAM_BASE_CANDIDATES,
-  discoverTeamBaseRef,
-  gitShowText,
-  listChangedPaths,
-  safeGitRef,
 };
+// prettier-ignore
+export { SPAWN_TIMEOUT_MS, TEAM_BASE_CANDIDATES, discoverTeamBaseRef, gitShowText, listChangedPaths, safeGitRef };
 
 export function contractSessionFrom(args, env = process.env) {
   if (args?.contractSession === true) return true;
