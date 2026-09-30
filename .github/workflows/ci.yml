@@ -15,6 +15,15 @@ name: CI
 #   complete packed/gallery/onboarding cells with fail-fast: false. A `release`
 #   label or a release-shaped branch name does not select this path.
 # Docs-only and hygiene intentional skips still report success on required gate jobs.
+#
+# Required status checks on main (classic branch protection):
+# - this file: CI profile, build, TypeScript compatibility gate, Journey gate,
+#   Gallery clean-room gate, Managed upgrade candidate gate, Adapter parity,
+#   Deterministic fuzz, Performance budgets, Z07 bounded feedback
+# - security.yml: CodeQL, Dependency review, Semgrep CE
+# - Test matrix gate: add to protection once this job has reported on main
+#   (it aggregates Node, Workspace portability, and Onboarding matrix cells).
+# Matrix cells are never required directly; each matrix has an always() aggregate gate.
 on:
   push:
     branches: [main]
@@ -210,6 +219,68 @@ jobs:
         run: npm run test:onboarding-matrix:shard
         env:
           O04_SHARD: ${{ matrix.fixture }}
+
+  # Required status check name: "Test matrix gate" (branch protection).
+  # Matrix cells report expanded names ("Node 20"), and a skipped matrix job reports its
+  # unexpanded name ("Node ${{ matrix.node }}"), so protection cannot require the cells.
+  # Always runs so the check reports success/failure (never silent skip for protection).
+  test-matrix-gate:
+    name: Test matrix gate
+    if: ${{ always() }}
+    needs: [ci-profile, node-compat, workspace-portability, onboarding-matrix]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every test matrix when scheduled
+        env:
+          PROFILE_RESULT: ${{ needs.ci-profile.result }}
+          NODE_COMPAT_RESULT: ${{ needs.node-compat.result }}
+          PORTABILITY_RESULT: ${{ needs.workspace-portability.result }}
+          ONBOARDING_RESULT: ${{ needs.onboarding-matrix.result }}
+          DOCS_ONLY: ${{ needs.ci-profile.outputs.docs_only }}
+          HYGIENE: ${{ needs.ci-profile.outputs.hygiene }}
+          RUN_ONBOARDING: ${{ needs.ci-profile.outputs.run_onboarding }}
+        run: |
+          set -euo pipefail
+          if [ "$PROFILE_RESULT" != "success" ]; then
+            echo "ci-profile did not succeed (result=$PROFILE_RESULT)" >&2
+            exit 1
+          fi
+          # Only explicit false is an intentional skip; empty/unset must fail closed.
+          # node-compat and workspace-portability run unless docs_only or hygiene.
+          case "$DOCS_ONLY/$HYGIENE" in
+            false/false) RUN_CODE_MATRICES=true ;;
+            true/false | false/true | true/true) RUN_CODE_MATRICES=false ;;
+            *)
+              echo "docs_only/hygiene missing/invalid: ${DOCS_ONLY:-<empty>}/${HYGIENE:-<empty>}" >&2
+              exit 1
+              ;;
+          esac
+          if [ "$RUN_ONBOARDING" != "true" ] && [ "$RUN_ONBOARDING" != "false" ]; then
+            echo "run_onboarding missing/invalid: ${RUN_ONBOARDING:-<empty>}" >&2
+            exit 1
+          fi
+          status=0
+          require() {
+            # $1 job, $2 scheduled (true|false), $3 needs.<job>.result
+            case "$3" in
+              failure | cancelled)
+                echo "$1 did not succeed (result=$3)" >&2
+                status=1
+                ;;
+              *)
+                if [ "$2" = "false" ]; then
+                  echo "$1 intentionally not scheduled (docs_only or hygiene)."
+                elif [ "$3" != "success" ]; then
+                  echo "$1 scheduled but did not succeed (result=${3:-<empty>})" >&2
+                  status=1
+                fi
+                ;;
+            esac
+          }
+          require node-compat "$RUN_CODE_MATRICES" "$NODE_COMPAT_RESULT"
+          require workspace-portability "$RUN_CODE_MATRICES" "$PORTABILITY_RESULT"
+          require onboarding-matrix "$RUN_ONBOARDING" "$ONBOARDING_RESULT"
+          exit "$status"
 
   performance:
     name: Performance budgets

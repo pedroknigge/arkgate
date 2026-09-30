@@ -240,4 +240,29 @@ describe('Z02 analysis completeness', () => {
     expect(workflow).toContain('run_packed missing/invalid');
     expect(workflow).toContain('ci-profile did not succeed');
   });
+
+  it('exposes one stable CI gate for the Node, portability, and onboarding matrices', () => {
+    const workflow = fs.readFileSync(path.join(REPO, '.github/workflows/ci.yml'), 'utf8');
+    const start = workflow.indexOf('  test-matrix-gate:');
+    expect(start).toBeGreaterThan(0);
+    const next = workflow.slice(start + 1).search(/\n {2}[a-z][a-z0-9-]*:\n/);
+    const job = workflow.slice(start, next < 0 ? undefined : start + 1 + next);
+    expect(job).toContain('name: Test matrix gate');
+    expect(job).toContain('if: ${{ always() }}');
+    expect(job).toContain(
+      'needs: [ci-profile, node-compat, workspace-portability, onboarding-matrix]'
+    );
+    for (const needed of ['node-compat', 'workspace-portability', 'onboarding-matrix']) {
+      expect(job).toContain(`\${{ needs.${needed}.result }}`);
+    }
+    // Failed/cancelled cells always fail; only explicit false profile outputs are
+    // intentional skips (empty/unset fails closed).
+    expect(job).toContain('failure | cancelled)');
+    expect(job).toContain('false/false) RUN_CODE_MATRICES=true');
+    expect(job).toContain('docs_only/hygiene missing/invalid');
+    expect(job).toContain('run_onboarding missing/invalid');
+    expect(job).toContain('ci-profile did not succeed');
+    // The header lists the required status checks, including the new gate.
+    expect(workflow.slice(0, workflow.indexOf('\non:'))).toContain('Test matrix gate');
+  });
 });
