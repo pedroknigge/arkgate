@@ -18,102 +18,102 @@
       }
     },
     {
-      "expect": "fail",
+      "expect": "pass",
       "got": {
         "completeness": "complete",
-        "flagged": false,
-        "severity": null
+        "flagged": true,
+        "severity": "error"
       },
       "id": "343-probe-b",
-      "met": false,
-      "note": "Probe B. The transaction type is imported from a PersistenceAdapters module (`a-db-executor`), not from the driver. Same `UPDATE orders SET`. Still invisible.",
+      "met": true,
+      "note": "Probe B. The transaction type is imported from a PersistenceAdapters module (`a-db-executor`), not from the driver. Same `UPDATE orders SET`. Flagged.",
       "owner": "#343",
-      "status": "expected-fail",
+      "status": "pass",
       "want": {
         "file": "src/lib/features/a/zz-probe-b-repo-tx.ts",
         "flagged": true
       }
     },
     {
-      "expect": "fail",
+      "expect": "pass",
       "got": {
         "completeness": "complete",
-        "flagged": false,
-        "severity": null
+        "flagged": true,
+        "severity": "error"
       },
       "id": "343-probe-c",
-      "met": false,
-      "note": "Probe C. Driver import plus `UPDATE ONLY orders SET`. Still invisible.",
+      "met": true,
+      "note": "Probe C. Driver import plus `UPDATE ONLY orders SET`. Flagged.",
       "owner": "#343",
-      "status": "expected-fail",
+      "status": "pass",
       "want": {
         "file": "src/lib/features/a/zz-probe-c-only.ts",
         "flagged": true
       }
     },
     {
-      "expect": "fail",
+      "expect": "pass",
       "got": {
         "completeness": "complete",
-        "flagged": false,
-        "severity": null
+        "flagged": true,
+        "severity": "error"
       },
       "id": "343-probe-d",
-      "met": false,
-      "note": "Probe D. Driver import plus `UPDATE \"public\".\"orders\" SET`. Still invisible.",
+      "met": true,
+      "note": "Probe D. Driver import plus `UPDATE \"public\".\"orders\" SET`. Flagged.",
       "owner": "#343",
-      "status": "expected-fail",
+      "status": "pass",
       "want": {
         "file": "src/lib/features/a/zz-probe-d-quoted.ts",
         "flagged": true
       }
     },
     {
-      "expect": "fail",
+      "expect": "pass",
       "got": {
         "completeness": "complete",
-        "flagged": false,
-        "severity": null
+        "flagged": true,
+        "severity": "error"
       },
       "id": "343-probe-e",
-      "met": false,
-      "note": "Probe E. Driver import plus `MERGE INTO` and `TRUNCATE`. Still invisible.",
+      "met": true,
+      "note": "Probe E. Driver import plus `MERGE INTO` and `TRUNCATE`. Flagged.",
       "owner": "#343",
-      "status": "expected-fail",
+      "status": "pass",
       "want": {
         "file": "src/lib/features/a/zz-probe-e-merge.ts",
         "flagged": true
       }
     },
     {
-      "expect": "fail",
+      "expect": "pass",
       "got": {
         "completeness": "complete",
-        "flagged": false,
-        "severity": null
+        "flagged": true,
+        "severity": "error"
       },
       "id": "343-probe-f",
-      "met": false,
-      "note": "Probe F. `sql` from drizzle-orm and `UPDATE ${ordersTable} SET`. Still invisible.",
+      "met": true,
+      "note": "Probe F. `sql` from drizzle-orm and `UPDATE ${ordersTable} SET`. Flagged.",
       "owner": "#343",
-      "status": "expected-fail",
+      "status": "pass",
       "want": {
         "file": "src/lib/features/b/zz-probe-f-interp.ts",
         "flagged": true
       }
     },
     {
-      "expect": "fail",
+      "expect": "pass",
       "got": {
         "completeness": "complete",
-        "flagged": false,
-        "severity": null
+        "flagged": true,
+        "severity": "error"
       },
       "id": "343-probe-g",
-      "met": false,
-      "note": "Probe G. Driver import plus `UPDATE public.line_items li SET` (table alias). Still invisible.",
+      "met": true,
+      "note": "Probe G. Driver import plus `UPDATE public.line_items li SET` (table alias). Flagged.",
       "owner": "#343",
-      "status": "expected-fail",
+      "status": "pass",
       "want": {
         "file": "src/lib/features/c/zz-probe-g-alias.ts",
         "flagged": true
@@ -203,6 +203,36 @@
           {
             "arkruleId": "writes-via-aggregate",
             "file": "src/lib/features/a/zz-probe-a-control.ts",
+            "severity": "error"
+          },
+          {
+            "arkruleId": "writes-via-aggregate",
+            "file": "src/lib/features/a/zz-probe-b-repo-tx.ts",
+            "severity": "error"
+          },
+          {
+            "arkruleId": "writes-via-aggregate",
+            "file": "src/lib/features/a/zz-probe-c-only.ts",
+            "severity": "error"
+          },
+          {
+            "arkruleId": "writes-via-aggregate",
+            "file": "src/lib/features/a/zz-probe-d-quoted.ts",
+            "severity": "error"
+          },
+          {
+            "arkruleId": "writes-via-aggregate",
+            "file": "src/lib/features/a/zz-probe-e-merge.ts",
+            "severity": "error"
+          },
+          {
+            "arkruleId": "writes-via-aggregate",
+            "file": "src/lib/features/b/zz-probe-f-interp.ts",
+            "severity": "error"
+          },
+          {
+            "arkruleId": "writes-via-aggregate",
+            "file": "src/lib/features/c/zz-probe-g-alias.ts",
             "severity": "error"
           }
         ]

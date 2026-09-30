@@ -28,9 +28,8 @@
  * status becomes `unexpected-pass` until that PR flips `expect` to `pass`.
  *
  * #343 is `orderdesk`: enforced `writes-via-aggregate` on tagged SQL in use cases.
- * Probe A is caught today (`expect: 'pass'`). Probes B–G are still invisible
- * (`expect: 'fail'` — the claim "this file is flagged" is unmet). The four
- * negative shapes stay unflagged (`expect: 'pass'`).
+ * Probes A–G are flagged. `FOR UPDATE`, an upsert `DO UPDATE`, a JS comment,
+ * and a SQL `--` comment stay unflagged.
  */
 const crossParentEdges = Object.freeze([
   Object.freeze({
@@ -642,50 +641,50 @@ export const JOURNEY_CASES = Object.freeze({
     Object.freeze({
       id: '343-probe-b',
       owner: '#343',
-      expect: 'fail',
+      expect: 'pass',
       kind: 'orderdesk-probe',
       file: 'src/lib/features/a/zz-probe-b-repo-tx.ts',
-      note: 'Probe B. The transaction type is imported from a PersistenceAdapters module (`a-db-executor`), not from the driver. Same `UPDATE orders SET`. Still invisible.',
+      note: 'Probe B. The transaction type is imported from a PersistenceAdapters module (`a-db-executor`), not from the driver. Same `UPDATE orders SET`. Flagged.',
     }),
     Object.freeze({
       id: '343-probe-c',
       owner: '#343',
-      expect: 'fail',
+      expect: 'pass',
       kind: 'orderdesk-probe',
       file: 'src/lib/features/a/zz-probe-c-only.ts',
-      note: 'Probe C. Driver import plus `UPDATE ONLY orders SET`. Still invisible.',
+      note: 'Probe C. Driver import plus `UPDATE ONLY orders SET`. Flagged.',
     }),
     Object.freeze({
       id: '343-probe-d',
       owner: '#343',
-      expect: 'fail',
+      expect: 'pass',
       kind: 'orderdesk-probe',
       file: 'src/lib/features/a/zz-probe-d-quoted.ts',
-      note: 'Probe D. Driver import plus `UPDATE "public"."orders" SET`. Still invisible.',
+      note: 'Probe D. Driver import plus `UPDATE "public"."orders" SET`. Flagged.',
     }),
     Object.freeze({
       id: '343-probe-e',
       owner: '#343',
-      expect: 'fail',
+      expect: 'pass',
       kind: 'orderdesk-probe',
       file: 'src/lib/features/a/zz-probe-e-merge.ts',
-      note: 'Probe E. Driver import plus `MERGE INTO` and `TRUNCATE`. Still invisible.',
+      note: 'Probe E. Driver import plus `MERGE INTO` and `TRUNCATE`. Flagged.',
     }),
     Object.freeze({
       id: '343-probe-f',
       owner: '#343',
-      expect: 'fail',
+      expect: 'pass',
       kind: 'orderdesk-probe',
       file: 'src/lib/features/b/zz-probe-f-interp.ts',
-      note: 'Probe F. `sql` from drizzle-orm and `UPDATE ${ordersTable} SET`. Still invisible.',
+      note: 'Probe F. `sql` from drizzle-orm and `UPDATE ${ordersTable} SET`. Flagged.',
     }),
     Object.freeze({
       id: '343-probe-g',
       owner: '#343',
-      expect: 'fail',
+      expect: 'pass',
       kind: 'orderdesk-probe',
       file: 'src/lib/features/c/zz-probe-g-alias.ts',
-      note: 'Probe G. Driver import plus `UPDATE public.line_items li SET` (table alias). Still invisible.',
+      note: 'Probe G. Driver import plus `UPDATE public.line_items li SET` (table alias). Flagged.',
     }),
     Object.freeze({
       id: '343-neg-for-update',

@@ -26,12 +26,19 @@ enforced (tier-1) like `thin-adapter`. Absence of the rule is silent.
 
 ### D2 — Direct evidence only
 
-A governed file matches when **both** are present in that file:
+A governed file matches when **both** are present in that file, with one exception below:
 
 1. Persistence driver/client import (same closed module family as capability
    `persistence` / existing IO hints).
 2. A write token: `.insert(` / `.update(` / `.upsert(` / `.delete(` / `.create(` /
    `.createMany(` / `INSERT INTO` / `UPDATE … SET` / `DELETE FROM`.
+
+A SQL write head inside a tagged template (a `tx` or `sql` tag) is evidence
+on its own (#343). The head includes `UPDATE ONLY`, a quoted name, a table
+alias, an interpolated table, `MERGE INTO`, and `TRUNCATE`. JS comments and
+SQL `--` comments are not evidence. `FOR UPDATE`, `DO UPDATE SET`, and a
+target of `OF` or `SET` are not writes. ORM verbs and untagged SQL still need
+the driver import.
 
 No filename religion (`*.adapter.ts`, `Externals/`, `admission.ts`). No vendor
 rename. Inference (“this looks like an aggregate”) never blocks.

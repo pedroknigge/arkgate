@@ -7,7 +7,11 @@
 
 import type { EffectiveArkRules, EffectiveStructureRule, ArkRuleSensorId } from './arkRulesTypes';
 import { findClassDeclarations, scanClassMembers } from './classSourceScan';
-import { sourceHasPersistenceWrite, sourceImportsPersistenceDriverText } from './persistenceWriteHint';
+import {
+  sourceHasPersistenceWrite,
+  sourceHasTaggedSqlWrite,
+  sourceImportsPersistenceDriverText,
+} from './persistenceWriteHint';
 
 /** Keep in lockstep with arkRulesTypes.ARK_RULE_TIER2_SENSOR_IDS (self-contained for CLI gen). */
 const ARK_RULE_TIER2_SENSOR_IDS = ['no-anemic-model'] as const;
@@ -754,7 +758,10 @@ export function deriveArkRuleFileHints(
   if (!content) return null;
 
   const hasIo = sourceImportsPersistenceDriver(content, resolvedImports);
-  const persistenceWrite = hasIo && sourceHasPersistenceWrite(content);
+  // A tagged-template SQL write head is evidence on its own (the use case composed
+  // the statement). ORM verbs and untagged SQL still need a driver import.
+  const persistenceWrite =
+    (hasIo && sourceHasPersistenceWrite(content)) || sourceHasTaggedSqlWrite(content);
   // Orchestration/adapter heuristics need a longer window; writes still fire on short probes.
   if (content.length < 40) {
     return persistenceWrite ? { persistenceWrite: true } : null;

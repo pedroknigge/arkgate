@@ -358,6 +358,86 @@ export async function saveOrder(cmd) {
     ).toBe(true);
   });
 
+  it('flags realistic tagged SQL writes and ignores locks, upserts, and comments (#343)', () => {
+    const flagged = (body: string) =>
+      deriveArkRuleFileHints('src/lib/features/a/probe.ts', body)?.persistenceWrite === true;
+
+    expect(
+      flagged(`import type postgres from 'postgres';
+export async function closeOrder(tx: postgres.TransactionSql) {
+  await tx\`UPDATE orders SET status = 'closed'\`;
+}`)
+    ).toBe(true);
+    expect(
+      flagged(`import type { ATx } from '@/lib/repositories/a-db-executor';
+export async function closeOrder(tx: ATx) {
+  await tx\`UPDATE orders SET status = 'closed'\`;
+}`)
+    ).toBe(true);
+    expect(
+      flagged(`import type postgres from 'postgres';
+export async function closeOrder(tx: postgres.TransactionSql) {
+  await tx\`UPDATE ONLY orders SET status = 'closed'\`;
+}`)
+    ).toBe(true);
+    expect(
+      flagged(`import type postgres from 'postgres';
+export async function closeOrder(tx: postgres.TransactionSql) {
+  await tx\`UPDATE "public"."orders" SET status = 'closed'\`;
+}`)
+    ).toBe(true);
+    expect(
+      flagged(`import type postgres from 'postgres';
+export async function closeOrder(tx: postgres.TransactionSql) {
+  await tx\`MERGE INTO orders r USING (SELECT 1 AS id) s ON r.id = s.id WHEN MATCHED THEN UPDATE SET status = 'closed'\`;
+  await tx\`TRUNCATE orders\`;
+}`)
+    ).toBe(true);
+    expect(
+      flagged(`import { sql } from 'drizzle-orm';
+export async function renameOrder(ordersTable: unknown) {
+  await sql\`UPDATE \${ordersTable} SET title = 'x'\`;
+}`)
+    ).toBe(true);
+    expect(
+      flagged(`import type postgres from 'postgres';
+export async function repriceLine(tx: postgres.TransactionSql) {
+  await tx\`UPDATE public.line_items li SET price = 1\`;
+}`)
+    ).toBe(true);
+
+    expect(
+      flagged(`import type postgres from 'postgres';
+export async function lockOrder(tx: postgres.TransactionSql) {
+  await tx\`SELECT id FROM orders r FOR UPDATE OF r\`;
+}`)
+    ).toBe(false);
+    expect(
+      flagged(`import type { ATx } from '@/lib/repositories/a-db-executor';
+export async function upsertEvent(tx: ATx) {
+  await tx\`INSERT INTO events (a) VALUES (1) ON CONFLICT (a) DO UPDATE SET a = 1\`;
+}`)
+    ).toBe(false);
+    expect(
+      flagged(`import type postgres from 'postgres';
+// UPDATE orders SET x
+export function note() { return 1; }`)
+    ).toBe(false);
+    expect(
+      flagged(`import type postgres from 'postgres';
+/**
+ * INSERT INTO orders (id) VALUES (1)
+ */
+export function note() { return 1; }`)
+    ).toBe(false);
+    expect(
+      flagged(`import type postgres from 'postgres';
+export async function readOrder(tx: postgres.TransactionSql) {
+  await tx\`SELECT 1 -- UPDATE orders SET x\`;
+}`)
+    ).toBe(false);
+  });
+
   it('keeps ArkOrder IO write regex in lockstep with writes-via-aggregate (WRITEAGG-001)', () => {
     const aliasWrite = `
 import { db } from '@/lib/db';
