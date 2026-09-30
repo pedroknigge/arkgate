@@ -39,6 +39,7 @@ These make the deny real. Keep them.
 | [0011](0011-resolved-candidate-facts-boundary.md) | Versioned facts in; Kernel classifies. Incomplete never looks green. |
 | [0026](0026-gate-waist-facts-in-verdict-out.md) | The check waist is config + resolved facts → one result. Advisory projects facts. Skills stay the edge. |
 | [0035](0035-layer-description-projection.md) | Project existing `layers[].description` (app-context caption). Strip from `policyHash` like `stewards`. Absence silent. Not a second verdict. |
+| [0037](0037-orphan-module-advisory.md) | Files nothing imports: doctor projects the resolved import edges. Closed entry sources, `.ark/entry-points.json` sidecar, honest `partial`. Never a gate input. |
 | [0017](0017-mcp-project-identity-binding.md) | MCP verdicts need an explicit project root. `ark://manifest` is unverified. |
 | [0018](0018-shared-skill-catalogs-are-monotonic.md) | Shared home skills never downgrade. |
 | [0019](0019-codex-operation-scoped-hard-write.md) | Codex hard write is only a complete trusted local `apply_patch`. |

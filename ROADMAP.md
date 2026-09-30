@@ -97,6 +97,12 @@ lift DF freezes on scores, new skill names, sensors, or LLM verdicts.
   ([layer description](docs/plans/layer-description-projection/README.md)) projects the
   existing optional `layers[].description` to place / doctor / coverage / report and
   strips it from `policyHash`. Absence stays silent and must not invent residual.
+  **Exception:** Phase **OM**
+  ([orphan module advisory](docs/plans/orphan-module-advisory/README.md),
+  [ADR 0037](docs/adr/0037-orphan-module-advisory.md)) projects the existing resolved
+  import edges to doctor Details / JSON / report as files nothing imports. Closed entry
+  sources, sidecar `.ark/entry-points.json` (no config key), honest `partial`. Never in
+  the write hook, MCP write tools, ESLint, or `--strict-merge`; never flips `valid`.
 
 ### Hard lines
 
@@ -580,6 +586,35 @@ close `Z09` / `K01`.
 | Order | ID | Status | Size | Depends on | Outcome |
 |---:|---|---|---:|---|---|
 | 299 | `RL824` | `doing` | S | RL823 | Prepare **4.8.24** (#339: #335/#336/#337/#338 + audit + memory). After merge: annotated tag `v4.8.24` + GitHub Release (no npm claim until `npm view arkgate@4.8.24 version` confirms, #314) + `gh workflow run publish-npm.yml -f tag=v4.8.24 -f dry_run=false`. Does not close `Z09` / `K01` |
+
+### Patch — policy-delta promotion sees coverageRoots
+
+`--policy-base` / MCP policy-delta evaluated invariant coverage without the
+declared `coverage.coverageRoots`, so a covered advisory → enforced promotion
+came out `judgment-required` while `--promote` allowed the same edit. No schema
+bump. Does not close `Z09` / `K01`.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 300 | `CR02` | `done` | S | RL824 | `policy-delta-io.mjs` passes `coverageRoots` (and stats) to `evaluateInvariantCoverage`; a declared-roots promotion classifies as strengthening, matching `--promote`. Failing test first (`policyDeltaIoDirectCoverage.test.ts`). No schema bump |
+
+### Phase OM — Orphan module advisory
+
+Plan: [docs/plans/orphan-module-advisory/README.md](docs/plans/orphan-module-advisory/README.md).
+Projects existing resolved import facts ([ADR 0026](docs/adr/0026-gate-waist-facts-in-verdict-out.md) D2;
+[ADR 0037](docs/adr/0037-orphan-module-advisory.md)).
+No `schemaVersion` bump. No config key (sidecar `.ark/entry-points.json`). No new skill name.
+Does not close `Z09` / `K01`. Never in the write hook, MCP write tools, or `--strict-merge`.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 301 | `OM01` | `done` | S | CR02 | ADR 0037: orphan advisory projects resolved facts; closed entry-evidence sources; sidecar not config; honesty states; ROADMAP freeze exception. Plan lock only |
+| 302 | `OM02` | `todo` | M | OM01 | `runArchitectureScan({ graphProjection })` returns a compact importer index for doctor/report; verdict + `factsHash` byte-identical; doctor memory scenario in `bench:memory` |
+| 303 | `OM03` | `todo` | M | OM01 | `entry-points-io.mjs`: package.json main/exports/bin/scripts per workspace (dist→src via bundler entry map / tsconfig), Next/Vite/Nest/Vercel/Storybook conventions, arkRun/arkOrder roots, config + ambient files, `.ark/entry-points.json` with `reviewBy` |
+| 304 | `OM04` | `todo` | L | OM02+OM03 | Domain `orphanModules.ts` + test/outside-include importer pass + dynamic reach; `doctor.orphanModules` JSON + Details + HTML parity; `ORPHAN_MODULE`; journey `deadwood` |
+| 305 | `OM05` | `todo` | M | OM04 | Tier 2 `UNUSED_EXPORT` in `--doctor --all` / `--report` only; conservative on default/namespace/star; bounded parse |
+| 306 | `OM06` | `todo` | S | OM02 | `flat-parent-pilot` reads the importer index instead of its lexical re-read; atlasgrid `pr6-doctor` golden unchanged |
+| 307 | `OM07` | `todo` | S | OM04+OM05 | Docs (package-surface, agent-guide, diagnostics, voice) + deepen `/ark-explore` `/ark-fix`; CHANGELOG |
 
 ### Patch — pre-hook write gate first, MCP prepare fallback (issue #277)
 
