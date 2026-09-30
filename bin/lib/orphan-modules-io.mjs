@@ -506,7 +506,10 @@ export function printOrphanModulesCompactLine(section, io) {
   const listed = Number(section?.totals?.listed) || 0;
   if (section?.notAScore !== true || listed === 0) return;
   console.log('');
-  io.line(' ', io.color.dim(`${listed} file${listed === 1 ? '' : 's'} nothing imports. Details: arkgate-check --doctor --all`));
+  // Tier 2 ran only under --all / --report; then the Details section follows, so no pointer.
+  const detailsRan = section?.unusedExports?.status !== undefined && section.unusedExports.status !== 'deferred';
+  const hint = detailsRan ? '' : ' Details: arkgate-check --doctor --all';
+  io.line(' ', io.color.dim(`${listed} file${listed === 1 ? '' : 's'} nothing imports.${hint}`));
 }
 
 /** Details view. */

@@ -165,7 +165,20 @@ describe('views', () => {
     });
     const compact = capture(() => printOrphanModulesCompactLine(section, io));
     expect(compact.trim().split('\n')).toHaveLength(1);
-    expect(compact).toContain('nothing imports. Details: arkgate-check --doctor --all');
+    // Details already ran (--all): the Details section follows, so no pointer to it.
+    expect(compact).toMatch(/\d+ files? nothing imports\./);
+    expect(compact).not.toContain('Details:');
+    const compactOnly = computeOrphanModules({
+      root,
+      config: CONFIG,
+      ts,
+      importGraph: importGraphOf(root),
+      details: false,
+      today: '2026-09-30',
+    });
+    expect(capture(() => printOrphanModulesCompactLine(compactOnly, io))).toContain(
+      'nothing imports. Details: arkgate-check --doctor --all'
+    );
     const details = capture(() => printOrphanModulesSection(section, io));
     expect(details).toContain('Files nothing imports (not a score)');
     expect(details).toContain('! Nothing imports src/orphan.ts, and no entry point covers it.');
