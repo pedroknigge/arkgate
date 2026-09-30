@@ -30,6 +30,10 @@
  * #343 is `orderdesk`: enforced `writes-via-aggregate` on tagged SQL in use cases.
  * Probes A–G are flagged. `FOR UPDATE`, an upsert `DO UPDATE`, a JS comment,
  * and a SQL `--` comment stay unflagged.
+ *
+ * ADR 0037 is `deadwood`: files nothing imports. One true orphan, one file only a
+ * test imports, one file behind `import.meta.glob`, Next / package.json /
+ * sidecar entries, and one unused export that only the details view lists.
  */
 const crossParentEdges = Object.freeze([
   Object.freeze({
@@ -185,6 +189,10 @@ export const JOURNEYS = Object.freeze({
     Object.freeze(['ark-check', '--doctor', '--json', '--no-cache', '--config', 'ark.config.pinned.json']),
   ]),
   orderdesk: Object.freeze([Object.freeze(['ark-check', '--json', '--no-cache'])]),
+  deadwood: Object.freeze([
+    Object.freeze(['ark-check', '--doctor', '--json', '--no-cache']),
+    Object.freeze(['ark-check', '--doctor', '--all', '--json', '--no-cache']),
+  ]),
 });
 
 export const JOURNEY_CASES = Object.freeze({
@@ -717,6 +725,54 @@ export const JOURNEY_CASES = Object.freeze({
       kind: 'orderdesk-clear',
       file: 'src/lib/features/a/zz-neg-sql-comment.ts',
       note: 'Negative. A `-- UPDATE orders SET x` comment inside a tagged template stays unflagged.',
+    }),
+  ]),
+  deadwood: Object.freeze([
+    Object.freeze({
+      id: 'orphan-listed',
+      owner: 'ADR 0037',
+      expect: 'pass',
+      kind: 'deadwood-orphan-listed',
+      note: 'Nothing imports src/lib/legacy-pricing.ts and no entry covers it. Listed as no-importer in the compact JSON and in details.',
+      file: 'src/lib/legacy-pricing.ts',
+    }),
+    Object.freeze({
+      id: 'test-only-tier',
+      owner: 'ADR 0037',
+      expect: 'pass',
+      kind: 'deadwood-test-only',
+      note: 'Only a test imports src/lib/only-tested.ts. It is counted in the test-only tier, never listed.',
+      file: 'src/lib/only-tested.ts',
+    }),
+    Object.freeze({
+      id: 'maybe-dynamic',
+      owner: 'ADR 0037',
+      expect: 'pass',
+      kind: 'deadwood-maybe-dynamic',
+      note: 'import.meta.glob reaches src/lib/handlers/refund.ts. Listed as maybe-dynamic, and the section is partial.',
+      file: 'src/lib/handlers/refund.ts',
+    }),
+    Object.freeze({
+      id: 'entry-suppressed',
+      owner: 'ADR 0037',
+      expect: 'pass',
+      kind: 'deadwood-entry-suppressed',
+      note: 'A Next route, Next middleware, a package.json export mapped through tsconfig outDir/rootDir, and a sidecar glob keep their files off the list.',
+      files: Object.freeze([
+        'src/app/page.tsx',
+        'src/middleware.ts',
+        'src/index.ts',
+        'src/lib/plugins/audit.ts',
+      ]),
+    }),
+    Object.freeze({
+      id: 'unused-export-details-only',
+      owner: 'ADR 0037',
+      expect: 'pass',
+      kind: 'deadwood-unused-export',
+      note: 'formatDate in src/lib/format.ts is exported and never imported by name. Compact status defers it; details list it.',
+      file: 'src/lib/format.ts',
+      name: 'formatDate',
     }),
   ]),
 });

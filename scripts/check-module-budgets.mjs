@@ -101,6 +101,11 @@ const BUDGETS = [
   { path: 'bin/lib/physical-cohesion.mjs', max: 260 },
   // #326 PR6 flat-parent suggestion. Measured 253. Ceiling is that measurement plus a few lines.
   { path: 'bin/lib/flat-parent-pilot.mjs', max: 256 },
+  // ADR 0037 files nothing imports. Measured at landing; ceilings are that plus a few lines.
+  { path: 'src/domain/orphanModules.ts', max: 365 },
+  { path: 'bin/lib/import-graph-projection.mjs', max: 120 },
+  { path: 'bin/lib/entry-points-io.mjs', max: 430 },
+  { path: 'bin/lib/orphan-modules-io.mjs', max: 585 },
   // Y01: bounded explicit verdict memory kept out of the X04 sensor/doctor orchestrator.
   { path: 'bin/lib/reshape-decisions.mjs', max: 300 },
   // Y03/Z02: count-only completeness evidence from the existing scan, not a second scanner.

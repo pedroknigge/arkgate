@@ -786,6 +786,22 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
     'Read the candidate and decide: fix the path, or leave it. Advisory only — it never fails a run and is never rewritten by --write, because there is no destination to propose. Run `--path-drift --all` to list the sweep.',
     { oftenAdvisory: true }
   ),
+  entry(
+    'ORPHAN_MODULE',
+    'drift',
+    'File nothing imports',
+    'No governed file, test or entry point imports this module. It is the leftover an agent leaves when a rewrite lands next to the old file. Status reads it from the import facts the check already resolved, so it never changes the verdict. When a dynamic import, an unresolved import or an unmapped entry could reach the file, the item says so (maybe-dynamic, maybe-unresolved) and the list is partial.',
+    'Delete the file through the write gate, one file at a time. If a framework, a script or a runtime loader uses it, add a glob with a reason to .ark/entry-points.json (optional reviewBy) instead. Advisory only — it never fails a run.',
+    { oftenAdvisory: true }
+  ),
+  entry(
+    'UNUSED_EXPORT',
+    'drift',
+    'Export nothing imports by name',
+    'An export no governed file or test imports by name. Listed only in status details (`--doctor --all`) and the report. Default, namespace, star, dynamic and require use count as using every export, so those files are skipped.',
+    'Drop the export keyword (or the code) if nothing outside the file needs it, or keep it when it is public API an entry point exposes. Advisory only — it never fails a run.',
+    { oftenAdvisory: true }
+  ),
 
   // ── meta ─────────────────────────────────────────────────────────────────
   entry(

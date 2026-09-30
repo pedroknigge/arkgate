@@ -35,6 +35,7 @@
  *   src/domain/persistenceWriteHint.ts → bin/lib/persistence-write-hint.mjs
  *   src/domain/literalPathDrift.ts → bin/lib/literal-path-drift.mjs
  *   src/domain/classSourceScan.ts → bin/lib/class-source-scan.mjs
+ *   src/domain/orphanModules.ts → bin/lib/orphan-modules.mjs
  *
  * Layer match remains scripts/generate-layer-match.mjs (R1).
  *
@@ -221,6 +222,11 @@ const MODULES = [
     canonical: 'src/domain/deepeningCoach.ts',
     derived: 'bin/lib/deepening-coach.mjs',
     label: 'deepening candidates pure projection (deep-module coach; notAScore)',
+  },
+  {
+    canonical: 'src/domain/orphanModules.ts',
+    derived: 'bin/lib/orphan-modules.mjs',
+    label: 'files nothing imports + unused exports (ADR 0037; notAScore)',
   },
   {
     canonical: 'src/domain/agentProjectionTypes.ts',
