@@ -31,7 +31,6 @@
  *   src/domain/arkRunSensors.ts → bin/lib/ark-run-sensors.mjs
  *   src/domain/arkRunDoctor.ts → bin/lib/ark-run-doctor.mjs
  *   src/domain/arkOrderDoctor.ts → bin/lib/ark-order-doctor.mjs
- *   src/domain/stableHash.ts → bin/lib/stable-hash.mjs
  *   src/domain/persistenceWriteHint.ts → bin/lib/persistence-write-hint.mjs
  *   src/domain/literalPathDrift.ts → bin/lib/literal-path-drift.mjs
  *   src/domain/classSourceScan.ts → bin/lib/class-source-scan.mjs
@@ -156,24 +155,9 @@ const MODULES = [
     label: 'ArkOrder tier-1 sensors (ADR 0029)',
   },
   {
-    canonical: 'src/domain/stableHash.ts',
-    derived: 'bin/lib/stable-hash.mjs',
-    label: 'portable FNV-1a hash + stable serialize (identity only)',
-  },
-  {
     canonical: 'src/domain/persistenceWriteHint.ts',
     derived: 'bin/lib/persistence-write-hint.mjs',
     label: 'persistence driver import + receiver-bound write evidence (ArkRules / ArkOrder)',
-  },
-  {
-    canonical: 'src/domain/arkOrderInvariants.ts',
-    derived: 'bin/lib/ark-order-invariants.mjs',
-    label: 'ArkOrder Haken invariants (freeze / ingest / blast)',
-  },
-  {
-    canonical: 'src/domain/arkOrderError.ts',
-    derived: 'bin/lib/ark-order-error.mjs',
-    label: 'ArkOrder domain error',
   },
   {
     canonical: 'src/domain/arkOrderTypes.ts',
