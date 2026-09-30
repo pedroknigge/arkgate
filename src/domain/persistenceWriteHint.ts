@@ -47,7 +47,7 @@ const SQL_WRITE_RE =
 const NOT_A_SQL_TAG =
   /^(?:await|return|throw|yield|new|typeof|void|delete|if|else|case|of|in|instanceof|async|function|class|const|let|var|import|export|from|as|default|type)$/;
 
-const TAGGED_SQL_RE = /(^|[^\w$])([A-Za-z_$][\w$]*)\s*`((?:\\[\s\S]|[^`])*)`/g;
+const TAGGED_SQL_RE = /(^|[^\w$])([A-Za-z_$][\w$]*)\s*`((?:[^`\\]|\\[\s\S])*)`/g;
 
 const UPSERT_RE = /\bINSERT\s+INTO\b[\s\S]*?\bON\s+CONFLICT\b[\s\S]*?\bDO\s+UPDATE\s+SET\b[^;`]*/gi;
 
@@ -107,7 +107,7 @@ export function persistenceClientBindings(content: string): string[] {
 
 function blankPersistenceComments(content: string): string {
   return content.replace(
-    /\/\*[\s\S]*?\*\/|\/\/[^\n]*|`(?:\\[\s\S]|[^`])*`|'(?:\\[\s\S]|[^'\\])*'|"(?:\\[\s\S]|[^"\\])*"/g,
+    /\/\*[\s\S]*?\*\/|\/\/[^\n]*|`(?:[^`\\]|\\[\s\S])*`|'(?:[^'\\]|\\[\s\S])*'|"(?:[^"\\]|\\[\s\S])*"/g,
     (token) =>
       token.charCodeAt(0) === 47
         ? token.replace(/[^\n]/g, ' ')

@@ -26,7 +26,7 @@ export const PERSISTENCE_CLIENT_NAMES = [
 const WRITE_VERB_SOURCE = '(?:insert(?:One|Many)?|update(?:One|Many)?|upsert|delete(?:One|Many)?|createMany|create|replaceOne|findOneAnd(?:Update|Delete|Replace))';
 const SQL_WRITE_RE = /\b(?:INSERT\s+INTO|(?<!\b(?:FOR(?:\s+NO\s+KEY)?|DO)\s)UPDATE(?:\s+ONLY)?(?!\s+(?:OF|SET)\b)|DELETE\s+FROM(?:\s+ONLY)?|MERGE\s+INTO|TRUNCATE(?:\s+TABLE)?(?:\s+ONLY)?)\s+(?:(?:(?:"[^"]*"|[A-Za-z_][\w$]*)\s*\.\s*)?(?:"[^"]*"|[A-Za-z_][\w$]*)|\$\{[^}]+\})/i;
 const NOT_A_SQL_TAG = /^(?:await|return|throw|yield|new|typeof|void|delete|if|else|case|of|in|instanceof|async|function|class|const|let|var|import|export|from|as|default|type)$/;
-const TAGGED_SQL_RE = /(^|[^\w$])([A-Za-z_$][\w$]*)\s*`((?:\\[\s\S]|[^`])*)`/g;
+const TAGGED_SQL_RE = /(^|[^\w$])([A-Za-z_$][\w$]*)\s*`((?:[^`\\]|\\[\s\S])*)`/g;
 const UPSERT_RE = /\bINSERT\s+INTO\b[\s\S]*?\bON\s+CONFLICT\b[\s\S]*?\bDO\s+UPDATE\s+SET\b[^;`]*/gi;
 /** Call arguments with one level of nested parentheses: `({ log: fn() })`. */
 const CALL_ARGS_SOURCE = '\\((?:[^()]|\\([^()]*\\))*\\)';
@@ -75,7 +75,7 @@ export function persistenceClientBindings(content) {
     return [...names].sort();
 }
 function blankPersistenceComments(content) {
-    return content.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*|`(?:\\[\s\S]|[^`])*`|'(?:\\[\s\S]|[^'\\])*'|"(?:\\[\s\S]|[^"\\])*"/g, (token) => token.charCodeAt(0) === 47
+    return content.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*|`(?:[^`\\]|\\[\s\S])*`|'(?:[^'\\]|\\[\s\S])*'|"(?:[^"\\]|\\[\s\S])*"/g, (token) => token.charCodeAt(0) === 47
         ? token.replace(/[^\n]/g, ' ')
         : token.charCodeAt(0) === 96
             ? token.replace(/--[^\n`]*/g, (comment) => ' '.repeat(comment.length))
