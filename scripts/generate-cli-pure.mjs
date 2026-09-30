@@ -5,6 +5,7 @@
  * Canonical → derived (committed for zero-build CLI on npm):
  *   src/domain/remediation.ts  → bin/lib/remediation.mjs
  *   src/domain/baselineKey.ts  → bin/lib/baseline-key.mjs
+ *   src/domain/schemaValidation.ts → bin/lib/schema-validation.mjs
  *   src/domain/configContractSlices.ts → bin/lib/config-contract-slices.mjs
  *   src/domain/configContract.ts → bin/lib/config-contract.mjs
  *                                → schemas/ark.config.schema.json
@@ -70,6 +71,11 @@ const MODULES = [
     canonical: 'src/domain/configExtras.ts',
     derived: 'bin/lib/config-extras.mjs',
     label: 'opt-in arkRun / arkOrder extra defaults + schema $defs',
+  },
+  {
+    canonical: 'src/domain/schemaValidation.ts',
+    derived: 'bin/lib/schema-validation.mjs',
+    label: 'JSON-Schema-subset walker shared by the config + ArkRules contracts',
   },
   {
     canonical: 'src/domain/configContractSlices.ts',
@@ -298,16 +304,23 @@ function stripLeadingBlockComment(js) {
 }
 
 /**
- * Map Domain TS basenames (no extension) → derived bin/lib basename for
- * multi-file pure modules (e.g. improvementCompass → improvement-compass.mjs).
+ * Domain modules derived by another generator, as seen from bin/lib.
+ * layerMatch.ts → bin/ark-layer-match.mjs (scripts/generate-layer-match.mjs).
+ */
+const EXTERNAL_DERIVED_SPECIFIERS = new Map([['layerMatch', '../ark-layer-match.mjs']]);
+
+/**
+ * Map Domain TS basenames (no extension) → derived relative specifier from
+ * bin/lib for multi-file pure modules (e.g. improvementCompass →
+ * ./improvement-compass.mjs, layerMatch → ../ark-layer-match.mjs).
  */
 function buildCanonicalImportRewriteMap() {
   /** @type {Map<string, string>} */
-  const map = new Map();
+  const map = new Map(EXTERNAL_DERIVED_SPECIFIERS);
   for (const mod of MODULES) {
     if (!mod.derived) continue;
     const base = path.basename(mod.canonical, path.extname(mod.canonical));
-    map.set(base, path.basename(mod.derived));
+    map.set(base, `./${path.basename(mod.derived)}`);
   }
   return map;
 }
@@ -328,15 +341,15 @@ function rewriteRelativeDomainImports(transpiledSource, importRewriteMap, canoni
         .replace(/\.js$/i, '')
         .replace(/\.ts$/i, '')
         .replace(/\.mjs$/i, '');
-      const derivedBase = importRewriteMap.get(bare);
-      if (!derivedBase) {
+      const derivedSpecifier = importRewriteMap.get(bare);
+      if (!derivedSpecifier) {
         throw new Error(
           `generate-cli-pure: unmapped relative import '${spec}' in ${canonicalRel}; ` +
             'add its canonical Domain module to MODULES (with a derived bin/lib path) ' +
             'or inline the helper so the shipped CLI module can load.'
         );
       }
-      return `${pre}./${derivedBase}${post}`;
+      return `${pre}${derivedSpecifier}${post}`;
     }
   );
 }

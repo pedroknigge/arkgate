@@ -18,6 +18,7 @@ import {
   upgradeOutcome,
 } from './upgrade-outcome.mjs';
 import { __packageRoot } from './gate-files.mjs';
+import { compareSemverCore } from './upgrade-package-decision.mjs';
 import {
   applyManagedUpgrade,
   managedUpgradeJson,
@@ -51,30 +52,7 @@ export function resolveProjectArkgatePackageJson(root) {
   }
 }
 
-/**
- * Compare numeric major.minor.patch cores (prerelease / build ignored).
- * @returns {-1|0|1}
- */
-export function compareSemverCore(a, b) {
-  const parse = (value) => {
-    const core = String(value ?? '')
-      .trim()
-      .replace(/^v/i, '')
-      .split(/[-+]/)[0];
-    const parts = core.split('.').map((part) => {
-      const n = Number.parseInt(part, 10);
-      return Number.isFinite(n) ? n : 0;
-    });
-    return [parts[0] || 0, parts[1] || 0, parts[2] || 0];
-  };
-  const left = parse(a);
-  const right = parse(b);
-  for (let i = 0; i < 3; i += 1) {
-    if (left[i] < right[i]) return -1;
-    if (left[i] > right[i]) return 1;
-  }
-  return 0;
-}
+export { compareSemverCore };
 
 /** True when candidate is the same path as root or a descendant (after resolve). */
 export function isPathInside(candidate, root) {

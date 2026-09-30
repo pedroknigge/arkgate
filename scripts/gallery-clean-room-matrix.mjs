@@ -21,6 +21,8 @@ import {
   runManager,
   runManagerBinary,
   runRecordedStage,
+  writeJson,
+  writeText,
 } from './ts-compat-matrix.mjs';
 
 const SCRIPT = fileURLToPath(import.meta.url);
@@ -117,16 +119,6 @@ Options:
 
 function safeName(value) {
   return String(value).replace(/[^A-Za-z0-9_.-]+/g, '_');
-}
-
-function writeJson(file, value) {
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, `${JSON.stringify(value, null, 2)}\n`);
-}
-
-function writeText(file, value) {
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, value);
 }
 
 export function copyStarter(source, destination) {

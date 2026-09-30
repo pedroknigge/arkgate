@@ -10,7 +10,10 @@ import {
   type AnalysisFileChange,
   type AnalysisImportEdge,
 } from '../domain/analysis';
-import { analyzeArchitectureConvergence } from '../domain/changeConvergence';
+import {
+  analyzeArchitectureConvergence,
+  resolvedEdgeDependencies,
+} from '../domain/changeConvergence';
 import { deterministicNextAction } from '../domain/remediation';
 import { analyzeChange, analyzeProject } from './analysisCore';
 import { evaluateArchitectureGraph } from './graphEvaluate';
@@ -164,12 +167,8 @@ export function preflightChange(input: AnalyzeChangeInput): ChangePreflightResul
     ? analyzeArchitectureConvergence({
         changeMap: input.changeMap,
         changes,
-        baseDependencies: base.ir.edges.flatMap((edge) =>
-          edge.to ? [{ from: edge.from, to: edge.to }] : []
-        ),
-        candidateDependencies: candidate.ir.edges.flatMap((edge) =>
-          edge.to ? [{ from: edge.from, to: edge.to }] : []
-        ),
+        baseDependencies: resolvedEdgeDependencies(base.ir.edges),
+        candidateDependencies: resolvedEdgeDependencies(candidate.ir.edges),
       })
     : undefined;
 

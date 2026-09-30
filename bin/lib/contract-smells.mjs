@@ -102,15 +102,22 @@ function ackMatchable(...names) {
 }
 
 /**
- * Load the optional acknowledgment sidecar. Bounded and fail-loud:
- * non-file, oversized, unparsable, or wrong-shaped content → `invalid: true`
- * with `acks: []` (a broken file never suppresses anything).
+ * Bounded, fail-loud `.ark/` acknowledgment sidecar loader (contract-smell and
+ * ambient-state acks). Missing file → `exists: false`. Non-file, oversized,
+ * unparsable, over-long, or wrong-shaped content → `invalid: true` with
+ * `acks: []` (a broken file never suppresses anything).
  *
  * @param {string} root
- * @returns {{ path: string, exists: boolean, invalid?: boolean, error?: string, acks: Array<{id: string, edge: string, reason?: string}> }}
+ * @param {string} relPath
+ * @param {{
+ *   shape: string,
+ *   isWellFormed: (ack: any) => boolean,
+ *   malformed: string,
+ *   normalize?: (acks: any[]) => any[],
+ * }} spec
+ * @returns {{ path: string, exists: boolean, invalid?: boolean, error?: string, acks: any[] }}
  */
-export function loadContractSmellAcks(root) {
-  const relPath = CONTRACT_SMELL_ACKS_PATH;
+export function loadAckSidecar(root, relPath, spec) {
   const abs = path.join(root, relPath);
   let stats;
   try {
@@ -128,21 +135,32 @@ export function loadContractSmellAcks(root) {
     return invalid(error instanceof Error ? error.message : 'unreadable JSON');
   }
   const acks = Array.isArray(parsed?.acks) ? parsed.acks : null;
-  if (!acks) return invalid('expected { acks: [{ id, edge, reason? }] }');
+  if (!acks) return invalid(`expected ${spec.shape}`);
   if (acks.length > MAX_ACK_ENTRIES) return invalid(`more than ${MAX_ACK_ENTRIES} entries`);
-  const wellFormed = acks.every(
-    (a) =>
+  if (!acks.every(spec.isWellFormed)) return invalid(spec.malformed);
+  return { path: relPath, exists: true, acks: spec.normalize ? spec.normalize(acks) : acks };
+}
+
+/**
+ * Load the optional acknowledgment sidecar. Bounded and fail-loud:
+ * non-file, oversized, unparsable, or wrong-shaped content → `invalid: true`
+ * with `acks: []` (a broken file never suppresses anything).
+ *
+ * @param {string} root
+ * @returns {{ path: string, exists: boolean, invalid?: boolean, error?: string, acks: Array<{id: string, edge: string, reason?: string}> }}
+ */
+export function loadContractSmellAcks(root) {
+  return loadAckSidecar(root, CONTRACT_SMELL_ACKS_PATH, {
+    shape: '{ acks: [{ id, edge, reason? }] }',
+    isWellFormed: (a) =>
       a !== null &&
       typeof a === 'object' &&
       typeof a.id === 'string' &&
       typeof a.edge === 'string' &&
       a.edge.trim().length > 0 &&
-      (a.reviewBy === undefined || typeof a.reviewBy === 'string')
-  );
-  if (!wellFormed) {
-    return invalid('every ack needs string id, non-empty string edge, and string reviewBy when present');
-  }
-  return { path: relPath, exists: true, acks };
+      (a.reviewBy === undefined || typeof a.reviewBy === 'string'),
+    malformed: 'every ack needs string id, non-empty string edge, and string reviewBy when present',
+  });
 }
 
 /**

@@ -6,6 +6,9 @@ import {
   composeMergePlanesHonesty,
   extraMergeTeethAllowed,
   isArkRunRuleId,
+  mergePlanesArkRulesInput,
+  projectExtraPlaneStatus,
+  type ExtraPlaneStatusInput,
   type ExtraMergeTeethClassificationInput,
   type MergePlanesHonesty,
 } from './extraMergeTeeth';
@@ -129,17 +132,7 @@ export function summarizeArkRunSection(input: {
   const residualCount = uniqueIds.length;
   const mergePlanes = composeMergePlanesHonesty({
     classification: input.classification,
-    arkRules: {
-      active: input.arkRules?.active === true,
-      structureEnforced: input.arkRules?.structureEnforced,
-      structureTotal: input.arkRules?.structureTotal,
-      structureAdvisory: input.arkRules?.structureAdvisory,
-      invariantEnforced: input.arkRules?.invariantEnforced,
-      invariantTotal: input.arkRules?.invariantTotal,
-      invariantAdvisory: input.arkRules?.invariantAdvisory,
-      covered: input.arkRules?.covered,
-      uncovered: input.arkRules?.uncovered,
-    },
+    arkRules: mergePlanesArkRulesInput(input.arkRules),
     arkRun: {
       present: extra.present,
       mode: extra.mode,
@@ -181,27 +174,8 @@ export function summarizeArkRunSection(input: {
 }
 
 /** Thin status slice — counts only; residual null means unknown, not green. */
-export function projectStatusArkRun(input: {
-  present?: boolean;
-  mode?: string | null;
-  extraMergeTeeth?: boolean;
-  residual?: number | null;
-} = {}): ArkRunStatusSlice {
-  const present = input.present === true;
-  const mode = closedMode(input.mode);
-  const residualRaw = input.residual;
-  let residual: number | null = null;
-  if (typeof residualRaw === 'number' && Number.isFinite(residualRaw) && residualRaw >= 0) {
-    residual = Math.floor(residualRaw);
-  }
-  if (!present) residual = residual == null ? 0 : residual;
-  return {
-    notAScore: true,
-    present,
-    mode: present ? mode : null,
-    extraMergeTeeth: present && mode === 'enforced' && input.extraMergeTeeth === true,
-    residual,
-  };
+export function projectStatusArkRun(input: ExtraPlaneStatusInput = {}): ArkRunStatusSlice {
+  return projectExtraPlaneStatus(input);
 }
 
 export function formatArkRunDoctorLines(section: ArkRunDoctorSection): string[] {

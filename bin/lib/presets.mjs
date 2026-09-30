@@ -448,6 +448,45 @@ export function writeArkRulesTemplates(root, config, { force = false } = {}) {
   return written;
 }
 
+/**
+ * Deny edges shared by the ports-and-adapters presets after their DomainModel
+ * rules: orchestration never reaches adapters, adapters never reach each other,
+ * and presentation never reaches the domain directly. Fresh objects per call.
+ */
+function portsAndAdaptersRules() {
+  return [
+    { from: 'ApplicationOrchestration', to: 'PersistenceAdapters', allowed: false },
+    { from: 'ApplicationOrchestration', to: 'PresentationAdapters', allowed: false },
+    { from: 'PresentationAdapters', to: 'PersistenceAdapters', allowed: false },
+    { from: 'PresentationAdapters', to: 'DomainModel', allowed: false },
+    { from: 'PersistenceAdapters', to: 'ApplicationOrchestration', allowed: false },
+    { from: 'PersistenceAdapters', to: 'PresentationAdapters', allowed: false },
+  ];
+}
+
+/**
+ * UI-surface preset rules: the domain and orchestration stay out of the UI, while
+ * presentation may reach data clients on day one (soft, `message` explains why).
+ * Persistence → Presentation stays denied. Fresh objects per call.
+ * @param {string} presentationToPersistenceMessage
+ */
+function uiSurfaceRules(presentationToPersistenceMessage) {
+  return [
+    { from: 'DomainModel', to: 'PresentationAdapters', allowed: false },
+    { from: 'DomainModel', to: 'PersistenceAdapters', allowed: false },
+    { from: 'DomainModel', to: 'ApplicationOrchestration', allowed: false },
+    { from: 'ApplicationOrchestration', to: 'PresentationAdapters', allowed: false },
+    {
+      from: 'PresentationAdapters',
+      to: 'PersistenceAdapters',
+      allowed: true,
+      message: presentationToPersistenceMessage,
+    },
+    { from: 'PersistenceAdapters', to: 'PresentationAdapters', allowed: false },
+    { from: 'PersistenceAdapters', to: 'ApplicationOrchestration', allowed: false },
+  ];
+}
+
 export function presetWithOverlays(baseConfig, root) {
   const config = root ? applyFrameworkLayoutOverlays(baseConfig, root) : baseConfig;
   return withArkConfigMetadata(withDefaultArkRules(config));
@@ -511,12 +550,7 @@ export const ARCHITECTURE_PRESETS = {
           { from: 'DomainModel', to: 'ApplicationOrchestration', allowed: false },
           { from: 'DomainModel', to: 'PersistenceAdapters', allowed: false },
           { from: 'DomainModel', to: 'PresentationAdapters', allowed: false },
-          { from: 'ApplicationOrchestration', to: 'PersistenceAdapters', allowed: false },
-          { from: 'ApplicationOrchestration', to: 'PresentationAdapters', allowed: false },
-          { from: 'PresentationAdapters', to: 'PersistenceAdapters', allowed: false },
-          { from: 'PresentationAdapters', to: 'DomainModel', allowed: false },
-          { from: 'PersistenceAdapters', to: 'ApplicationOrchestration', allowed: false },
-          { from: 'PersistenceAdapters', to: 'PresentationAdapters', allowed: false },
+          ...portsAndAdaptersRules(),
         ],
       },
       root
@@ -705,12 +739,7 @@ export const ARCHITECTURE_PRESETS = {
           { from: 'DomainModel', to: 'ApplicationOrchestration', allowed: false },
           { from: 'DomainModel', to: 'PresentationAdapters', allowed: false },
           { from: 'DomainModel', to: 'PersistenceAdapters', allowed: false },
-          { from: 'ApplicationOrchestration', to: 'PersistenceAdapters', allowed: false },
-          { from: 'ApplicationOrchestration', to: 'PresentationAdapters', allowed: false },
-          { from: 'PresentationAdapters', to: 'PersistenceAdapters', allowed: false },
-          { from: 'PresentationAdapters', to: 'DomainModel', allowed: false },
-          { from: 'PersistenceAdapters', to: 'ApplicationOrchestration', allowed: false },
-          { from: 'PersistenceAdapters', to: 'PresentationAdapters', allowed: false },
+          ...portsAndAdaptersRules(),
         ],
       },
       root
@@ -810,24 +839,12 @@ export const ARCHITECTURE_PRESETS = {
             optional: true,
           },
         ],
-        rules: [
-          { from: 'DomainModel', to: 'PresentationAdapters', allowed: false },
-          { from: 'DomainModel', to: 'PersistenceAdapters', allowed: false },
-          { from: 'DomainModel', to: 'ApplicationOrchestration', allowed: false },
-          { from: 'ApplicationOrchestration', to: 'PresentationAdapters', allowed: false },
-          // Next RSC often imports data clients from routes; deny is ideal but day-one
-          // ui-surface keeps this as a soft guidance edge (allowed) until ports exist —
-          // Persistence → Presentation stays denied when that edge appears.
-          {
-            from: 'PresentationAdapters',
-            to: 'PersistenceAdapters',
-            allowed: true,
-            message:
-              'UI/routes may reach data clients on day one (RSC); prefer application ports as the product grows.',
-          },
-          { from: 'PersistenceAdapters', to: 'PresentationAdapters', allowed: false },
-          { from: 'PersistenceAdapters', to: 'ApplicationOrchestration', allowed: false },
-        ],
+        // Next RSC often imports data clients from routes; deny is ideal but day-one
+        // ui-surface keeps this as a soft guidance edge (allowed) until ports exist —
+        // Persistence → Presentation stays denied when that edge appears.
+        rules: uiSurfaceRules(
+          'UI/routes may reach data clients on day one (RSC); prefer application ports as the product grows.'
+        ),
       },
       root
     ),
@@ -978,12 +995,7 @@ export const ARCHITECTURE_PRESETS = {
           { from: 'DomainModel', to: 'ApplicationOrchestration', allowed: false },
           { from: 'DomainModel', to: 'PersistenceAdapters', allowed: false },
           { from: 'DomainModel', to: 'PresentationAdapters', allowed: false },
-          { from: 'ApplicationOrchestration', to: 'PersistenceAdapters', allowed: false },
-          { from: 'ApplicationOrchestration', to: 'PresentationAdapters', allowed: false },
-          { from: 'PresentationAdapters', to: 'PersistenceAdapters', allowed: false },
-          { from: 'PresentationAdapters', to: 'DomainModel', allowed: false },
-          { from: 'PersistenceAdapters', to: 'ApplicationOrchestration', allowed: false },
-          { from: 'PersistenceAdapters', to: 'PresentationAdapters', allowed: false },
+          ...portsAndAdaptersRules(),
           { from: 'SharedKernel', to: 'DomainModel', allowed: false },
           { from: 'SharedKernel', to: 'ApplicationOrchestration', allowed: false },
           { from: 'SharedKernel', to: 'PresentationAdapters', allowed: false },
@@ -1078,21 +1090,9 @@ export const ARCHITECTURE_PRESETS = {
             optional: true,
           },
         ],
-        rules: [
-          { from: 'DomainModel', to: 'PresentationAdapters', allowed: false },
-          { from: 'DomainModel', to: 'PersistenceAdapters', allowed: false },
-          { from: 'DomainModel', to: 'ApplicationOrchestration', allowed: false },
-          { from: 'ApplicationOrchestration', to: 'PresentationAdapters', allowed: false },
-          {
-            from: 'PresentationAdapters',
-            to: 'PersistenceAdapters',
-            allowed: true,
-            message:
-              'SPA day-one UI may reach data clients; prefer ports as the product grows.',
-          },
-          { from: 'PersistenceAdapters', to: 'PresentationAdapters', allowed: false },
-          { from: 'PersistenceAdapters', to: 'ApplicationOrchestration', allowed: false },
-        ],
+        rules: uiSurfaceRules(
+          'SPA day-one UI may reach data clients; prefer ports as the product grows.'
+        ),
       },
       root
     ),

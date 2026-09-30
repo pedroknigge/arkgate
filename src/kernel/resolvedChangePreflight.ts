@@ -6,7 +6,11 @@ import {
   type AnalysisFileChange,
   type ResolvedCandidateFacts,
 } from '../domain/analysis';
-import { analyzeArchitectureConvergence } from '../domain/changeConvergence';
+import {
+  analyzeArchitectureConvergence,
+  resolvedEdgeDependencies,
+} from '../domain/changeConvergence';
+import { canonicalProjectPath } from '../domain/changeMap';
 import { deterministicNextAction } from '../domain/remediation';
 import type {
   ArchitectureEngineViolation,
@@ -16,30 +20,6 @@ import type {
   ResolvedChangePreflightResult,
 } from './analysisTypes';
 import { analyzeCanonicalResolvedProject } from './resolvedAnalysis';
-
-function canonicalChangePath(value: string): string | undefined {
-  const portable = value.replace(/\\/g, '/');
-  if (
-    !portable ||
-    portable.startsWith('/') ||
-    /^[A-Za-z]:\//.test(portable) ||
-    portable.includes('\0')
-  ) {
-    return undefined;
-  }
-  const segments: string[] = [];
-  for (const segment of portable.split('/')) {
-    if (!segment || segment === '.') continue;
-    if (segment === '..') {
-      if (segments.length === 0) return undefined;
-      segments.pop();
-    } else {
-      segments.push(segment);
-    }
-  }
-  const normalized = segments.join('/');
-  return normalized && normalized === portable ? normalized : undefined;
-}
 
 function identityViolations(
   base: ResolvedCandidateFacts,
@@ -202,7 +182,7 @@ export function preflightCanonicalChange(
   const changes: PreparedChangeFile[] = [];
 
   for (const change of input.changes) {
-    const path = canonicalChangePath(change.path);
+    const path = canonicalProjectPath(change.path);
     if (!path) {
       inputViolations.push({
         ruleId: 'INVALID_CHANGE_PATH',
@@ -291,12 +271,8 @@ export function preflightCanonicalChange(
     ? analyzeArchitectureConvergence({
         changeMap: input.changeMap,
         changes,
-        baseDependencies: base.ir.edges.flatMap((edge) =>
-          edge.to ? [{ from: edge.from, to: edge.to }] : []
-        ),
-        candidateDependencies: candidate.ir.edges.flatMap((edge) =>
-          edge.to ? [{ from: edge.from, to: edge.to }] : []
-        ),
+        baseDependencies: resolvedEdgeDependencies(base.ir.edges),
+        candidateDependencies: resolvedEdgeDependencies(candidate.ir.edges),
       })
     : undefined;
   const candidateViolations = ratchetPreExistingArkRules(

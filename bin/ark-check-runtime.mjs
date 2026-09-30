@@ -77,6 +77,7 @@ import {
   printViolationBreakdown,
   printHumanWarnings,
   CONCENTRATION_MIN_VIOLATIONS,
+  color,
 } from './lib/violations.mjs';
 import {
   detectBestFitModel,
@@ -1032,15 +1033,6 @@ function readManifest(root, manifestPath) {
   }
   return readJson(fullPath);
 }
-
-const useColor = process.stderr.isTTY && !process.env.NO_COLOR;
-const color = {
-  red: (s) => (useColor ? `\x1b[31m${s}\x1b[0m` : s),
-  yellow: (s) => (useColor ? `\x1b[33m${s}\x1b[0m` : s),
-  green: (s) => (useColor ? `\x1b[32m${s}\x1b[0m` : s),
-  dim: (s) => (useColor ? `\x1b[2m${s}\x1b[0m` : s),
-  bold: (s) => (useColor ? `\x1b[1m${s}\x1b[0m` : s),
-};
 
 /**
  * Monorepo honesty: when cwd/--root has no ark.config.json, walk parents (bounded).

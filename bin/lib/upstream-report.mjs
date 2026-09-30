@@ -59,8 +59,13 @@ gh issue create --repo pedroknigge/arkgate command, then exits 2.
 `;
 }
 
-export function lastCheckSnippet(latest) {
-  if (!latest || typeof latest !== 'object') return null;
+/**
+ * Timestamp, active violation count, and verdict of a `.ark/reports/latest.json`
+ * snapshot object. Verdict: pass / fail / incomplete, or null when unknown.
+ * @param {object} latest
+ * @returns {{ at: string|null, active: number|null, verdict: 'pass'|'fail'|'incomplete'|null }}
+ */
+export function lastCheckVerdictFacts(latest) {
   const at =
     typeof latest.generatedAt === 'string'
       ? latest.generatedAt
@@ -79,6 +84,12 @@ export function lastCheckSnippet(latest) {
   else if (latest.completeness === 'partial' || latest.completeness === 'unavailable') {
     verdict = 'incomplete';
   } else if (latest.ok === true) verdict = 'pass';
+  return { at, active, verdict };
+}
+
+export function lastCheckSnippet(latest) {
+  if (!latest || typeof latest !== 'object') return null;
+  const { at, active, verdict } = lastCheckVerdictFacts(latest);
   if (at == null && verdict == null && active == null) return null;
   return { at, verdict, activeViolations: active };
 }

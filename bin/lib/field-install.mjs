@@ -40,21 +40,41 @@ function matchingBrace(text, openIndex) {
   return -1;
 }
 
-function addDevDependencyPreservingFormat(source, version) {
+/**
+ * Insert `"name": value` into a top-level package.json object section (created at
+ * the end of the root object when absent) while preserving indentation, line
+ * endings, and single-line vs multi-line layout. Never replaces an existing key;
+ * callers check for it first.
+ *
+ * @param {string} source package.json text
+ * @param {string} section top-level key, e.g. `scripts` or `devDependencies`
+ * @param {string} name property name
+ * @param {string} value property value (JSON-encoded here)
+ * @param {string} [unbalancedLabel] error label when the section's braces do not close
+ */
+export function addPackageJsonPropertyPreservingFormat(
+  source,
+  section,
+  name,
+  value,
+  unbalancedLabel = section
+) {
   const multiline = /\r?\n/.test(source);
   const eol = source.includes('\r\n') ? '\r\n' : '\n';
   const rootPropertyIndent = source.match(/\r?\n([ \t]+)"[^"\n]+"\s*:/)?.[1] ?? '  ';
   const indentUnit = rootPropertyIndent;
-  const encoded = JSON.stringify(version);
-  const devMatch = /"devDependencies"\s*:\s*\{/.exec(source);
+  const encoded = JSON.stringify(value);
+  const key = JSON.stringify(name);
+  const sectionKey = JSON.stringify(section);
+  const sectionMatch = new RegExp(`${sectionKey}\\s*:\\s*\\{`).exec(source);
 
-  if (devMatch) {
-    const open = source.indexOf('{', devMatch.index);
+  if (sectionMatch) {
+    const open = source.indexOf('{', sectionMatch.index);
     const close = matchingBrace(source, open);
-    if (close === -1) throw new Error('Unbalanced devDependencies object');
+    if (close === -1) throw new Error(`Unbalanced ${unbalancedLabel} object`);
     const body = source.slice(open + 1, close);
     if (!multiline) {
-      const addition = body.trim() ? `,"arkgate":${encoded}` : `"arkgate":${encoded}`;
+      const addition = body.trim() ? `,${key}:${encoded}` : `${key}:${encoded}`;
       return `${source.slice(0, close)}${addition}${source.slice(close)}`;
     }
     const beforeClose = source.slice(0, close);
@@ -63,8 +83,8 @@ function addDevDependencyPreservingFormat(source, version) {
     const closingIndent = trailing.slice(trailing.lastIndexOf('\n') + 1);
     const propertyIndent = `${closingIndent}${indentUnit}`;
     const addition = body.trim()
-      ? `,${eol}${propertyIndent}"arkgate": ${encoded}`
-      : `${propertyIndent}"arkgate": ${encoded}`;
+      ? `,${eol}${propertyIndent}${key}: ${encoded}`
+      : `${propertyIndent}${key}: ${encoded}`;
     return `${source.slice(0, contentEnd)}${addition}${eol}${closingIndent}${source.slice(close)}`;
   }
 
@@ -73,14 +93,18 @@ function addDevDependencyPreservingFormat(source, version) {
   const rootBody = source.slice(0, rootClose);
   if (!multiline) {
     const separator = rootBody.trim().endsWith('{') ? '' : ',';
-    return `${rootBody}${separator}"devDependencies":{"arkgate":${encoded}}${source.slice(rootClose)}`;
+    return `${rootBody}${separator}${sectionKey}:{${key}:${encoded}}${source.slice(rootClose)}`;
   }
   const trailing = rootBody.match(/\s*$/)?.[0] ?? '';
   const contentEnd = rootClose - trailing.length;
   const rootClosingIndent = trailing.slice(trailing.lastIndexOf('\n') + 1);
   const separator = source.slice(0, contentEnd).trimEnd().endsWith('{') ? '' : ',';
-  const addition = `${separator}${eol}${rootPropertyIndent}"devDependencies": {${eol}${rootPropertyIndent}${indentUnit}"arkgate": ${encoded}${eol}${rootPropertyIndent}}`;
+  const addition = `${separator}${eol}${rootPropertyIndent}${sectionKey}: {${eol}${rootPropertyIndent}${indentUnit}${key}: ${encoded}${eol}${rootPropertyIndent}}`;
   return `${source.slice(0, contentEnd)}${addition}${eol}${rootClosingIndent}${source.slice(rootClose)}`;
+}
+
+function addDevDependencyPreservingFormat(source, version) {
+  return addPackageJsonPropertyPreservingFormat(source, 'devDependencies', 'arkgate', version);
 }
 
 function replaceArkgateDependencyPreservingFormat(source, version) {

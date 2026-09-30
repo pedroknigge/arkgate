@@ -38,11 +38,12 @@ function isPathInsideRoot(root, absolute) {
 }
 
 /**
- * Minimal glob match for testGlobs (double-star slash = zero path segments).
+ * Minimal glob match for testGlobs and ArkRules `appliesTo` fileHints
+ * (double-star slash = zero path segments).
  * @param {string} glob
  * @param {string} file
  */
-function matchSimpleGlob(glob, file) {
+export function matchSimpleGlob(glob, file) {
   const pattern = String(glob || '').replace(/\\/g, '/');
   const target = String(file || '').replace(/\\/g, '/');
   if (!pattern) return false;

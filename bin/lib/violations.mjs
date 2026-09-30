@@ -2,7 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const useColor = process.stderr.isTTY && !process.env.NO_COLOR;
-const color = {
+/** ANSI styling for ark-check's stderr; plain text when stderr is not a TTY or NO_COLOR is set. */
+export const color = {
   red: (s) => (useColor ? `\x1b[31m${s}\x1b[0m` : s),
   yellow: (s) => (useColor ? `\x1b[33m${s}\x1b[0m` : s),
   green: (s) => (useColor ? `\x1b[32m${s}\x1b[0m` : s),

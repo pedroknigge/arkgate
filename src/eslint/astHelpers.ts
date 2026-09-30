@@ -92,3 +92,117 @@ export function declarationIsTypeOnly(node: AstNode): boolean {
   }
   return specifiers.every((specifier) => specifier.exportKind === 'type');
 }
+
+/** How a module specifier reaches the linted file. */
+export type ModuleSourceKind = 'import' | 'export' | 'dynamic-import' | 'require';
+
+/**
+ * Receives each static module source the file names: its specifier (not yet
+ * checked to be a string), whether the edge is erased at runtime, and its kind.
+ */
+export type ModuleSourceCheck = (
+  node: AstNode,
+  specifier: unknown,
+  typeOnly: boolean,
+  kind: ModuleSourceKind
+) => void;
+
+type ModuleSourceListeners = Record<
+  | 'ImportDeclaration'
+  | 'ImportExpression'
+  | 'TSImportEqualsDeclaration'
+  | 'ExportNamedDeclaration'
+  | 'ExportAllDeclaration'
+  | 'CallExpression',
+  (node: AstNode) => void
+>;
+
+/**
+ * Listeners that hand every static module source to `check`: import / export
+ * declarations, `import x = require()`, literal `import()`, and literal
+ * `require()` when `require` is not locally bound. A braced import list whose
+ * named specifiers are ALL `type` counts as type-only (parity with the symbol
+ * path: it is erased at runtime too).
+ */
+export function moduleSourceListeners(
+  context: RuleContext,
+  check: ModuleSourceCheck,
+  isBound: (context: RuleContext, node: AstNode, name: string) => boolean = isLocallyBound
+): ModuleSourceListeners {
+  return {
+    ImportDeclaration(node) {
+      const importNode = node as AstNode & {
+        source?: { value?: unknown };
+        importKind?: string;
+        specifiers?: Array<{ importKind?: string; type?: string }>;
+      };
+      const named = (importNode.specifiers ?? []).filter(
+        (specifier) => specifier.type === 'ImportSpecifier'
+      );
+      const allNamedTypeOnly =
+        named.length > 0 &&
+        named.length === (importNode.specifiers ?? []).length &&
+        named.every((specifier) => specifier.importKind === 'type');
+      check(
+        node,
+        importNode.source?.value,
+        importNode.importKind === 'type' || allNamedTypeOnly,
+        'import'
+      );
+    },
+    ImportExpression(node) {
+      const importNode = node as AstNode & { source?: { type?: string; value?: unknown } };
+      if (importNode.source?.type === 'Literal') {
+        check(node, importNode.source.value, false, 'dynamic-import');
+      }
+    },
+    TSImportEqualsDeclaration(node) {
+      const importNode = node as AstNode & {
+        importKind?: string;
+        isTypeOnly?: boolean;
+        moduleReference?: { expression?: { value?: unknown } };
+      };
+      check(
+        node,
+        importNode.moduleReference?.expression?.value,
+        importNode.importKind === 'type' || importNode.isTypeOnly === true,
+        'require'
+      );
+    },
+    ExportNamedDeclaration(node) {
+      const exportNode = node as AstNode & {
+        source?: { value?: unknown };
+        exportKind?: string;
+        specifiers?: Array<{ exportKind?: string }>;
+      };
+      if (!exportNode.source) return;
+      const specifiers = exportNode.specifiers ?? [];
+      const allTypeOnly =
+        specifiers.length > 0 && specifiers.every((specifier) => specifier.exportKind === 'type');
+      check(
+        node,
+        exportNode.source.value,
+        exportNode.exportKind === 'type' || allTypeOnly,
+        'export'
+      );
+    },
+    ExportAllDeclaration(node) {
+      const exportNode = node as AstNode & { source?: { value?: unknown }; exportKind?: string };
+      check(node, exportNode.source?.value, exportNode.exportKind === 'type', 'export');
+    },
+    CallExpression(node) {
+      const call = node as AstNode & {
+        callee?: { type?: string; name?: string };
+        arguments?: Array<{ type?: string; value?: unknown }>;
+      };
+      if (
+        call.callee?.type === 'Identifier' &&
+        call.callee.name === 'require' &&
+        call.arguments?.[0]?.type === 'Literal' &&
+        !isBound(context, node, 'require')
+      ) {
+        check(node, call.arguments[0].value, false, 'require');
+      }
+    },
+  };
+}

@@ -7,6 +7,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { codexProjectMcpIsValid } from './codex-home.mjs';
 import { enforcingArkRunText, runsArkCheck } from './github-enforcement.mjs';
+import { parseJsonMergeInputs } from './hook-templates.mjs';
 import { npxArkgatePrefixLength } from './package-manager.mjs';
 
 export const __packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -43,13 +44,16 @@ export function packageScriptsHaveTypecheck(scripts) {
 }
 
 /**
- * Root package (and shallow nested packages) already have a typecheck script.
- * Does not scan CI or framework configs — only package.json scripts.
+ * Visit the parsed package.json of each shallow nested package — `root/<dir>/`
+ * and `root/<dir>/<child>/`, skipping dot directories and `node_modules` — in
+ * directory order. Unreadable or invalid files are skipped. Stops at the first
+ * visit that returns true.
+ *
  * @param {string} root
+ * @param {(pkg: any, dir: string) => boolean | void} visit
+ * @returns {boolean} true when a visit returned true
  */
-export function treeHasTypecheckScript(root) {
-  const pkg = readPackageJson(root);
-  if (packageScriptsHaveTypecheck(pkg?.scripts)) return true;
+export function someNestedPackageJson(root, visit) {
   try {
     for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
       if (!entry.isDirectory() || entry.name.startsWith('.') || entry.name === 'node_modules') continue;
@@ -67,8 +71,7 @@ export function treeHasTypecheckScript(root) {
         const pj = path.join(dir, 'package.json');
         if (!fs.existsSync(pj)) continue;
         try {
-          const nested = JSON.parse(fs.readFileSync(pj, 'utf8'));
-          if (packageScriptsHaveTypecheck(nested.scripts)) return true;
+          if (visit(JSON.parse(fs.readFileSync(pj, 'utf8')), dir) === true) return true;
         } catch {
           /* ignore */
         }
@@ -78,6 +81,17 @@ export function treeHasTypecheckScript(root) {
     /* ignore */
   }
   return false;
+}
+
+/**
+ * Root package (and shallow nested packages) already have a typecheck script.
+ * Does not scan CI or framework configs — only package.json scripts.
+ * @param {string} root
+ */
+export function treeHasTypecheckScript(root) {
+  const pkg = readPackageJson(root);
+  if (packageScriptsHaveTypecheck(pkg?.scripts)) return true;
+  return someNestedPackageJson(root, (nested) => packageScriptsHaveTypecheck(nested.scripts));
 }
 
 /**
@@ -317,16 +331,9 @@ export const CLAUDE_STYLE_HOOK_FILES = ['.claude/settings.json', '.codex/hooks.j
  * Preserves sibling servers and unknown top-level keys. Returns null if unreadable.
  */
 export function mergeArkMcpJson(existingText, generatedText) {
-  let existing;
-  let generated;
-  try {
-    existing = existingText && existingText.trim() ? JSON.parse(existingText) : {};
-    generated = JSON.parse(generatedText);
-  } catch {
-    return null;
-  }
-  if (!existing || typeof existing !== 'object' || Array.isArray(existing)) return null;
-  if (!generated || typeof generated !== 'object' || Array.isArray(generated)) return null;
+  const parsed = parseJsonMergeInputs(existingText, generatedText);
+  if (!parsed) return null;
+  const { existing, generated } = parsed;
   const generatedArk = generated.mcpServers?.ark;
   if (!generatedArk || typeof generatedArk !== 'object' || Array.isArray(generatedArk)) {
     return null;

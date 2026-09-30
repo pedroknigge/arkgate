@@ -91,6 +91,25 @@ export function defaultedArkOrder(value: unknown): Record<string, unknown> {
   };
 }
 
+/** Each named managed layer of an extra must be declared in `layers[]`. */
+function validateManagedLayersDeclared(
+  config: Record<string, unknown>,
+  managed: unknown,
+  extraKey: 'arkRun' | 'arkOrder',
+  issues: ArkConfigIssue[]
+): void {
+  if (!Array.isArray(managed)) return;
+  const layerNames = declaredLayerNames(config);
+  managed.forEach((name, index) => {
+    if (typeof name === 'string' && name.length > 0 && !layerNames.has(name)) {
+      issues.push({
+        path: `$.${extraKey}.managedLayers[${index}]`,
+        message: `layer ${JSON.stringify(name)} is not declared in layers[]`,
+      });
+    }
+  });
+}
+
 export function validateArkRunExtra(
   config: Record<string, unknown>,
   issues: ArkConfigIssue[]
@@ -98,18 +117,8 @@ export function validateArkRunExtra(
   const extra = config.arkRun;
   if (extra === undefined || !isObject(extra)) return;
 
-  const layerNames = declaredLayerNames(config);
   const managed = extra.managedLayers;
-  if (Array.isArray(managed)) {
-    managed.forEach((name, index) => {
-      if (typeof name === 'string' && name.length > 0 && !layerNames.has(name)) {
-        issues.push({
-          path: `$.arkRun.managedLayers[${index}]`,
-          message: `layer ${JSON.stringify(name)} is not declared in layers[]`,
-        });
-      }
-    });
-  }
+  validateManagedLayersDeclared(config, managed, 'arkRun', issues);
 
   if (extra.mode === 'enforced') {
     const roots = extra.kernelRoots ?? extra.compositionRoots;
@@ -135,18 +144,8 @@ export function validateArkOrderExtra(
   const extra = config.arkOrder;
   if (extra === undefined || !isObject(extra)) return;
 
-  const layerNames = declaredLayerNames(config);
   const managed = extra.managedLayers;
-  if (Array.isArray(managed)) {
-    managed.forEach((name, index) => {
-      if (typeof name === 'string' && name.length > 0 && !layerNames.has(name)) {
-        issues.push({
-          path: `$.arkOrder.managedLayers[${index}]`,
-          message: `layer ${JSON.stringify(name)} is not declared in layers[]`,
-        });
-      }
-    });
-  }
+  validateManagedLayersDeclared(config, managed, 'arkOrder', issues);
 
   if (extra.mode === 'enforced') {
     const roots = extra.planeRoots;

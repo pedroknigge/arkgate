@@ -8,7 +8,7 @@
  * Pure CLI helper (bin/lib/ark-order-doctor.mjs). Zero Node I/O.
  */
 
-import { composeMergePlanesHonesty, extraMergeTeethAllowed, isArkOrderRuleId, } from './extra-merge-teeth.mjs';
+import { composeMergePlanesHonesty, extraMergeTeethAllowed, isArkOrderRuleId, mergePlanesArkRulesInput, projectExtraPlaneStatus, } from './extra-merge-teeth.mjs';
 export const ARK_ORDER_DOCTOR_SCHEMA_VERSION = '1.0';
 const RESIDUAL_RULE_CAP = 12;
 export const ARKORDER_ONE_BREATH = 'Layers stop a bad import. ArkOrder stops rewriting a big product choice — like the billing plan — as if it were a seat count. Change those choices through a valve, not a generic update.';
@@ -54,17 +54,7 @@ export function summarizeArkOrderSection(input = {}) {
     const residualCount = uniqueIds.length;
     const mergePlanes = composeMergePlanesHonesty({
         classification: input.classification,
-        arkRules: {
-            active: input.arkRules?.active === true,
-            structureEnforced: input.arkRules?.structureEnforced,
-            structureTotal: input.arkRules?.structureTotal,
-            structureAdvisory: input.arkRules?.structureAdvisory,
-            invariantEnforced: input.arkRules?.invariantEnforced,
-            invariantTotal: input.arkRules?.invariantTotal,
-            invariantAdvisory: input.arkRules?.invariantAdvisory,
-            covered: input.arkRules?.covered,
-            uncovered: input.arkRules?.uncovered,
-        },
+        arkRules: mergePlanesArkRulesInput(input.arkRules),
         arkRun: {
             present: input.arkRun?.present === true,
             mode: input.arkRun?.mode ?? null,
@@ -110,22 +100,7 @@ export function summarizeArkOrderSection(input = {}) {
 }
 /** Thin status slice — counts only; residual null means unknown, not green. */
 export function projectStatusArkOrder(input = {}) {
-    const present = input.present === true;
-    const mode = closedMode(input.mode);
-    const residualRaw = input.residual;
-    let residual = null;
-    if (typeof residualRaw === 'number' && Number.isFinite(residualRaw) && residualRaw >= 0) {
-        residual = Math.floor(residualRaw);
-    }
-    if (!present)
-        residual = residual == null ? 0 : residual;
-    return {
-        notAScore: true,
-        present,
-        mode: present ? mode : null,
-        extraMergeTeeth: present && mode === 'enforced' && input.extraMergeTeeth === true,
-        residual,
-    };
+    return projectExtraPlaneStatus(input);
 }
 export function formatArkOrderDoctorLines(section) {
     if (!section || section.notAScore !== true)

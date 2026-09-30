@@ -16,7 +16,7 @@ import {
   buildAgentProjectionBlock,
 } from './agent-projection.mjs';
 import { getDiagnosticCatalogEntry } from './diagnostic-catalog.mjs';
-import { falseGreenAdoptionGap } from './field-install.mjs';
+import { addPackageJsonPropertyPreservingFormat, falseGreenAdoptionGap } from './field-install.mjs';
 import { renderHostSupportMatrixMarkdown } from './host-support-matrix.mjs';
 import { PREFERRED_MCP_BIN } from './hook-templates.mjs';
 import { hasCheckArchitectureScript, readPackageJson } from './gate-files.mjs';
@@ -114,65 +114,13 @@ export function checkArchitectureScriptSnippet(root) {
  * @param {string} scriptValue
  */
 function addPackageScriptPreservingFormat(source, scriptName, scriptValue) {
-  const multiline = /\r?\n/.test(source);
-  const eol = source.includes('\r\n') ? '\r\n' : '\n';
-  const rootPropertyIndent = source.match(/\r?\n([ \t]+)"[^"\n]+"\s*:/)?.[1] ?? '  ';
-  const indentUnit = rootPropertyIndent;
-  const encoded = JSON.stringify(scriptValue);
-  const key = JSON.stringify(scriptName);
-  const scriptsMatch = /"scripts"\s*:\s*\{/.exec(source);
-
-  if (scriptsMatch) {
-    const open = source.indexOf('{', scriptsMatch.index);
-    let depth = 0;
-    let quoted = false;
-    let escaped = false;
-    let close = -1;
-    for (let index = open; index < source.length; index += 1) {
-      const char = source[index];
-      if (quoted) {
-        if (escaped) escaped = false;
-        else if (char === '\\') escaped = true;
-        else if (char === '"') quoted = false;
-        continue;
-      }
-      if (char === '"') quoted = true;
-      else if (char === '{') depth += 1;
-      else if (char === '}' && --depth === 0) {
-        close = index;
-        break;
-      }
-    }
-    if (close === -1) throw new Error('Unbalanced package.json scripts object');
-    const body = source.slice(open + 1, close);
-    if (!multiline) {
-      const addition = body.trim() ? `,${key}:${encoded}` : `${key}:${encoded}`;
-      return `${source.slice(0, close)}${addition}${source.slice(close)}`;
-    }
-    const beforeClose = source.slice(0, close);
-    const trailing = beforeClose.match(/\s*$/)?.[0] ?? '';
-    const contentEnd = close - trailing.length;
-    const closingIndent = trailing.slice(trailing.lastIndexOf('\n') + 1);
-    const propertyIndent = `${closingIndent}${indentUnit}`;
-    const addition = body.trim()
-      ? `,${eol}${propertyIndent}${key}: ${encoded}`
-      : `${propertyIndent}${key}: ${encoded}`;
-    return `${source.slice(0, contentEnd)}${addition}${eol}${closingIndent}${source.slice(close)}`;
-  }
-
-  const rootClose = source.lastIndexOf('}');
-  if (rootClose === -1) throw new Error('Unbalanced package.json object');
-  const rootBody = source.slice(0, rootClose);
-  if (!multiline) {
-    const separator = rootBody.trim().endsWith('{') ? '' : ',';
-    return `${rootBody}${separator}"scripts":{${key}:${encoded}}${source.slice(rootClose)}`;
-  }
-  const trailing = rootBody.match(/\s*$/)?.[0] ?? '';
-  const contentEnd = rootClose - trailing.length;
-  const rootClosingIndent = trailing.slice(trailing.lastIndexOf('\n') + 1);
-  const separator = source.slice(0, contentEnd).trimEnd().endsWith('{') ? '' : ',';
-  const addition = `${separator}${eol}${rootPropertyIndent}"scripts": {${eol}${rootPropertyIndent}${indentUnit}${key}: ${encoded}${eol}${rootPropertyIndent}}`;
-  return `${source.slice(0, contentEnd)}${addition}${eol}${rootClosingIndent}${source.slice(rootClose)}`;
+  return addPackageJsonPropertyPreservingFormat(
+    source,
+    'scripts',
+    scriptName,
+    scriptValue,
+    'package.json scripts'
+  );
 }
 
 /**

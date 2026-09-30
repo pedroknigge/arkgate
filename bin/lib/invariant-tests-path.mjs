@@ -48,13 +48,14 @@ export function scanDemandsInvariantTestsPath(root, args = {}) {
 }
 
 /**
- * First concrete path segment exists, or every declared glob is wildcard-only.
+ * True when some declared glob's concrete prefix (text before the first `*`/`?`)
+ * exists under root, or when every declared glob is wildcard-only. Prefixes that
+ * escape root are skipped. No declarations → false; no root → true.
  *
  * @param {string} root
- * @param {{ testGlobs?: unknown, coverageRoots?: unknown } | null | undefined} coverage
+ * @param {string[]} declared
  */
-export function declaredInvariantTestsPathPresent(root, coverage) {
-  const declared = configuredInvariantTestsPaths(coverage);
+function firstConcreteGlobPrefixPresent(root, declared) {
   if (declared.length === 0) return false;
   if (typeof root !== 'string' || root.length === 0) return true;
   let sawConcrete = false;
@@ -72,6 +73,16 @@ export function declaredInvariantTestsPathPresent(root, coverage) {
     }
   }
   return !sawConcrete;
+}
+
+/**
+ * First concrete path segment exists, or every declared glob is wildcard-only.
+ *
+ * @param {string} root
+ * @param {{ testGlobs?: unknown, coverageRoots?: unknown } | null | undefined} coverage
+ */
+export function declaredInvariantTestsPathPresent(root, coverage) {
+  return firstConcreteGlobPrefixPresent(root, configuredInvariantTestsPaths(coverage));
 }
 
 /**
@@ -131,24 +142,7 @@ export function collectInvariantTestsPathResidual(input = {}) {
  * @param {{ coverageRoots?: unknown } | null | undefined} coverage
  */
 export function declaredCoverageRootsPresent(root, coverage) {
-  const declared = configuredCoverageRoots(coverage);
-  if (declared.length === 0) return false;
-  if (typeof root !== 'string' || root.length === 0) return true;
-  let sawConcrete = false;
-  for (const entry of declared) {
-    const prefix = entry.split(/[*?]/)[0].replace(/\/$/, '');
-    if (!prefix) continue;
-    sawConcrete = true;
-    const abs = path.resolve(root, prefix);
-    const rel = path.relative(path.resolve(root), abs).replace(/\\/g, '/');
-    if (!rel || rel === '..' || rel.startsWith('../') || path.isAbsolute(rel)) continue;
-    try {
-      if (fs.existsSync(abs)) return true;
-    } catch {
-      continue;
-    }
-  }
-  return !sawConcrete;
+  return firstConcreteGlobPrefixPresent(root, configuredCoverageRoots(coverage));
 }
 
 function residualHasEnforcedInvariant(input) {

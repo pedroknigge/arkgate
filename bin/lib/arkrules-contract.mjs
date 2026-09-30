@@ -8,6 +8,7 @@
  * Pure CLI helper (bin/lib/arkrules-contract.mjs). Zero Node I/O.
  */
 
+import { isObject, validateSchemaNode, valueType } from './schema-validation.mjs';
 export const ARK_RULES_SCHEMA_VERSION = '1.0';
 export const ARK_RULES_SCHEMA_URL = 'https://unpkg.com/arkgate/schemas/ark.arkrules.schema.json';
 /** Closed sensor vocabulary — keep in lockstep with arkRulesTypes.ARK_RULE_SENSOR_IDS. */
@@ -105,113 +106,6 @@ export class ArkRulesValidationError extends Error {
         this.issues = issues;
     }
 }
-function isObject(value) {
-    return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
-function propertyPath(parent, key) {
-    return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(key)
-        ? `${parent}.${key}`
-        : `${parent}[${JSON.stringify(key)}]`;
-}
-function valueType(value) {
-    if (value === null)
-        return 'null';
-    if (Array.isArray(value))
-        return 'array';
-    return typeof value;
-}
-function resolveSchemaRef(ref, root) {
-    const prefix = '#/$defs/';
-    if (!ref.startsWith(prefix))
-        return undefined;
-    return root.$defs[ref.slice(prefix.length)];
-}
-function validateNode(value, schema, path, root, issues) {
-    if (schema.$ref) {
-        const referenced = resolveSchemaRef(schema.$ref, root);
-        if (!referenced) {
-            issues.push({ path, message: `schema reference ${schema.$ref} cannot be resolved` });
-            return;
-        }
-        validateNode(value, referenced, path, root, issues);
-        return;
-    }
-    if (schema.const !== undefined && !Object.is(value, schema.const)) {
-        issues.push({ path, message: `must equal ${JSON.stringify(schema.const)}` });
-        return;
-    }
-    if (schema.enum && !schema.enum.some((candidate) => Object.is(candidate, value))) {
-        issues.push({ path, message: `must be one of ${schema.enum.map(String).join(', ')}` });
-        return;
-    }
-    if (schema.type === 'object') {
-        if (!isObject(value)) {
-            issues.push({ path, message: `must be an object; received ${valueType(value)}` });
-            return;
-        }
-        const properties = schema.properties ?? {};
-        for (const key of schema.required ?? []) {
-            if (value[key] === undefined) {
-                issues.push({ path: propertyPath(path, key), message: 'is required' });
-            }
-        }
-        if (schema.additionalProperties === false) {
-            for (const key of Object.keys(value)) {
-                if (!(key in properties)) {
-                    issues.push({ path: propertyPath(path, key), message: 'unknown field' });
-                }
-            }
-        }
-        else if (isObject(schema.additionalProperties)) {
-            const additional = schema.additionalProperties;
-            for (const key of Object.keys(value)) {
-                if (!(key in properties)) {
-                    validateNode(value[key], additional, propertyPath(path, key), root, issues);
-                }
-            }
-        }
-        for (const [key, childSchema] of Object.entries(properties)) {
-            if (value[key] !== undefined) {
-                validateNode(value[key], childSchema, propertyPath(path, key), root, issues);
-            }
-        }
-        return;
-    }
-    if (schema.type === 'array') {
-        if (!Array.isArray(value)) {
-            issues.push({ path, message: `must be an array; received ${valueType(value)}` });
-            return;
-        }
-        if (schema.minItems !== undefined && value.length < schema.minItems) {
-            issues.push({ path, message: `must contain at least ${schema.minItems} item(s)` });
-        }
-        if (schema.uniqueItems) {
-            const serialized = value.map((entry) => JSON.stringify(entry));
-            if (new Set(serialized).size !== serialized.length) {
-                issues.push({ path, message: 'must not contain duplicate items' });
-            }
-        }
-        if (schema.items) {
-            value.forEach((entry, index) => validateNode(entry, schema.items, `${path}[${index}]`, root, issues));
-        }
-        return;
-    }
-    if (schema.type === 'string') {
-        if (typeof value !== 'string') {
-            issues.push({ path, message: `must be a string; received ${valueType(value)}` });
-            return;
-        }
-        if (schema.minLength !== undefined && value.length < schema.minLength) {
-            issues.push({ path, message: `must contain at least ${schema.minLength} character(s)` });
-        }
-        return;
-    }
-    if (schema.type === 'boolean') {
-        if (typeof value !== 'boolean') {
-            issues.push({ path, message: `must be a boolean; received ${valueType(value)}` });
-        }
-    }
-}
 function defaultedArkRules(input) {
     return {
         ...input,
@@ -299,7 +193,7 @@ export function loadArkRulesContract(input, source = 'arkrules.json', expectedLa
     }
     const candidate = defaultedArkRules(input);
     const issues = [];
-    validateNode(candidate, ARK_RULES_SCHEMA, '$', ARK_RULES_SCHEMA, issues);
+    validateSchemaNode(candidate, ARK_RULES_SCHEMA, '$', ARK_RULES_SCHEMA, issues);
     validateSemantics(candidate, issues);
     if (expectedLayer !== undefined &&
         typeof candidate.layer === 'string' &&
