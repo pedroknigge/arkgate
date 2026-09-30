@@ -1,6 +1,6 @@
 /**
  * Every shipped bin/lib module must load in plain Node (zero-build CLI contract).
- * Regression: bin/lib/ark-order-invariants.mjs imported a missing './stableHash'.
+ * Regression: the former bin/lib/ark-order-invariants.mjs imported a missing './stableHash'.
  */
 import { describe, it, expect } from 'vitest';
 import { spawnSync } from 'node:child_process';
@@ -41,8 +41,8 @@ describe('shipped bin/lib modules are loadable', () => {
 
   it('finds the shipped module set', () => {
     expect(modules.length).toBeGreaterThan(50);
-    expect(modules).toContain('bin/lib/ark-order-invariants.mjs');
-    expect(modules).toContain('bin/lib/stable-hash.mjs');
+    expect(modules).toContain('bin/lib/ark-order-types.mjs');
+    expect(modules).toContain('bin/lib/persistence-write-hint.mjs');
   });
 
   it('no shipped module uses an extensionless relative import', () => {

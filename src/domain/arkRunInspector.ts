@@ -27,8 +27,8 @@ export const ARK_RUN_INSPECTOR_TRANSPORT_FALLBACK = 'in-process-local' as const;
 export const ARK_RUN_INSPECTOR_MONITOR_SAMPLE_LIMIT = 32;
 
 /** Outbox statuses the Queues monitor surfaces (dispatched is omitted). */
-export const ARK_RUN_INSPECTOR_OUTBOX_MONITOR_STATUSES = ['pending', 'failed'] as const;
-export type ArkRunInspectorOutboxMonitorStatus =
+const ARK_RUN_INSPECTOR_OUTBOX_MONITOR_STATUSES = ['pending', 'failed'] as const;
+type ArkRunInspectorOutboxMonitorStatus =
   (typeof ARK_RUN_INSPECTOR_OUTBOX_MONITOR_STATUSES)[number];
 
 export type ArkRunInspectorStoreDurabilityKind = 'memory' | 'durable';

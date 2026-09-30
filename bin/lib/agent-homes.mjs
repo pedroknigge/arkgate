@@ -52,43 +52,43 @@ const HOSTS = {
   },
 };
 
-export function agentHomeHostIds() {
+function agentHomeHostIds() {
   return Object.keys(HOSTS);
 }
 
-export function claudeHomeDir(env = process.env, homeDir = os.homedir()) {
+function claudeHomeDir(env = process.env, homeDir = os.homedir()) {
   return resolveHomeDir(HOSTS.claude, env, homeDir);
 }
 
-export function grokHomeDir(env = process.env, homeDir = os.homedir()) {
+function grokHomeDir(env = process.env, homeDir = os.homedir()) {
   return resolveHomeDir(HOSTS.grok, env, homeDir);
 }
 
-export function claudeSkillsDir(env = process.env, homeDir = os.homedir()) {
+function claudeSkillsDir(env = process.env, homeDir = os.homedir()) {
   return path.join(claudeHomeDir(env, homeDir), 'skills');
 }
 
-export function grokSkillsDir(env = process.env, homeDir = os.homedir()) {
+function grokSkillsDir(env = process.env, homeDir = os.homedir()) {
   return path.join(grokHomeDir(env, homeDir), 'skills');
 }
 
-export function antigravityHomeDir(env = process.env, homeDir = os.homedir()) {
+function antigravityHomeDir(env = process.env, homeDir = os.homedir()) {
   return resolveHomeDir(HOSTS.antigravity, env, homeDir);
 }
 
-export function antigravitySkillsDir(env = process.env, homeDir = os.homedir()) {
+function antigravitySkillsDir(env = process.env, homeDir = os.homedir()) {
   return path.join(antigravityHomeDir(env, homeDir), 'skills');
 }
 
-export function usesDefaultAntigravityHome(env = process.env, homeDir = os.homedir()) {
+function usesDefaultAntigravityHome(env = process.env, homeDir = os.homedir()) {
   return usesDefaultHome(HOSTS.antigravity, env, homeDir);
 }
 
-export function usesDefaultClaudeHome(env = process.env, homeDir = os.homedir()) {
+function usesDefaultClaudeHome(env = process.env, homeDir = os.homedir()) {
   return usesDefaultHome(HOSTS.claude, env, homeDir);
 }
 
-export function usesDefaultGrokHome(env = process.env, homeDir = os.homedir()) {
+function usesDefaultGrokHome(env = process.env, homeDir = os.homedir()) {
   return usesDefaultHome(HOSTS.grok, env, homeDir);
 }
 

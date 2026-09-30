@@ -10,7 +10,6 @@ import { enforcingArkRunText, runsArkCheck } from './github-enforcement.mjs';
 import { npxArkgatePrefixLength } from './package-manager.mjs';
 
 export const __packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
-export const __arkCheckCli = path.join(__packageRoot, 'bin', 'ark-check.mjs');
 
 export function readJson(file) {
   return JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -96,7 +95,7 @@ export function treeHasTypecheckScript(root) {
  * True when `typescript` is declared by the project (deps/devDeps/peerDeps) or resolves
  * from its root (e.g. hoisted in a workspace), so a generated `tsc --noEmit` can run.
  */
-export function projectHasTypeScript(root, pkg = readPackageJson(root) || {}) {
+function projectHasTypeScript(root, pkg = readPackageJson(root) || {}) {
   for (const field of ['dependencies', 'devDependencies', 'peerDependencies']) {
     const deps = pkg?.[field];
     if (deps && typeof deps === 'object' && Object.hasOwn(deps, 'typescript')) return true;
@@ -142,7 +141,7 @@ export const REQUIRED_GATE_FILES = [
   '.mcp.json',
 ];
 export const REQUIRED_GATE_WORKFLOW = '.github/workflows/*.yml running ark-check';
-export const CI_NOT_FAIL_CLOSED_ERROR = 'ci-not-fail-closed';
+const CI_NOT_FAIL_CLOSED_ERROR = 'ci-not-fail-closed';
 const COMPACT_ROUTER = /<!--\s*arkgate:compact-router host=([a-z]+)\s*-->/;
 const FAIL_CLOSED_ARK_FLAG = /(?:^|\s)--(?:strict|strict-merge|require-gates)(?=\s|$)/;
 
@@ -652,7 +651,7 @@ function listWorkflowYamlFiles(root) {
  * `failClosed` matches `hasArkWorkflow` (merge line). `present` is any
  * ark-check / arkgate action workflow, including draft-skip jobs.
  */
-export function inspectArkCiGate(root) {
+function inspectArkCiGate(root) {
   const failClosedFiles = [];
   const presentFiles = [];
   const declaredScript = architectureScript(root);

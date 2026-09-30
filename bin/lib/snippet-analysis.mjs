@@ -12,7 +12,7 @@ import { getDiagnosticCatalogEntry } from './diagnostic-catalog.mjs';
 import { demoteExtraPlaneTeethUnderClassificationFloor } from './extra-merge-teeth.mjs';
 
 /** Hook-only guidance: a hook deny is already the verdict for that write. */
-export const HOOK_DENY_PREPARE_CHANGE_NOTE = 'Do not call ark_prepare_change from a hook deny.';
+const HOOK_DENY_PREPARE_CHANGE_NOTE = 'Do not call ark_prepare_change from a hook deny.';
 
 function surfaceNote(context) {
   return context?.surface === 'hook' ? ` ${HOOK_DENY_PREPARE_CHANGE_NOTE}` : '';

@@ -85,8 +85,10 @@ const MAX_TOKEN_LENGTH = 200;
  * Alias map used when the caller declares none: the `@/` convention over `src/`.
  * The CLI side derives the real map from the project's tsconfig `paths`.
  */
-export const DEFAULT_ALIASES = Object.freeze({ '@/': 'src/' });
-/** Include roots assumed when the contract declares none. */
+const DEFAULT_ALIASES = Object.freeze({ '@/': 'src/' });
+/**
+ * Include roots assumed when the contract declares none.
+ */
 export const DEFAULT_INCLUDE_ROOTS = Object.freeze(['src']);
 /**
  * A replacement must look like a path before it may be written into a file.

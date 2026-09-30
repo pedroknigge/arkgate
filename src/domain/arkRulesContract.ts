@@ -20,21 +20,13 @@ import type {
 import type { SchemaNode, SchemaRoot } from './configTypes';
 
 export type {
-  ArkRuleInvariantCoverage,
-  ArkRuleInvariantEntry,
-  ArkRuleMode,
-  ArkRuleProvenance,
   ArkRulesFile,
   ArkRulesIssue,
-  ArkRuleSensorId,
-  ArkRuleStructureEntry,
   EffectiveArkRules,
-  EffectiveInvariantRule,
-  EffectiveStructureRule,
 } from './arkRulesTypes';
 
 export const ARK_RULES_SCHEMA_VERSION = '1.0' as const;
-export const ARK_RULES_SCHEMA_URL =
+const ARK_RULES_SCHEMA_URL =
   'https://unpkg.com/arkgate/schemas/ark.arkrules.schema.json';
 
 /** Closed sensor vocabulary — keep in lockstep with arkRulesTypes.ARK_RULE_SENSOR_IDS. */
@@ -446,7 +438,7 @@ function provenanceFor(part: ArkRulesBuildPart, localId: string): ArkRuleProvena
  * True when every path the glob can match stays under the slice root.
  * A wider prefix, a `**` that is not the last segment, or `..` escapes.
  */
-export function appliesToPatternInsideSlice(pattern: string, sliceRoot: string): boolean {
+function appliesToPatternInsideSlice(pattern: string, sliceRoot: string): boolean {
   const root = sliceRoot.replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
   const value = pattern.trim().replace(/\\/g, '/').replace(/^\.\//, '').toLowerCase();
   if (!value || !root || value.includes('..')) return false;

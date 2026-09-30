@@ -35,7 +35,7 @@ import {
   extractSemanticDependencies,
 } from '../semanticAnalysis';
 
-export interface AICodeGatePolicyContext<Context = AICodeGateContext> {
+interface AICodeGatePolicyContext<Context = AICodeGateContext> {
   source: string;
   context?: Context;
 }

@@ -37,7 +37,7 @@ function initialState<State>(definition: ProjectionDefinition<State>): State {
     : definition.initialState;
 }
 
-export class ProjectionRegistryImpl implements ProjectionRegistry {
+class ProjectionRegistryImpl implements ProjectionRegistry {
   private readonly definitions = new Map<string, ProjectionDefinition>();
   private readonly checkpoints = new Map<string, ProjectionCheckpoint>();
   private readonly store: ReadModelStore;

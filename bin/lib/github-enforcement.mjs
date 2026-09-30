@@ -224,7 +224,7 @@ function unquoteRun(value) {
   return trimmed;
 }
 
-export function workflowRunText(text) {
+function workflowRunText(text) {
   const lines = String(text || '').split('\n');
   const commands = [];
   for (let index = 0; index < lines.length; index++) {
@@ -344,7 +344,7 @@ function commandsEnforceArk(commands, script) {
   return analyzeCommands(commands, script).some((entry) => entry.enforcing && FAIL_CLOSED.test(entry.text));
 }
 
-export function activeWorkflowRunText(text) {
+function activeWorkflowRunText(text) {
   const jobs = workflowJobs(text);
   const byId = jobIndex(jobs);
   return jobs.filter((job) => !jobCannotEnforce(job, byId)).map((job) => workflowRunText(job.body)).join('\n');
@@ -543,7 +543,7 @@ export function classifyGithubProviderFailure(errorText, opts = {}) {
  * @param {{ name?: string, workflowName?: string, displayTitle?: string }} run
  * @returns {boolean}
  */
-export function isArkishCiRun(run) {
+function isArkishCiRun(run) {
   const blob = `${run?.name || ''} ${run?.workflowName || ''} ${run?.displayTitle || ''}`.toLowerCase();
   if (!blob.trim()) return false;
   // Product tokens with word boundaries (avoid spark, dark, lark false positives).

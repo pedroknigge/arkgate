@@ -494,7 +494,7 @@ export function summarizeDesignFitness(smells, ctx = {}) {
 export const GREEN_PLAN_POINTER_MAX_IDS = 4;
 
 /** When a smell has no evidence path, say so — do not leave the reader hunting. */
-export const SMELL_UNATTRIBUTED =
+const SMELL_UNATTRIBUTED =
   'no file — leftover design, not a specific line';
 
 /**
@@ -502,7 +502,7 @@ export const SMELL_UNATTRIBUTED =
  * The pointer used to print only the id, so "1 design smell (domain-logic-in-ui)"
  * could not answer "did my change cause this?"
  */
-export function formatSmellPointerName(id, smells) {
+function formatSmellPointerName(id, smells) {
   const match = (smells || []).find((smell) => smell?.id === id);
   const evidence = Array.isArray(match?.evidence)
     ? match.evidence.filter((entry) => typeof entry === 'string' && entry.trim())

@@ -6,8 +6,8 @@
 export const DASHBOARD_DEFAULT_INTERVAL_MS = 2000;
 export const DASHBOARD_DEFAULT_TIMEOUT_MS = 5000;
 export const DASHBOARD_DEFAULT_URL = 'http://127.0.0.1:3000/snapshot';
-export const DASHBOARD_MIN_MS = 200;
-export const DASHBOARD_MAX_MS = 60_000;
+const DASHBOARD_MIN_MS = 200;
+const DASHBOARD_MAX_MS = 60_000;
 
 export const DASHBOARD_HELP = `arkgate-dashboard (alias ark-dashboard, ark dashboard) — observability TUI.
 Usage: arkgate-dashboard [--url <inspector-url>] [--interval <ms>] [--timeout <ms>] [--once]

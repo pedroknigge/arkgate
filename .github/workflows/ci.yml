@@ -353,6 +353,10 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      # Dead files, unused exports, unlisted/unused dependencies (config: knip.jsonc).
+      - name: Dead code and dependencies (knip)
+        run: npm run check:knip
+
       - name: JavaScript syntax (bin/scripts/eval)
         run: npm run check:js
 

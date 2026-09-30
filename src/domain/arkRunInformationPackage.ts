@@ -28,11 +28,11 @@ export type ArkRunInformationPackageComponent = {
   extendedInfo?: ArkRunExtendedInfo;
 };
 
-export const ARK_RUN_DECISION_TAPE_RESIDUAL_KINDS = ['absorb', 'escalate_up', 'hold'] as const;
-export type ArkRunDecisionTapeResidualKind = (typeof ARK_RUN_DECISION_TAPE_RESIDUAL_KINDS)[number];
+const ARK_RUN_DECISION_TAPE_RESIDUAL_KINDS = ['absorb', 'escalate_up', 'hold'] as const;
+type ArkRunDecisionTapeResidualKind = (typeof ARK_RUN_DECISION_TAPE_RESIDUAL_KINDS)[number];
 
 /** Additive Order residual tape (ADR 0034 D6). Not a bus. Not durable. */
-export type ArkRunDecisionTapeRecord = {
+type ArkRunDecisionTapeRecord = {
   xiHash: string;
   event: { kind: string; payload?: Record<string, string | number | boolean | null> };
   residual: {
@@ -97,7 +97,7 @@ function sanitizeMetadata(
   return Object.keys(out).length > 0 ? out : undefined;
 }
 
-export function sanitizeArkRunExtendedInfo(value: unknown): ArkRunExtendedInfo | undefined {
+function sanitizeArkRunExtendedInfo(value: unknown): ArkRunExtendedInfo | undefined {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) return undefined;
   const record = value as Record<string, unknown>;
   const info: ArkRunExtendedInfo = {};
@@ -146,7 +146,7 @@ function sanitizeTapePayload(
   return sanitizeMetadata(value);
 }
 
-export function sanitizeDecisionTapeRecord(value: unknown): ArkRunDecisionTapeRecord | undefined {
+function sanitizeDecisionTapeRecord(value: unknown): ArkRunDecisionTapeRecord | undefined {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) return undefined;
   const record = value as Record<string, unknown>;
   const xiHash = typeof record.xiHash === 'string' ? record.xiHash.trim() : '';
@@ -182,7 +182,7 @@ export function sanitizeDecisionTapeRecord(value: unknown): ArkRunDecisionTapeRe
   return { xiHash, event, residual };
 }
 
-export function sanitizeDecisionTape(value: unknown): ArkRunDecisionTapeRecord[] {
+function sanitizeDecisionTape(value: unknown): ArkRunDecisionTapeRecord[] {
   if (!Array.isArray(value)) return [];
   const out: ArkRunDecisionTapeRecord[] = [];
   for (const entry of value) {

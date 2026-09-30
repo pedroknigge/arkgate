@@ -355,7 +355,7 @@ export function configForRule(configPath: string | null): ArkConfig | null {
 
 // ── Fail-closed guard ──────────────────────────────────────────────────────
 
-export const CONFIG_INVALID_MESSAGE_ID = 'configInvalid';
+const CONFIG_INVALID_MESSAGE_ID = 'configInvalid';
 const CONFIG_INVALID_MESSAGE =
   'Ark contract is invalid, so no architecture verdict is possible (fix it; ark-check fails closed the same way): {{detail}}';
 
@@ -417,10 +417,4 @@ export function contractFingerprint(startDir: string = process.cwd()): string | 
   } catch {
     return null;
   }
-}
-
-/** Test hook: drop memoized config lookups and parsed contracts. */
-export function clearContractCache(): void {
-  configPathCache.clear();
-  contractCache.clear();
 }

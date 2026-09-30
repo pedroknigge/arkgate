@@ -1,0 +1,87 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema-jsonc.json",
+  // Package entries need no listing: knip reads package.json `bin` (bin/ark*.mjs) and the
+  // tsup plugin reads tsup.config.ts (src/gate.ts, src/eslint/index.ts, src/kernel/order/index.ts,
+  // src/runtime/index.ts, src/nestjs/index.ts). npm scripts, .github/workflows, vitest
+  // (tests/**/*.test.ts + setupFiles) and stryker.config.mjs are picked up by their plugins.
+  "entry": [
+    // Private entry of the committed zero-build CLI bundle: scripts/generate-analysis-engine.mjs
+    // bundles it into bin/lib/analysis-engine.mjs.
+    "src/kernel/analysisBundle.ts",
+    // Inputs of scripts/generate-packaged-tooling.mjs: read from disk and compacted into the
+    // shipped bin/lib/{design-delta,enforcement-state,hook-templates}.mjs.
+    "bin/lib/*.source.mjs",
+    // Standalone scripts spawned by path (not imported, not an npm script).
+    "scripts/ark-scale-worker.mjs",
+    "scripts/local-check-dx-proof.mjs",
+    "eval/causal/accept-task.mjs"
+  ],
+  "project": [
+    "src/**/*.ts",
+    "bin/**/*.mjs",
+    "scripts/**/*.mjs",
+    "eval/**/*.mjs",
+    "tests/**/*.{ts,mjs}",
+    "*.{ts,mjs}"
+  ],
+  // `project` leaves out examples/ (gallery starters with their own manifests), templates/
+  // (assets copied into consumer repos, never imported here) and packages/runtime (the
+  // deprecated @arkgate/runtime companion, built from src/ by its own tsup config).
+  // tests/fixtures holds dogfood sample trees the suite analyses as data; vitest excludes
+  // them, but the vitest plugin's include glob would still pick up their *.test.ts.
+  "ignore": ["tests/fixtures/**"],
+  "ignoreIssues": {
+    // Generated artifacts mirror their canonical source on purpose: each export of a
+    // src/domain module (or of the analysis bundle / packaged-tooling source) reappears here
+    // whether or not a shipped bin consumes it. Unused FILES are still reported for them.
+    "bin/ark-layer-match.mjs": ["exports", "types"],
+    "bin/lib/analysis-engine.mjs": ["exports", "types"],
+    "bin/lib/design-delta.mjs": ["exports", "types"],
+    "bin/lib/enforcement-state.mjs": ["exports", "types"],
+    "bin/lib/hook-templates.mjs": ["exports", "types"],
+    "bin/lib/adapter-contract-types.mjs": ["exports", "types"],
+    "bin/lib/adapter-contract.mjs": ["exports", "types"],
+    "bin/lib/adapter-finding-refs.mjs": ["exports", "types"],
+    "bin/lib/agent-projection-formatters.mjs": ["exports", "types"],
+    "bin/lib/agent-projection-merge.mjs": ["exports", "types"],
+    "bin/lib/agent-projection-types.mjs": ["exports", "types"],
+    "bin/lib/agent-projection.mjs": ["exports", "types"],
+    "bin/lib/agent-skills-package.mjs": ["exports", "types"],
+    "bin/lib/ark-order-doctor.mjs": ["exports", "types"],
+    "bin/lib/ark-order-facts.mjs": ["exports", "types"],
+    "bin/lib/ark-order-sensors.mjs": ["exports", "types"],
+    "bin/lib/ark-order-types.mjs": ["exports", "types"],
+    "bin/lib/ark-run-doctor.mjs": ["exports", "types"],
+    "bin/lib/ark-run-facts.mjs": ["exports", "types"],
+    "bin/lib/ark-run-sensors.mjs": ["exports", "types"],
+    "bin/lib/arkrules-contract.mjs": ["exports", "types"],
+    "bin/lib/arkrules-sensors.mjs": ["exports", "types"],
+    "bin/lib/baseline-key.mjs": ["exports", "types"],
+    "bin/lib/class-source-scan.mjs": ["exports", "types"],
+    "bin/lib/config-contract-slices.mjs": ["exports", "types"],
+    "bin/lib/config-contract.mjs": ["exports", "types"],
+    "bin/lib/config-extras.mjs": ["exports", "types"],
+    "bin/lib/deepening-coach.mjs": ["exports", "types"],
+    "bin/lib/diagnostic-catalog.mjs": ["exports", "types"],
+    "bin/lib/extra-merge-teeth.mjs": ["exports", "types"],
+    "bin/lib/improvement-compass-map.mjs": ["exports", "types"],
+    "bin/lib/improvement-compass-types.mjs": ["exports", "types"],
+    "bin/lib/improvement-compass.mjs": ["exports", "types"],
+    "bin/lib/invariant-coverage.mjs": ["exports", "types"],
+    "bin/lib/literal-path-drift.mjs": ["exports", "types"],
+    "bin/lib/persistence-write-hint.mjs": ["exports", "types"],
+    "bin/lib/project-identity.mjs": ["exports", "types"],
+    "bin/lib/remediation.mjs": ["exports", "types"],
+    "bin/lib/rules-inventory.mjs": ["exports", "types"],
+    "bin/lib/sensor-promotion.mjs": ["exports", "types"],
+    "bin/lib/source-policy.mjs": ["exports", "types"],
+    "bin/lib/status-manifest.mjs": ["exports", "types"],
+    "bin/lib/team-parliament.mjs": ["exports", "types"]
+  },
+  // A src/domain export that only the generated CLI mirror consumes (bin code imports the
+  // mirror, never the .ts) is tagged `@cliMirror` in its JSDoc; knip cannot follow
+  // canonical -> mirror, so the tag records that edge instead of silencing the whole module.
+  "tags": ["-cliMirror"],
+  // Plain OS tools spawned by tests (rg has an in-test fallback; mkfifo is POSIX).
+  "ignoreBinaries": ["rg", "mkfifo"]
+}

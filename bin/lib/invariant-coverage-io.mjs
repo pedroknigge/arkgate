@@ -10,7 +10,7 @@ const DEFAULT_TEST_NAME_RE =
   /\.(test|spec)\.(ts|tsx|mts|cts|js|jsx|mjs|cjs)$|\/__tests__\/|\/tests?\//i;
 
 /** Default max files to load for coverage evidence (budget). Config: `coverage.maxFiles`. */
-export const DEFAULT_MAX_COVERAGE_FILES = 400;
+const DEFAULT_MAX_COVERAGE_FILES = 400;
 /**
  * Hard ceiling on `coverage.maxFiles`. The config validator implements no
  * `maximum` keyword for integers, so a schema bound would be accepted and then

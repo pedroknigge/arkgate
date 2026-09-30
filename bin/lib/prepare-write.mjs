@@ -8,11 +8,10 @@ import crypto from 'node:crypto';
 import { validateWithAutoPatch } from './auto-patch.mjs';
 import { classifyRemediation, enrichViolationWithFixClass } from './remediation.mjs';
 import {
-  layerDescriptionCaption,
   placementDescriptionFields,
 } from './layer-description.mjs';
 
-export { layerDescriptionCaption, placementDescriptionFields };
+export { placementDescriptionFields };
 
 /**
  * Stable content identity for host commit / cache keys.

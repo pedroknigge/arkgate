@@ -146,7 +146,7 @@ export function hashSigmaIdentity(sigma: SigmaRecord): string {
   return deterministicHash(stableSerialize({ sigma }));
 }
 
-export function xiRecordsEqual(left: XiRecord, right: XiRecord): boolean {
+function xiRecordsEqual(left: XiRecord, right: XiRecord): boolean {
   return stableSerialize(left) === stableSerialize(right);
 }
 
@@ -365,7 +365,7 @@ export function classifyIngest(
   return { ...bound, kind: 'absorb' };
 }
 
-export function blastRadiusOf(
+function blastRadiusOf(
   previous: Projection,
   next: Projection
 ): { blastRadius: string[]; invalidations: string[] } {

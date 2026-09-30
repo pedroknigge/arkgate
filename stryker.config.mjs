@@ -46,7 +46,7 @@ const config = {
     'bin/lib/ast-scan.mjs:11-42',
     'bin/lib/ast-scan.mjs:301-322',
     'bin/lib/ast-scan.mjs:411-427',
-    'bin/ark-shared.mjs:450-475',
+    'bin/ark-shared.mjs:448-473',
     // STRUCTURE freeze target + non-freezable SCOPE_EMPTY + baselineKey join
     // (type-only fields above line 40 are not executable — do not pin them).
     'src/domain/baselineKey.ts:40-120',
@@ -67,15 +67,15 @@ const config = {
     // decisions. The load pin includes the new call. JSON.parse is 1111.
     // The slice-wall split (configContractSlices.ts) moved them to 557-643; one
     // validateSliceContract call replaces the three slice validators.
-    'src/domain/configContract.ts:597-600',
-    'src/domain/configContract.ts:602-603',
-    'src/domain/configContract.ts:623-624',
-    'src/domain/configContract.ts:629-630',
-    'src/domain/configContract.ts:639-641',
-    'src/domain/configContract.ts:651-651',
-    'src/domain/configContract.ts:658-658',
-    'src/domain/configContract.ts:667-672',
-    'src/domain/configContract.ts:683-683',
+    'src/domain/configContract.ts:585-588',
+    'src/domain/configContract.ts:590-591',
+    'src/domain/configContract.ts:611-612',
+    'src/domain/configContract.ts:617-618',
+    'src/domain/configContract.ts:627-629',
+    'src/domain/configContract.ts:639-639',
+    'src/domain/configContract.ts:646-646',
+    'src/domain/configContract.ts:655-660',
+    'src/domain/configContract.ts:671-671',
     // DF04 — selective pure truth islands (fail-closed / ack / promote honesty).
     // peerIsolationDecision is the killable fail-closed core; findDeniedEdgeDecision wires it.
     // #297 inserted the shared-imports-slice hop. Slice-id JSDoc and #308
@@ -100,9 +100,9 @@ const config = {
     // canPromoteInvariant. #307/#310 classifyCoverage shifted them again.
     // #322 declaration-miss shifted them once more.
     // Pins stay on those decisions, not on the classifier.
-    'src/domain/invariantCoverage.ts:234-253',
-    'src/domain/invariantCoverage.ts:754-758',
-    'src/domain/invariantCoverage.ts:893-942',
+    'src/domain/invariantCoverage.ts:235-254',
+    'src/domain/invariantCoverage.ts:755-759',
+    'src/domain/invariantCoverage.ts:894-943',
     'src/kernel/semanticAnalysis.ts:18-49',
     'src/kernel/semanticAnalysis.ts:78-258',
     // runtimeIds removed the module sequence above Saga: same body at 186-236.

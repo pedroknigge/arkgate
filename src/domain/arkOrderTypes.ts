@@ -37,13 +37,10 @@ export type Projection = {
 
 export type EscalationTarget = 'human' | 'scale' | 'hold';
 
-export const INGEST_RESIDUAL_KINDS = ['absorb', 'escalate_up', 'hold'] as const;
-export type IngestResidualKind = (typeof INGEST_RESIDUAL_KINDS)[number];
-
-export const INGEST_REASON_CODES = ['not-in-pattern', 'stale-sigma', 'pack', 'capacity'] as const;
+const INGEST_REASON_CODES = ['not-in-pattern', 'stale-sigma', 'pack', 'capacity'] as const;
 export type IngestReasonCode = (typeof INGEST_REASON_CODES)[number];
 
-export type IngestResidualBind = {
+type IngestResidualBind = {
   readonly event: FieldEvent;
   readonly xiHash: string;
   readonly eventId: string;

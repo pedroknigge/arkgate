@@ -49,7 +49,7 @@ export class InMemoryAuditStore implements AuditStore {
   }
 }
 
-export class AuditTrailImpl implements AuditTrail {
+class AuditTrailImpl implements AuditTrail {
   constructor(private readonly store: AuditStore) {}
 
   async record(input: AuditRecordInput): Promise<AuditRecord> {

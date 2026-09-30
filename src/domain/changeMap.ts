@@ -3,7 +3,7 @@ import { deterministicHash, stableSerialize } from './stableHash';
 import type { ArkConfig } from './configContract';
 import { layerForRelativePath } from './layerMatch';
 
-export const ARK_CHANGE_MAP_SCHEMA_VERSION = '1.0' as const;
+const ARK_CHANGE_MAP_SCHEMA_VERSION = '1.0' as const;
 export const ARK_CHANGE_MAP_SCHEMA_URL =
   'https://unpkg.com/arkgate@3/schemas/ark.change-map.schema.json';
 

@@ -9,7 +9,7 @@ import { REQUIRED_GATE_WORKFLOW } from './gate-files.mjs';
 import { CI_MERGE_BOUNDARY_REL } from './ci-merge-boundary.mjs';
 
 export const HEALTHY_CLAIM = 'Healthy — nothing to do.';
-export const HEALTHY_KEEP = '  Keep write path + CI.';
+const HEALTHY_KEEP = '  Keep write path + CI.';
 export const UNCITE_SUFFIX =
   'not green until a file, config key, or test is named';
 

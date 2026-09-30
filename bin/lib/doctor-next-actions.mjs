@@ -13,7 +13,7 @@ import { REQUIRED_GATE_WORKFLOW } from './gate-files.mjs';
 export const PACKAGE_UNRESOLVED_NEXT_ACTION =
   'Install arkgate in this project first (npx --package=arkgate, or pnpm add -D arkgate -w / yarn add -D arkgate -W at a workspace root), then re-run --doctor';
 
-export function packageUnresolvedNextAction(ctx) {
+function packageUnresolvedNextAction(ctx) {
   if (ctx?.packageInstalled !== false || ctx?.selfHost === true) return null;
   const code = ctx?.packageVersionTruth?.code;
   if (code === 'PACKAGE_PIN_SELF_HOST' || code === 'PACKAGE_PIN_ABSENT') return null;
@@ -101,7 +101,7 @@ function domainSampleIsGlobLeak(row, cov) {
 }
 
 /** Overlapping roots from matching Domain wildcards, else sample path prefixes. */
-export function overlappingRootsFromCoverage(cov) {
+function overlappingRootsFromCoverage(cov) {
   const samples = Array.isArray(cov?.dualMembership?.samples) ? cov.dualMembership.samples : [];
   const domainPatterns = layerPatterns(cov, 'DomainModel');
   const fromPatterns = [];

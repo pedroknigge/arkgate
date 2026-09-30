@@ -4,8 +4,6 @@
  */
 import type { ArkRunGraph, ArkRunGraphQuery } from '../../domain/arkRunGraph';
 import {
-  ArkRunInspectorBindError,
-  ArkRunInspectorProductionError,
   resolveArkRunInspectorBind,
   type ArkRunInspectorBind,
   type ArkRunInspectorOutboxMonitor,
@@ -53,5 +51,3 @@ export async function startArkRunInspector(
     sseIntervalMs: options.sseIntervalMs,
   });
 }
-
-export { ArkRunInspectorBindError, ArkRunInspectorProductionError };

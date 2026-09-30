@@ -18,6 +18,7 @@ import type {
 } from '../domain/analysis';
 import type { ArkConfig, ArkConfigLoadResult } from '../domain/configTypes';
 import type { EffectiveArkRules } from '../domain/arkRulesTypes';
+import type { InvariantCoverageStats } from '../domain/invariantCoverage';
 import type {
   PolicyDeltaAcknowledgement,
   PolicyDeltaClassification,
@@ -94,7 +95,7 @@ export type AnalyzeResolvedProjectInput = {
     /** Declared `coverage.coverageRoots`: where the project says its runner runs. */
     coverageRoots?: readonly string[];
     /** Counted scan facts: files loaded, tests retained, discards by reason. */
-    stats?: import('../domain/invariantCoverage').InvariantCoverageStats;
+    stats?: InvariantCoverageStats;
   };
   /**
    * AR07 — Tooling-supplied orchestration/thin-adapter heuristics per file.
@@ -115,7 +116,7 @@ export type AnalyzeResolvedProjectInput = {
 };
 
 /** Tooling-supplied analysis evidence for one side (base or candidate) of a preflight. */
-export type ResolvedAnalysisSideInputs = Pick<
+type ResolvedAnalysisSideInputs = Pick<
   AnalyzeResolvedProjectInput,
   'adopted' | 'invariantTestsPathPresent' | 'coverageRootsPresent' | 'coverageInputs' | 'fileHints'
 >;

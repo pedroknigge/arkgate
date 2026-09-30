@@ -8,12 +8,12 @@ import { isScanExcludedRelative, isSkippedSourceDir } from '../ark-shared.mjs';
 
 export { isSkippedSourceDir };
 
-export const SOURCE_FILE_NAME = /\.[cm]?[tj]sx?$/;
+const SOURCE_FILE_NAME = /\.[cm]?[tj]sx?$/;
 
 /** Unit/e2e test files are not architecture surface — agents and Nest put them next
  *  to production code (*.spec.ts). Counting them as ungoverned forces false
  *  CONFIG_UNCLASSIFIED_FILES under --strict-config on every starter. */
-export const TEST_FILE_NAME =
+const TEST_FILE_NAME =
   /(^test(?:[-_.]).*|\.(spec|test)(?:-d)?\.)(tsx?|jsx?|mjsx?|cjsx?|mts|cts)$/i;
 
 export function isGovernableSourceFile(name) {
@@ -123,7 +123,7 @@ export function walk(dir, files = [], options = {}) {
 }
 
 /** Walk include roots then drop codegen / config.exclude (universal scan filter). */
-export function isIncludeMatch(relativePath, include) {
+function isIncludeMatch(relativePath, include) {
   return (include ?? []).some((entry) => {
     const includeRoot = String(entry)
       .replace(/\\/g, '/')
@@ -192,7 +192,7 @@ export function normalize(value) {
 export const UNGOVERNED_PROBE_CAP = 200;
 
 /** Tooling configs (vite.config.ts, eslint.config.js …) are not the product source a contract governs. */
-export const TOOLING_CONFIG_FILE_NAME = /\.config\.[cm]?[jt]sx?$/i;
+const TOOLING_CONFIG_FILE_NAME = /\.config\.[cm]?[jt]sx?$/i;
 
 /**
  * Count governable source files under `root` that the contract's own scope cannot hide.

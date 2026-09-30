@@ -8,8 +8,6 @@ import { computeCoverage } from './doctor-plan.mjs';
 import { CORE_LAYER_NAMES } from './core-layers.mjs';
 import { resolveConfigPathWithinRoot } from './project-root.mjs';
 
-export { CORE_LAYER_NAMES } from './core-layers.mjs';
-
 /**
  * Core layers whose optionality matters once they match files (presets share these names).
  * Used by doctor adoption gaps and `--ratchet-cores`.

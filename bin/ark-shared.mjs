@@ -19,10 +19,8 @@ import {
   execCommandParts,
   isPnpmWorkspaceRoot,
   isNpmYarnWorkspaceRoot,
-  normalizeArkgateInstallSpec,
   packageInstallArgv,
   installDevHint,
-  arkPackageRecoveryCommand,
 } from './lib/package-manager.mjs';
 
 /**
@@ -566,16 +564,8 @@ export function collectForbiddenGlobalUses(ts, sourceFile, forbidden) {
 export {
   globToRegExp,
   patternSpecificity,
-  concreteGlobSegments,
   matchingLayersForRelativePath,
   layerForFile,
-  layerForRelativePath,
-  isEdgeDenied,
-  findDeniedEdgeRule,
-  sliceIdForPath,
-  inferSliceFoldersFromPatterns,
-  DEFAULT_GENERATED_FILE_GLOBS,
-  scanExcludePatterns,
   isScanExcludedRelative,
 } from './ark-layer-match.mjs';
 
@@ -601,7 +591,6 @@ export function looksLikeIntent(value) {
  * Generated CLI load path: bin/lib/remediation.mjs (`npm run generate:cli-pure`).
  */
 export {
-  REMEDIATION_CLASSES,
   classifyRemediation,
   enrichViolationWithFixClass,
 } from './lib/remediation.mjs';
@@ -671,11 +660,8 @@ export {
   arkCommand,
   execCommandParts,
   isPnpmWorkspaceRoot,
-  isNpmYarnWorkspaceRoot,
-  normalizeArkgateInstallSpec,
   packageInstallArgv,
   installDevHint,
-  arkPackageRecoveryCommand,
 };
 
 // FX01–FX02: registry-aware skip lives in upgrade-package-decision (injectable probe).
@@ -684,7 +670,6 @@ export {
   buildPackageInstallSkipPayload,
   formatPackageInstallDecisionHuman,
   compareSemverCore,
-  probeRegistryArkgateLatest,
 } from './lib/upgrade-package-decision.mjs';
 
 export const ARCHETYPE_IDS = [
@@ -880,7 +865,7 @@ const SKIP_DIR_NAMES = new Set([
  * (`isSkippedSourceDir` in scan-files). Start/recommend/discovery must not
  * treat playground, fixtures, scaffolds, or tests as production architecture.
  */
-export const NON_PRODUCT_SOURCE_DIR_NAMES = new Set([
+const NON_PRODUCT_SOURCE_DIR_NAMES = new Set([
   'bench',
   'benches',
   'benchmark',
@@ -901,10 +886,6 @@ export const NON_PRODUCT_SOURCE_DIR_NAMES = new Set([
   'test',
   'tests',
 ]);
-
-export function isNonProductSourceDirName(name) {
-  return NON_PRODUCT_SOURCE_DIR_NAMES.has(name);
-}
 
 export function isNonProductRelativePath(relPath) {
   return String(relPath)
@@ -1067,7 +1048,7 @@ function packageRole(rel, pkg) {
 }
 
 /** Path tokens already treated as UI app folders in discoverRepoUnits (root scan). */
-export const UI_PACKAGE_PATH_TOKENS = new Set(['web', 'frontend', 'client', 'ui']);
+const UI_PACKAGE_PATH_TOKENS = new Set(['web', 'frontend', 'client', 'ui']);
 
 const UI_PACKAGE_DEP_NAMES =
   /^(react|react-dom|vue|svelte|preact|solid-js|next|@angular\/core|@sveltejs\/kit)$/i;
@@ -2218,7 +2199,7 @@ export function writeAdoptionPlan(root, recommendation, filename = ADOPTION_PLAN
 
 const __arkSharedDir = path.dirname(fileURLToPath(import.meta.url));
 
-export function defaultPolicyPacksPath() {
+function defaultPolicyPacksPath() {
   return path.resolve(__arkSharedDir, '../templates/policy-packs');
 }
 
@@ -2271,7 +2252,7 @@ export function loadPolicyPackMeta(packId, packsPath = defaultPolicyPacksPath())
  * (`INV-*` invariants keep their prefix: `INV-<LAYER>-…`).
  */
 
-export function kebabLayerName(layerName) {
+function kebabLayerName(layerName) {
   return String(layerName)
     .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
     .replace(/[^A-Za-z0-9]+/g, '-')

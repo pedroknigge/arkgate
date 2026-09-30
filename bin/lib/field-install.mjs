@@ -126,7 +126,7 @@ const YAML_CONCURRENCY_GROUP_RE = /^\s*group:\s+/;
  * True when the line invokes ark-check / arkgate-check (npx/pnpm/yarn/npm/node/run).
  * YAML concurrency.group and job-id keys that only contain the name are not invocations.
  */
-export function isArkCheckInvocationLine(command) {
+function isArkCheckInvocationLine(command) {
   if (typeof command !== 'string' || !command.trim()) return false;
   if (/^\s*#/.test(command)) return false;
   if (YAML_CHECK_JOB_ID_RE.test(command)) return false;
@@ -258,7 +258,7 @@ export function syncBaselineIntoCheckSurfaces(root, opts = {}) {
  * @param {string} root
  * @returns {string|null}
  */
-export function readDeclaredArkgatePin(root) {
+function readDeclaredArkgatePin(root) {
   const pkgPath = path.join(root, 'package.json');
   if (!fs.existsSync(pkgPath)) return null;
   try {
@@ -278,7 +278,7 @@ export function readDeclaredArkgatePin(root) {
  * Consumers never match: they depend on arkgate; they are not named arkgate with bin/.
  * @param {string} root
  */
-export function isArkgateSelfHostRoot(root) {
+function isArkgateSelfHostRoot(root) {
   try {
     const pkgPath = path.join(root, 'package.json');
     const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));

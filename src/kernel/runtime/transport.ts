@@ -13,8 +13,6 @@ import { SourceMetadataOverrideError } from '../event-bus/errors';
 import type { EventBusImpl } from '../event-bus/EventBus';
 import type { IntentCreator } from '../intent';
 
-export type { ArkRunSendPlan, ArkRunTransportKind };
-
 /**
  * Consumer-owned broker handoff. Resolving means the adapter accepted the
  * message, not that downstream consumers processed it. Not a durability claim.

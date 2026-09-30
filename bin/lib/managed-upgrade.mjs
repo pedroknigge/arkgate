@@ -31,17 +31,11 @@ import {
 } from './skill-install.mjs';
 
 export {
-  formatManagedUpgradeSelfServiceHonesty,
   projectHostWritePathActivation,
   projectManagedUpgradeSelfServiceHonesty,
 } from './managed-upgrade-honesty.mjs';
-export {
-  buildUpgradeWhatsNewSuggestions,
-  formatUpgradeWhatsNewSuggestions,
-  UPGRADE_WHATS_NEW_SCHEMA_VERSION,
-} from './upgrade-whats-new.mjs';
 
-export const MANAGED_MANIFEST_PATH = 'ark.managed.json';
+const MANAGED_MANIFEST_PATH = 'ark.managed.json';
 const MANIFEST_VERSION = '1.0';
 const AFTER_CONTENT = Symbol('managed-after-content');
 // Exact normalized identities shipped by the last pre-manifest release. They are
@@ -438,7 +432,7 @@ function summaryFor(assets, manifestChanged) {
   };
 }
 
-export function managedPlanDigest(plan) {
+function managedPlanDigest(plan) {
   const payload = {
     schemaVersion: plan.schemaVersion,
     root: plan.root,

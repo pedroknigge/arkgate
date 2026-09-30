@@ -14,7 +14,7 @@ const resolvedFactsSchema = path.join(
   root,
   'schemas/ark.resolved-candidate-facts.schema.json'
 );
-const probeCanonical = path.join(root, 'src/domain/arkOrderError.ts');
+const probeCanonical = path.join(root, 'src/domain/arkOrderTypes.ts');
 
 function runGenerate(args: string[] = []) {
   return spawnSync(process.execPath, [script, ...args], {
@@ -66,7 +66,7 @@ describe('generate-cli-pure drift guard (real script)', () => {
   });
 
   it('fails closed on a relative Domain import with no generated sibling', () => {
-    // ark-order-invariants.mjs once shipped `from './stableHash'` (no bin/lib sibling,
+    // The former ark-order-invariants.mjs once shipped `from './stableHash'` (no bin/lib sibling,
     // ERR_MODULE_NOT_FOUND on load) while --check reported parity.
     canonicalBackup = fs.readFileSync(probeCanonical, 'utf8');
     fs.writeFileSync(

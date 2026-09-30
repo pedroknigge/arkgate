@@ -9,7 +9,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 /** Product-domain / domain-model homes. Closed list — no tree walk. */
-export const STATES_TRANSITIONS_DOMAIN_HOMES = Object.freeze([
+const STATES_TRANSITIONS_DOMAIN_HOMES = Object.freeze([
   'docs/domain.md',
   'docs/data-model.md',
   'docs/product-domain.md',
@@ -19,7 +19,7 @@ export const STATES_TRANSITIONS_DOMAIN_HOMES = Object.freeze([
 ]);
 
 /** Evolved dedicated homes. Adopt if present; do not force a filename. */
-export const STATES_TRANSITIONS_DEDICATED_HOMES = Object.freeze([
+const STATES_TRANSITIONS_DEDICATED_HOMES = Object.freeze([
   'docs/states.md',
   'docs/transitions.md',
   'docs/states-transitions.md',
@@ -32,7 +32,7 @@ export const STATES_TRANSITIONS_ASK_MISSING =
 export const STATES_TRANSITIONS_ASK_INCOMPLETE =
   'The states heading is there, but it is not a map yet — no table or link.';
 
-export const STATES_TRANSITIONS_NEXT =
+const STATES_TRANSITIONS_NEXT =
   'Add a short table (entity · states · allowed from → to) — or one link — on the domain doc. Names from the code. No flag soup.';
 
 function readMarkdown(abs) {

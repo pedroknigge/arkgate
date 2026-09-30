@@ -36,7 +36,7 @@ function withoutComments(text) {
 }
 
 /** Every string module specifier in `text` (relative and bare). */
-export function moduleSpecifiers(text) {
+function moduleSpecifiers(text) {
   const specs = [];
   const source = withoutComments(String(text));
   let i = 0;

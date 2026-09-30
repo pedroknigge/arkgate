@@ -22,7 +22,7 @@ import { detectCiEnforcement } from './weakest-link.mjs';
 import { buildEnforcementState, packageInstallation } from './enforcement-state.mjs';
 import { npxArkgatePrefixLength } from './package-manager.mjs';
 
-export const WRITE_CAPABILITY_NAMES = [
+const WRITE_CAPABILITY_NAMES = [
   'hard-write',
   'advisory-write',
   'merge-gate',
@@ -451,7 +451,7 @@ function hostRecord(hard, advisory, repair, merge, extras = {}) {
   };
 }
 
-export function detectWritePathInventory(root) {
+function detectWritePathInventory(root) {
   // Merge-gate evidence only when CI uses the fail-closed profile (not bare ark-check).
   const ci = detectCiEnforcement(root);
   const merge = ci.failClosed ? ci.arkWorkflowFiles : [];

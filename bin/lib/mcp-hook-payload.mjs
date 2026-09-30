@@ -201,7 +201,7 @@ function seekSequence(source, pattern, start, eof) {
  * `*** End of File` may close a chunk; a bare empty line is an empty context line.
  * Returns null for any line outside the Codex apply_patch grammar.
  */
-export function parseCodexUpdateChunks(lines) {
+function parseCodexUpdateChunks(lines) {
   const body = [...lines];
   while (body.length > 0 && body[body.length - 1] === '') body.pop();
   const chunks = [];
@@ -412,13 +412,13 @@ export function proposedSource(toolName, toolInput) {
 }
 
 /** Antigravity PreToolUse requires stdout `decision` on every response (allow included). */
-export function emitAntigravityAllow(output, antigravityStyle) {
+function emitAntigravityAllow(output, antigravityStyle) {
   if (!antigravityStyle) return;
   output.stdout(`${JSON.stringify({ decision: 'allow' })}\n`);
 }
 
 /** Cursor preToolUse accepts explicit allow; exit 0 alone also works. */
-export function emitCursorAllow(output, cursorStyle) {
+function emitCursorAllow(output, cursorStyle) {
   if (!cursorStyle) return;
   output.stdout(`${JSON.stringify({ permission: 'allow' })}\n`);
 }
@@ -662,7 +662,7 @@ function patchTargets(patch) {
 }
 
 /** File paths the hook payload would write, or null for non-file tools. */
-export function hookPayloadTargets(normalized) {
+function hookPayloadTargets(normalized) {
   const { toolName, toolInput } = normalized;
   if (toolName === 'ApplyPatch') {
     return patchTargets(

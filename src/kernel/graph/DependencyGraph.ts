@@ -13,7 +13,7 @@ import type {
 } from './types';
 import type { ArchitectureProfile } from '../layers';
 
-export class DependencyGraphImpl implements DependencyGraph {
+class DependencyGraphImpl implements DependencyGraph {
   private nodes = new Map<string, GraphNode>();
   private edges: GraphEdge[] = [];
 

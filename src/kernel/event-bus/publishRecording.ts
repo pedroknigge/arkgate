@@ -17,7 +17,7 @@ export type RecordingBuffers = {
   instanceId?: string;
 };
 
-export function appendHistory(
+function appendHistory(
   buffers: RecordingBuffers,
   record: PublishedEventRecord
 ): void {

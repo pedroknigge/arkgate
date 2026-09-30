@@ -25,7 +25,7 @@ export const ARKRULES_FIRST_CONTACT_NEXT =
 export const ARKRULES_EMPTY_CATALOG_NEXT =
   'Next: add 1–2 short phrases to invariants[] in the Domain rules file, then ark-check --doctor.';
 
-/** Status-light leftover-design qualifier (was “design-weak”). */
+/** Status-light leftover-design qualifier (was “design-weak”); also the HTML/doctor badge text. */
 export const LEFTOVER_DESIGN_LABEL = 'leftover design work';
 
 /**
@@ -41,14 +41,9 @@ export function operatingModeTitle(mode, leftoverDesign, stewardsUnset) {
   return light;
 }
 
-/** Short HTML/doctor badge text. */
-export const LEFTOVER_DESIGN_BADGE = LEFTOVER_DESIGN_LABEL;
-
 export const POST_GREEN_HUMAN =
   'Imports check out, but the design is still messy. Next: /ark-explore, then one small refactor with /ark-autopilot and your OK.';
 
 export const POST_GREEN_LEDE =
   'Import rules are clean, but leftover design work remains. That does not fail the check — it only means “done” is still wrong until you tidy shape.';
 
-export const HARD_WRITE_HUMAN = 'pre-write block';
-export const ADVISORY_WRITE_HUMAN = 'warning only (not blocked)';

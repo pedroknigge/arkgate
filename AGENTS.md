@@ -179,15 +179,13 @@ or `dist/` except `ark-mcp` loading the built library. Shared CLI logic lives in
 | `src/domain/sourcePolicy.ts` | `bin/lib/source-policy.mjs` | (same `cli-pure` scripts); intent prefixes + runtime layer-flow resolvability |
 | `src/domain/arkOrderDoctor.ts` | `bin/lib/ark-order-doctor.mjs` | (same `cli-pure` scripts); doctor/status/report arkOrder (notAScore) |
 | `src/domain/arkOrderTypes.ts` | `bin/lib/ark-order-types.mjs` | (same `cli-pure` scripts); ArkOrder vocabulary |
-| `src/domain/stableHash.ts` | `bin/lib/stable-hash.mjs` | (same `cli-pure` scripts); FNV-1a + stable serialize (imported by ArkOrder invariants) |
 | `src/domain/persistenceWriteHint.ts` | `bin/lib/persistence-write-hint.mjs` | (same `cli-pure` scripts); receiver-bound persistence write evidence shared by ArkRules + ArkOrder |
-| `src/domain/arkOrderError.ts` | `bin/lib/ark-order-error.mjs` | (same `cli-pure` scripts) |
-| `src/domain/arkOrderInvariants.ts` | `bin/lib/ark-order-invariants.mjs` | (same `cli-pure` scripts); Haken freeze/ingest/blast |
 | `src/domain/arkOrderFacts.ts` | `bin/lib/ark-order-facts.mjs` | (same `cli-pure` scripts); ADR 0029 |
 | `src/domain/arkOrderSensors.ts` | `bin/lib/ark-order-sensors.mjs` | (same `cli-pure` scripts); ADR 0029 |
-| `src/domain/stableHash.ts` | `bin/lib/stable-hash.mjs` | (same `cli-pure` scripts); shared by ArkOrder invariants + streaming facts hash |
-| `src/domain/persistenceWriteHint.ts` | `bin/lib/persistence-write-hint.mjs` | (same `cli-pure` scripts); ORM client write detection (ArkOrder + ArkRules) |
 | `src/domain/classSourceScan.ts` | `bin/lib/class-source-scan.mjs` | (same `cli-pure` scripts); ArkRules class-shape scanner |
+| `src/domain/stableHash.ts` | kernel-consumed (no `bin/lib` generate) | FNV-1a + stable serialize for ArkOrder invariants; the CLI gets it inside `analysis-engine.mjs` |
+| `src/domain/arkOrderError.ts` | kernel-consumed (no `bin/lib` generate) | ArkOrder domain error for `arkgate/order` |
+| `src/domain/arkOrderInvariants.ts` | kernel-consumed (no `bin/lib` generate) | Haken freeze/ingest/blast for `arkgate/order`; no shipped bin loads them |
 | `src/domain/arkRunInformationPackage.ts` | kernel-consumed (no `bin/lib` generate) | RN10 snapshot sanitizer; strips factories, live instances, input DTOs |
 | `src/domain/arkRunTransport.ts` | kernel-consumed (no `bin/lib` generate) | RN11 closed send kinds + ephemeral default + broker→local plan |
 | `src/domain/arkRunInspector.ts` | kernel-consumed (no `bin/lib` generate) | RN12 inspector bind policy + snapshot/SSE text; HTTP listen stays Kernel |

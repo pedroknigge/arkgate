@@ -83,7 +83,7 @@ function assertInsideProject(root, relativePath) {
   }
 }
 
-export function normalizeChangeSet(input) {
+function normalizeChangeSet(input) {
   if (!Array.isArray(input)) throw new Error('changes must be an array.');
   return input.map((change, index) => {
     if (!change || typeof change !== 'object' || Array.isArray(change)) {

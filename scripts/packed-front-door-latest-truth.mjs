@@ -18,8 +18,6 @@ const PREPARED_NOT_PUBLISHED = new RegExp(
 const PREPARED_LINK = new RegExp(`\\[${SEMVER} prepared\\]`, 'gi');
 const NOT_PUBLISHED_UNTIL = /not published until/i;
 
-export const PACKED_FRONT_DOORS = Object.freeze(['README.md', 'docs/README.md']);
-
 export function changelogSectionForVersion(changelog, version) {
   if (typeof changelog !== 'string' || !version) return '';
   const heading = `## ${version} —`;
@@ -63,7 +61,7 @@ export function frontDoorStalePins(text, packageVersion) {
   return pins;
 }
 
-export function changelogStalePins(section, packageVersion) {
+function changelogStalePins(section, packageVersion) {
   return latestRemainsPins(section, packageVersion);
 }
 

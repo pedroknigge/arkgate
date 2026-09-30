@@ -7,7 +7,6 @@ import os from 'node:os';
 import path from 'node:path';
 import { arkCommand } from '../ark-shared.mjs';
 import {
-  parseSkillDescriptionVersion,
   stampSkillDescription,
   stripSkillDescriptionVersion,
 } from './agent-skills-package.mjs';
@@ -227,14 +226,14 @@ export function canonicalSkillPath(name) {
  * Hosts that natively load `.agents/skills` — do not also copy bytes there under
  * a second name. Cursor/Codex list every path they scan; two copies = two picker rows.
  */
-export const SKILL_NATIVE_AGENTS_HOSTS = Object.freeze(['codex', 'cursor', 'antigravity']);
+const SKILL_NATIVE_AGENTS_HOSTS = Object.freeze(['codex', 'cursor', 'antigravity']);
 
 /**
  * Hosts that do not scan `.agents/skills`. Adapter is a relative symlink to the
  * canonical catalog so Grok/Claude/OpenCode see the same bytes.
  * Cursor also scans `.claude/skills` — doctor warns; still one body + visible version.
  */
-export const SKILL_ADAPTER_LINKS = Object.freeze({
+const SKILL_ADAPTER_LINKS = Object.freeze({
   claude: (name) => ({
     link: `.claude/skills/${name}`,
     target: `../../${SKILL_CANONICAL_DIR}/${name}`,
@@ -593,7 +592,7 @@ export function skillTemplates() {
  * Relative symlink so clones keep working. Fallback copy when the OS refuses links.
  * @returns {'linked'|'copied'|'current'|'skipped-customized'|'missing-canonical'}
  */
-export function ensureSkillAdapterLink(root, name, adapter, force = false) {
+function ensureSkillAdapterLink(root, name, adapter, force = false) {
   const canonicalDir = path.join(root, SKILL_CANONICAL_DIR, name);
   const canonicalFile = path.join(canonicalDir, 'SKILL.md');
   if (!fs.existsSync(canonicalFile)) return 'missing-canonical';
@@ -692,8 +691,6 @@ export function pruneHomeArkSkillDuplicates(root, skillNames = skillTemplateName
   }
   return { ok: true, reason: 'pruned', removed };
 }
-
-export { parseSkillDescriptionVersion, stripSkillDescriptionVersion };
 
 // Skill names only, silent on a missing templates dir — for the freshness
 // advisory below, which must not print packaging warnings on every check run.

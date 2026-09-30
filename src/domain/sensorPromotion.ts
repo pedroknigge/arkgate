@@ -24,10 +24,10 @@ import type { InvariantCoverageEvidence } from './invariantCoverage';
 import { ARKRUN_TIER1_SENSOR_IDS } from './arkRunSensors';
 import { ARKORDER_TIER1_SENSOR_IDS } from './arkOrderSensors';
 
-export type ArkRuleModeName = 'advisory' | 'enforced';
+type ArkRuleModeName = 'advisory' | 'enforced';
 
 /** Which contract plane a sensor belongs to. */
-export type SensorPlane = 'arkrules' | 'arkrun' | 'arkorder' | 'unknown';
+type SensorPlane = 'arkrules' | 'arkrun' | 'arkorder' | 'unknown';
 
 /**
  * Why a rule cannot be promoted. `null` means it can.
@@ -44,7 +44,7 @@ export type SensorPlane = 'arkrules' | 'arkrun' | 'arkorder' | 'unknown';
  *   support promotion. The text comes from `canPromoteInvariant`, so this
  *   surface and the promotion gate can never disagree.
  */
-export type PromotionBlocker =
+type PromotionBlocker =
   | 'tier-2-advisory-only'
   | 'no-structure-teeth'
   | 'unknown-sensor'
@@ -218,14 +218,14 @@ export type DeclaredInvariantRule = {
  * and a write targeting the id has two candidates. Every row says how many
  * declarations share its id so no caller can miss it.
  */
-export type AmbiguityFields = {
+type AmbiguityFields = {
   /** How many declared rules share this id. 1 for the ordinary case. */
   declarationsWithThisId: number;
   /** True when more than one does — the count and any write are ambiguous. */
   ambiguousId: boolean;
 };
 
-export type StructureRuleRow = AmbiguityFields & {
+type StructureRuleRow = AmbiguityFields & {
   kind: 'structure';
   id: string;
   sensor: string;
@@ -239,7 +239,7 @@ export type StructureRuleRow = AmbiguityFields & {
   reason: string;
 };
 
-export type InvariantRuleRow = AmbiguityFields & {
+type InvariantRuleRow = AmbiguityFields & {
   kind: 'invariant';
   id: string;
   mode: ArkRuleModeName;
@@ -253,7 +253,7 @@ export type InvariantRuleRow = AmbiguityFields & {
   coverageEvaluated: boolean;
 };
 
-export type SensorMapRow = StructureRuleRow | InvariantRuleRow;
+type SensorMapRow = StructureRuleRow | InvariantRuleRow;
 
 export type SensorMap = {
   vocabulary: SensorDescription[];
@@ -365,7 +365,7 @@ export function buildSensorMap(input: {
   };
 }
 
-export type PromotionPreviewRow = SensorMapRow & {
+type PromotionPreviewRow = SensorMapRow & {
   /**
    * Findings this rule produces on the tree as it stands. Advisory rules are
    * already evaluated on every run, so the count comes from the SAME analysis

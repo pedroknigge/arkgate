@@ -30,7 +30,7 @@ export const ARKRUN_EDITOR_SENSOR_IDS = [
     'arkrun-transport-bypass',
 ];
 const EDITOR_SENSOR_SET = new Set(ARKRUN_EDITOR_SENSOR_IDS);
-export function isArkRunEditorSensor(sensor) {
+function isArkRunEditorSensor(sensor) {
     return EDITOR_SENSOR_SET.has(sensor);
 }
 export const ARKRUN_RULE_IDS = {

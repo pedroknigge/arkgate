@@ -14,7 +14,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { parseJsonc } from './jsonc';
 
-export type TsconfigAlias = {
+type TsconfigAlias = {
   /** Pattern text before `*` (whole pattern when it has no `*`). */
   from: string;
   /** First target with the trailing `*` removed (legacy shape). */
@@ -54,7 +54,7 @@ function isFile(file: string): boolean {
 }
 
 /** Nearest `tsconfig.json` at or above `startDir` (memoized per directory). */
-export function findNearestTsconfig(startDir: string): string | null {
+function findNearestTsconfig(startDir: string): string | null {
   const dir = path.resolve(startDir);
   const cached = nearestCache.get(dir);
   if (cached !== undefined && (cached === null || isFile(cached))) return cached;
@@ -198,7 +198,7 @@ function buildAliasSet(effective: Effective, rootConfigDir: string): TsconfigAli
 }
 
 /** Parsed aliases for one tsconfig file (cached; invalidated by mtime/size of its chain). */
-export function aliasesForTsconfig(tsconfigPath: string): TsconfigAliasSet {
+function aliasesForTsconfig(tsconfigPath: string): TsconfigAliasSet {
   const cached = parsedCache.get(tsconfigPath);
   if (cached && cached.chain.every((entry) => fileStamp(entry.file) === entry.stamp)) {
     return cached.result;
@@ -226,7 +226,7 @@ export function readTsconfigPathAliases(startDir: string): TsconfigAliasSet {
 }
 
 /** Probe on-disk TS/JS candidates for a resolved base path (no package resolution). */
-export function existingSourceFile(base: string): string | null {
+function existingSourceFile(base: string): string | null {
   const candidates = [
     base,
     `${base}.ts`,

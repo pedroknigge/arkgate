@@ -6,7 +6,7 @@
  */
 
 /** Closed sensor vocabulary (ADR 0013). Unknown sensors fail closed at load time. */
-export const ARK_RULE_SENSOR_IDS = [
+const ARK_RULE_SENSOR_IDS = [
   'aggregate-private-state',
   'always-valid-factory',
   'domain-event-on-mutation',
@@ -19,9 +19,6 @@ export const ARK_RULE_SENSOR_IDS = [
 
 export type ArkRuleSensorId = (typeof ARK_RULE_SENSOR_IDS)[number];
 
-/** Tier-2 sensors are advisory-only forever (never promotable to enforced). */
-export const ARK_RULE_TIER2_SENSOR_IDS = ['no-anemic-model'] as const;
-
 export type ArkRuleMode = 'advisory' | 'enforced';
 
 export type ArkRuleStructureEntry = {
@@ -32,7 +29,7 @@ export type ArkRuleStructureEntry = {
   description?: string;
 };
 
-export type ArkRuleInvariantCoverage = {
+type ArkRuleInvariantCoverage = {
   test?: boolean;
   symbol?: string;
 };

@@ -15,7 +15,7 @@ import { buildArkRuleFileHints } from './arkrules-sensors.mjs';
 /** Default hint-file budget. Same lever as `coverage.maxFiles`. */
 export const DEFAULT_MAX_HINT_FILES = 400;
 /** Hard ceiling — same clamp as coverage.maxFiles. */
-export const MAX_HINT_FILES_CAP = 20_000;
+const MAX_HINT_FILES_CAP = 20_000;
 const MAX_FILE_BYTES = 256 * 1024;
 
 const HINT_SENSORS = new Set([
@@ -35,17 +35,6 @@ export const HINT_BUDGET_DOCTOR_LINE =
  */
 export function needsArkRuleFileHints(arkRules) {
   return (arkRules?.structure ?? []).some((rule) => HINT_SENSORS.has(rule?.sensor));
-}
-
-/**
- * @param {unknown} maxFiles
- * @returns {number}
- */
-export function resolveHintBudget(maxFiles) {
-  if (Number.isInteger(maxFiles) && maxFiles > 0) {
-    return Math.min(maxFiles, MAX_HINT_FILES_CAP);
-  }
-  return DEFAULT_MAX_HINT_FILES;
 }
 
 /**

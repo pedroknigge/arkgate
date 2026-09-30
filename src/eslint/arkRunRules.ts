@@ -33,8 +33,6 @@ import {
   type RuleListener,
 } from './ruleSupport';
 
-export type { AstNode, RuleContext } from './ruleSupport';
-
 export type ArkRunEslintHelpers = {
   findConfigPath: (startFile: string) => string | null;
   loadArkConfig: (configPath: string) => ArkConfig | null;

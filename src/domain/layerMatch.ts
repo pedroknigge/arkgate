@@ -126,7 +126,7 @@ export type EdgeRule = {
  * sibling crossing, and only after the universe wall has allowed the edge.
  */
 /** A folder outside the slice trees, borrowed onto a child id until it moves. */
-export type SliceAlias = {
+type SliceAlias = {
   /** Source path glob. Only files the slice folders do not already classify. */
   from: string;
   /** Child slice id: the universe id plus one child segment. */
@@ -157,13 +157,13 @@ export type ChildSlices = {
 };
 
 /** How the child wall treats a sibling crossing. Absent means `deny`. */
-export type ChildSliceSiblingsMode = 'deny' | 'advisory';
+type ChildSliceSiblingsMode = 'deny' | 'advisory';
 
 /**
  * Per-subtree sibling enforcement. `default` is everyone not listed.
  * `enforce` names child slice ids or subtree paths. The list never loosens deny.
  */
-export type ChildSliceSiblingsEnforce = {
+type ChildSliceSiblingsEnforce = {
   default: ChildSliceSiblingsMode;
   enforce?: string[];
   /**
@@ -174,13 +174,13 @@ export type ChildSliceSiblingsEnforce = {
   ratchet?: boolean;
 };
 
-export type ChildSliceSiblings = ChildSliceSiblingsMode | ChildSliceSiblingsEnforce;
+type ChildSliceSiblings = ChildSliceSiblingsMode | ChildSliceSiblingsEnforce;
 
 /** `sharedImportsSlice` string modes. */
 export type SharedImportsSliceMode = 'deny' | 'deny-cross-parent';
 
 /** String mode, or the object form that carries composition-root stops. */
-export type SharedImportsSliceSetting =
+type SharedImportsSliceSetting =
   | SharedImportsSliceMode
   | { mode: 'deny-cross-parent'; stopAt: string[] };
 
@@ -318,7 +318,7 @@ export function globToRegExp(pattern: string): RegExp {
  * Used for path-anchored ranking so a domain folder glob can beat a broad
  * Application bag like src/lib when the file actually sits under domain/.
  */
-export function concreteGlobSegments(pattern: string): string[] {
+function concreteGlobSegments(pattern: string): string[] {
   const glob = normalizeGlobSeparators(String(pattern));
   return glob
     .split('/')
@@ -615,7 +615,7 @@ function bindAnchoredSlice(
  * literal, and everything after it. Literals before the last literal drop.
  * Returns null when the pattern has no literal.
  */
-export function starsKeptSegmentIndexes(segments: readonly string[]): number[] | null {
+function starsKeptSegmentIndexes(segments: readonly string[]): number[] | null {
   let lastLiteral = -1;
   for (let at = 0; at < segments.length; at += 1) {
     if (segments[at] !== '*') lastLiteral = at;
@@ -895,7 +895,7 @@ export type SliceReasonId =
  * Which wall produced the finding. `none` is an allow. `fail-closed` is a
  * universe-wall evidence deny (missing path, no folders, unclassifiable).
  */
-export type SliceCrossing =
+type SliceCrossing =
   | 'none'
   | 'cross-parent'
   | 'cross-sibling'
@@ -1005,7 +1005,7 @@ export type GovernedSlice = {
   childId?: string;
 };
 
-export type SliceAliasMove = {
+type SliceAliasMove = {
   from: string;
   to: string;
   destination: string;
@@ -1019,7 +1019,7 @@ export type SliceAliasMove = {
   advisory?: string;
 };
 
-export type SliceAliasPinned = {
+type SliceAliasPinned = {
   from: string;
   to: string;
   destination: string;
@@ -1151,7 +1151,7 @@ function literalsMatch(shape: readonly (string | null)[], parts: readonly string
  * New-id shapes (`*` for a star) that a 4.8.23 stars id maps to. Empty when the id is
  * already a new id or no shape takes it. Config load rejects more than one.
  */
-export function legacyStarsIdTargets(
+function legacyStarsIdTargets(
   folders: readonly string[] | undefined,
   id: string
 ): string[] {
@@ -1573,7 +1573,7 @@ function isCommonFolderName(segment: string | undefined, commonFolders: string[]
  * (`features/projects/rfi/domain/**`) belongs to that child. A child id that
  * does not extend the universe id is not used; the caller warns.
  */
-export function resolveChildSliceId(
+function resolveChildSliceId(
   relPath: string | undefined,
   universeId: string | undefined,
   child: ChildSlices | undefined
@@ -1638,7 +1638,7 @@ export function importerInEnforcedSubtree(
  * value deny every one. An object denies the importer only when it is listed,
  * unless `default` is already `deny`.
  */
-export function siblingCrossingAdvisory(
+function siblingCrossingAdvisory(
   siblings: ChildSliceSiblings | undefined,
   fromPath: string | undefined,
   fromChild: string | undefined
@@ -1718,7 +1718,7 @@ function childAllowanceSpansUniverses(from: string, to: string): boolean {
  * Universe wall, then the child wall. An allow from the child wall never
  * overturns a universe deny: that deny returns before the child wall runs.
  */
-export function evaluateNestedSliceWall(input: {
+function evaluateNestedSliceWall(input: {
   rule: EdgeRule;
   fromPath?: string;
   toPath?: string;
@@ -1944,7 +1944,7 @@ export function sliceCountReport(
   };
 }
 
-export type SharedWalkHub = { file: string; count: number; share: number };
+type SharedWalkHub = { file: string; count: number; share: number };
 
 export type SharedWalkHubReport = {
   notAScore: true;

@@ -310,13 +310,6 @@ export function moduleFactsFor(
   return { edges, capabilityUses };
 }
 
-export function importEdges(
-  file: AnalysisFile,
-  files: ReadonlyMap<string, AnalysisFile>
-): AnalysisImportEdge[] {
-  return moduleFactsFor(file, files).edges;
-}
-
 function resolveSpecifier(
   from: string,
   specifier: string,
@@ -335,16 +328,6 @@ function resolveSpecifier(
     if (found) return found;
   }
   return undefined;
-}
-
-/**
- * Import-based capability evidence the pure engine can prove from content
- * alone (ADR 0009 — U03). Ambient globals need symbols and belong to
- * src/kernel/capabilityAnalysis.ts; relative specifiers are project code.
- * Prefer moduleFactsFor when edges are needed too — one scan, both facts.
- */
-export function capabilityUsesFor(file: AnalysisFile): AnalysisCapabilityUse[] {
-  return moduleFactsFor(file, new Map()).capabilityUses;
 }
 
 export function violationsFor(
