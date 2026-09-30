@@ -58,6 +58,13 @@ one bounded decision needs 2–3 enforceable options.
   including when the run is green. A declaration in a non-test file is not
   “the tests pass” — ArkGate never runs tests. Depth and byte caps stay
   internal; the counts are what you read.
+- When doctor JSON has `orphanModules` with files listed, map them: nothing imports
+  each file and no entry point covers it. Read `certainty` — `maybe-dynamic` and
+  `maybe-unresolved` may still be loaded (open what the evidence names). A
+  `partial` section is never a complete list. `--doctor --all` adds exports
+  nothing imports by name. Map only; deleting is `/ark-fix`, one file at a time.
+  A framework or loader ArkGate does not know goes in `.ark/entry-points.json`
+  with a reason. Never say "dead code". No new skill.
 - A doctor green / Healthy line must name a file, config key, or test.
   Uncited green is a lie — treat it as unfinished. No `/ark-cite`.
 - Distinguish **missing** skills vs **stale** catalog. Installed ≠ stale.

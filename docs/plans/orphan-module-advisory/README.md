@@ -96,8 +96,18 @@ top-level key: one section, one JSON key, and the compact view can say
 - `reportParity.test.ts` covers the new key automatically.
 - Journey `tests/fixtures/journey/deadwood/` + golden: `orphan-listed`,
   `test-only-tier`, `maybe-dynamic`, `entry-suppressed`,
-  `unused-export-details-only`.
-- Self-host: the mother repo's doctor lists no `bin/*.mjs` entry.
+  `unused-export-details-only`. The dynamic file sits behind
+  `import.meta.glob` rather than a template `import()`: the mother repo's own
+  write hook denies a non-literal dynamic import even in fixture data, and the
+  template-head path is covered by `orphanModulesIo.test.ts`.
+- Self-host: the mother repo's doctor lists no `bin/*.mjs` entry. On the
+  landing commit it lists exactly the three files `knip.jsonc` declares by
+  hand as entries: `scripts/local-check-dx-proof.mjs` (run by hand;
+  `no-importer`), `scripts/ark-scale-worker.mjs` and
+  `src/kernel/analysisBundle.ts` (named by path in a script; `maybe-dynamic`).
+  The `bin/lib/*.source.mjs` generator inputs are covered by the header of
+  their generated copies.
+- Memory: `bench:memory` gains a `doctor` scenario (500 MiB ceiling).
 
 ## 7. ROADMAP
 
