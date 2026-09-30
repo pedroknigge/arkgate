@@ -385,10 +385,12 @@ export function analyzePolicyTransition({
       fileContents: coverageInputs.fileContents,
       testFiles: coverageInputs.testFiles,
       testGlobsMissing: coverageInputs.testGlobsMissing,
-      // No coverageStats / coverageRoots: this caller reads coverage ROWS and
-      // drops the violations, and both only shape violation messages. Passing
-      // them would look like wiring while changing nothing observable here.
       coverageBudgetExhausted: coverageInputs.coverageBudgetExhausted === true,
+      ...(coverageInputs.stats ? { coverageStats: coverageInputs.stats } : {}),
+      // The declared roots set `coverageRootsDeclared` / `outsideDeclaredRoots`
+      // on each row, and canPromoteInvariant refuses without them. Same inputs
+      // as `--promote` (sensor-promote-io), so both surfaces judge alike.
+      ...(coverageInputs.coverageRoots ? { coverageRoots: coverageInputs.coverageRoots } : {}),
     });
     candidateInvariantCoverage = evaluated.coverage;
   }
