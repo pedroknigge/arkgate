@@ -2,7 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const useColor = process.stderr.isTTY && !process.env.NO_COLOR;
-const color = {
+/** ANSI styling for ark-check's stderr; plain text when stderr is not a TTY or NO_COLOR is set. */
+export const color = {
   red: (s) => (useColor ? `\x1b[31m${s}\x1b[0m` : s),
   yellow: (s) => (useColor ? `\x1b[33m${s}\x1b[0m` : s),
   green: (s) => (useColor ? `\x1b[32m${s}\x1b[0m` : s),
@@ -17,10 +18,10 @@ import { toAdapterDiagnostic } from './adapter-contract.mjs';
 export { baselineKey, baselineOccurrenceKeys };
 
 /** Real regenerate flags: freeze-refuse needs --force; law PR needs --contract-session; stewards[] needs --author. */
-export const REGENERATE_BASELINE_COMMAND =
+const REGENERATE_BASELINE_COMMAND =
   'ark-check --update-baseline --force --contract-session --author <steward>';
 
-export const BASELINE_NOTE =
+const BASELINE_NOTE =
   `Frozen ark-check violations (one record per edge). Only NEW keys vs the merge-base fail --against / --baseline. Regenerate with: ${REGENERATE_BASELINE_COMMAND} (--author when stewards[] is set)`;
 
 export function readBaseline(root, baselinePath) {
@@ -98,7 +99,7 @@ export function printWarning(warning) {
 }
 
 /** Advisory the engine emits once per shared-root → slice edge. Humans see a group. */
-export const SHARED_IMPORTS_SLICE_RULE_ID = 'SHARED_IMPORTS_SLICE';
+const SHARED_IMPORTS_SLICE_RULE_ID = 'SHARED_IMPORTS_SLICE';
 
 /**
  * Where the full per-edge list lives. Human check output names this on every
@@ -118,7 +119,7 @@ function layerLabel(value) {
 }
 
 /** Group key: one fact per rule and layer edge. */
-export function sharedImportsSliceGroupKey(warning) {
+function sharedImportsSliceGroupKey(warning) {
   return [
     typeof warning?.ruleId === 'string' ? warning.ruleId : SHARED_IMPORTS_SLICE_RULE_ID,
     layerLabel(warning?.fromLayer),
@@ -207,7 +208,7 @@ export function printSharedImportsSliceBridgeList(warnings) {
 }
 
 /** Non-blocking type-only placement debt: exit stays 0; do not paint ✖. */
-export function isNonBlockingPlacementDebt(violation) {
+function isNonBlockingPlacementDebt(violation) {
   return violation?.failsStrict === false;
 }
 
@@ -241,7 +242,7 @@ export const CONCENTRATION_MIN_VIOLATIONS = 10;
 export const CONCENTRATION_SHARE = 0.9;
 
 /** Sensor id for STRUCTURE findings. Orchestration-only is code debt, not a missing toLayer. */
-export function violationSensorId(violation) {
+function violationSensorId(violation) {
   if (typeof violation?.sensor === 'string' && violation.sensor.trim()) return violation.sensor.trim();
   if (typeof violation?.arkruleId === 'string' && violation.arkruleId.trim()) return violation.arkruleId.trim();
   return undefined;
@@ -257,11 +258,11 @@ export function violationEdge(violation) {
 }
 
 /** Layer-import arrows can mean a contract bug. Structural-sensor blobs are code debt. */
-export function isContractConcentrationEdge(edge) {
+function isContractConcentrationEdge(edge) {
   return typeof edge === 'string' && edge.includes(' → ');
 }
 
-export function isContractStyleViolation(violation) {
+function isContractStyleViolation(violation) {
   if (violationSensorId(violation)) return false;
   if (violation.ruleId === 'CIRCULAR_DEPENDENCY') return true;
   if (violation.ruleId === 'FORBIDDEN_GLOBAL') return true;

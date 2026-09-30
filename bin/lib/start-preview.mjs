@@ -147,7 +147,7 @@ export function setupBudget(changes) {
 }
 
 /** One next write when compact start is the wrong size. `--force` does not unlock. */
-export const START_SETUP_BUDGET_NEXT = 'arkgate-check --init';
+const START_SETUP_BUDGET_NEXT = 'arkgate-check --init';
 
 function formatSetupKb(bytes) {
   return `${Math.max(1, Math.round(Number(bytes) / 1024))} KB`;

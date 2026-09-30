@@ -147,5 +147,8 @@ export class InMemoryEventBuffer implements EventBufferStore {
   }
 }
 
-/** @deprecated Use InMemoryEventBuffer. */
+/**
+ * @deprecated Use InMemoryEventBuffer.
+ * @alias Kept as a public alias of `arkgate/runtime` until its removal.
+ */
 export const InMemoryOutboxStore = InMemoryEventBuffer;

@@ -4,7 +4,7 @@
  */
 import type { EventPayloadPatch } from './types';
 
-export function isPlainRecord(value: unknown): value is Record<string, unknown> {
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     return false;
   }
@@ -12,7 +12,7 @@ export function isPlainRecord(value: unknown): value is Record<string, unknown> 
   return proto === Object.prototype || proto === null;
 }
 
-export function clonePatchValue(value: unknown): unknown {
+function clonePatchValue(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(clonePatchValue);
   if (isPlainRecord(value)) {
     return Object.fromEntries(
@@ -52,7 +52,7 @@ export function mergeRecordPatch(
   return next;
 }
 
-export function mergeArrayPatch(
+function mergeArrayPatch(
   target: unknown[],
   patch: unknown[],
   path = 'payload'

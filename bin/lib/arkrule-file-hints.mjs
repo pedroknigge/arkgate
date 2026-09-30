@@ -11,11 +11,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { buildArkRuleFileHints } from './arkrules-sensors.mjs';
+import { matchSimpleGlob } from './invariant-coverage-io.mjs';
 
 /** Default hint-file budget. Same lever as `coverage.maxFiles`. */
 export const DEFAULT_MAX_HINT_FILES = 400;
 /** Hard ceiling — same clamp as coverage.maxFiles. */
-export const MAX_HINT_FILES_CAP = 20_000;
+const MAX_HINT_FILES_CAP = 20_000;
 const MAX_FILE_BYTES = 256 * 1024;
 
 const HINT_SENSORS = new Set([
@@ -35,17 +36,6 @@ export const HINT_BUDGET_DOCTOR_LINE =
  */
 export function needsArkRuleFileHints(arkRules) {
   return (arkRules?.structure ?? []).some((rule) => HINT_SENSORS.has(rule?.sensor));
-}
-
-/**
- * @param {unknown} maxFiles
- * @returns {number}
- */
-export function resolveHintBudget(maxFiles) {
-  if (Number.isInteger(maxFiles) && maxFiles > 0) {
-    return Math.min(maxFiles, MAX_HINT_FILES_CAP);
-  }
-  return DEFAULT_MAX_HINT_FILES;
 }
 
 /**
@@ -72,41 +62,6 @@ export function getArkRuleHintBudget(hints) {
 export function formatHintBudgetDoctorLine(budget) {
   if (!budget?.truncated) return HINT_BUDGET_DOCTOR_LINE;
   return `${HINT_BUDGET_DOCTOR_LINE} Hinted ${budget.hinted} of ${budget.governed} eligible governed files (budget ${budget.budget}).`;
-}
-
-/**
- * Minimal glob match (double-star slash = zero path segments).
- * @param {string} glob
- * @param {string} file
- */
-function matchSimpleGlob(glob, file) {
-  const pattern = String(glob || '').replace(/\\/g, '/');
-  const target = String(file || '').replace(/\\/g, '/');
-  if (!pattern) return false;
-  let out = '';
-  for (let i = 0; i < pattern.length; i += 1) {
-    const c = pattern[i];
-    if (c === '*') {
-      if (pattern[i + 1] === '*') {
-        if (pattern[i + 2] === '/') {
-          out += '(?:.*/)?';
-          i += 2;
-        } else {
-          out += '.*';
-          i += 1;
-        }
-      } else {
-        out += '[^/]*';
-      }
-    } else if (c === '?') {
-      out += '[^/]';
-    } else if (/[.+^${}()|[\]\\]/.test(c)) {
-      out += `\\${c}`;
-    } else {
-      out += c;
-    }
-  }
-  return new RegExp(`^${out}$`).test(target);
 }
 
 /**

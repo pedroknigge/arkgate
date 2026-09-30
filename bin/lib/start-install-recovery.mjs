@@ -35,7 +35,7 @@ function hostOutputTail(hostOutput) {
  * @param {string|undefined} installCommand
  * @returns {string|null}
  */
-export function resolveStartInstallPackagePin(packageVersion, installCommand) {
+function resolveStartInstallPackagePin(packageVersion, installCommand) {
   const fromArg = String(packageVersion ?? '')
     .trim()
     .replace(/^arkgate@/i, '')

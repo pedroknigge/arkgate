@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 export const CI_MERGE_BOUNDARY_REL = '.ark/ci-merge-boundary.json';
-export const CI_MERGE_BOUNDARY_SCHEMA = '1.0';
+const CI_MERGE_BOUNDARY_SCHEMA = '1.0';
 
 /**
  * @param {{

@@ -30,8 +30,6 @@ export const DOMAIN_INVARIANT_WORDS = [
   'record',
 ] as const;
 
-export type DomainInvariantWord = (typeof DOMAIN_INVARIANT_WORDS)[number];
-
 /** No `g` flag: `.test` must not advance lastIndex. */
 export const DOMAIN_INVARIANT_WORD_RE = new RegExp(
   `\\b(${DOMAIN_INVARIANT_WORDS.join('|')})\\b`
@@ -55,7 +53,7 @@ export function expectedDomainInvariantWordsPhrase(): string {
   return `${DOMAIN_INVARIANT_WORDS.join(', ')}, or events-array .push(`;
 }
 
-export function referencesGuardOrPublish(source: string): boolean {
+function referencesGuardOrPublish(source: string): boolean {
   return DOMAIN_INVARIANT_WORD_RE.test(source) || DOMAIN_EVENTS_PUSH_RE.test(source);
 }
 
@@ -708,11 +706,11 @@ export type ResolvedPersistenceImportFact = {
   layer?: string | null;
 };
 
-export function isPersistenceDriverLayer(layer: string | null | undefined): boolean {
+function isPersistenceDriverLayer(layer: string | null | undefined): boolean {
   return layer === 'PersistenceAdapters';
 }
 
-export function sourceImportsPersistenceDriver(
+function sourceImportsPersistenceDriver(
   content: string,
   resolvedImports?: readonly ResolvedPersistenceImportFact[]
 ): boolean {

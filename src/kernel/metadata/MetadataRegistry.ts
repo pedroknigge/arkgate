@@ -10,7 +10,7 @@ import type {
   MetadataValidationResult,
 } from './types';
 
-export class MetadataRegistryImpl implements MetadataRegistry {
+class MetadataRegistryImpl implements MetadataRegistry {
   private entities = new Map<string, EntityMeta>();
 
   entity(

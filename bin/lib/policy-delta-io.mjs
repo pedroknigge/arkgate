@@ -220,7 +220,7 @@ export function readPolicyAcknowledgement(root, acknowledgementPath) {
  * failure is fail-closed: silently dropping the base catalog would make every
  * ArkRule demotion or deletion classify as neutral.
  */
-export function loadBaseArkRules(base) {
+function loadBaseArkRules(base) {
   const loaded = loadEffectiveArkRules(base.config, base.readArkRulesFile, {
     missingAsEmpty: base.ref != null,
     ...(Array.isArray(base.files) ? { files: base.files } : {}),

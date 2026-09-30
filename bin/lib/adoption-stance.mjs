@@ -5,8 +5,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-export const ADOPTION_STANCE_REL = '.ark/adoption-stance.json';
-export const ADOPTION_STANCE_VALUE = 'advisory-only';
+const ADOPTION_STANCE_REL = '.ark/adoption-stance.json';
+const ADOPTION_STANCE_VALUE = 'advisory-only';
 export const ADOPTED_REQUIRED_MERGE = 'required-merge';
 export const ADOPTED_ADVISORY_ACKED = 'advisory-only-acked';
 export const ADOPTED_NOT = 'not-adopted';

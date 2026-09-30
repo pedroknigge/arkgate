@@ -296,6 +296,19 @@ export function collectWeakestLinkGaps(root, opts = {}) {
         fix: 'Add the architecture CI job name to required status checks',
       });
     }
+    const upstream = Array.isArray(github.arkCheckUpstreamNotRequired)
+      ? github.arkCheckUpstreamNotRequired
+      : [];
+    if (github.available && upstream.length > 0) {
+      gaps.push({
+        id: 'enforcement-ark-check-upstream-not-required',
+        severity: 'warn',
+        message:
+          `The required architecture job has needs: that are not required (${upstream.join(', ')}); ` +
+          'if one fails, the architecture job is skipped and a skipped job satisfies branch protection',
+        fix: 'Require those jobs too, or give the architecture job `if: ${{ always() }}` and fail it when a needed job failed',
+      });
+    }
   }
 
   return {

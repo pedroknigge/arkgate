@@ -15,49 +15,28 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { layerForFile } from '../ark-shared.mjs';
+import { loadAckSidecar } from './contract-smells.mjs';
 
 export const AMBIENT_STATE_ACKS_PATH = '.ark/ambient-state-acks.json';
 
-const MAX_ACK_BYTES = 64 * 1024;
-const MAX_ACK_ENTRIES = 200;
 const MAX_FILE_BYTES = 256 * 1024;
 const MAX_FINDINGS = 50;
 
 /** Bounded, fail-loud sidecar loader (same discipline as contract-smell acks). */
 export function loadAmbientStateAcks(root) {
-  const relPath = AMBIENT_STATE_ACKS_PATH;
-  const abs = path.join(root, relPath);
-  let stats;
-  try {
-    stats = fs.statSync(abs);
-  } catch {
-    return { path: relPath, exists: false, acks: [] };
-  }
-  const invalid = (error) => ({ path: relPath, exists: true, invalid: true, error, acks: [] });
-  if (!stats.isFile()) return invalid('not a regular file');
-  if (stats.size > MAX_ACK_BYTES) return invalid(`larger than ${MAX_ACK_BYTES} bytes`);
-  let parsed;
-  try {
-    parsed = JSON.parse(fs.readFileSync(abs, 'utf8'));
-  } catch (error) {
-    return invalid(error instanceof Error ? error.message : 'unreadable JSON');
-  }
-  const acks = Array.isArray(parsed?.acks) ? parsed.acks : null;
-  if (!acks) return invalid('expected { acks: [{ file, name, reason? }] }');
-  if (acks.length > MAX_ACK_ENTRIES) return invalid(`more than ${MAX_ACK_ENTRIES} entries`);
-  const wellFormed = acks.every(
-    (a) =>
+  return loadAckSidecar(root, AMBIENT_STATE_ACKS_PATH, {
+    shape: '{ acks: [{ file, name, reason? }] }',
+    isWellFormed: (a) =>
       a !== null &&
       typeof a === 'object' &&
       typeof a.file === 'string' &&
       a.file.length > 0 &&
       typeof a.name === 'string' &&
-      a.name.length > 0
-  );
-  if (!wellFormed) return invalid('every ack needs string file and name');
-  // Normalize separators so a Windows-authored ack file still matches.
-  const normalized = acks.map((a) => ({ ...a, file: a.file.replace(/\\/g, '/') }));
-  return { path: relPath, exists: true, acks: normalized };
+      a.name.length > 0,
+    malformed: 'every ack needs string file and name',
+    // Normalize separators so a Windows-authored ack file still matches.
+    normalize: (acks) => acks.map((a) => ({ ...a, file: a.file.replace(/\\/g, '/') })),
+  });
 }
 
 function isAcknowledged(ackState, file, name) {

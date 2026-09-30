@@ -8,10 +8,10 @@
  * Canonical → bin/lib/team-parliament.mjs (generate:cli-pure).
  */
 
-export const TEAM_PERSONAS = ['touch', 'contributor', 'agent', 'steward'] as const;
+const TEAM_PERSONAS = ['touch', 'contributor', 'agent', 'steward'] as const;
 export type TeamPersona = (typeof TEAM_PERSONAS)[number];
 
-export const CONTRACT_DIFF_KINDS = [
+const CONTRACT_DIFF_KINDS = [
   'unchanged',
   'tighten',
   'loosen',
@@ -36,7 +36,7 @@ export type ChangeSetClass = {
   hasProduct: boolean;
 };
 
-export type TeamGateReasonId =
+type TeamGateReasonId =
   | 'ok'
   | 'mixed-law-and-product'
   | 'law-in-feature'
@@ -90,7 +90,7 @@ export function isLawRelativePath(relPath: string): boolean {
 const PRODUCT_SOURCE = /\.(tsx?|jsx?|mjs|cjs)$/i;
 
 /** Governable product source (not law, not tests-only heuristic — basename extension). */
-export function isProductSourceRelativePath(relPath: string): boolean {
+function isProductSourceRelativePath(relPath: string): boolean {
   const n = posixRel(relPath);
   if (!n || isLawRelativePath(n)) return false;
   const base = n.split('/').pop() ?? n;
@@ -148,20 +148,20 @@ export function classifyBaselineKeyDelta(
   return { grow, shrink, kinds };
 }
 
-export function normalizeStewardId(value: string | null | undefined): string | null {
+function normalizeStewardId(value: string | null | undefined): string | null {
   if (typeof value !== 'string') return null;
   const trimmed = value.trim().replace(/^@/, '').toLowerCase();
   return trimmed.length > 0 ? trimmed : null;
 }
 
 /** GitHub handle (login), not a display name. Spaces and emails are not handles. */
-export function isGitHubHandle(value: string | null | undefined): boolean {
+function isGitHubHandle(value: string | null | undefined): boolean {
   const id = normalizeStewardId(value);
   if (!id || isAutomationAuthor(id) || id.includes(' ') || id.includes('@')) return false;
   return /^(?!-)[a-z0-9-]{1,39}(?<!-)$/.test(id);
 }
 
-export function isGitHubEmail(value: string | null | undefined): boolean {
+function isGitHubEmail(value: string | null | undefined): boolean {
   if (typeof value !== 'string') return false;
   const email = value.trim().toLowerCase();
   if (!email.includes('@') || email.includes(' ') || isAutomationAuthor(email)) return false;
@@ -173,7 +173,7 @@ export function isGitHubEmail(value: string | null | undefined): boolean {
 }
 
 /** `123+login@users.noreply.github.com` or `login@users.noreply.github.com` → login. */
-export function githubHandleFromEmail(email: string | null | undefined): string | null {
+function githubHandleFromEmail(email: string | null | undefined): string | null {
   if (typeof email !== 'string') return null;
   const match = email.trim().match(/^(?:\d+\+)?([^@]+)@users\.noreply\.github\.com$/i);
   if (!match) return null;
@@ -193,7 +193,7 @@ export function canonicalStewardId(value: string | null | undefined): string | n
   return null;
 }
 
-export function formatStewardMention(id: string): string {
+function formatStewardMention(id: string): string {
   return id.includes('@') ? id : `@${id}`;
 }
 
@@ -232,7 +232,7 @@ export function isSteward(
 
 const BOT_STEWARD = /bot\b|\[bot\]|dependabot|renovate|github-actions|imgbot|codecov/i;
 
-export function isAutomationAuthor(value: string | null | undefined): boolean {
+function isAutomationAuthor(value: string | null | undefined): boolean {
   const id = normalizeStewardId(value);
   return !id || BOT_STEWARD.test(id);
 }
@@ -408,6 +408,10 @@ export function personaCheckBudget(persona: TeamPersona): TeamPersonaBudget {
   };
 }
 
+/**
+ * Narrow a string to a team persona.
+ * @cliMirror bin/lib/team-parliament-io.mjs
+ */
 export function isTeamPersona(value: string | null | undefined): value is TeamPersona {
   return TEAM_PERSONAS.includes(value as TeamPersona);
 }

@@ -46,7 +46,7 @@ function versionParts(version) {
  * @param {string} right
  * @returns {-1|0|1}
  */
-export function compareUpgradeVersions(left, right) {
+function compareUpgradeVersions(left, right) {
   const a = versionParts(left);
   const b = versionParts(right);
   const length = Math.max(a.length, b.length);
@@ -61,7 +61,7 @@ export function compareUpgradeVersions(left, right) {
  * @param {UpgradeBehaviorChange} row
  * @returns {string}
  */
-export function formatBehaviorChange(row) {
+function formatBehaviorChange(row) {
   return `${row.version}: ${row.note}`;
 }
 

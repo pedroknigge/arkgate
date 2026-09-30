@@ -220,7 +220,7 @@ function stopAtEntryIssue(raw: string, layerFolders: readonly string[][]): strin
 }
 
 /** String form unchanged. Object form carries composition roots the walk stops at. */
-export function validateSharedImportsSlice(candidate: Record<string, unknown>, issues: ArkConfigIssue[]): void {
+function validateSharedImportsSlice(candidate: Record<string, unknown>, issues: ArkConfigIssue[]): void {
   const rules = candidate.rules;
   if (!Array.isArray(rules)) return;
   rules.forEach((rule, index) => {
@@ -291,7 +291,7 @@ const SIBLING_MODES = ['deny', 'advisory'] as const;
 const SIBLINGS_FORM_MESSAGE =
   'must be "deny", "advisory", or { "default": "deny" | "advisory", "enforce": ["<child id or subtree path>"], "ratchet": true | false }';
 
-export function validateChildSliceSiblings(candidate: Record<string, unknown>, issues: ArkConfigIssue[]): void {
+function validateChildSliceSiblings(candidate: Record<string, unknown>, issues: ArkConfigIssue[]): void {
   const rules = candidate.rules;
   if (!Array.isArray(rules)) return;
   rules.forEach((rule, index) => {
@@ -387,7 +387,7 @@ function childCrossSlicePatternKey(raw: string): string {
   return trimTrailingSlashes(raw.trim().replace(/\\/g, '/')).toLowerCase();
 }
 
-export function validateChildSliceAllowedCrossSlice(
+function validateChildSliceAllowedCrossSlice(
   candidate: Record<string, unknown>,
   issues: ArkConfigIssue[]
 ): void {
@@ -668,7 +668,7 @@ function globsCanMatchSame(
 const ARK_RULES_FILE_MESSAGE =
   'must be a filename with exactly one <Layer> token and no slash or wildcard (arkrules.<Layer>.json)';
 
-export function validateChildSliceArkRulesFile(candidate: Record<string, unknown>, issues: ArkConfigIssue[]): void {
+function validateChildSliceArkRulesFile(candidate: Record<string, unknown>, issues: ArkConfigIssue[]): void {
   const rules = candidate.rules;
   if (!Array.isArray(rules)) return;
   rules.forEach((rule, index) => {
@@ -688,7 +688,7 @@ export function validateChildSliceArkRulesFile(candidate: Record<string, unknown
   });
 }
 
-export function validateChildSliceAliases(candidate: Record<string, unknown>, issues: ArkConfigIssue[]): void {
+function validateChildSliceAliases(candidate: Record<string, unknown>, issues: ArkConfigIssue[]): void {
   const rules = candidate.rules;
   if (!Array.isArray(rules)) return;
   rules.forEach((rule, index) => {

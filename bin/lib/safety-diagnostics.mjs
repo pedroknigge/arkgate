@@ -4,21 +4,13 @@ import path from 'node:path';
 import { globToRegExp } from '../ark-shared.mjs';
 import { extractSemanticDependencies } from './analysis-engine.mjs';
 import { lineOf } from './ast-scan.mjs';
+import {
+  arkInMemoryFactoryBindings,
+  arkInMemoryStoreImports,
+  inMemoryDefaultsFactoryCall,
+  tsSuppressionPositions,
+} from './resolved-candidate-facts.mjs';
 import { normalize } from './scan-files.mjs';
-
-const IN_MEMORY_STORES = new Set([
-  'InMemoryAuditStore',
-  'InMemoryOutboxStore',
-  'InMemoryReadModelStore',
-  'InMemoryWorkflowStore',
-]);
-
-const IN_MEMORY_DEFAULT_FACTORIES = new Map([
-  ['createArkKernel', ['outbox', 'auditTrail', 'projections']],
-  ['createAuditTrail', ['store']],
-  ['createProjectionRegistry', ['store']],
-  ['createWorkflowEngine', ['store']],
-]);
 
 function matchesAny(relFile, patterns) {
   return patterns.some((pattern) => {
@@ -36,38 +28,6 @@ function packageName(root) {
   } catch {
     return undefined;
   }
-}
-
-function propertyName(ts, node) {
-  if (ts.isIdentifier(node) || ts.isStringLiteralLike(node)) return node.text;
-  return undefined;
-}
-
-function objectHasProperty(ts, object, name) {
-  return object.properties.some((property) => {
-    if (ts.isShorthandPropertyAssignment(property)) return property.name.text === name;
-    return property.name ? propertyName(ts, property.name) === name : false;
-  });
-}
-
-function tsSuppressionPositions(sourceFile, source) {
-  const positions = new Set();
-  for (const directive of sourceFile.commentDirectives ?? []) {
-    const start = directive.range?.pos;
-    const end = directive.range?.end;
-    if (Number.isInteger(start) && Number.isInteger(end)) {
-      const text = source.slice(start, end);
-      if (/\@ts-ignore\b/.test(text)) positions.add(start);
-    }
-  }
-
-  const noCheck = sourceFile.pragmas?.get?.('ts-nocheck');
-  const entries = Array.isArray(noCheck) ? noCheck : noCheck ? [noCheck] : [];
-  for (const entry of entries) {
-    const start = entry.range?.pos;
-    if (Number.isInteger(start)) positions.add(start);
-  }
-  return [...positions];
 }
 
 export function collectSafetyDiagnostics(ts, root, config, files) {
@@ -132,26 +92,10 @@ export function collectSafetyDiagnostics(ts, root, config, files) {
       });
     }
 
-    const importedFactories = new Map();
-    const arkNamespaces = new Set();
-    if (!allowInMemory && !isProvider) {
-      for (const statement of sourceFile.statements) {
-        if (!ts.isImportDeclaration(statement) || !ts.isStringLiteralLike(statement.moduleSpecifier)) {
-          continue;
-        }
-        if (!/^arkgate(?:\/runtime)?$/.test(statement.moduleSpecifier.text)) continue;
-        const bindings = statement.importClause?.namedBindings;
-        if (bindings && ts.isNamespaceImport(bindings)) arkNamespaces.add(bindings.name.text);
-        if (!bindings || !ts.isNamedImports(bindings)) continue;
-        for (const element of bindings.elements) {
-          const imported = element.propertyName?.text ?? element.name.text;
-          const requirements = IN_MEMORY_DEFAULT_FACTORIES.get(imported);
-          if (requirements) {
-            importedFactories.set(element.name.text, { imported, requirements });
-          }
-        }
-      }
-    }
+    const factoryBindings =
+      !allowInMemory && !isProvider
+        ? arkInMemoryFactoryBindings(ts, sourceFile)
+        : { importedFactories: new Map(), arkNamespaces: new Set() };
 
     const visit = (node) => {
       if (
@@ -165,54 +109,23 @@ export function collectSafetyDiagnostics(ts, root, config, files) {
       }
 
       if (!allowInMemory && !isProvider && ts.isImportDeclaration(node)) {
-        const specifier = node.moduleSpecifier;
-        const fromArk = ts.isStringLiteralLike(specifier) && /^arkgate(?:\/runtime)?$/.test(specifier.text);
-        if (fromArk) {
-          const elements = node.importClause?.namedBindings &&
-            ts.isNamedImports(node.importClause.namedBindings)
-            ? node.importClause.namedBindings.elements
-            : [];
-          for (const element of elements) {
-            const imported = element.propertyName?.text ?? element.name.text;
-            if (IN_MEMORY_STORES.has(imported)) {
-              report.inMemoryProductionStores.push({
-                file: relFile,
-                line: lineOf(sourceFile, element.getStart(sourceFile)),
-                store: imported,
-              });
-            }
-          }
+        for (const { element, imported } of arkInMemoryStoreImports(ts, node)) {
+          report.inMemoryProductionStores.push({
+            file: relFile,
+            line: lineOf(sourceFile, element.getStart(sourceFile)),
+            store: imported,
+          });
         }
       }
 
       if (!allowInMemory && !isProvider && ts.isCallExpression(node)) {
-        let factory;
-        if (ts.isIdentifier(node.expression)) {
-          factory = importedFactories.get(node.expression.text);
-        } else if (
-          ts.isPropertyAccessExpression(node.expression) &&
-          ts.isIdentifier(node.expression.expression) &&
-          arkNamespaces.has(node.expression.expression.text)
-        ) {
-          const imported = node.expression.name.text;
-          const requirements = IN_MEMORY_DEFAULT_FACTORIES.get(imported);
-          if (requirements) factory = { imported, requirements };
-        }
-
+        const factory = inMemoryDefaultsFactoryCall(ts, node, factoryBindings);
         if (factory) {
-          const options = node.arguments[0];
-          const definitelyDefaults =
-            !options ||
-            (ts.isIdentifier(options) && options.text === 'undefined') ||
-            (ts.isObjectLiteralExpression(options) &&
-              factory.requirements.some((name) => !objectHasProperty(ts, options, name)));
-          if (definitelyDefaults) {
-            report.inMemoryProductionStores.push({
-              file: relFile,
-              line: lineOf(sourceFile, node.getStart(sourceFile)),
-              store: `${factory.imported} defaults`,
-            });
-          }
+          report.inMemoryProductionStores.push({
+            file: relFile,
+            line: lineOf(sourceFile, node.getStart(sourceFile)),
+            store: `${factory.imported} defaults`,
+          });
         }
       }
 

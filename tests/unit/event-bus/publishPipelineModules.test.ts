@@ -8,7 +8,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { assertIntentAllowed, assertContractAllowed } from '../../../src/kernel/event-bus/publishGuards';
 import { UnregisteredIntentError } from '../../../src/kernel/event-bus/errors';
-import { createIntentRegistry, defineIntent } from '../../../src/index';
+import { createIntentRegistry, defaultIntentRegistry, defineIntent } from '../../../src/index';
 
 const EVENT_BUS_DIR = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -51,6 +51,9 @@ describe('R8 EventBus publish pipeline modules', () => {
   });
 
   it('assertContractAllowed is a no-op without contracts', () => {
+    // The suite runs with isolate: false, so another file may have left this intent in
+    // the shared default registry.
+    defaultIntentRegistry.clear();
     const OrderPlaced = defineIntent<'Domain.Order.Placed', { id: string }>(
       'Domain.Order.Placed'
     );

@@ -15,13 +15,13 @@ export const ARK_DEEPENING_COACH_SCHEMA_VERSION = '1.0' as const;
 /** Cap on listed deepening candidates (agent-legible; not a ranking score). */
 export const DEEPENING_CANDIDATE_CAP = 5;
 
-export type DeepeningCandidateEvidence = {
+type DeepeningCandidateEvidence = {
   source: string;
   ref: string;
   detail?: string;
 };
 
-export type DeepeningCandidate = {
+type DeepeningCandidate = {
   /** Repo-relative path when known; otherwise a smell/pilot label. */
   target: string;
   /** Plain-language friction (why reshape pays off). */

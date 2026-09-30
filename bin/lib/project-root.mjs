@@ -16,14 +16,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 /** Safety cap so a pathological tree cannot walk forever. */
-export const MAX_CONFIG_WALK_DEPTH = 32;
+const MAX_CONFIG_WALK_DEPTH = 32;
 
 /**
  * True when dir looks like a package-manager workspaces / monorepo root.
  * Used as an upper bound for walk-up (config at this root is accepted; parents are not).
  * @param {string} dir
  */
-export function isWorkspacesPackageRoot(dir) {
+function isWorkspacesPackageRoot(dir) {
   const pkgPath = path.join(dir, 'package.json');
   try {
     if (!fs.statSync(pkgPath, { throwIfNoEntry: false })?.isFile()) {
@@ -55,7 +55,7 @@ export function isWorkspacesPackageRoot(dir) {
  * True when dir is a git worktree root (.git file or directory).
  * @param {string} dir
  */
-export function isGitRoot(dir) {
+function isGitRoot(dir) {
   try {
     const git = path.join(dir, '.git');
     const st = fs.statSync(git, { throwIfNoEntry: false });
@@ -97,7 +97,7 @@ function isFile(absPath) {
 }
 
 /** True when --config is a path (nested or absolute), not a basename to walk. */
-export function configNameIsPath(configName) {
+function configNameIsPath(configName) {
   return (
     typeof configName === 'string' &&
     (path.isAbsolute(configName) || /[\\/]/.test(configName))
@@ -118,7 +118,7 @@ function isInsideRoot(root, target) {
  * @param {string} configName
  * @returns {string | null} absolute config file path
  */
-export function resolveConfigPathCandidate(startDir, configName) {
+function resolveConfigPathCandidate(startDir, configName) {
   if (typeof configName !== 'string' || configName.trim() === '') return null;
   const start = path.resolve(startDir || process.cwd());
   if (path.isAbsolute(configName)) return isFile(configName) ? path.resolve(configName) : null;
@@ -243,76 +243,45 @@ export function resolveEffectiveProjectRoot(startRoot, opts = {}) {
   // Writes adopt walked config root only with explicit opt-in.
   const adoptWalkedRoot = !writeMode || followConfigRoot;
 
+  /** Config found by walk-up (or at start); root follows it unless a plain write. */
+  const walkedResult = (found) => ({
+    root: adoptWalkedRoot ? found.root : start,
+    writeRoot: start,
+    config: configName,
+    configPath: found.configPath,
+    configRoot: found.root,
+    walkedUp: found.walkedUp,
+    configFound: true,
+    writeRootFollowedConfig: adoptWalkedRoot && found.walkedUp,
+  });
+  /** Everything stays at the start directory. */
+  const startResult = (configPath, configFound) => ({
+    root: start,
+    writeRoot: start,
+    config: configName,
+    configPath,
+    configRoot: start,
+    walkedUp: false,
+    configFound,
+    writeRootFollowedConfig: false,
+  });
+
   if (typeof configName === 'string' && path.isAbsolute(configName)) {
     const found = findNearestArkConfig(start, configName, opts);
-    if (found) {
-      const root = adoptWalkedRoot ? found.root : start;
-      return {
-        root,
-        writeRoot: start,
-        config: configName,
-        configPath: found.configPath,
-        configRoot: found.root,
-        walkedUp: found.walkedUp,
-        configFound: true,
-        writeRootFollowedConfig: adoptWalkedRoot && found.walkedUp,
-      };
-    }
-    return {
-      root: start,
-      writeRoot: start,
-      config: configName,
-      configPath: configName,
-      configRoot: start,
-      walkedUp: false,
-      configFound: false,
-      writeRootFollowedConfig: false,
-    };
+    return found ? walkedResult(found) : startResult(configName, false);
   }
 
   const localPath = path.join(start, configName);
   try {
     if (fs.statSync(localPath, { throwIfNoEntry: false })?.isFile()) {
-      return {
-        root: start,
-        writeRoot: start,
-        config: configName,
-        configPath: localPath,
-        configRoot: start,
-        walkedUp: false,
-        configFound: true,
-        writeRootFollowedConfig: false,
-      };
+      return startResult(localPath, true);
     }
   } catch {
     // fall through to walk-up
   }
 
   const found = findNearestArkConfig(start, configName, opts);
-  if (found) {
-    const root = adoptWalkedRoot ? found.root : start;
-    return {
-      root,
-      writeRoot: start,
-      config: configName,
-      configPath: found.configPath,
-      configRoot: found.root,
-      walkedUp: found.walkedUp,
-      configFound: true,
-      writeRootFollowedConfig: adoptWalkedRoot && found.walkedUp,
-    };
-  }
-
-  return {
-    root: start,
-    writeRoot: start,
-    config: configName,
-    configPath: localPath,
-    configRoot: start,
-    walkedUp: false,
-    configFound: false,
-    writeRootFollowedConfig: false,
-  };
+  return found ? walkedResult(found) : startResult(localPath, false);
 }
 
 /**

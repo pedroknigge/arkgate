@@ -32,7 +32,7 @@ export interface WorkflowStep<P extends SagaContext = SagaContext> {
   compensate?: (payload: P, bus: EventBus, error?: unknown) => MaybePromise<void>;
 }
 
-export interface WorkflowStartTrigger<P extends SagaContext = SagaContext> {
+interface WorkflowStartTrigger<P extends SagaContext = SagaContext> {
   intent: IntentName;
   mapEventToPayload(event: DomainEvent<IntentName, unknown>): P;
 }

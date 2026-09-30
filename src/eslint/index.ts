@@ -31,12 +31,18 @@ import {
 import { createArkRunEslintRules } from './arkRunRules';
 import { createArkOrderEslintRules } from './arkOrderRules';
 import { createArkRulesStructureRule } from './arkRulesRules';
-import { declarationIsTypeOnly, isLocallyBound, stringValue } from './astHelpers';
+import {
+  declarationIsTypeOnly,
+  isLocallyBound,
+  moduleSourceListeners,
+  stringValue,
+} from './astHelpers';
 import {
   configForRule,
   contractErrorForFile,
   contractFingerprint,
   findConfigPath,
+  lintedFileInScope,
   loadArkConfig,
   sourceIsInAnalysisScope,
   withContractGuard,
@@ -254,13 +260,9 @@ const deniedCapabilitiesRule: ArkRule = {
     const config = configForRule(configPath);
     const root = configPath ? path.dirname(configPath) : null;
     if (!config || !root || !filename) return {} as RuleListener;
-    const absFile = path.isAbsolute(filename) ? filename : path.resolve(filename);
-    const relFile = path.relative(root, absFile).split(path.sep).join('/');
-    if (!sourceIsInAnalysisScope(config, relFile)) return {} as RuleListener;
-    const layer = config.layers?.find(
-      (l) => l.name === layerForRelativePath(relFile, config.layers)
-    );
-    if (!layer) return {} as RuleListener;
+    const located = lintedFileInScope(config, root, filename);
+    if (!located?.layer) return {} as RuleListener;
+    const { relFile, layer } = located;
     const deny = new Set(effectiveCapabilityDeny(layer));
     if (deny.size === 0) return {} as RuleListener;
 
@@ -291,84 +293,7 @@ const deniedCapabilitiesRule: ArkRule = {
       );
     };
 
-    return {
-      ImportDeclaration(node) {
-        const importNode = node as AstNode & {
-          source?: { value?: unknown };
-          importKind?: string;
-          specifiers?: Array<{ importKind?: string; type?: string }>;
-        };
-        // Parity with the symbol path (isTypeOnlyReference): a braced list whose
-        // named specifiers are ALL `type` is erased at runtime too.
-        const named = (importNode.specifiers ?? []).filter(
-          (s) => s.type === 'ImportSpecifier'
-        );
-        const allNamedTypeOnly =
-          named.length > 0 &&
-          named.length === (importNode.specifiers ?? []).length &&
-          named.every((s) => s.importKind === 'type');
-        check(
-          node,
-          importNode.source?.value,
-          importNode.importKind === 'type' || allNamedTypeOnly,
-          'import'
-        );
-      },
-      ImportExpression(node) {
-        const importNode = node as AstNode & { source?: { type?: string; value?: unknown } };
-        if (importNode.source?.type === 'Literal') {
-          check(node, importNode.source.value, false, 'dynamic-import');
-        }
-      },
-      TSImportEqualsDeclaration(node) {
-        const importNode = node as AstNode & {
-          importKind?: string;
-          isTypeOnly?: boolean;
-          moduleReference?: { expression?: { value?: unknown } };
-        };
-        check(
-          node,
-          importNode.moduleReference?.expression?.value,
-          importNode.importKind === 'type' || importNode.isTypeOnly === true,
-          'require'
-        );
-      },
-      ExportNamedDeclaration(node) {
-        const exportNode = node as AstNode & {
-          source?: { value?: unknown };
-          exportKind?: string;
-          specifiers?: Array<{ exportKind?: string; type?: string }>;
-        };
-        if (!exportNode.source) return;
-        const specifiers = (exportNode.specifiers ?? []) as Array<{ exportKind?: string }>;
-        const allTypeOnly =
-          specifiers.length > 0 && specifiers.every((s) => s.exportKind === 'type');
-        check(
-          node,
-          exportNode.source.value,
-          exportNode.exportKind === 'type' || allTypeOnly,
-          'export'
-        );
-      },
-      ExportAllDeclaration(node) {
-        const exportNode = node as AstNode & { source?: { value?: unknown }; exportKind?: string };
-        check(node, exportNode.source?.value, exportNode.exportKind === 'type', 'export');
-      },
-      CallExpression(node) {
-        const call = node as AstNode & {
-          callee?: { type?: string; name?: string };
-          arguments?: Array<{ type?: string; value?: unknown }>;
-        };
-        if (
-          call.callee?.type === 'Identifier' &&
-          call.callee.name === 'require' &&
-          call.arguments?.[0]?.type === 'Literal' &&
-          !isLocallyBound(context, node, 'require')
-        ) {
-          check(node, call.arguments[0].value, false, 'require');
-        }
-      },
-    };
+    return moduleSourceListeners(context, check);
   },
 };
 
@@ -508,4 +433,9 @@ Object.defineProperty(configs, 'recommended', {
 plugin.configs = configs;
 
 export { configs };
+/**
+ * `plugin` and the default export are both public API of `arkgate/eslint`
+ * (tests/unit/publish/eslint-cjs-shape.test.ts pins `require('arkgate/eslint').plugin`).
+ * @alias
+ */
 export default plugin;

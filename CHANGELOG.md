@@ -48,6 +48,8 @@ in the immutable pre-2.0 archive linked below.
   short phrase templates so the shape is visible. No new skill, schema, or flag.
 
 ### Changed
+- The package no longer ships `bin/lib/ark-order-invariants.mjs`, `bin/lib/ark-order-error.mjs`, or `bin/lib/stable-hash.mjs`; no CLI loaded them. ArkOrder invariants still ship in `arkgate/order`. One new generated CLI module, `bin/lib/schema-validation.mjs`, holds the JSON-Schema walker shared by the config and ArkRules contracts.
+- Internal cleanup with no public export or behavior change: about 390 unused internal exports removed (knip) and hand-written copy/paste duplication cut from 1.01% to 0% (jscpd). Maintainers: `npm run check:knip` and `npm run check:duplication` run in the CI build job.
 - Compact `--doctor` names ArkRules only when the `arkRules` map is on
   (one breath + counts, not a score). Absence stays silent. Reuses
   `rulesUnderContract` — no new schema, flag, or skill. `--doctor --all`
@@ -66,6 +68,8 @@ in the immutable pre-2.0 archive linked below.
   Required CI is still the shared merge line. No new skill, schema, or host.
 
 ### Fixed
+- Doctor sees CI jobs gated by `needs:`: a job that runs the fail-closed Ark check behind unconditional jobs (such as a CI-profile job) now counts as a merge gate; `ciMergeBoundary.ci.workflowPresent` / `merge-gate` no longer report it absent. Jobs a profile output can skip, jobs with `continue-on-error`, and chains with a conditional job still do not count.
+- With `ARK_DOCTOR_GITHUB=1`, the Ark check counts as required only when every job that can skip it is required too (a skipped job satisfies branch protection); otherwise the doctor reports `unverified`, `arkCheckUpstreamNotRequired`, and the gap `enforcement-ark-check-upstream-not-required`. Required checks bound to the GitHub Actions app now correlate (`arkCheckSourceBound: true`).
 - Write hook and `ark-check` now agree on overlapping layer globs: the hook
   probes the same specifier extensions as `ark-check` and classifies with
   `layerForRelativePath` (explicit `money.ts` beats `src/lib/**`). Field

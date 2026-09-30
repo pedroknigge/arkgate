@@ -3,7 +3,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { readPackageJson, packageScriptsHaveTypecheck } from './gate-files.mjs';
+import { readPackageJson, packageScriptsHaveTypecheck, someNestedPackageJson } from './gate-files.mjs';
 
 /**
  * Production deploy path quality (universal — any consumer repo).
@@ -62,44 +62,19 @@ export function detectDeployPathQuality(root) {
   let hasTypecheckScript = packageScriptsHaveTypecheck(scripts);
   const packageLintScripts = [];
   // Monorepo: package-level scripts count (apps/web, packages/ui, …).
-  try {
-    for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
-      if (!entry.isDirectory() || entry.name.startsWith('.') || entry.name === 'node_modules') continue;
-      const candidates = [path.join(root, entry.name)];
-      // one more level: packages/foo
-      try {
-        for (const child of fs.readdirSync(path.join(root, entry.name), { withFileTypes: true })) {
-          if (child.isDirectory() && !child.name.startsWith('.')) {
-            candidates.push(path.join(root, entry.name, child.name));
-          }
-        }
-      } catch {
-        /* ignore */
-      }
-      for (const dir of candidates) {
-        const pj = path.join(dir, 'package.json');
-        if (!fs.existsSync(pj)) continue;
-        try {
-          const nested = JSON.parse(fs.readFileSync(pj, 'utf8'));
-          const ns = nested.scripts && typeof nested.scripts === 'object' ? nested.scripts : {};
-          if (scriptHasLint(ns)) {
-            hasLintScript = true;
-            packageLintScripts.push(path.relative(root, dir).split(path.sep).join('/'));
-          }
-          if (packageScriptsHaveTypecheck(ns)) hasTypecheckScript = true;
-          const nd = {
-            ...(nested.dependencies || {}),
-            ...(nested.devDependencies || {}),
-          };
-          if (nd.next && !engines.includes('next')) engines.push('next');
-        } catch {
-          /* ignore */
-        }
-      }
+  someNestedPackageJson(root, (nested, dir) => {
+    const ns = nested.scripts && typeof nested.scripts === 'object' ? nested.scripts : {};
+    if (scriptHasLint(ns)) {
+      hasLintScript = true;
+      packageLintScripts.push(path.relative(root, dir).split(path.sep).join('/'));
     }
-  } catch {
-    /* ignore */
-  }
+    if (packageScriptsHaveTypecheck(ns)) hasTypecheckScript = true;
+    const nd = {
+      ...(nested.dependencies || {}),
+      ...(nested.devDependencies || {}),
+    };
+    if (nd.next && !engines.includes('next')) engines.push('next');
+  });
 
   const ciTexts = collectCiWorkflowTexts(root);
   const ciJoined = ciTexts.join('\n');

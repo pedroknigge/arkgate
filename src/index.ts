@@ -14,19 +14,10 @@
 
 export { version } from './version';
 
-export {
-  ARK_ANALYSIS_RESULT_SCHEMA_VERSION,
-  ARK_ANALYSIS_RESULT_SCHEMA,
-  createAdapterResult,
-  toAdapterDiagnostic,
-  type AnalysisCompleteness,
-  type AnalysisMode,
-  type AdapterCompletenessReason,
-  type AdapterDiagnostic,
-  type AdapterResult,
-  type AdapterSeverity,
-  type AdapterViolationInput,
-} from './domain/adapterContract';
+// Adapter contract, AI code gate, architecture profiles, analysis engine, policy
+// delta, diagnostic catalog, enforcement state, design delta, and resolved facts:
+// the same list the stable `arkgate` root exports.
+export * from './kernel/sharedPublicSurface';
 
 // Domain types are re-exported below; no local value imports needed here.
 
@@ -197,25 +188,6 @@ export {
 } from './kernel/graph';
 
 // =============================================================================
-// Architecture Profiles / 11-Layer Governance
-// =============================================================================
-
-export {
-  createArchitectureProfile,
-  createArchitectureProfileFromArkConfig,
-  createElevenLayerArkConfig,
-  elevenLayerProfile,
-  type ArchitectureLayer,
-  type ArchitectureLayerConfig,
-  type ArchitectureProfile,
-  type ArchitectureRule,
-  type ArkCheckConfig,
-  type CreateArchitectureProfileFromArkConfigOptions,
-  type CreateArchitectureProfileOptions,
-  type CreateElevenLayerArkConfigOptions,
-} from './kernel/layers';
-
-// =============================================================================
 // Metadata System (basic)
 // =============================================================================
 
@@ -243,163 +215,6 @@ export {
   type CreateAdapterOptions,
   type DefinePortOptions,
 } from './kernel/adapters';
-
-// =============================================================================
-// AI Code Gate (basic)
-// =============================================================================
-
-export {
-  createAICodeGate,
-  type AICodeGate,
-  type AICodeGateResult,
-  type AICodeGateViolation,
-  type AICodeGateContext,
-  type AICodeGateOptions,
-  type AIGateExtension,
-} from './kernel/ai-gate';
-
-// =============================================================================
-// Analysis Engine (stable IR contract)
-// =============================================================================
-
-export {
-  loadContract,
-  analyzeProject,
-  analyzeResolvedProject,
-  analyzeChange,
-  preflightChange,
-  preflightResolvedChange,
-  analyzePolicyDelta,
-  analyzeArchitectureConvergence,
-  explainViolation,
-  evaluateArchitectureGraph,
-  collectAnalysisConfigWarnings,
-  detectArchitectureCycles,
-  collectForbiddenCapabilityUses,
-  extractSemanticDependencies,
-  type AnalysisContract,
-  type ArchitectureChangeMap,
-  type ArchitectureChangeMapContract,
-  type ArchitectureChangeMapDependency,
-  type ArchitectureChangeMapFile,
-  type ArchitectureChangeOperation,
-  type AnalyzeArchitectureConvergenceInput,
-  type ArchitectureActualChange,
-  type ArchitectureConvergenceClassification,
-  type ArchitectureConvergenceFinding,
-  type ArchitectureConvergenceResult,
-  type ArchitectureDependency,
-  type AnalyzeProjectInput,
-  type AnalyzeResolvedProjectInput,
-  type PreflightResolvedChangeInput,
-  type AnalyzeChangeInput,
-  type AnalysisResult,
-  type PreparedChangeFile,
-  type ChangePreflightResult,
-  type AnalyzePolicyDeltaInput,
-  type PolicyDeltaAnalysis,
-  type ArchitectureEngineViolation,
-  type ArchitectureEngineEdge,
-  type EvaluateArchitectureGraphInput,
-  type ArchitectureEngineResult,
-  type CollectAnalysisConfigWarningsInput,
-  type ForbiddenCapabilityUse,
-  type SemanticDependency,
-  type SemanticDependencyKind,
-  type ResolvedAnalysisFile,
-  type ResolvedAnalysisIr,
-  type ResolvedAnalysisResult,
-  type ResolvedChangePreflightResult,
-  type ResolvedSafetyReport,
-} from './kernel/analysis';
-
-export {
-  POLICY_DELTA_SCHEMA_VERSION,
-  classifyArkPolicyDelta,
-  policyDeltaAcknowledgementMatches,
-  type PolicyDelta,
-  type PolicyDeltaAcknowledgement,
-  type PolicyDeltaClassification,
-  type PolicyDeltaFinding,
-} from './domain/policyDelta';
-
-export {
-  DIAGNOSTIC_CATALOG,
-  DIAGNOSTIC_CATALOG_SCHEMA_VERSION,
-  DIAGNOSTIC_DOCS_RELATIVE_PATH,
-  DIAGNOSTIC_RULE_IDS,
-  catalogFixForRuleId,
-  catalogWhyForRuleId,
-  diagnosticDocsFragment,
-  diagnosticDocsPath,
-  getDiagnosticCatalogEntry,
-  isCataloguedOrArkRuleFamily,
-  isKnownDiagnosticCode,
-  serializeDiagnosticCatalog,
-  type DiagnosticCatalogEntry,
-  type DiagnosticCategory,
-} from './domain/diagnosticCatalog';
-
-export {
-  ARK_ENFORCEMENT_STATE_SCHEMA_VERSION,
-  type ArkEnforcementHost,
-  type ArkEnforcementState,
-  type EnforcementBoundaryState,
-  type EnforcementEvidence,
-  type EnforcementEvidenceField,
-  type EnforcementVerification,
-} from './domain/enforcementState';
-
-export {
-  ARK_DESIGN_DELTA_SCHEMA_VERSION,
-  type ArkDesignDeltaResult,
-  type DesignDeltaChange,
-  type DesignDeltaEnforcementScope,
-  type DesignDeltaIdentity,
-  type DesignSmellEvidence,
-  type DesignSmellFinding,
-  type DesignSmellId,
-} from './domain/designDelta';
-
-export {
-  ANALYSIS_IR_SCHEMA_VERSION,
-  RESOLVED_CANDIDATE_FACTS_SCHEMA,
-  RESOLVED_CANDIDATE_FACTS_SCHEMA_VERSION,
-  createResolvedCandidateFacts,
-  deterministicHash,
-  loadResolvedCandidateFacts,
-  resolvedFactsEvidenceRequirementsHash,
-  stableSerialize,
-  type AnalysisFileInput,
-  type AnalysisFileChange,
-  type AnalysisCompilerOptions,
-  type AnalysisFile,
-  type AnalysisImportEdge,
-  type AnalysisCapabilityUse,
-  type AnalysisEvidence,
-  type AnalysisViolation,
-  type AnalysisIr,
-  type ResolvedAmbientFact,
-  type ResolvedArkRunCompositionRootHitFact,
-  type ResolvedArkRunDeclarationFact,
-  type ResolvedArkRunKernelCallFact,
-  type ResolvedArkRunKernelCallKind,
-  type ResolvedArkRunManagedNewFact,
-  type ResolvedCandidateFacts,
-  type ResolvedCandidateFactsInput,
-  type ResolvedCapability,
-  type ResolvedCapabilityFact,
-  type ResolvedDependencyFact,
-  type ResolvedDependencyKind,
-  type ResolvedDependencyState,
-  type ResolvedFactsCompleteness,
-  type ResolvedFactsReason,
-  type ResolvedFileFact,
-  type ResolvedIntentReferenceFact,
-  type ResolvedPublishFact,
-  type ResolvedSafetyFact,
-  type ResolvedSafetyKind,
-} from './domain/analysis';
 
 // =============================================================================
 // Read Models / Projections

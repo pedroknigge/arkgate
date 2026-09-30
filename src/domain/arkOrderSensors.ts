@@ -39,7 +39,7 @@ export const ARKORDER_TIER1_SENSOR_IDS = [
   'arkorder-xi-ttl',
 ] as const;
 
-export type ArkOrderTier1SensorId = (typeof ARKORDER_TIER1_SENSOR_IDS)[number];
+type ArkOrderTier1SensorId = (typeof ARKORDER_TIER1_SENSOR_IDS)[number];
 
 export const ARKORDER_RULE_IDS = {
   'arkorder-missing-plane': 'ARKORDER_MISSING_PLANE',

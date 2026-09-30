@@ -44,8 +44,8 @@ import {
   evaluateInvariantCoverage,
 } from '../domain/invariantCoverage';
 import { classifyResolvedLayerCoverage } from '../domain/extraMergeTeeth';
-import { evaluateArkRunSensors } from '../domain/arkRunSensors';
-import { evaluateArkOrderSensors } from '../domain/arkOrderSensors';
+import { evaluateArkRunSensors, type ArkRunSensorFinding } from '../domain/arkRunSensors';
+import { evaluateArkOrderSensors, type ArkOrderSensorFinding } from '../domain/arkOrderSensors';
 import { collectAnalysisConfigWarnings } from './configWarnings';
 import { evaluateArchitectureGraph } from './graphEvaluate';
 import type {
@@ -415,6 +415,48 @@ function contentViolations(
   return violations;
 }
 
+/**
+ * Extra-plane (ArkRun / ArkOrder) findings as engine output: every finding is a
+ * violation (failsStrict and severity kept) when the plane is enforced, otherwise
+ * an advisory warning that never fails strict.
+ */
+function splitExtraPlaneFindings(
+  findings: readonly (ArkRunSensorFinding | ArkOrderSensorFinding)[],
+  mode: unknown
+): { violations: ArchitectureEngineViolation[]; warnings: ArchitectureEngineViolation[] } {
+  if (mode === 'enforced') {
+    return {
+      violations: findings.map((item) => ({
+        ruleId: item.ruleId,
+        file: item.file,
+        line: item.line,
+        message: item.message,
+        fromLayer: item.fromLayer,
+        target: item.target,
+        nextAction: item.nextAction,
+        sensor: item.sensor,
+        failsStrict: item.failsStrict,
+        ...(item.severity ? { severity: item.severity } : {}),
+      })),
+      warnings: [],
+    };
+  }
+  return {
+    violations: [],
+    warnings: findings.map((item) => ({
+      ruleId: item.ruleId,
+      file: item.file,
+      line: item.line,
+      message: item.message,
+      fromLayer: item.fromLayer,
+      target: item.target,
+      nextAction: item.nextAction,
+      sensor: item.sensor,
+      failsStrict: false,
+    })),
+  };
+}
+
 export function analyzeCanonicalResolvedProject(
   input: {
     contract: AnalysisContract;
@@ -623,34 +665,10 @@ export function analyzeCanonicalResolvedProject(
       layerByFile.get(path) ?? layerForRelativePath(path, input.contract.config.layers),
     classification: arkRunClassification,
   });
-  const arkRunMode = input.contract.config.arkRun?.mode;
-  const arkRunViolations: ArchitectureEngineViolation[] = arkRunEval.findings
-    .filter(() => arkRunMode === 'enforced')
-    .map((item) => ({
-      ruleId: item.ruleId,
-      file: item.file,
-      line: item.line,
-      message: item.message,
-      fromLayer: item.fromLayer,
-      target: item.target,
-      nextAction: item.nextAction,
-      sensor: item.sensor,
-      failsStrict: item.failsStrict,
-      ...(item.severity ? { severity: item.severity } : {}),
-    }));
-  const arkRunWarnings: ArchitectureEngineViolation[] = arkRunEval.findings
-    .filter(() => arkRunMode !== 'enforced')
-    .map((item) => ({
-      ruleId: item.ruleId,
-      file: item.file,
-      line: item.line,
-      message: item.message,
-      fromLayer: item.fromLayer,
-      target: item.target,
-      nextAction: item.nextAction,
-      sensor: item.sensor,
-      failsStrict: false,
-    }));
+  const { violations: arkRunViolations, warnings: arkRunWarnings } = splitExtraPlaneFindings(
+    arkRunEval.findings,
+    input.contract.config.arkRun?.mode
+  );
   const arkOrderEval = evaluateArkOrderSensors({
     arkOrder: input.contract.config.arkOrder,
     layers: input.contract.config.layers,
@@ -667,34 +685,10 @@ export function analyzeCanonicalResolvedProject(
       layerByFile.get(path) ?? layerForRelativePath(path, input.contract.config.layers),
     classification: arkRunClassification,
   });
-  const arkOrderMode = input.contract.config.arkOrder?.mode;
-  const arkOrderViolations: ArchitectureEngineViolation[] = arkOrderEval.findings
-    .filter(() => arkOrderMode === 'enforced')
-    .map((item) => ({
-      ruleId: item.ruleId,
-      file: item.file,
-      line: item.line,
-      message: item.message,
-      fromLayer: item.fromLayer,
-      target: item.target,
-      nextAction: item.nextAction,
-      sensor: item.sensor,
-      failsStrict: item.failsStrict,
-      ...(item.severity ? { severity: item.severity } : {}),
-    }));
-  const arkOrderWarnings: ArchitectureEngineViolation[] = arkOrderEval.findings
-    .filter(() => arkOrderMode !== 'enforced')
-    .map((item) => ({
-      ruleId: item.ruleId,
-      file: item.file,
-      line: item.line,
-      message: item.message,
-      fromLayer: item.fromLayer,
-      target: item.target,
-      nextAction: item.nextAction,
-      sensor: item.sensor,
-      failsStrict: false,
-    }));
+  const { violations: arkOrderViolations, warnings: arkOrderWarnings } = splitExtraPlaneFindings(
+    arkOrderEval.findings,
+    input.contract.config.arkOrder?.mode
+  );
   // Only enforced + partial coverage degrades analysis completeness (never fake green).
   // Advisory-only catalogs stay complete with advisory warnings.
   const enforcedPartial =

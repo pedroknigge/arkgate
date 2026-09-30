@@ -17,7 +17,6 @@ import {
   loadInvariantCoverageInputs,
 } from './invariant-coverage-io.mjs';
 import {
-  EXTRA_MERGE_TEETH_GOVERNED_FLOOR,
   composeMergePlanesHonesty,
   demoteExtraPlaneTeethUnderClassificationFloor,
 } from './extra-merge-teeth.mjs';
@@ -38,8 +37,6 @@ export { ARKRULES_EMPTY_CATALOG_NEXT, ARKRULES_FIRST_CONTACT_NEXT, ARKRULES_ONE_
 const COVERED_SAMPLE_MAX = 24;
 const STRUCTURE_CATALOG_MAX = 40;
 const UNCOVERED_CATALOG_MAX = 30;
-
-export { EXTRA_MERGE_TEETH_GOVERNED_FLOOR };
 
 /** Doctor walk often hands absolute paths; layer globs are project-relative. */
 function projectRelativePath(root, filePath) {
@@ -677,7 +674,7 @@ export function formatRulesUnderContractHtml(section, esc) {
   </section>`;
 }
 
-export const RULES_INVENTORY_MAX_FILES = 400;
+const RULES_INVENTORY_MAX_FILES = 400;
 
 /**
  * Brownfield rules migration (AR13/AR15): one code path for `--rules-inventory`,
@@ -689,7 +686,7 @@ export const RULES_INVENTORY_MAX_FILES = 400;
  * @param {{ root: string, config: Record<string, any>, files?: string[], arkRules?: any }} input
  *   `files` defaults to the governed walk; `arkRules` to the catalog on disk.
  */
-export function buildRulesMigration({ root, config, files, arkRules }) {
+function buildRulesMigration({ root, config, files, arkRules }) {
   const governed = Array.isArray(files) ? files : collectGovernedFiles(root, config);
   const fileContents = {};
   const fileLayers = {};

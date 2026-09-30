@@ -47,7 +47,7 @@ export type ScopeReference = {
   resolved?: ScopeVariable | null;
   isValueReference?: boolean;
 };
-export type Scope = {
+type Scope = {
   set?: Map<string, ScopeVariable>;
   references?: ScopeReference[];
   upper?: Scope | null;

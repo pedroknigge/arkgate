@@ -25,6 +25,7 @@ import type {
   ResolvedDependencyFact,
   ResolvedDependencyKind,
 } from '../domain/resolvedCandidateFactsTypes';
+import { moduleSourceListeners } from './astHelpers';
 import {
   editorSourceText,
   type ArkRule,
@@ -32,8 +33,6 @@ import {
   type RuleContext,
   type RuleListener,
 } from './ruleSupport';
-
-export type { AstNode, RuleContext } from './ruleSupport';
 
 export type ArkRunEslintHelpers = {
   findConfigPath: (startFile: string) => string | null;
@@ -63,20 +62,6 @@ type EditorFile = {
   relFile: string;
   fromLayer: string;
 };
-
-function declarationIsTypeOnly(node: AstNode): boolean {
-  if (node.importKind === 'type' || node.exportKind === 'type') return true;
-  const specifiers = (node.specifiers ?? []) as Array<{
-    type?: string;
-    importKind?: string;
-    exportKind?: string;
-  }>;
-  if (specifiers.length === 0) return false;
-  if (specifiers.every((specifier) => specifier.type === 'ImportSpecifier')) {
-    return specifiers.every((specifier) => specifier.importKind === 'type');
-  }
-  return specifiers.every((specifier) => specifier.exportKind === 'type');
-}
 
 function readUtf8(file: string): string | null {
   try {
@@ -181,11 +166,6 @@ function constructedTypeName(node: AstNode): string | undefined {
   return undefined;
 }
 
-function specifierEdgeKind(node: AstNode, fallback: ResolvedDependencyKind): ResolvedDependencyKind {
-  if (node.type?.startsWith('Export')) return 'export';
-  return fallback;
-}
-
 function importListeners(
   helpers: ArkRunEslintHelpers,
   context: RuleContext,
@@ -232,87 +212,7 @@ function importListeners(
     }
   };
 
-  return {
-    ImportDeclaration(node) {
-      const importNode = node as AstNode & {
-        source?: { value?: unknown };
-        importKind?: string;
-        specifiers?: Array<{ importKind?: string; type?: string }>;
-      };
-      const named = (importNode.specifiers ?? []).filter(
-        (specifier) => specifier.type === 'ImportSpecifier'
-      );
-      const allNamedTypeOnly =
-        named.length > 0 &&
-        named.length === (importNode.specifiers ?? []).length &&
-        named.every((specifier) => specifier.importKind === 'type');
-      check(
-        node,
-        importNode.source?.value,
-        importNode.importKind === 'type' || allNamedTypeOnly || declarationIsTypeOnly(node),
-        'import'
-      );
-    },
-    ImportExpression(node) {
-      const importNode = node as AstNode & { source?: { type?: string; value?: unknown } };
-      if (importNode.source?.type === 'Literal') {
-        check(node, importNode.source.value, false, 'dynamic-import');
-      }
-    },
-    TSImportEqualsDeclaration(node) {
-      const importNode = node as AstNode & {
-        importKind?: string;
-        isTypeOnly?: boolean;
-        moduleReference?: { expression?: { value?: unknown } };
-      };
-      check(
-        node,
-        importNode.moduleReference?.expression?.value,
-        importNode.importKind === 'type' || importNode.isTypeOnly === true,
-        'require'
-      );
-    },
-    ExportNamedDeclaration(node) {
-      const exportNode = node as AstNode & {
-        source?: { value?: unknown };
-        exportKind?: string;
-        specifiers?: Array<{ exportKind?: string }>;
-      };
-      if (!exportNode.source) return;
-      const specifiers = (exportNode.specifiers ?? []) as Array<{ exportKind?: string }>;
-      const allTypeOnly =
-        specifiers.length > 0 && specifiers.every((specifier) => specifier.exportKind === 'type');
-      check(
-        node,
-        exportNode.source.value,
-        exportNode.exportKind === 'type' || allTypeOnly,
-        specifierEdgeKind(node, 'export')
-      );
-    },
-    ExportAllDeclaration(node) {
-      const exportNode = node as AstNode & { source?: { value?: unknown }; exportKind?: string };
-      check(
-        node,
-        exportNode.source?.value,
-        exportNode.exportKind === 'type',
-        'export'
-      );
-    },
-    CallExpression(node) {
-      const call = node as AstNode & {
-        callee?: { type?: string; name?: string };
-        arguments?: Array<{ type?: string; value?: unknown }>;
-      };
-      if (
-        call.callee?.type === 'Identifier' &&
-        call.callee.name === 'require' &&
-        call.arguments?.[0]?.type === 'Literal' &&
-        !helpers.isLocallyBound(context, node, 'require')
-      ) {
-        check(node, call.arguments[0].value, false, 'require');
-      }
-    },
-  };
+  return moduleSourceListeners(context, check, helpers.isLocallyBound);
 }
 
 function directNewListener(

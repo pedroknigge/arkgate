@@ -9,14 +9,14 @@
 
 export type ArkConfigSchemaVersion = '1.0' | '1.1' | '1.2' | '1.3';
 
-export type ArkConfigCyclePolicy = 'strict' | 'soft' | 'framework-soft' | 'off';
+type ArkConfigCyclePolicy = 'strict' | 'soft' | 'framework-soft' | 'off';
 
-export type ArkConfigLayerCapabilities = {
+type ArkConfigLayerCapabilities = {
   deny?: string[];
 };
 
 /** Who this folder is for. Metadata — not import-rule teeth. Absence is silent. */
-export type ArkConfigLayerTrustBoundary = 'public' | 'auth' | 'admin' | 'internal';
+type ArkConfigLayerTrustBoundary = 'public' | 'auth' | 'admin' | 'internal';
 
 export type ArkConfigLayer = {
   name: string;
@@ -56,7 +56,7 @@ export type ArkConfigLayer = {
 };
 
 /** How a starred `sliceFolders` prefix is named. Absent equals `path`. */
-export type ArkConfigSliceIdentity = 'path' | 'stars';
+type ArkConfigSliceIdentity = 'path' | 'stars';
 
 export type ArkConfigRule = {
   from: string;
@@ -91,12 +91,12 @@ export type ArkConfigRule = {
   childSlices?: ArkConfigChildSlices;
 };
 
-export type ArkConfigSharedImportsSlice =
+type ArkConfigSharedImportsSlice =
   | 'deny'
   | 'deny-cross-parent'
   | { mode: 'deny-cross-parent'; stopAt: string[] };
 
-export type ArkConfigChildSlices = {
+type ArkConfigChildSlices = {
   sliceFolders: string[];
   sliceIdentity?: ArkConfigSliceIdentity;
   commonFolders?: string[];
@@ -129,7 +129,7 @@ export type ArkConfigChildSlices = {
   arkRulesFile?: string;
 };
 
-export type ArkConfigSliceAlias = {
+type ArkConfigSliceAlias = {
   from: string;
   to: string;
   /** True: the path stays. It is not an owed move and does not clear other honesty debt. */
@@ -138,12 +138,12 @@ export type ArkConfigSliceAlias = {
   reason?: string;
 };
 
-export type ArkConfigCrossSliceEdge = {
+type ArkConfigCrossSliceEdge = {
   from: string;
   to: string;
 };
 
-export type ArkConfigSafety = {
+type ArkConfigSafety = {
   maxTsSuppressions?: number;
   maxAnyCasts?: number;
   allowInMemory?: boolean;
@@ -154,7 +154,7 @@ export type ArkConfigSafety = {
  * Optional invariant-coverage scan controls. Absence keeps the built-in
  * defaults (test-name heuristic, 400-file budget) and changes no verdict.
  */
-export type ArkConfigCoverage = {
+type ArkConfigCoverage = {
   /** Globs that decide which files count as tests (replaces the name heuristic). */
   testGlobs?: string[];
   /** Max files loaded as coverage evidence before the budget is exhausted. */
@@ -175,12 +175,12 @@ export type ArkConfigCoverage = {
  * Absence changes no inter-layer verdict.
  */
 /** One path, or several paths merged into that layer's catalog. */
-export type ArkConfigArkRulesRef = string | string[];
+type ArkConfigArkRulesRef = string | string[];
 
-export type ArkConfigArkRulesRefs = Record<string, ArkConfigArkRulesRef>;
+type ArkConfigArkRulesRefs = Record<string, ArkConfigArkRulesRef>;
 
 /** ADR 0020 — advisory never adds merge teeth; enforced is the extra's merge plane. */
-export type ArkConfigArkRunMode = 'advisory' | 'enforced';
+type ArkConfigArkRunMode = 'advisory' | 'enforced';
 
 /**
  * ADR 0020 — optional inline ArkRun extra (schema 1.2+). Absence is silent.
@@ -196,7 +196,7 @@ export type ArkConfigArkRun = {
 };
 
 /** ADR 0027 — advisory never adds merge teeth; enforced is the extra's merge plane. */
-export type ArkConfigArkOrderMode = 'advisory' | 'enforced';
+type ArkConfigArkOrderMode = 'advisory' | 'enforced';
 
 /**
  * ADR 0027 — optional inline ArkOrder extra (schema 1.3+). Absence is silent.

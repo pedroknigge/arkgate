@@ -50,6 +50,7 @@ export const MECHANICAL_SAFE_KINDS: readonly RemediationKind[] = [
 /**
  * Judgment-class kinds that still have a named transform / plan label (eval corpus vocabulary).
  * Never auto-apply without multi-file / caller proof.
+ * @cliMirror eval/validate-corpus.mjs
  */
 export const JUDGMENT_SUGGESTED_KINDS: readonly RemediationKind[] = [
   'port-proof-inject-binding',
@@ -172,7 +173,7 @@ export function layerImportNextAction(violation: ArkViolationLike): string {
   return 'Classify the import: if it is constants/types/pure, adopt into DomainModel or SharedKernel; define a port only if the target is a real use-case. Then preflight again.';
 }
 
-export type FixClassEffort = 'small' | 'medium';
+type FixClassEffort = 'small' | 'medium';
 
 export type EnrichedViolation<T extends ArkViolationLike = ArkViolationLike> = T & {
   fixClass: string;

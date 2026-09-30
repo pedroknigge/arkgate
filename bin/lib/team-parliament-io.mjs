@@ -20,7 +20,6 @@ import {
   suggestStewards,
 } from './team-parliament.mjs';
 import {
-  SPAWN_TIMEOUT_MS,
   TEAM_BASE_CANDIDATES,
   discoverTeamBaseRef,
   gitShowText,
@@ -29,21 +28,8 @@ import {
   safeGitRef,
 } from './git-change-scope.mjs';
 
-export {
-  baselineKeysFromDocument,
-  classifyBaselineKeyDelta,
-  classifyChangeSet,
-  evaluateTeamGate,
-  formatVsBaseLine,
-  isTeamPersona,
-  mapPolicyClassToKind,
-  parseCodeownersHandles,
-  personaCheckBudget,
-  resolveStewardHandle,
-  suggestStewards,
-};
 // prettier-ignore
-export { SPAWN_TIMEOUT_MS, TEAM_BASE_CANDIDATES, discoverTeamBaseRef, gitShowText, listChangedPaths, safeGitRef };
+export { discoverTeamBaseRef, safeGitRef };
 
 export function contractSessionFrom(args, env = process.env) {
   if (args?.contractSession === true) return true;
@@ -269,12 +255,12 @@ export function runTeamPreflight({ root, args, config, policyDelta, teamBase }) 
 }
 
 /** `--changed` / `--persona touch|contributor|agent` without a resolvable merge base. */
-export function changedNeedsBaseMessage(args) {
+function changedNeedsBaseMessage(args) {
   const flag = args?.persona ? `--persona ${args.persona}` : '--changed';
   return `${flag} needs a git merge base to know which files changed, and none was found (tried ${TEAM_BASE_CANDIDATES.join(', ')}; or this is not a git repository). Pass --base <ref> (for example --base HEAD or --base origin/main), or run without ${flag} for a full-tree check.`;
 }
 
-export function contractDiffNeedsBaseMessage(args) {
+function contractDiffNeedsBaseMessage(args) {
   const flag = args?.persona ? `--persona ${args.persona}` : '--contract-diff';
   return `${flag} compares the contract and .ark-baseline.json against a git base, and none was found (tried ${TEAM_BASE_CANDIDATES.join(', ')}; or this is not a git repository). Pass --base <ref> (for example --base origin/main), or run a plain full-tree check without ${flag}.`;
 }

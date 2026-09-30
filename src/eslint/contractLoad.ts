@@ -13,7 +13,11 @@ import path from 'node:path';
 import { parseArkConfigJson, type ArkConfig } from '../domain/configContract';
 import { resolveEffectiveContract } from '../domain/effectiveContract';
 import { emptyEffectiveArkRules, type EffectiveArkRules } from '../domain/arkRulesContract';
-import { isScanExcludedRelative, resolveSliceRulePlan } from '../domain/layerMatch';
+import {
+  isScanExcludedRelative,
+  layerForRelativePath,
+  resolveSliceRulePlan,
+} from '../domain/layerMatch';
 import {
   lintedFilename,
   sourceCodeFor,
@@ -349,13 +353,31 @@ export function sourceIsInAnalysisScope(config: ArkConfig, relativePath: string)
 }
 
 /** Config for rule bodies: guarded rules only run when the contract is valid. */
+/**
+ * The linted file relative to the contract root plus its declared layer, or null
+ * when the file is outside the analysis scope (`include`).
+ */
+export function lintedFileInScope(
+  config: ArkConfig,
+  root: string,
+  filename: string
+): { relFile: string; layer: NonNullable<ArkConfig['layers']>[number] | undefined } | null {
+  const absFile = path.isAbsolute(filename) ? filename : path.resolve(filename);
+  const relFile = path.relative(root, absFile).split(path.sep).join('/');
+  if (!sourceIsInAnalysisScope(config, relFile)) return null;
+  const layer = config.layers?.find(
+    (l) => l.name === layerForRelativePath(relFile, config.layers)
+  );
+  return { relFile, layer };
+}
+
 export function configForRule(configPath: string | null): ArkConfig | null {
   return configPath ? loadArkContract(configPath).config : null;
 }
 
 // ── Fail-closed guard ──────────────────────────────────────────────────────
 
-export const CONFIG_INVALID_MESSAGE_ID = 'configInvalid';
+const CONFIG_INVALID_MESSAGE_ID = 'configInvalid';
 const CONFIG_INVALID_MESSAGE =
   'Ark contract is invalid, so no architecture verdict is possible (fix it; ark-check fails closed the same way): {{detail}}';
 
@@ -417,10 +439,4 @@ export function contractFingerprint(startDir: string = process.cwd()): string | 
   } catch {
     return null;
   }
-}
-
-/** Test hook: drop memoized config lookups and parsed contracts. */
-export function clearContractCache(): void {
-  configPathCache.clear();
-  contractCache.clear();
 }

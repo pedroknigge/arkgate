@@ -8,7 +8,7 @@
  * Pure CLI helper (bin/lib/class-source-scan.mjs). Zero Node I/O.
  */
 
-export const MEMBER_MODIFIERS = new Set([
+const MEMBER_MODIFIERS = new Set([
     'public',
     'private',
     'protected',
@@ -92,7 +92,7 @@ function skipRegexLiteral(src, index) {
  * Index after a string / comment / regex literal starting at `index`, or `index`
  * when none starts there.
  */
-export function skipStringOrComment(src, index) {
+function skipStringOrComment(src, index) {
     const ch = src[index];
     if (ch === '/' && src[index + 1] === '/') {
         const nl = src.indexOf('\n', index);
@@ -119,7 +119,7 @@ export function skipStringOrComment(src, index) {
     }
     return index;
 }
-export function skipWsAndComments(src, index) {
+function skipWsAndComments(src, index) {
     let i = index;
     while (i < src.length) {
         if (/\s/.test(src[i])) {
@@ -134,7 +134,7 @@ export function skipWsAndComments(src, index) {
     }
     return i;
 }
-export function readIdent(src, index) {
+function readIdent(src, index) {
     const ch = src[index];
     if (!ch || !/[A-Za-z_$]/.test(ch))
         return null;
@@ -148,7 +148,7 @@ export function readIdent(src, index) {
  * never closes. Strings and comments are skipped. For `<`/`>`, an arrow `=>` is not
  * a closing angle.
  */
-export function skipBalanced(src, openIndex, openCh, closeCh) {
+function skipBalanced(src, openIndex, openCh, closeCh) {
     if (src[openIndex] !== openCh)
         return null;
     let depth = 1;

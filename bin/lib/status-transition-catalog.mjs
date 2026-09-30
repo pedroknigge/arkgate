@@ -17,12 +17,6 @@ import { layerForFile } from '../ark-shared.mjs';
 import { isDomainRoleLayerName } from './arkrules-sensors.mjs';
 import { collectStatesTransitionsResidual } from './states-transitions-presence.mjs';
 
-export const STATUS_CATALOG_ASK =
-  'Domain code already names statuses, but the states → transitions map is still thin.';
-
-export const STATUS_CATALOG_NEXT =
-  'Add those names to the table on the domain doc (entity · states · allowed from → to). No flag soup.';
-
 const SOURCE_EXT = new Set(['.ts', '.tsx', '.mts', '.cts', '.js', '.mjs', '.cjs']);
 const MAX_FILE_BYTES = 200_000;
 const MAX_ENTITIES = 8;

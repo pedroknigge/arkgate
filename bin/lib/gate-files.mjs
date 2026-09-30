@@ -7,10 +7,10 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { codexProjectMcpIsValid } from './codex-home.mjs';
 import { enforcingArkRunText, runsArkCheck } from './github-enforcement.mjs';
+import { parseJsonMergeInputs } from './hook-templates.mjs';
 import { npxArkgatePrefixLength } from './package-manager.mjs';
 
 export const __packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
-export const __arkCheckCli = path.join(__packageRoot, 'bin', 'ark-check.mjs');
 
 export function readJson(file) {
   return JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -43,13 +43,16 @@ export function packageScriptsHaveTypecheck(scripts) {
 }
 
 /**
- * Root package (and shallow nested packages) already have a typecheck script.
- * Does not scan CI or framework configs — only package.json scripts.
+ * Visit the parsed package.json of each shallow nested package — `root/<dir>/`
+ * and `root/<dir>/<child>/`, skipping dot directories and `node_modules` — in
+ * directory order. Unreadable or invalid files are skipped. Stops at the first
+ * visit that returns true.
+ *
  * @param {string} root
+ * @param {(pkg: any, dir: string) => boolean | void} visit
+ * @returns {boolean} true when a visit returned true
  */
-export function treeHasTypecheckScript(root) {
-  const pkg = readPackageJson(root);
-  if (packageScriptsHaveTypecheck(pkg?.scripts)) return true;
+export function someNestedPackageJson(root, visit) {
   try {
     for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
       if (!entry.isDirectory() || entry.name.startsWith('.') || entry.name === 'node_modules') continue;
@@ -67,8 +70,7 @@ export function treeHasTypecheckScript(root) {
         const pj = path.join(dir, 'package.json');
         if (!fs.existsSync(pj)) continue;
         try {
-          const nested = JSON.parse(fs.readFileSync(pj, 'utf8'));
-          if (packageScriptsHaveTypecheck(nested.scripts)) return true;
+          if (visit(JSON.parse(fs.readFileSync(pj, 'utf8')), dir) === true) return true;
         } catch {
           /* ignore */
         }
@@ -78,6 +80,17 @@ export function treeHasTypecheckScript(root) {
     /* ignore */
   }
   return false;
+}
+
+/**
+ * Root package (and shallow nested packages) already have a typecheck script.
+ * Does not scan CI or framework configs — only package.json scripts.
+ * @param {string} root
+ */
+export function treeHasTypecheckScript(root) {
+  const pkg = readPackageJson(root);
+  if (packageScriptsHaveTypecheck(pkg?.scripts)) return true;
+  return someNestedPackageJson(root, (nested) => packageScriptsHaveTypecheck(nested.scripts));
 }
 
 /**
@@ -96,7 +109,7 @@ export function treeHasTypecheckScript(root) {
  * True when `typescript` is declared by the project (deps/devDeps/peerDeps) or resolves
  * from its root (e.g. hoisted in a workspace), so a generated `tsc --noEmit` can run.
  */
-export function projectHasTypeScript(root, pkg = readPackageJson(root) || {}) {
+function projectHasTypeScript(root, pkg = readPackageJson(root) || {}) {
   for (const field of ['dependencies', 'devDependencies', 'peerDependencies']) {
     const deps = pkg?.[field];
     if (deps && typeof deps === 'object' && Object.hasOwn(deps, 'typescript')) return true;
@@ -142,7 +155,7 @@ export const REQUIRED_GATE_FILES = [
   '.mcp.json',
 ];
 export const REQUIRED_GATE_WORKFLOW = '.github/workflows/*.yml running ark-check';
-export const CI_NOT_FAIL_CLOSED_ERROR = 'ci-not-fail-closed';
+const CI_NOT_FAIL_CLOSED_ERROR = 'ci-not-fail-closed';
 const COMPACT_ROUTER = /<!--\s*arkgate:compact-router host=([a-z]+)\s*-->/;
 const FAIL_CLOSED_ARK_FLAG = /(?:^|\s)--(?:strict|strict-merge|require-gates)(?=\s|$)/;
 
@@ -317,16 +330,9 @@ export const CLAUDE_STYLE_HOOK_FILES = ['.claude/settings.json', '.codex/hooks.j
  * Preserves sibling servers and unknown top-level keys. Returns null if unreadable.
  */
 export function mergeArkMcpJson(existingText, generatedText) {
-  let existing;
-  let generated;
-  try {
-    existing = existingText && existingText.trim() ? JSON.parse(existingText) : {};
-    generated = JSON.parse(generatedText);
-  } catch {
-    return null;
-  }
-  if (!existing || typeof existing !== 'object' || Array.isArray(existing)) return null;
-  if (!generated || typeof generated !== 'object' || Array.isArray(generated)) return null;
+  const parsed = parseJsonMergeInputs(existingText, generatedText);
+  if (!parsed) return null;
+  const { existing, generated } = parsed;
   const generatedArk = generated.mcpServers?.ark;
   if (!generatedArk || typeof generatedArk !== 'object' || Array.isArray(generatedArk)) {
     return null;
@@ -604,71 +610,6 @@ function unquoteYamlScalar(value) {
   return match ? match[2].trim() : text;
 }
 
-function jobCondition(lines, job) {
-  const condition = jobProperty(lines, job, 'if');
-  if (!condition) return 'default';
-  const value = unquoteYamlScalar(condition.value);
-  if (/^(?:\$\{\{\s*)?always\(\)(?:\s*\}\})?$/i.test(value)) return 'always';
-  if (/^(?:true|\$\{\{\s*true\s*\}\})$/i.test(value)) return 'true';
-  return 'conditional';
-}
-
-function jobNeeds(lines, job) {
-  const property = jobProperty(lines, job, 'needs');
-  if (!property) return { ids: [], indexes: [], valid: true };
-  const indexes = [property.index];
-  if (property.value) {
-    const value = unquoteYamlScalar(property.value);
-    const raw = value.startsWith('[') && value.endsWith(']')
-      ? value.slice(1, -1).split(',')
-      : [value];
-    const ids = raw.map(unquoteYamlScalar).filter((id) => /^[A-Za-z0-9_-]+$/.test(id));
-    return { ids, indexes, valid: ids.length === raw.length && ids.length > 0 };
-  }
-  const ids = [];
-  for (let index = property.index + 1; index < job.end; index += 1) {
-    if (!lines[index].trim() || /^\s*#/.test(lines[index])) {
-      indexes.push(index);
-      continue;
-    }
-    const indent = lines[index].match(/^\s*/)?.[0].length ?? 0;
-    if (indent <= job.propertyIndent) break;
-    indexes.push(index);
-    const item = lines[index].match(/^\s*-\s*(['"]?)([A-Za-z0-9_-]+)\1\s*(?:#.*)?$/);
-    if (!item) return { ids: [], indexes, valid: false };
-    ids.push(item[2]);
-  }
-  return { ids, indexes, valid: ids.length > 0 };
-}
-
-function withVerifiedDependencyJobs(content) {
-  const { lines, jobs } = workflowJobSections(content);
-  const byId = new Map(jobs.map((job) => [job.id, job]));
-  const guaranteed = (job, seen = new Set()) => {
-    if (!job || seen.has(job.id)) return false;
-    const condition = jobCondition(lines, job);
-    if (condition === 'conditional') return false;
-    if (condition === 'always') return true;
-    const needs = jobNeeds(lines, job);
-    if (!needs.valid) return false;
-    const nextSeen = new Set(seen).add(job.id);
-    return needs.ids.every((id) => guaranteed(byId.get(id), nextSeen));
-  };
-  for (const job of jobs) {
-    const needs = jobNeeds(lines, job);
-    if (
-      needs.valid &&
-      needs.ids.length > 0 &&
-      needs.ids.every((id) => guaranteed(byId.get(id)))
-    ) {
-      // The shared analyzer treats every `needs` as skippable. Hide it only after
-      // this dependency chain is proven unconditional; keep uncertain/skipped needs visible.
-      for (const index of needs.indexes) lines[index] = '';
-    }
-  }
-  return lines.join('\n');
-}
-
 function isGuaranteedJobCondition(value) {
   const text = unquoteYamlScalar(value);
   return (
@@ -732,13 +673,13 @@ export function inspectArkCiGate(root) {
     } catch {
       continue;
     }
-    const prepared = withVerifiedDependencyJobs(withFailClosedArkActions(content));
+    // The shared analyzer proves `needs:` chains (github-enforcement.mjs), so this
+    // file-level view and doctor merge-gate evidence cannot disagree.
+    const prepared = withFailClosedArkActions(content);
     const failClosed = FAIL_CLOSED_ARK_FLAG.test(
       enforcingArkRunText(prepared, failClosedScript)
     );
-    const visible = withVerifiedDependencyJobs(
-      neutralizeSkippableJobControls(withFailClosedArkActions(content))
-    );
+    const visible = neutralizeSkippableJobControls(prepared);
     const present =
       failClosed ||
       runsArkCheck(visible, declaredScript) ||

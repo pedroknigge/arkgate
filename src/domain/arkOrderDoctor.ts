@@ -7,6 +7,9 @@ import {
   composeMergePlanesHonesty,
   extraMergeTeethAllowed,
   isArkOrderRuleId,
+  mergePlanesArkRulesInput,
+  projectExtraPlaneStatus,
+  type ExtraPlaneStatusInput,
   type ExtraMergeTeethClassificationInput,
   type MergePlanesHonesty,
 } from './extraMergeTeeth';
@@ -22,9 +25,9 @@ export const ARKORDER_ONE_BREATH =
 export const ARKORDER_FIRST_CONTACT_NEXT =
   'Next: see the billing gallery at github.com/pedroknigge/arkgate/tree/main/examples/arkorder-billing (git only, not in the npm package), then /ark-adopt to turn the extra on and /ark-order to wire one candidate.';
 
-export type ArkOrderDoctorMode = 'advisory' | 'enforced';
+type ArkOrderDoctorMode = 'advisory' | 'enforced';
 
-export type ArkOrderDoctorResidual = {
+type ArkOrderDoctorResidual = {
   count: number;
   ruleIds: string[];
 };
@@ -130,17 +133,7 @@ export function summarizeArkOrderSection(
   const residualCount = uniqueIds.length;
   const mergePlanes = composeMergePlanesHonesty({
     classification: input.classification,
-    arkRules: {
-      active: input.arkRules?.active === true,
-      structureEnforced: input.arkRules?.structureEnforced,
-      structureTotal: input.arkRules?.structureTotal,
-      structureAdvisory: input.arkRules?.structureAdvisory,
-      invariantEnforced: input.arkRules?.invariantEnforced,
-      invariantTotal: input.arkRules?.invariantTotal,
-      invariantAdvisory: input.arkRules?.invariantAdvisory,
-      covered: input.arkRules?.covered,
-      uncovered: input.arkRules?.uncovered,
-    },
+    arkRules: mergePlanesArkRulesInput(input.arkRules),
     arkRun: {
       present: input.arkRun?.present === true,
       mode: input.arkRun?.mode ?? null,
@@ -186,29 +179,8 @@ export function summarizeArkOrderSection(
 }
 
 /** Thin status slice — counts only; residual null means unknown, not green. */
-export function projectStatusArkOrder(
-  input: {
-    present?: boolean;
-    mode?: string | null;
-    extraMergeTeeth?: boolean;
-    residual?: number | null;
-  } = {}
-): ArkOrderStatusSlice {
-  const present = input.present === true;
-  const mode = closedMode(input.mode);
-  const residualRaw = input.residual;
-  let residual: number | null = null;
-  if (typeof residualRaw === 'number' && Number.isFinite(residualRaw) && residualRaw >= 0) {
-    residual = Math.floor(residualRaw);
-  }
-  if (!present) residual = residual == null ? 0 : residual;
-  return {
-    notAScore: true,
-    present,
-    mode: present ? mode : null,
-    extraMergeTeeth: present && mode === 'enforced' && input.extraMergeTeeth === true,
-    residual,
-  };
+export function projectStatusArkOrder(input: ExtraPlaneStatusInput = {}): ArkOrderStatusSlice {
+  return projectExtraPlaneStatus(input);
 }
 
 export function formatArkOrderDoctorLines(section: ArkOrderDoctorSection): string[] {

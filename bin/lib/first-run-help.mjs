@@ -111,16 +111,16 @@ Non-interactive (no TTY): uses the same defaults as --yes — never calls readli
 }
 
 /** `--sensors` is contract + coverage-evidence only — never a full-check pass. */
-export const SENSORS_PARTIAL_MODE_LINE =
+const SENSORS_PARTIAL_MODE_LINE =
   'Contract + coverage-evidence only: no TypeScript, no analysis. Not a validity verdict.';
 
-export const SENSORS_DID_NOT_RUN = Object.freeze(['TypeScript', 'analysis']);
+const SENSORS_DID_NOT_RUN = Object.freeze(['TypeScript', 'analysis']);
 
 /**
  * Stamp a successful `--sensors --json` payload so agents cannot read exit 0 as
  * a full-check pass. Failure payloads (`sensors.ok === false`) stay untouched.
  */
-export function stampSensorsPartialModePayload(payload) {
+function stampSensorsPartialModePayload(payload) {
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return payload;
   const sensors = payload.sensors;
   if (!sensors || typeof sensors !== 'object' || Array.isArray(sensors)) return payload;

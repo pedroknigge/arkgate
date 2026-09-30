@@ -4,7 +4,7 @@
  * governed files to a partial analysis verdict.
  */
 
-export const PARSE_HEALTH_FILE_CAP = 12;
+const PARSE_HEALTH_FILE_CAP = 12;
 
 function unavailableParseHealth(scannedFiles = 0) {
   return {

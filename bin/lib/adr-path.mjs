@@ -12,10 +12,10 @@ export const ADR_PATH_ASK =
 export const ADR_PATH_NEXT =
   'Add a short note under docs/adr/ (or docs/decisions/) and put that file path in --policy-ack as adrPath.';
 
-export const ADR_PATH_MISSING_FILE_ASK =
+const ADR_PATH_MISSING_FILE_ASK =
   'The acknowledgement names a decision note that is missing or empty.';
 
-export const ADR_PATH_MISSING_FILE_NEXT =
+const ADR_PATH_MISSING_FILE_NEXT =
   'Write that note (or fix adrPath) under docs/adr/ or docs/decisions/, then run ArkGate again.';
 
 /**
@@ -24,7 +24,7 @@ export const ADR_PATH_MISSING_FILE_NEXT =
  * @param {unknown} value
  * @returns {string | null}
  */
-export function canonicalizeAdrPath(value) {
+function canonicalizeAdrPath(value) {
   if (typeof value !== 'string') return null;
   const rel = value.trim().replace(/\\/g, '/');
   if (!rel || rel.startsWith('/') || /^[A-Za-z]:\//.test(rel) || rel.includes('\0')) return null;

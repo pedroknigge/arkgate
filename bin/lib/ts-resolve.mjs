@@ -171,6 +171,10 @@ export function isFile(candidate) {
 }
 
 export function resolveRelativeFallback(fromFile, specifier) {
+  // jscpd:ignore-start — same candidate order as resolveRelativeFallback in
+  // resolved-candidate-facts.mjs on purpose (lexical and resolved engines agree on
+  // extension fallback). That copy sits inside a pinned mutation range and probes
+  // through the compiler host; this unshipped one probes the disk with isFile.
   const base = path.resolve(path.dirname(fromFile), specifier);
   const candidates = [
     base, // only used when the specifier already carries an extension (isFile filters dirs)
@@ -187,6 +191,7 @@ export function resolveRelativeFallback(fromFile, specifier) {
     path.join(base, 'index.mts'),
     path.join(base, 'index.cts'),
   ];
+  // jscpd:ignore-end
   // isFile (not existsSync) so a directory named like the specifier never shadows the
   // real module file — e.g. `./foo` must not resolve to a `foo/` directory before `foo.mts`.
   return candidates.find(isFile);

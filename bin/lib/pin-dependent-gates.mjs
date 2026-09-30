@@ -16,7 +16,7 @@ const LOCAL_RUNNER_TEXT =
 const TOML_SERVER = /command\s*=\s*"([^"]*)"\s*\r?\nargs\s*=\s*\[([^\]]*)\]/g;
 
 /** Host hooks, package scripts, and MCP registrations Ark generates. */
-export const PIN_DEPENDENT_CANDIDATES = [
+const PIN_DEPENDENT_CANDIDATES = [
   '.claude/settings.json',
   '.codex/hooks.json',
   '.cursor/hooks.json',
@@ -40,7 +40,7 @@ function readText(file) {
 }
 
 /** True when this argv runs an Ark bin through a runner that needs the local pin. */
-export function argvDependsOnArkgatePin(command, args) {
+function argvDependsOnArkgatePin(command, args) {
   if (typeof command !== 'string' || !Array.isArray(args)) return false;
   const runner = path.basename(command.trim().replace(/\\/g, '/')).replace(/\.(?:cmd|exe)$/i, '');
   if (runner === 'npx') return npxArkgatePrefixLength(args) === 0 && ARK_BIN.test(args[0] ?? '');

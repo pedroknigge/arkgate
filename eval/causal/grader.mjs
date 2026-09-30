@@ -13,7 +13,7 @@ import {
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_TIMEOUT_MS = 120_000;
-export const GRADER_STAGES = Object.freeze(['integrity', 'architecture', 'typecheck', 'tests']);
+const GRADER_STAGES = Object.freeze(['integrity', 'architecture', 'typecheck', 'tests']);
 export const GRADER_BUNDLE_FILES = Object.freeze([
   'eval/causal/accept-task.mjs',
   'eval/causal/analyze.mjs',

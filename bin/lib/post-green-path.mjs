@@ -21,7 +21,7 @@ export const POST_GREEN_PRIMARY_SKILL = '/ark-explore';
 export const POST_GREEN_PRIMARY_ACTION = POST_GREEN_HUMAN;
 
 /** Short label for tables / metrics. */
-export const POST_GREEN_PRIMARY_SHORT =
+const POST_GREEN_PRIMARY_SHORT =
   '/ark-explore shape-focus → /ark-autopilot (apply one B pilot)  # Shape residual';
 
 /** Placement coaching while design residual remains (new code only). */

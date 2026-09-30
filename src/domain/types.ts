@@ -56,15 +56,3 @@ export interface DomainEvent<Name extends IntentName = IntentName, Payload = unk
   payload: Payload;
   metadata: EventMetadata;
 }
-
-/**
- * Branded intent definition.
- * Returned by defineIntent in later iterations.
- */
-export interface IntentDefinition<Name extends IntentName, Payload> {
-  readonly name: Name;
-  create(payload: Payload): DomainEvent<Name, Payload>;
-}
-
-// Re-export for convenience
-export type { IntentName as Intent };

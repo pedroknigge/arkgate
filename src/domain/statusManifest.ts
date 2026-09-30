@@ -17,6 +17,23 @@ import type { ProjectBinding, ProjectExpectation } from './projectIdentity';
 import { projectStatusArkRun, type ArkRunStatusSlice } from './arkRunDoctor';
 import { projectStatusArkOrder, type ArkOrderStatusSlice } from './arkOrderDoctor';
 
+/** Status slice schema of one extra plane (ArkRun / ArkOrder). */
+function extraPlaneStatusSchema(plane: 'ArkRun' | 'ArkOrder') {
+  return {
+    type: 'object',
+    description: `${plane} extra residual (notAScore). present/mode from config; residual is a finding-id count (null = unknown, not green). extraMergeTeeth is honesty, never a score.`,
+    additionalProperties: false,
+    required: ['notAScore', 'present', 'mode', 'extraMergeTeeth', 'residual'],
+    properties: {
+      notAScore: { const: true },
+      present: { type: 'boolean' },
+      mode: { anyOf: [{ enum: ['advisory', 'enforced'] }, { type: 'null' }] },
+      extraMergeTeeth: { type: 'boolean' },
+      residual: { anyOf: [{ type: 'integer', minimum: 0 }, { type: 'null' }] },
+    },
+  } as const;
+}
+
 export const ARK_STATUS_MANIFEST_SCHEMA_VERSION = '1.0' as const;
 export const ARK_STATUS_MANIFEST_SCHEMA_URL =
   'https://unpkg.com/arkgate@4/schemas/ark.status-manifest.schema.json';
@@ -145,13 +162,13 @@ export type StatusManifest = {
   arkOrder?: ArkOrderStatusSlice;
 };
 
-export type StatusContractSlice = {
+type StatusContractSlice = {
   valid: false;
   /** Validator messages (`<json path>: <message>`), in validator order. */
   errors: string[];
 };
 
-export type StatusVsBaseSlice = {
+type StatusVsBaseSlice = {
   baseRef: string;
   line: string;
   pinLocal: string | null;
@@ -935,33 +952,7 @@ export const ARK_STATUS_MANIFEST_SCHEMA = {
         baselineGrew: { type: 'boolean' },
       },
     },
-    arkRun: {
-      type: 'object',
-      description:
-        'ArkRun extra residual (notAScore). present/mode from config; residual is a finding-id count (null = unknown, not green). extraMergeTeeth is honesty, never a score.',
-      additionalProperties: false,
-      required: ['notAScore', 'present', 'mode', 'extraMergeTeeth', 'residual'],
-      properties: {
-        notAScore: { const: true },
-        present: { type: 'boolean' },
-        mode: { anyOf: [{ enum: ['advisory', 'enforced'] }, { type: 'null' }] },
-        extraMergeTeeth: { type: 'boolean' },
-        residual: { anyOf: [{ type: 'integer', minimum: 0 }, { type: 'null' }] },
-      },
-    },
-    arkOrder: {
-      type: 'object',
-      description:
-        'ArkOrder extra residual (notAScore). present/mode from config; residual is a finding-id count (null = unknown, not green). extraMergeTeeth is honesty, never a score.',
-      additionalProperties: false,
-      required: ['notAScore', 'present', 'mode', 'extraMergeTeeth', 'residual'],
-      properties: {
-        notAScore: { const: true },
-        present: { type: 'boolean' },
-        mode: { anyOf: [{ enum: ['advisory', 'enforced'] }, { type: 'null' }] },
-        extraMergeTeeth: { type: 'boolean' },
-        residual: { anyOf: [{ type: 'integer', minimum: 0 }, { type: 'null' }] },
-      },
-    },
+    arkRun: extraPlaneStatusSchema('ArkRun'),
+    arkOrder: extraPlaneStatusSchema('ArkOrder'),
   },
 } as const;

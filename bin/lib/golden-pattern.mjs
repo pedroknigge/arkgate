@@ -10,7 +10,7 @@ import path from 'node:path';
 /** Relative path from project root (stable contract). */
 export const GOLDEN_PATTERN_REL = '.ark/golden-pattern.json';
 
-export const GOLDEN_PATTERN_SCHEMA_VERSION = '1';
+const GOLDEN_PATTERN_SCHEMA_VERSION = '1';
 
 /**
  * @typedef {{

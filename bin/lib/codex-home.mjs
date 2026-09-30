@@ -9,7 +9,7 @@ import path from 'node:path';
 import { execCommandParts } from '../ark-shared.mjs';
 import { npxArkgatePrefixLength } from './package-manager.mjs';
 
-export const PREFERRED_CODEX_MCP_BIN = 'arkgate-mcp';
+const PREFERRED_CODEX_MCP_BIN = 'arkgate-mcp';
 
 /** Where Codex loads slash-command prompts ($CODEX_HOME/prompts) — legacy, not the skill catalog. */
 export function codexPromptsDir() {

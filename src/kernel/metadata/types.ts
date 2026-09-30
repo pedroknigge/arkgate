@@ -20,7 +20,7 @@ export interface FieldMeta {
   [key: string]: unknown;
 }
 
-export interface EntityRuleMeta {
+interface EntityRuleMeta {
   name: string;
   description?: string;
   severity?: 'hard' | 'soft';

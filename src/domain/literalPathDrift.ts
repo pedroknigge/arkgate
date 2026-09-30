@@ -61,7 +61,7 @@ export const LITERAL_PATH_DRIFT_RULE_ID = 'LITERAL_PATH_DRIFT' as const;
 export const LITERAL_PATH_UNRESOLVED_RULE_ID = 'LITERAL_PATH_UNRESOLVED' as const;
 
 /** Which of the four field forms a literal was written in. */
-export type LiteralPathForm = 'alias' | 'relative' | 'rootless' | 'prose';
+type LiteralPathForm = 'alias' | 'relative' | 'rootless' | 'prose';
 
 /** One rename, both sides repo-relative and POSIX-separated. */
 export type PathRename = {
@@ -204,9 +204,12 @@ const MAX_TOKEN_LENGTH = 200;
  * Alias map used when the caller declares none: the `@/` convention over `src/`.
  * The CLI side derives the real map from the project's tsconfig `paths`.
  */
-export const DEFAULT_ALIASES: Readonly<Record<string, string>> = Object.freeze({ '@/': 'src/' });
+const DEFAULT_ALIASES: Readonly<Record<string, string>> = Object.freeze({ '@/': 'src/' });
 
-/** Include roots assumed when the contract declares none. */
+/**
+ * Include roots assumed when the contract declares none.
+ * @cliMirror bin/lib/literal-path-drift-io.mjs
+ */
 export const DEFAULT_INCLUDE_ROOTS: readonly string[] = Object.freeze(['src']);
 
 /**

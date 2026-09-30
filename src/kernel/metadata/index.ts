@@ -1,2 +1,2 @@
 export * from './types';
-export { createMetadataRegistry, MetadataRegistryImpl } from './MetadataRegistry';
+export { createMetadataRegistry,  } from './MetadataRegistry';

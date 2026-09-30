@@ -5,14 +5,13 @@ import {
   type ResolvedCandidateFactsInput,
 } from '../domain/analysis';
 import type {
-  AnalysisContract,
+  AnalyzeResolvedProjectInput,
   PreflightResolvedChangeInput,
   ResolvedAnalysisResult,
   ResolvedChangePreflightResult,
 } from './analysisTypes';
 import { analyzeCanonicalResolvedProject } from './resolvedAnalysis';
 import { preflightCanonicalChange, preflightResolvedChange } from './resolvedChangePreflight';
-import type { ArkgatePinEvidence } from '../domain/configVersionFloor';
 
 const trustedResolvedFacts = new WeakSet<ResolvedCandidateFacts>();
 
@@ -32,34 +31,9 @@ export function createTrustedResolvedCandidateFacts(
 }
 
 /** Only immutable canonical facts created by this bundle instance may skip validation. */
-export function analyzeTrustedResolvedProject(input: {
-  contract: AnalysisContract;
-  facts: ResolvedCandidateFacts;
-  adopted?: boolean;
-  invariantTestsPathPresent?: boolean;
-  coverageRootsPresent?: boolean;
-  arkgatePins?: readonly ArkgatePinEvidence[];
-  runningArkgateVersion?: string;
-  coverageInputs?: {
-    fileContents: Readonly<Record<string, string>>;
-    testFiles?: readonly string[];
-    testGlobsMissing?: boolean;
-    coverageBudgetExhausted?: boolean;
-    /** Declared `coverage.coverageRoots`: where the project says its runner runs. */
-    coverageRoots?: readonly string[];
-    stats?: import('../domain/invariantCoverage').InvariantCoverageStats;
-  };
-  fileHints?: Readonly<
-    Record<
-      string,
-      {
-        orchestrationHeavy?: boolean;
-        adapterThick?: boolean;
-        persistenceWrite?: boolean;
-      }
-    >
-  >;
-}): ResolvedAnalysisResult {
+export function analyzeTrustedResolvedProject(
+  input: Omit<AnalyzeResolvedProjectInput, 'facts'> & { facts: ResolvedCandidateFacts }
+): ResolvedAnalysisResult {
   if (!trustedResolvedFacts.has(input.facts)) {
     throw new Error('Trusted resolved analysis requires immutable in-process canonical facts.');
   }

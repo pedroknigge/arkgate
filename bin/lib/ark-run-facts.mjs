@@ -23,14 +23,14 @@ export const ARKRUN_KERNEL_FACTORY_CALLEES = [
  * count as a kernel factory only when `ArkModule` is imported from a kernel module
  * (`arkgate/nestjs`). A bare `.forRoot(` on any other receiver never counts.
  */
-export const ARKRUN_NEST_KERNEL_MODULE = 'ArkModule';
-export const ARKRUN_NEST_FACTORY_METHODS = ['forRoot', 'forRootAsync'];
+const ARKRUN_NEST_KERNEL_MODULE = 'ArkModule';
+const ARKRUN_NEST_FACTORY_METHODS = ['forRoot', 'forRootAsync'];
 /**
  * Kernel types whose annotated bindings (`ark: ArkKernel`, constructor-injected
  * `private readonly ark: ArkKernel`) are traced as kernel receivers when the type
  * is imported from a kernel module.
  */
-export const ARKRUN_KERNEL_RECEIVER_TYPES = [
+const ARKRUN_KERNEL_RECEIVER_TYPES = [
     'ArkKernel',
     'EventBus',
     'EventPublisher',
@@ -310,21 +310,33 @@ export function extractArkRunValueImportDependenciesFromSource(file, content) {
     }
     return out;
 }
+/**
+ * Value bindings of a braced import list (`{ A, B as C }`): local name plus the
+ * imported (original) name. Inline `type` specifiers are skipped.
+ */
+function bracedValueImportBindings(clause) {
+    const braced = /\{([^}]*)\}/.exec(clause);
+    if (!braced?.[1])
+        return [];
+    const out = [];
+    for (const part of braced[1].split(',')) {
+        const piece = part.trim();
+        if (!piece || piece.startsWith('type '))
+            continue;
+        const alias = /^([A-Za-z_][A-Za-z0-9_]*)\s+as\s+([A-Za-z_][A-Za-z0-9_]*)$/.exec(piece);
+        const local = alias?.[2] ?? /^([A-Za-z_][A-Za-z0-9_]*)$/.exec(piece)?.[1];
+        const original = alias?.[1] ?? local;
+        if (local && original)
+            out.push({ local, original });
+    }
+    return out;
+}
 /** PascalCase named bindings from value import clauses (snippet admitted constructors). */
 export function extractArkRunImportedConstructorNamesFromSource(content) {
     const names = [];
     forEachArkRunValueImportClause(content, (clause) => {
-        const braced = /\{([^}]*)\}/.exec(clause);
-        if (!braced?.[1])
-            return;
-        for (const part of braced[1].split(',')) {
-            const piece = part.trim();
-            if (!piece || piece.startsWith('type '))
-                continue;
-            const alias = /^([A-Za-z_][A-Za-z0-9_]*)\s+as\s+([A-Za-z_][A-Za-z0-9_]*)$/.exec(piece);
-            const local = alias?.[2] ?? /^([A-Za-z_][A-Za-z0-9_]*)$/.exec(piece)?.[1];
-            const original = alias?.[1] ?? local;
-            if (local && original && /^[A-Z]/.test(original))
+        for (const { local, original } of bracedValueImportBindings(clause)) {
+            if (/^[A-Z]/.test(original))
                 names.push(local, original);
         }
     });
@@ -342,21 +354,8 @@ function collectKernelImportBindings(content) {
         const defaultIdent = /^([A-Za-z_][A-Za-z0-9_]*)\s*(?:,|$)/.exec(clause.trim());
         if (defaultIdent?.[1])
             named.set(defaultIdent[1], defaultIdent[1]);
-        const braced = /\{([^}]*)\}/.exec(clause);
-        if (!braced?.[1])
-            return;
-        for (const part of braced[1].split(',')) {
-            const piece = part.trim();
-            if (!piece || piece.startsWith('type '))
-                continue;
-            const alias = /^([A-Za-z_][A-Za-z0-9_]*)\s+as\s+([A-Za-z_][A-Za-z0-9_]*)$/.exec(piece);
-            if (alias) {
-                named.set(alias[2], alias[1]);
-                continue;
-            }
-            const ident = /^([A-Za-z_][A-Za-z0-9_]*)$/.exec(piece);
-            if (ident?.[1])
-                named.set(ident[1], ident[1]);
+        for (const { local, original } of bracedValueImportBindings(clause)) {
+            named.set(local, original);
         }
     });
     return { named, namespaces };
@@ -364,17 +363,8 @@ function collectKernelImportBindings(content) {
 function collectImportedConstructors(content, admitted) {
     const out = new Set(admitted);
     parseValueImportClause(content, (clause, specifier) => {
-        const braced = /\{([^}]*)\}/.exec(clause);
-        if (!braced?.[1])
-            return;
-        for (const part of braced[1].split(',')) {
-            const piece = part.trim();
-            if (!piece || piece.startsWith('type '))
-                continue;
-            const alias = /^([A-Za-z_][A-Za-z0-9_]*)\s+as\s+([A-Za-z_][A-Za-z0-9_]*)$/.exec(piece);
-            const local = alias?.[2] ?? /^([A-Za-z_][A-Za-z0-9_]*)$/.exec(piece)?.[1];
-            const original = alias?.[1] ?? local;
-            if (!local || !original || !/^[A-Z]/.test(original))
+        for (const { local, original } of bracedValueImportBindings(clause)) {
+            if (!/^[A-Z]/.test(original))
                 continue;
             if (isArkRunKernelModuleSpecifier(specifier) || admitted.has(original) || admitted.has(local)) {
                 out.add(local);

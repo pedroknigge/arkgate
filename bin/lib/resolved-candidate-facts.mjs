@@ -58,7 +58,7 @@ import {
   normalize,
 } from './scan-files.mjs';
 
-export const RESOLVED_FACTS_RESOLVER_IDENTITY = 'arkgate-typescript-resolver@1';
+const RESOLVED_FACTS_RESOLVER_IDENTITY = 'arkgate-typescript-resolver@1';
 
 const IN_MEMORY_STORES = new Set([
   'InMemoryAuditStore',
@@ -995,7 +995,8 @@ function objectLiteralHasProperty(ts, object, name) {
   );
 }
 
-function tsSuppressionPositions(sourceFile, source) {
+/** Start offsets of `@ts-ignore` directives and `@ts-nocheck` pragmas in a parsed file. */
+export function tsSuppressionPositions(sourceFile, source) {
   const positions = new Set();
   for (const directive of sourceFile.commentDirectives ?? []) {
     const start = directive.range?.pos;
@@ -1010,6 +1011,79 @@ function tsSuppressionPositions(sourceFile, source) {
     if (Number.isInteger(entry.range?.pos)) positions.add(entry.range.pos);
   }
   return [...positions];
+}
+
+const ARKGATE_RUNTIME_SPECIFIER = /^arkgate(?:\/runtime)?$/;
+
+/**
+ * Local bindings of the arkgate kernel factories whose omitted options fall back
+ * to in-memory stores: named imports (local name → factory) plus namespace
+ * imports of `arkgate` / `arkgate/runtime`.
+ */
+export function arkInMemoryFactoryBindings(ts, sourceFile) {
+  const importedFactories = new Map();
+  const arkNamespaces = new Set();
+  for (const statement of sourceFile.statements) {
+    if (!ts.isImportDeclaration(statement) || !ts.isStringLiteralLike(statement.moduleSpecifier)) {
+      continue;
+    }
+    if (!ARKGATE_RUNTIME_SPECIFIER.test(statement.moduleSpecifier.text)) continue;
+    const bindings = statement.importClause?.namedBindings;
+    if (bindings && ts.isNamespaceImport(bindings)) arkNamespaces.add(bindings.name.text);
+    if (!bindings || !ts.isNamedImports(bindings)) continue;
+    for (const element of bindings.elements) {
+      const imported = element.propertyName?.text ?? element.name.text;
+      const requirements = IN_MEMORY_DEFAULT_FACTORIES.get(imported);
+      if (requirements) importedFactories.set(element.name.text, { imported, requirements });
+    }
+  }
+  return { importedFactories, arkNamespaces };
+}
+
+/** Named `InMemory*Store` imports of an arkgate import declaration. */
+export function arkInMemoryStoreImports(ts, node) {
+  const specifier = node.moduleSpecifier;
+  if (!ts.isStringLiteralLike(specifier) || !ARKGATE_RUNTIME_SPECIFIER.test(specifier.text)) {
+    return [];
+  }
+  const elements =
+    node.importClause?.namedBindings && ts.isNamedImports(node.importClause.namedBindings)
+      ? node.importClause.namedBindings.elements
+      : [];
+  const out = [];
+  for (const element of elements) {
+    const imported = element.propertyName?.text ?? element.name.text;
+    if (IN_MEMORY_STORES.has(imported)) out.push({ element, imported });
+  }
+  return out;
+}
+
+/**
+ * The factory a call expression invokes when that call definitely takes the
+ * in-memory defaults (no options, `undefined`, or an object literal missing a
+ * required store); otherwise undefined.
+ */
+export function inMemoryDefaultsFactoryCall(ts, node, { importedFactories, arkNamespaces }) {
+  let factory;
+  if (ts.isIdentifier(node.expression)) {
+    factory = importedFactories.get(node.expression.text);
+  } else if (
+    ts.isPropertyAccessExpression(node.expression) &&
+    ts.isIdentifier(node.expression.expression) &&
+    arkNamespaces.has(node.expression.expression.text)
+  ) {
+    const imported = node.expression.name.text;
+    const requirements = IN_MEMORY_DEFAULT_FACTORIES.get(imported);
+    if (requirements) factory = { imported, requirements };
+  }
+  if (!factory) return undefined;
+  const options = node.arguments[0];
+  const definitelyDefaults =
+    !options ||
+    (ts.isIdentifier(options) && options.text === 'undefined') ||
+    (ts.isObjectLiteralExpression(options) &&
+      factory.requirements.some((name) => !objectLiteralHasProperty(ts, options, name)));
+  return definitelyDefaults ? factory : undefined;
 }
 
 function collectSafetyUses(ts, sourceFile, relativePath, source, dependencies) {
@@ -1027,22 +1101,7 @@ function collectSafetyUses(ts, sourceFile, relativePath, source, dependencies) {
     });
   }
 
-  const importedFactories = new Map();
-  const arkNamespaces = new Set();
-  for (const statement of sourceFile.statements) {
-    if (!ts.isImportDeclaration(statement) || !ts.isStringLiteralLike(statement.moduleSpecifier)) {
-      continue;
-    }
-    if (!/^arkgate(?:\/runtime)?$/.test(statement.moduleSpecifier.text)) continue;
-    const bindings = statement.importClause?.namedBindings;
-    if (bindings && ts.isNamespaceImport(bindings)) arkNamespaces.add(bindings.name.text);
-    if (!bindings || !ts.isNamedImports(bindings)) continue;
-    for (const element of bindings.elements) {
-      const imported = element.propertyName?.text ?? element.name.text;
-      const requirements = IN_MEMORY_DEFAULT_FACTORIES.get(imported);
-      if (requirements) importedFactories.set(element.name.text, { imported, requirements });
-    }
-  }
+  const factoryBindings = arkInMemoryFactoryBindings(ts, sourceFile);
 
   const visit = (node) => {
     if (
@@ -1057,56 +1116,25 @@ function collectSafetyUses(ts, sourceFile, relativePath, source, dependencies) {
     }
 
     if (ts.isImportDeclaration(node)) {
-      const specifier = node.moduleSpecifier;
-      const fromArk =
-        ts.isStringLiteralLike(specifier) && /^arkgate(?:\/runtime)?$/.test(specifier.text);
-      if (fromArk) {
-        const elements =
-          node.importClause?.namedBindings && ts.isNamedImports(node.importClause.namedBindings)
-            ? node.importClause.namedBindings.elements
-            : [];
-        for (const element of elements) {
-          const imported = element.propertyName?.text ?? element.name.text;
-          if (IN_MEMORY_STORES.has(imported)) {
-            facts.push({
-              file: relativePath,
-              line: lineOf(sourceFile, element.getStart(sourceFile)),
-              kind: 'in-memory-store',
-              symbol: imported,
-            });
-          }
-        }
+      for (const { element, imported } of arkInMemoryStoreImports(ts, node)) {
+        facts.push({
+          file: relativePath,
+          line: lineOf(sourceFile, element.getStart(sourceFile)),
+          kind: 'in-memory-store',
+          symbol: imported,
+        });
       }
     }
 
     if (ts.isCallExpression(node)) {
-      let factory;
-      if (ts.isIdentifier(node.expression)) {
-        factory = importedFactories.get(node.expression.text);
-      } else if (
-        ts.isPropertyAccessExpression(node.expression) &&
-        ts.isIdentifier(node.expression.expression) &&
-        arkNamespaces.has(node.expression.expression.text)
-      ) {
-        const imported = node.expression.name.text;
-        const requirements = IN_MEMORY_DEFAULT_FACTORIES.get(imported);
-        if (requirements) factory = { imported, requirements };
-      }
+      const factory = inMemoryDefaultsFactoryCall(ts, node, factoryBindings);
       if (factory) {
-        const options = node.arguments[0];
-        const definitelyDefaults =
-          !options ||
-          (ts.isIdentifier(options) && options.text === 'undefined') ||
-          (ts.isObjectLiteralExpression(options) &&
-            factory.requirements.some((name) => !objectLiteralHasProperty(ts, options, name)));
-        if (definitelyDefaults) {
-          facts.push({
-            file: relativePath,
-            line: lineOf(sourceFile, node.getStart(sourceFile)),
-            kind: 'in-memory-store',
-            symbol: `${factory.imported} defaults`,
-          });
-        }
+        facts.push({
+          file: relativePath,
+          line: lineOf(sourceFile, node.getStart(sourceFile)),
+          kind: 'in-memory-store',
+          symbol: `${factory.imported} defaults`,
+        });
       }
     }
     ts.forEachChild(node, visit);

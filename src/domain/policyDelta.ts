@@ -610,16 +610,26 @@ function compareChildSlices(
   compareSliceAliases(findings, path, previous, candidate);
 }
 
+/** Entries added / removed between two ordered string lists; null when identical. */
+function stringListDelta(
+  previous: string[],
+  candidate: string[]
+): { added: string[]; removed: string[]; bothWays: boolean } | null {
+  if (JSON.stringify(previous) === JSON.stringify(candidate)) return null;
+  const added = candidate.filter((value) => !previous.includes(value));
+  const removed = previous.filter((value) => !candidate.includes(value));
+  return { added, removed, bothWays: added.length > 0 && removed.length > 0 };
+}
+
 function compareSiblingEnforceList(
   findings: PolicyDeltaFinding[],
   path: string,
   previous: string[],
   candidate: string[]
 ): void {
-  if (JSON.stringify(previous) === JSON.stringify(candidate)) return;
-  const added = candidate.filter((value) => !previous.includes(value));
-  const removed = previous.filter((value) => !candidate.includes(value));
-  const bothWays = added.length > 0 && removed.length > 0;
+  const delta = stringListDelta(previous, candidate);
+  if (!delta) return;
+  const { added, bothWays } = delta;
   addFinding(findings, {
     kind: bothWays ? 'child-slices-siblings-enforce-changed' : 'child-slices-siblings-enforce',
     path,
@@ -772,10 +782,9 @@ function compareDeclaredExceptions(
   addedMessage: string,
   removedMessage: string
 ): void {
-  if (JSON.stringify(previous) === JSON.stringify(candidate)) return;
-  const added = candidate.filter((value) => !previous.includes(value));
-  const removed = previous.filter((value) => !candidate.includes(value));
-  const bothWays = added.length > 0 && removed.length > 0;
+  const delta = stringListDelta(previous, candidate);
+  if (!delta) return;
+  const { added, bothWays } = delta;
   addFinding(findings, {
     kind: bothWays
       ? `${kindPrefix}-changed`

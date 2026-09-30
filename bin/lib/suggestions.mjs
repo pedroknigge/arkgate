@@ -19,7 +19,7 @@ export function dirSegmentsFromGlob(pattern) {
  * Basename / path tokens that score as Persistence (data clients, auth, CRM).
  * Used so adopt never maps lib/turso → Presentation (NEW-ADOPT-LIB-AS-PRESENTATION).
  */
-export const PERSISTENCE_PATH_TOKENS = Object.freeze([
+const PERSISTENCE_PATH_TOKENS = Object.freeze([
   'turso',
   'prisma',
   'supabase',
@@ -64,7 +64,7 @@ export function isPersistenceClientPath(relPath) {
 }
 
 /** True when a path looks like pure domain folders. */
-export function isDomainPath(relPath) {
+function isDomainPath(relPath) {
   const posix = String(relPath || '')
     .split(/[/\\]/)
     .filter(Boolean)
@@ -81,7 +81,7 @@ let _layerByDir;
 // Map<dirBasename, string[] layers>. A basename mapping to >1 layer (e.g. `app` — Application
 // orchestration in the 11-layer defaults, but Presentation in the monorepo/Next preset) is
 // genuinely ambiguous; every candidate is surfaced rather than silently picked.
-export function layerByDir() {
+function layerByDir() {
   if (_layerByDir) return _layerByDir;
   const map = new Map();
   const add = (segment, layer) => {

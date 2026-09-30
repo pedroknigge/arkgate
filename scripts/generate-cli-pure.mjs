@@ -5,6 +5,7 @@
  * Canonical → derived (committed for zero-build CLI on npm):
  *   src/domain/remediation.ts  → bin/lib/remediation.mjs
  *   src/domain/baselineKey.ts  → bin/lib/baseline-key.mjs
+ *   src/domain/schemaValidation.ts → bin/lib/schema-validation.mjs
  *   src/domain/configContractSlices.ts → bin/lib/config-contract-slices.mjs
  *   src/domain/configContract.ts → bin/lib/config-contract.mjs
  *                                → schemas/ark.config.schema.json
@@ -31,7 +32,6 @@
  *   src/domain/arkRunSensors.ts → bin/lib/ark-run-sensors.mjs
  *   src/domain/arkRunDoctor.ts → bin/lib/ark-run-doctor.mjs
  *   src/domain/arkOrderDoctor.ts → bin/lib/ark-order-doctor.mjs
- *   src/domain/stableHash.ts → bin/lib/stable-hash.mjs
  *   src/domain/persistenceWriteHint.ts → bin/lib/persistence-write-hint.mjs
  *   src/domain/literalPathDrift.ts → bin/lib/literal-path-drift.mjs
  *   src/domain/classSourceScan.ts → bin/lib/class-source-scan.mjs
@@ -70,6 +70,11 @@ const MODULES = [
     canonical: 'src/domain/configExtras.ts',
     derived: 'bin/lib/config-extras.mjs',
     label: 'opt-in arkRun / arkOrder extra defaults + schema $defs',
+  },
+  {
+    canonical: 'src/domain/schemaValidation.ts',
+    derived: 'bin/lib/schema-validation.mjs',
+    label: 'JSON-Schema-subset walker shared by the config + ArkRules contracts',
   },
   {
     canonical: 'src/domain/configContractSlices.ts',
@@ -156,24 +161,9 @@ const MODULES = [
     label: 'ArkOrder tier-1 sensors (ADR 0029)',
   },
   {
-    canonical: 'src/domain/stableHash.ts',
-    derived: 'bin/lib/stable-hash.mjs',
-    label: 'portable FNV-1a hash + stable serialize (identity only)',
-  },
-  {
     canonical: 'src/domain/persistenceWriteHint.ts',
     derived: 'bin/lib/persistence-write-hint.mjs',
     label: 'persistence driver import + receiver-bound write evidence (ArkRules / ArkOrder)',
-  },
-  {
-    canonical: 'src/domain/arkOrderInvariants.ts',
-    derived: 'bin/lib/ark-order-invariants.mjs',
-    label: 'ArkOrder Haken invariants (freeze / ingest / blast)',
-  },
-  {
-    canonical: 'src/domain/arkOrderError.ts',
-    derived: 'bin/lib/ark-order-error.mjs',
-    label: 'ArkOrder domain error',
   },
   {
     canonical: 'src/domain/arkOrderTypes.ts',
@@ -298,16 +288,23 @@ function stripLeadingBlockComment(js) {
 }
 
 /**
- * Map Domain TS basenames (no extension) → derived bin/lib basename for
- * multi-file pure modules (e.g. improvementCompass → improvement-compass.mjs).
+ * Domain modules derived by another generator, as seen from bin/lib.
+ * layerMatch.ts → bin/ark-layer-match.mjs (scripts/generate-layer-match.mjs).
+ */
+const EXTERNAL_DERIVED_SPECIFIERS = new Map([['layerMatch', '../ark-layer-match.mjs']]);
+
+/**
+ * Map Domain TS basenames (no extension) → derived relative specifier from
+ * bin/lib for multi-file pure modules (e.g. improvementCompass →
+ * ./improvement-compass.mjs, layerMatch → ../ark-layer-match.mjs).
  */
 function buildCanonicalImportRewriteMap() {
   /** @type {Map<string, string>} */
-  const map = new Map();
+  const map = new Map(EXTERNAL_DERIVED_SPECIFIERS);
   for (const mod of MODULES) {
     if (!mod.derived) continue;
     const base = path.basename(mod.canonical, path.extname(mod.canonical));
-    map.set(base, path.basename(mod.derived));
+    map.set(base, `./${path.basename(mod.derived)}`);
   }
   return map;
 }
@@ -328,15 +325,15 @@ function rewriteRelativeDomainImports(transpiledSource, importRewriteMap, canoni
         .replace(/\.js$/i, '')
         .replace(/\.ts$/i, '')
         .replace(/\.mjs$/i, '');
-      const derivedBase = importRewriteMap.get(bare);
-      if (!derivedBase) {
+      const derivedSpecifier = importRewriteMap.get(bare);
+      if (!derivedSpecifier) {
         throw new Error(
           `generate-cli-pure: unmapped relative import '${spec}' in ${canonicalRel}; ` +
             'add its canonical Domain module to MODULES (with a derived bin/lib path) ' +
             'or inline the helper so the shipped CLI module can load.'
         );
       }
-      return `${pre}./${derivedBase}${post}`;
+      return `${pre}${derivedSpecifier}${post}`;
     }
   );
 }
@@ -363,8 +360,16 @@ function transpileCanonicalSource(canonicalRel, canonicalTs, importRewriteMap) {
   return rewriteRelativeDomainImports(stripped, importRewriteMap, canonicalRel);
 }
 
+/**
+ * `@cliMirror` marks a Domain export that only this mirror's bin consumers use (knip.jsonc
+ * `tags`). The mirror's own exports are not checked, so the tag is dropped here.
+ */
+function stripCliMirrorTags(source) {
+  return source.replace(/^[ \t]*\*[ \t]*@cliMirror\b[^\n]*\n/gm, '');
+}
+
 function buildDerivedSource(canonicalRel, derivedRel, transpiledSource) {
-  return `${banner(canonicalRel, derivedRel)}\n${transpiledSource}`;
+  return `${banner(canonicalRel, derivedRel)}\n${stripCliMirrorTags(transpiledSource)}`;
 }
 
 function normalizeNewlines(s) {

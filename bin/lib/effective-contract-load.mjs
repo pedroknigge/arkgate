@@ -37,7 +37,7 @@ export function normalizeProjectRelativePath(value) {
   return segments.length > 0 ? segments.join('/') : undefined;
 }
 
-export function isWithinRoot(root, candidate) {
+function isWithinRoot(root, candidate) {
   const relative = path.relative(root, candidate);
   return (
     relative === '' ||
@@ -278,7 +278,7 @@ function unreferencedArkRulesWarnings(canonicalRoot, referenced) {
   return warnings;
 }
 
-export const ARKRULE_FILE_UNREFERENCED = 'ARKRULE_FILE_UNREFERENCED';
+const ARKRULE_FILE_UNREFERENCED = 'ARKRULE_FILE_UNREFERENCED';
 
 /**
  * Loader drift warnings as advisory check warnings (never fail --strict-config).

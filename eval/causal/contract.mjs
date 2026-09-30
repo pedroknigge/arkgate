@@ -6,7 +6,7 @@ import {
 } from './task-materialize.mjs';
 
 export const LEDGER_GENESIS_HASH = '0'.repeat(64);
-export const REQUIRED_MUTATION_RANGES = Object.freeze({
+const REQUIRED_MUTATION_RANGES = Object.freeze({
   'analysis-completeness': 'bin/lib/analysis-completeness.mjs',
   'resolved-candidate-facts': 'bin/lib/resolved-candidate-facts.mjs',
   'managed-upgrade': 'bin/lib/managed-upgrade.mjs',
@@ -522,10 +522,6 @@ export function freezeManifest(input) {
   const manifest = validateAndFreezeManifest(input);
   const canonical = canonicalJson(manifest);
   return Object.freeze({ manifest, canonical, sha256: rawSha256(canonical) });
-}
-
-export function manifestSha256(input) {
-  return freezeManifest(input).sha256;
 }
 
 function findRun(manifest, cellId) {

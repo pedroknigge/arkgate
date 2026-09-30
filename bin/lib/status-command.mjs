@@ -30,6 +30,7 @@ import { projectStatusArkRun } from './ark-run-doctor.mjs';
 import { projectStatusArkOrder } from './ark-order-doctor.mjs';
 import { collectVsBaseFacts, discoverTeamBaseRef } from './team-parliament-io.mjs';
 import { classifyAdopted, readAdoptionStance } from './adoption-stance.mjs';
+import { lastCheckVerdictFacts } from './upstream-report.mjs';
 
 function sha256Hex(value) {
   return createHash('sha256').update(value, 'utf8').digest('hex');
@@ -115,24 +116,7 @@ export function lastCheckFactsFromSnapshot(latest, baseline) {
       frozenResidual,
     };
   }
-  const at =
-    typeof latest.generatedAt === 'string'
-      ? latest.generatedAt
-      : typeof latest.at === 'string'
-        ? latest.at
-        : null;
-  const active =
-    typeof latest.activeViolations === 'number'
-      ? latest.activeViolations
-      : typeof latest.violations?.active === 'number'
-        ? latest.violations.active
-        : null;
-  let verdict = null;
-  if (latest.ok === true && (active == null || active === 0)) verdict = 'pass';
-  else if (latest.ok === false || (typeof active === 'number' && active > 0)) verdict = 'fail';
-  else if (latest.completeness === 'partial' || latest.completeness === 'unavailable') {
-    verdict = 'incomplete';
-  } else if (latest.ok === true) verdict = 'pass';
+  const { at, active, verdict } = lastCheckVerdictFacts(latest);
   return {
     lastCheckAt: at,
     lastCheckVerdict: verdict,
