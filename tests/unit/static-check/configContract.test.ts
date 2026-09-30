@@ -54,16 +54,23 @@ function runCheck(root: string, config = 'ark.config.json') {
   );
 }
 
-function repositoryConfigFiles(directory = REPO_ROOT, found: string[] = []): string[] {
-  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
-    if (entry.name === '.git' || entry.name === 'dist' || entry.name === 'node_modules') continue;
-    const absolute = path.join(directory, entry.name);
-    if (entry.isDirectory()) repositoryConfigFiles(absolute, found);
-    else if (entry.name === 'ark.config.json') {
-      found.push(path.relative(REPO_ROOT, absolute).split(path.sep).join('/'));
-    }
-  }
-  return found.sort();
+/**
+ * Every `ark.config.json` the repository owns: tracked files plus untracked files git does
+ * not ignore. Git-ignored trees (agent worktrees under `.claude/`, node_modules, dist) are
+ * local leftovers, so a directory walk would make the test count machine-dependent.
+ */
+function repositoryConfigFiles(): string[] {
+  const listed = spawnSync(
+    'git',
+    ['ls-files', '-z', '--cached', '--others', '--exclude-standard', '--', '*ark.config.json'],
+    { cwd: REPO_ROOT, encoding: 'utf8' }
+  );
+  if (listed.status !== 0) throw new Error(`git ls-files failed: ${listed.stderr}`);
+  const files = listed.stdout
+    .split('\0')
+    .filter((rel) => rel !== '' && path.posix.basename(rel) === 'ark.config.json')
+    .filter((rel) => fs.existsSync(path.join(REPO_ROOT, rel)));
+  return [...new Set(files)].sort();
 }
 
 const REPOSITORY_CONFIG_FILES = repositoryConfigFiles();

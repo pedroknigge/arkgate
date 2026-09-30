@@ -658,7 +658,7 @@ function listWorkflowYamlFiles(root) {
  * `failClosed` matches `hasArkWorkflow` (merge line). `present` is any
  * ark-check / arkgate action workflow, including draft-skip jobs.
  */
-function inspectArkCiGate(root) {
+export function inspectArkCiGate(root) {
   const failClosedFiles = [];
   const presentFiles = [];
   const declaredScript = architectureScript(root);
