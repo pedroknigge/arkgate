@@ -24,7 +24,10 @@ export const PERSISTENCE_CLIENT_NAMES = [
     'drizzle',
 ];
 const WRITE_VERB_SOURCE = '(?:insert(?:One|Many)?|update(?:One|Many)?|upsert|delete(?:One|Many)?|createMany|create|replaceOne|findOneAnd(?:Update|Delete|Replace))';
-const SQL_WRITE_SOURCE = '\\bINSERT\\s+INTO\\b|\\bUPDATE\\s+[A-Za-z_][\\w.]*\\s+SET\\b|\\bDELETE\\s+FROM\\b';
+const SQL_WRITE_RE = /\b(?:INSERT\s+INTO|(?<!\b(?:FOR(?:\s+NO\s+KEY)?|DO)\s)UPDATE(?:\s+ONLY)?(?!\s+(?:OF|SET)\b)|DELETE\s+FROM(?:\s+ONLY)?|MERGE\s+INTO|TRUNCATE(?:\s+TABLE)?(?:\s+ONLY)?)\s+(?:(?:(?:"[^"]*"|[A-Za-z_][\w$]*)\s*\.\s*)?(?:"[^"]*"|[A-Za-z_][\w$]*)|\$\{[^}]+\})/i;
+const NOT_A_SQL_TAG = /^(?:await|return|throw|yield|new|typeof|void|delete|if|else|case|of|in|instanceof|async|function|class|const|let|var|import|export|from|as|default|type)$/;
+const TAGGED_SQL_RE = /(^|[^\w$])([A-Za-z_$][\w$]*)\s*`((?:[^`\\]|\\[\s\S])*)`/g;
+const UPSERT_RE = /\bINSERT\s+INTO\b[\s\S]*?\bON\s+CONFLICT\b[\s\S]*?\bDO\s+UPDATE\s+SET\b[^;`]*/gi;
 /** Call arguments with one level of nested parentheses: `({ log: fn() })`. */
 const CALL_ARGS_SOURCE = '\\((?:[^()]|\\([^()]*\\))*\\)';
 /** Receivers built inline: `new PrismaClient(...)` / `drizzle(...)`. */
@@ -71,11 +74,33 @@ export function persistenceClientBindings(content) {
     }
     return [...names].sort();
 }
+function blankPersistenceComments(content) {
+    return content.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*|`(?:[^`\\]|\\[\s\S])*`|'(?:[^'\\]|\\[\s\S])*'|"(?:[^"\\]|\\[\s\S])*"/g, (token) => token.charCodeAt(0) === 47
+        ? token.replace(/[^\n]/g, ' ')
+        : token.charCodeAt(0) === 96
+            ? token.replace(/--[^\n`]*/g, (comment) => ' '.repeat(comment.length))
+            : token);
+}
+export function sourceHasTaggedSqlWrite(content) {
+    const text = blankPersistenceComments(content);
+    TAGGED_SQL_RE.lastIndex = 0;
+    let match;
+    while ((match = TAGGED_SQL_RE.exec(text)) !== null) {
+        if (NOT_A_SQL_TAG.test(match[2] ?? ''))
+            continue;
+        if (SQL_WRITE_RE.test((match[3] ?? '').replace(UPSERT_RE, ' ')))
+            return true;
+    }
+    return false;
+}
 /** Receiver-bound write evidence (ORM verb on a persistence client, or raw SQL write). */
 export function sourceHasPersistenceWrite(content) {
-    const receivers = [...PERSISTENCE_CLIENT_NAMES, ...persistenceClientBindings(content)]
+    const text = blankPersistenceComments(content);
+    const receivers = [...PERSISTENCE_CLIENT_NAMES, ...persistenceClientBindings(text)]
         .map(escapeRegExp)
         .join('|');
-    const re = new RegExp(`(?:\\b(?:${receivers})(?![\\w$])|${INLINE_CLIENT_SOURCE})(?:\\s*\\.\\s*[A-Za-z_]\\w*)*\\s*\\.\\s*${WRITE_VERB_SOURCE}\\s*\\(|${SQL_WRITE_SOURCE}`, 'i');
-    return re.test(content);
+    const re = new RegExp(`(?:\\b(?:${receivers})(?![\\w$])|${INLINE_CLIENT_SOURCE})(?:\\s*\\.\\s*[A-Za-z_]\\w*)*\\s*\\.\\s*${WRITE_VERB_SOURCE}\\s*\\(`, 'i');
+    if (re.test(text))
+        return true;
+    return SQL_WRITE_RE.test(text);
 }
