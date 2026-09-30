@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "1.0",
+  "layer": "DomainModel",
+  "invariants": [
+    {
+      "id": "ORPHAN",
+      "description": "Top-level arkrules file nobody references.",
+      "mode": "advisory"
+    }
+  ]
+}

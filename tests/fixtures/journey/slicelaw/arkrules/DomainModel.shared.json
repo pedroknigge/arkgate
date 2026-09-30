@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "1.0",
+  "layer": "DomainModel",
+  "invariants": [
+    {
+      "id": "INV-SHARED-CODES",
+      "description": "A second central file contributes its own id to the same layer.",
+      "mode": "advisory"
+    }
+  ]
+}

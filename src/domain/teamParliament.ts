@@ -82,6 +82,8 @@ export function isLawRelativePath(relPath: string): boolean {
   if ((n.startsWith('arkrules/') || n.includes('/arkrules/')) && n.endsWith('.json')) {
     return true;
   }
+  // Slice file named by childSlices.arkRulesFile (`arkrules.<Layer>.json`), including a lookalike.
+  if (/^arkrules\.[^/]+\.json$/i.test(base)) return true;
   return false;
 }
 

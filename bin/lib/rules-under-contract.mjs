@@ -100,6 +100,39 @@ function arkOrderMergeInput(config, residualCount = 0) {
   };
 }
 
+function rulesBySlice(arkRules) {
+  const groups = new Map();
+  const rows = [...(arkRules?.structure ?? []), ...(arkRules?.invariants ?? [])];
+  for (const entry of rows) {
+    const childId = entry?.provenance?.childId;
+    const sourceFile = entry?.provenance?.sourceFile;
+    if (typeof childId !== 'string' || typeof sourceFile !== 'string') continue;
+    const key = `${childId}\0${sourceFile}`;
+    let group = groups.get(key);
+    if (!group) {
+      group = {
+        slice: childId,
+        layer: entry.provenance?.layer ?? null,
+        sourceFile,
+        ids: [],
+        appliesTo: [],
+      };
+      groups.set(key, group);
+    }
+    if (typeof entry.id === 'string' && !group.ids.includes(entry.id)) group.ids.push(entry.id);
+    for (const pattern of entry.appliesTo ?? []) {
+      if (typeof pattern === 'string' && !group.appliesTo.includes(pattern)) group.appliesTo.push(pattern);
+    }
+  }
+  return [...groups.values()]
+    .map((group) => ({
+      ...group,
+      ids: [...group.ids].sort(),
+      appliesTo: [...group.appliesTo].sort(),
+    }))
+    .sort((left, right) => left.slice.localeCompare(right.slice) || left.sourceFile.localeCompare(right.sourceFile));
+}
+
 /** ADR 0012 D2 drift: arkrules/*.json no arkRules entry references (advisory). */
 function unreferencedArkRulesFiles(loaded) {
   const files = (loaded?.warnings ?? []).map((w) => w.path).filter(Boolean);
@@ -110,11 +143,32 @@ function unreferencedArkRulesFiles(loaded) {
  * @param {{ rulesMigration?: boolean }} [options] rulesMigration:false skips the
  *   migration counts (the inventory payload computes them itself).
  */
+function governedPathsFromFacts(root, facts) {
+  const rows = facts?.files;
+  if (!Array.isArray(rows) || rows.length === 0) return undefined;
+  const base = String(root).replace(/\\/g, '/').replace(/\/+$/, '');
+  const prefix = `${base}/`;
+  const out = [];
+  for (const entry of rows) {
+    const raw = typeof entry === 'string' ? entry : entry?.path;
+    if (typeof raw !== 'string' || raw.length === 0) continue;
+    const norm = raw.replace(/\\/g, '/');
+    const rel = norm.startsWith(prefix)
+      ? norm.slice(prefix.length)
+      : norm.replace(/^\.\//, '');
+    if (!rel || rel.startsWith('..') || rel.startsWith('/')) continue;
+    out.push(rel);
+  }
+  return out.length > 0 ? out : undefined;
+}
+
 export function summarizeRulesUnderContract(root, config, facts, classification, options = {}) {
+  const governedFiles = governedPathsFromFacts(root, facts);
+  const loadOpts = governedFiles ? { files: governedFiles } : {};
   if (!config?.arkRules || Object.keys(config.arkRules).length === 0) {
     let drift = {};
     try {
-      drift = unreferencedArkRulesFiles(loadEffectiveArkRulesFromDisk(root, config));
+      drift = unreferencedArkRulesFiles(loadEffectiveArkRulesFromDisk(root, config, loadOpts));
     } catch {
       drift = {};
     }
@@ -136,7 +190,7 @@ export function summarizeRulesUnderContract(root, config, facts, classification,
     };
   }
   try {
-    const loaded = loadEffectiveArkRulesFromDisk(root, config);
+    const loaded = loadEffectiveArkRulesFromDisk(root, config, loadOpts);
     if (loaded.errors?.length) {
       return {
         active: true,
@@ -180,6 +234,7 @@ export function summarizeRulesUnderContract(root, config, facts, classification,
         return {
           name,
           sourceFile: part.sourceFile ?? null,
+          ...(Array.isArray(part.sourceFiles) ? { sourceFiles: [...part.sourceFiles] } : {}),
           structureRules: (part.structure ?? []).length,
           invariants: layerInvariants.length,
           coveredInvariants: covered,
@@ -280,6 +335,7 @@ export function summarizeRulesUnderContract(root, config, facts, classification,
       partialCoverage: coverage.partial,
       testFilesScanned: coverageInputs.testFiles.length,
       layers,
+      ...(rulesBySlice(loaded.arkRules).length > 0 ? { bySlice: rulesBySlice(loaded.arkRules) } : {}),
       structure,
       structureTruncated,
       uncovered,
@@ -651,7 +707,12 @@ export function buildRulesMigration({ root, config, files, arkRules }) {
   let catalog = arkRules;
   if (catalog === undefined && config?.arkRules) {
     try {
-      const loaded = loadEffectiveArkRulesFromDisk(root, config);
+      const loaded = loadEffectiveArkRulesFromDisk(root, config, {
+        files: governed.map((file) => {
+          const absolute = path.isAbsolute(file) ? file : path.resolve(root, file);
+          return path.relative(root, absolute).split(path.sep).join('/');
+        }),
+      });
       catalog = loaded.errors.length > 0 ? null : loaded.arkRules;
     } catch {
       catalog = null; // the advisory inventory is still useful

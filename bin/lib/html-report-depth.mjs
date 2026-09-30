@@ -28,7 +28,7 @@ import { buildDeepModuleCoachAdvisory } from './deep-module-coach.mjs';
 import { computePhysicalCohesion } from './physical-cohesion.mjs';
 import { computeReshapeDecisionMemory } from './reshape-decisions.mjs';
 import { POST_GREEN_LEDE, operatingModeTitle } from './product-copy.mjs';
-import { anyChildWallAdvisory, anySliceAlias } from '../ark-layer-match.mjs';
+import { anyChildWallAdvisory, sliceAliasOwesMove } from '../ark-layer-match.mjs';
 
 function esc(value) {
   return String(value)
@@ -176,7 +176,7 @@ export function buildReportDepthPayload(
     primaryNextAction: postGreenPath?.action ?? dualTruthNext,
     activeBlockingViolations: activeBlockingCount,
     physicalCohesionResidual: physicalCohesionResidualRemains(physicalCohesion), childWallAdvisory: anyChildWallAdvisory(config?.rules),
-    sliceAliasDebt: anySliceAlias(config?.rules),
+    sliceAliasDebt: sliceAliasOwesMove(config?.rules),
   });
   // Doctor parity: same physical-cohesion + baseline stale facts as runDoctor.
   const baselineStale =

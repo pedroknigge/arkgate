@@ -11,8 +11,12 @@ import path from 'node:path';
 import {
   emptyEffectiveArkRules,
   buildEffectiveArkRules,
+  duplicateArkRuleIds,
   loadArkRulesContract,
+  sliceScopeEscapes,
 } from './arkrules-contract.mjs';
+import { resolveSliceRulePlan } from '../ark-layer-match.mjs';
+import { collectGovernedFiles } from './scan-files.mjs';
 
 export function normalizeProjectRelativePath(value) {
   const normalized = value.replace(/\\/g, '/');
@@ -56,59 +60,123 @@ export function isWithinRoot(root, candidate) {
  *   from the source counts as an empty layer (a base that predates the file), not an error.
  * @returns {{ arkRules: ReturnType<typeof emptyEffectiveArkRules>, errors: Array<{path:string,message:string}>, referenced: Set<string> }}
  */
+function declaredLayerNames(config) {
+  return new Set(Array.isArray(config?.layers) ? config.layers.map((layer) => layer?.name).filter(Boolean) : []);
+}
+
+function arkRulesRefList(value) {
+  if (typeof value === 'string') return value.length > 0 ? [value] : null;
+  if (Array.isArray(value) && value.length > 0 && value.every((entry) => typeof entry === 'string' && entry.length > 0)) {
+    return value;
+  }
+  return null;
+}
+
+function pushReadError(errors, pathKey, rel, error) {
+  errors.push({
+    path: pathKey,
+    message:
+      error instanceof Error
+        ? error.message
+        : `referenced ArkRules file ${JSON.stringify(rel)} failed to load`,
+  });
+}
+
 export function loadEffectiveArkRules(config, readRelative, opts = {}) {
   const refs = config?.arkRules;
   const referenced = new Set();
-  if (!refs || typeof refs !== 'object' || Object.keys(refs).length === 0) {
-    return { arkRules: emptyEffectiveArkRules(), errors: [], referenced };
-  }
-  const layerNames = new Set(
-    Array.isArray(config.layers) ? config.layers.map((layer) => layer.name) : []
-  );
+  const layerNames = declaredLayerNames(config);
   const errors = [];
   const parts = [];
-  for (const layer of Object.keys(refs).sort()) {
-    const relRaw = refs[layer];
-    const pathKey = `$.arkRules[${JSON.stringify(layer)}]`;
-    if (typeof relRaw !== 'string' || relRaw.length === 0) {
-      errors.push({ path: pathKey, message: 'must be a non-empty relative path string' });
-      continue;
-    }
-    const rel = normalizeProjectRelativePath(relRaw);
-    if (!rel) {
-      errors.push({
-        path: pathKey,
-        message:
-          'must be a project-relative path without absolute roots or parent-directory traversal',
+  const hasRefs = Boolean(refs && typeof refs === 'object' && Object.keys(refs).length > 0);
+  if (hasRefs) {
+    for (const layer of Object.keys(refs).sort()) {
+      const raw = refs[layer];
+      const paths = arkRulesRefList(raw);
+      const pathKey = `$.arkRules[${JSON.stringify(layer)}]`;
+      if (!paths) {
+        errors.push({ path: pathKey, message: 'must be a non-empty path string or an array of paths' });
+        continue;
+      }
+      if (!layerNames.has(layer)) {
+        errors.push({
+          path: pathKey,
+          message: `layer ${JSON.stringify(layer)} is not declared in layers[]`,
+        });
+        continue;
+      }
+      paths.forEach((relRaw, index) => {
+        const itemKey = paths.length === 1 && typeof raw === 'string' ? pathKey : `${pathKey}[${index}]`;
+        const rel = normalizeProjectRelativePath(relRaw);
+        if (!rel) {
+          errors.push({
+            path: itemKey,
+            message:
+              'must be a project-relative path without absolute roots or parent-directory traversal',
+          });
+          return;
+        }
+        referenced.add(rel);
+        const read = readRelative(rel);
+        if (!read.ok) {
+          if (read.missing && opts.missingAsEmpty) return;
+          errors.push({ path: itemKey, message: read.message });
+          return;
+        }
+        try {
+          const loaded = loadArkRulesContract(JSON.parse(read.content), rel, layer);
+          parts.push({ layer, sourceFile: rel, file: loaded.config });
+        } catch (error) {
+          pushReadError(errors, itemKey, rel, error);
+        }
       });
-      continue;
     }
-    if (!layerNames.has(layer)) {
-      errors.push({
-        path: pathKey,
-        message: `layer ${JSON.stringify(layer)} is not declared in layers[]`,
-      });
-      continue;
-    }
-    referenced.add(rel);
-    const read = readRelative(rel);
+  }
+  const plan = resolveSliceRulePlan({
+    files: Array.isArray(opts.files) ? opts.files : [],
+    rules: Array.isArray(config?.rules) ? config.rules : [],
+    layers: [...layerNames],
+  });
+  for (const entry of plan) {
+    const read = readRelative(entry.path);
     if (!read.ok) {
-      if (read.missing && opts.missingAsEmpty) continue;
-      errors.push({ path: pathKey, message: read.message });
+      if (read.missing) continue;
+      errors.push({ path: entry.path, message: read.message });
       continue;
     }
+    referenced.add(entry.path);
     try {
-      const loaded = loadArkRulesContract(JSON.parse(read.content), rel, layer);
-      parts.push({ layer, sourceFile: rel, file: loaded.config });
+      const loaded = loadArkRulesContract(JSON.parse(read.content), entry.path, entry.layer);
+      const part = {
+        layer: entry.layer,
+        sourceFile: entry.path,
+        file: loaded.config,
+        childId: entry.childId,
+        defaultAppliesTo: entry.defaultAppliesTo,
+      };
+      const escapes = sliceScopeEscapes(part);
+      if (escapes.length > 0) {
+        errors.push({
+          path: entry.path,
+          message: `ARKRULE_SCOPE_ESCAPES_SLICE: ${entry.path} appliesTo ${escapes
+            .map((row) => row.pattern)
+            .join(', ')} escapes ${entry.childId}`,
+        });
+        continue;
+      }
+      parts.push(part);
     } catch (error) {
-      errors.push({
-        path: pathKey,
-        message:
-          error instanceof Error
-            ? error.message
-            : `referenced ArkRules file ${JSON.stringify(rel)} failed to load`,
-      });
+      pushReadError(errors, entry.path, entry.path, error);
     }
+  }
+  for (const dupe of duplicateArkRuleIds(parts)) {
+    errors.push({
+      path: `$.arkRules[${JSON.stringify(dupe.layer)}]`,
+      message: `ARKRULE_DUPLICATE_ID: ${dupe.id} is declared in ${dupe.sourceFiles.join(', ')}`,
+    });
+  }
+  if (!hasRefs && parts.length === 0 && errors.length === 0) {
+    return { arkRules: emptyEffectiveArkRules(), errors: [], referenced };
   }
   if (errors.length > 0) return { arkRules: emptyEffectiveArkRules(), errors, referenced };
   return { arkRules: buildEffectiveArkRules(parts), errors: [], referenced };
@@ -233,10 +301,79 @@ export function arkRulesDriftWarnings(warnings) {
  * @param {{ observeInput?: (abs: string, kind: string) => void }} [opts]
  * @returns {{ arkRules: ReturnType<typeof emptyEffectiveArkRules>, warnings: Array<{path:string,message:string,severity:string}>, errors: Array<{path:string,message:string}> }}
  */
+function governedRelativeFiles(canonicalRoot, config) {
+  const include = Array.isArray(config?.include) && config.include.length > 0 ? config.include : ['src'];
+  return collectGovernedFiles(canonicalRoot, { ...config, include })
+    .map((file) => path.relative(canonicalRoot, file).split(path.sep).join('/'))
+    .filter((rel) => rel && !rel.startsWith('..'));
+}
+
+function sliceRuleBasenames(config) {
+  return [...declaredLayerNames(config)].map((layer) => `arkrules.${layer}.json`);
+}
+
+/** `arkrules.<Layer>.json` beside a governed file or one of its parents. Not a repo-wide search. */
+function unreferencedSliceRuleWarnings(canonicalRoot, referenced, files, basenames) {
+  const wanted = new Set(basenames);
+  if (wanted.size === 0) return [];
+  const dirs = new Set();
+  for (const rel of files) {
+    let end = String(rel).lastIndexOf('/');
+    while (end > 0) {
+      const dir = String(rel).slice(0, end);
+      if (dirs.has(dir)) break;
+      dirs.add(dir);
+      end = dir.lastIndexOf('/');
+    }
+  }
+  const warnings = [];
+  for (const dir of dirs) {
+    let names;
+    try {
+      names = fs.readdirSync(path.join(canonicalRoot, ...dir.split('/')));
+    } catch {
+      continue;
+    }
+    for (const name of names) {
+      if (!wanted.has(name)) continue;
+      const candidate = `${dir}/${name}`;
+      if (referenced.has(candidate)) continue;
+      warnings.push({
+        path: candidate,
+        message: `ArkRules file ${JSON.stringify(candidate)} is not referenced by arkRules and will not be enforced`,
+        severity: 'advisory',
+      });
+    }
+  }
+  return warnings;
+}
+
+export function arkRulesLoadFailed(source, errors) {
+  const message = (errors ?? []).map((issue) => `- ${issue.path}: ${issue.message}`).join('\n');
+  const contractError = (errors ?? []).some(
+    (issue) =>
+      typeof issue.message === 'string' &&
+      (issue.message.includes('ARKRULE_DUPLICATE_ID') || issue.message.includes('ARKRULE_SCOPE_ESCAPES_SLICE'))
+  );
+  const label = contractError ? 'Invalid ArkGate config' : 'Invalid Effective Contract';
+  const error = new Error(`${label} (${source}):\n${message}`);
+  error.code = 'ARKRULES_LOAD_FAILED';
+  error.issues = errors;
+  if (contractError) {
+    error.name = 'ArkConfigValidationError';
+    error.source = source;
+  }
+  return error;
+}
+
 export function loadEffectiveArkRulesFromDisk(root, config, opts = {}) {
   const canonicalRoot = fs.realpathSync(root);
-  const loaded = loadEffectiveArkRules(config, directoryArkRulesReader(canonicalRoot, opts));
+  const files = Array.isArray(opts.files) ? opts.files : governedRelativeFiles(canonicalRoot, config);
+  const loaded = loadEffectiveArkRules(config, directoryArkRulesReader(canonicalRoot, opts), { ...opts, files });
   // Drift runs with or without a map: an arkrules/ directory nobody references is visible.
-  const warnings = unreferencedArkRulesWarnings(canonicalRoot, loaded.referenced);
+  const warnings = [
+    ...unreferencedArkRulesWarnings(canonicalRoot, loaded.referenced),
+    ...unreferencedSliceRuleWarnings(canonicalRoot, loaded.referenced, files, sliceRuleBasenames(config)),
+  ].sort((left, right) => left.path.localeCompare(right.path));
   return { arkRules: loaded.arkRules, warnings, errors: loaded.errors };
 }

@@ -681,6 +681,7 @@ export function peerIsolationMustDeny(input) {
     return peerIsolationDecision(input).denied;
 }
 export const SLICE_ALIAS_DEBT = 'Aliases are an owed move, not a destination. These files are not finished.';
+const PINNED_ALIAS_NOTE = 'Pinned aliases stay where they are. They are not an owed move.';
 function aliasGlobPattern(glob) {
     return trimTrailingSlashes(glob.trim().replace(/\\/g, '/')).toLowerCase();
 }
@@ -937,11 +938,93 @@ export function sliceAliasDestination(file, childId, child) {
 export function anySliceAlias(rules) {
     return (rules ?? []).some((rule) => (rule?.childSlices?.sliceAliases?.length ?? 0) > 0);
 }
+/** True when an alias is still an owed move. `pinned: true` does not count. A reason alone does. */
+export function sliceAliasOwesMove(rules) {
+    return (rules ?? []).some((rule) => (rule?.childSlices?.sliceAliases ?? []).some((alias) => alias?.pinned !== true));
+}
+const SLICE_RULE_LAYER_TOKEN = '<Layer>';
+function sliceRuleFileName(pattern, layer) {
+    const token = SLICE_RULE_LAYER_TOKEN;
+    if (!pattern.includes(token) || pattern.split(token).length !== 2)
+        return null;
+    if (/[*\\/]/.test(pattern))
+        return null;
+    const name = pattern.replace(token, layer);
+    if (!name || name.includes('..'))
+        return null;
+    return name;
+}
+/**
+ * Child-slice ArkRules files this wall already named.
+ * Roots come from the governed file index. The pattern is a filename, not a search.
+ */
+export function resolveSliceRulePlan(input) {
+    const layers = [...new Set(input.layers.filter((name) => typeof name === 'string' && name.length > 0))].sort();
+    const entries = [];
+    const seen = new Set();
+    for (const rule of input.rules ?? []) {
+        const child = rule?.childSlices;
+        const pattern = child?.arkRulesFile;
+        if (!child || typeof pattern !== 'string')
+            continue;
+        const roots = new Map();
+        for (const file of input.files) {
+            if (typeof file !== 'string' || file.length === 0)
+                continue;
+            const universeId = rule.sliceFolders?.length
+                ? sliceIdForPath(file, rule.sliceFolders, rule.sliceIdentity)
+                : undefined;
+            const resolved = resolveChildSliceId(file, universeId, child);
+            if (!resolved.childId || roots.has(resolved.childId))
+                continue;
+            const root = sliceAliasDestination(file, resolved.childId, child);
+            if (root)
+                roots.set(resolved.childId, root);
+        }
+        for (const [childId, sliceRoot] of [...roots.entries()].sort((left, right) => left[0].localeCompare(right[0]))) {
+            for (const layer of layers) {
+                const name = sliceRuleFileName(pattern, layer);
+                if (!name)
+                    continue;
+                const rel = `${sliceRoot}/${name}`.replace(/\\/g, '/');
+                if (seen.has(`${layer}\0${rel}`))
+                    continue;
+                seen.add(`${layer}\0${rel}`);
+                entries.push({
+                    path: rel,
+                    childId,
+                    layer,
+                    defaultAppliesTo: [`${sliceRoot}/**`],
+                });
+            }
+        }
+    }
+    return entries;
+}
+/** Ids from the effective catalog that belong to the child slice of this file. */
+export function sliceRuleIdsForFile(filePath, rules, catalog) {
+    const childIds = new Set();
+    for (const rule of rules ?? []) {
+        if (!rule?.childSlices)
+            continue;
+        const universeId = rule.sliceFolders?.length
+            ? sliceIdForPath(filePath, rule.sliceFolders, rule.sliceIdentity)
+            : undefined;
+        const resolved = resolveChildSliceId(filePath, universeId, rule.childSlices);
+        if (resolved.childId)
+            childIds.add(resolved.childId);
+    }
+    return catalog
+        .filter((row) => typeof row.childId === 'string' && childIds.has(row.childId))
+        .map((row) => row.id)
+        .sort();
+}
 /** Doctor list. Absent when no rule sets sliceAliases, so the key stays off. */
 export function sliceAliasReport(rules, files) {
     if (!anySliceAlias(rules))
         return null;
     const moves = new Map();
+    const pinned = new Map();
     for (const rule of rules ?? []) {
         const child = rule?.childSlices;
         if (!child?.sliceAliases)
@@ -950,10 +1033,19 @@ export function sliceAliasReport(rules, files) {
             if (!alias || typeof alias.from !== 'string' || typeof alias.to !== 'string')
                 continue;
             const key = `${aliasGlobPattern(alias.from)}\0${aliasGlobPattern(alias.to)}`;
-            let move = moves.get(key);
+            const bucket = alias.pinned === true ? pinned : moves;
+            let move = bucket.get(key);
             if (!move) {
-                move = { from: alias.from, to: alias.to, destination: '', files: [] };
-                moves.set(key, move);
+                move = {
+                    from: alias.from,
+                    to: alias.to,
+                    destination: '',
+                    files: [],
+                    ...(alias.pinned === true && typeof alias.reason === 'string' && alias.reason.length > 0
+                        ? { reason: alias.reason }
+                        : {}),
+                };
+                bucket.set(key, move);
             }
             const seen = new Set(move.files);
             for (const file of files) {
@@ -967,7 +1059,7 @@ export function sliceAliasReport(rules, files) {
         }
     }
     const universes = knownUniverseIds(rules, files);
-    const listed = [...moves.values()].map((move) => {
+    const decorate = (move) => {
         const target = splitAliasTarget(move.to);
         const unknown = universes !== null && target !== null && !universes.has(target.universeId);
         return {
@@ -980,9 +1072,19 @@ export function sliceAliasReport(rules, files) {
                 }
                 : {}),
         };
-    });
-    listed.sort((left, right) => left.from.localeCompare(right.from) || left.to.localeCompare(right.to));
-    return { notAScore: true, finished: false, debt: SLICE_ALIAS_DEBT, moves: listed };
+    };
+    const listed = [...moves.values()].map((move) => decorate(move));
+    const pinnedListed = [...pinned.values()].map((move) => decorate(move));
+    const byAlias = (left, right) => left.from.localeCompare(right.from) || left.to.localeCompare(right.to);
+    listed.sort(byAlias);
+    pinnedListed.sort(byAlias);
+    return {
+        notAScore: true,
+        finished: false,
+        debt: listed.length > 0 ? SLICE_ALIAS_DEBT : PINNED_ALIAS_NOTE,
+        moves: listed,
+        ...(pinnedListed.length > 0 ? { pinned: pinnedListed } : {}),
+    };
 }
 /**
  * Universe ids that real (non-aliased) files resolve to, across rules that set

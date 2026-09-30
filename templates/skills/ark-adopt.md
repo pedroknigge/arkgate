@@ -241,6 +241,7 @@ ArkGate has **always-on Layers** plus opt-in extras. The user chooses extras; yo
 
 
 ### Adopt + ArkRules
+- `arkRules[<Layer>]` may be one path or a list. On a child wall, `childSlices.arkRulesFile` (`arkrules.<Layer>.json`) is the slice's own file. Do not put feature rules only in the central file when that filename is set. `"pinned": true` on a slice alias keeps a framework path; `reason` does not pin.
 - After classify: emit or refresh `arkRules` for matched layers (exact names; generic mold for unknowns).
 - Mine rules → inventory + write advisory invariants/structure into `arkrules/<Layer>.json` **in this turn**.
 - Empty `invariants[]` on a populated Domain while `arkRules` is on is residual (`INVARIANT_CATALOG_EMPTY`), not done. Fill 1–2 short phrases. Advisory until a domain structure rule is `enforced`.

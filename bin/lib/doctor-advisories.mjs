@@ -342,13 +342,24 @@ export function printDoctorAdvisories(advisories, io) {
   printFlatParentPilot(advisories?.flatParentPilot, io);
   const sliceAliases = advisories?.sliceAliases;
   if (sliceAliases && sliceAliases.notAScore === true && Array.isArray(sliceAliases.moves)) {
-    console.log('');
-    console.log(io.color.bold('Slice aliases (owed move)'));
-    io.line(io.warn, sliceAliases.debt);
-    for (const move of sliceAliases.moves) {
-      io.line(io.warn, `${move.from} → ${move.to}. Move these files to ${move.destination}. They are not finished.`);
-      if (move.advisory) io.line(io.warn, move.advisory);
-      for (const file of move.files ?? []) io.line(' ', file);
+    if (sliceAliases.moves.length > 0) {
+      console.log('');
+      console.log(io.color.bold('Slice aliases (owed move)'));
+      io.line(io.warn, sliceAliases.debt);
+      for (const move of sliceAliases.moves) {
+        io.line(io.warn, `${move.from} → ${move.to}. Move these files to ${move.destination}. They are not finished.`);
+        if (move.advisory) io.line(io.warn, move.advisory);
+        for (const file of move.files ?? []) io.line(' ', file);
+      }
+    }
+    if (Array.isArray(sliceAliases.pinned) && sliceAliases.pinned.length > 0) {
+      console.log('');
+      console.log(io.color.bold('Pinned slice aliases'));
+      for (const row of sliceAliases.pinned) {
+        const label = typeof row.reason === 'string' && row.reason.length > 0 ? ` (${row.reason})` : '';
+        io.line(' ', `${row.from} → ${row.to}${label} stays. It is not an owed move.`);
+        for (const file of row.files ?? []) io.line(' ', file);
+      }
     }
   }
   const hubs = advisories?.sharedWalkHubs;

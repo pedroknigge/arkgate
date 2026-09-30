@@ -51,6 +51,26 @@ function childSlicesOf(rule: FloorRule): Record<string, unknown> | null {
 
 /** Ordered newest floor first so the message names the key that needs the most. */
 export const ARKGATE_CONFIG_KEY_FLOORS: readonly ConfigKeyFloor[] = Object.freeze([
+  // #341: per-slice ArkRules filename on the child wall.
+  {
+    key: 'childSlices.arkRulesFile',
+    minVersion: NEXT_RELEASE,
+    uses: (rule: FloorRule) => typeof childSlicesOf(rule)?.arkRulesFile === 'string',
+  },
+  // #341: pinned framework route. reason is a label on the same alias.
+  {
+    key: 'childSlices.sliceAliases.pinned',
+    minVersion: NEXT_RELEASE,
+    uses: (rule: FloorRule) => {
+      const aliases = childSlicesOf(rule)?.sliceAliases;
+      if (!Array.isArray(aliases)) return false;
+      return aliases.some((alias) => {
+        if (alias === null || typeof alias !== 'object') return false;
+        const row = alias as { pinned?: unknown; reason?: unknown };
+        return row.pinned !== undefined || row.reason !== undefined;
+      });
+    },
+  },
   // #335: object form with stopAt.
   {
     key: 'sharedImportsSlice.stopAt',

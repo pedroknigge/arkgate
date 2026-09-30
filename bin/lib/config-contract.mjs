@@ -141,10 +141,21 @@ export const ARK_CONFIG_SCHEMA = {
          *  maxFiles also bounds structural-hint preload (orchestration-only / thin-adapter /
          *  writes-via-aggregate). There is no arkrules.hintBudget. */
         coverage: { $ref: '#/$defs/coverage' },
-        /** ADR 0012 — layer name → relative path to arkrules/<Layer>.json */
+        /** ADR 0012 — layer name → one path, or a list of paths merged into that layer. */
         arkRules: {
             type: 'object',
-            additionalProperties: { type: 'string', minLength: 1 },
+            additionalProperties: {
+                description: 'A project-relative ArkRules path, or a list of paths merged into one catalog for this layer. A string keeps today\'s behaviour. An older build that types this value as a string rejects an array at config load.',
+                oneOf: [
+                    { type: 'string', minLength: 1 },
+                    {
+                        type: 'array',
+                        minItems: 1,
+                        uniqueItems: true,
+                        items: { type: 'string', minLength: 1 },
+                    },
+                ],
+            },
             default: {},
         },
         /** ADR 0020 — optional ArkRun extra. Absence is silent; unknown keys fail closed. */
@@ -397,6 +408,35 @@ function validateNode(value, schema, path, root, issues) {
         }
     }
 }
+/** The schema walk has no oneOf, so string-or-array `arkRules` values are checked here. */
+export function validateArkRulesRefs(candidate, issues) {
+    const refs = candidate.arkRules;
+    if (refs === undefined || !isObject(refs))
+        return;
+    for (const [layer, value] of Object.entries(refs)) {
+        const path = propertyPath('$.arkRules', layer);
+        if (typeof value === 'string') {
+            if (value.length === 0)
+                issues.push({ path, message: 'must be a non-empty relative path string' });
+            continue;
+        }
+        if (!Array.isArray(value) || value.length === 0) {
+            issues.push({ path, message: 'must be a non-empty path string or an array of paths' });
+            continue;
+        }
+        const seen = new Set();
+        value.forEach((entry, index) => {
+            const itemPath = `${path}[${index}]`;
+            if (typeof entry !== 'string' || entry.length === 0) {
+                issues.push({ path: itemPath, message: 'must be a non-empty relative path string' });
+                return;
+            }
+            if (seen.has(entry))
+                issues.push({ path: itemPath, message: 'duplicate path' });
+            seen.add(entry);
+        });
+    }
+}
 function validateLayerOwners(candidate, issues) {
     const layers = candidate.layers;
     if (!Array.isArray(layers))
@@ -528,6 +568,7 @@ export function loadArkConfigContract(input, source = 'ark.config.json') {
     validateArkOrderExtra(candidate, issues);
     validateLayerOwners(candidate, issues);
     validateSliceContract(candidate, issues);
+    validateArkRulesRefs(candidate, issues);
     if (issues.length > 0)
         throw new ArkConfigValidationError(source, issues);
     return { config: candidate, migratedFrom };

@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "1.0",
+  "layer": "DomainModel",
+  "invariants": [
+    {
+      "id": "INV-UNIVERSE-CODES",
+      "description": "Project codes live in the universe catalog, not in a feature file.",
+      "mode": "advisory"
+    }
+  ]
+}

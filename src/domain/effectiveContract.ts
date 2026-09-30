@@ -8,11 +8,15 @@
 
 import {
   buildEffectiveArkRules,
+  duplicateArkRuleIds,
   emptyEffectiveArkRules,
   loadArkRulesContract,
+  sliceScopeEscapes,
+  type ArkRulesBuildPart,
   type EffectiveArkRules,
   ArkRulesValidationError,
 } from './arkRulesContract';
+import { resolveSliceRulePlan } from './layerMatch';
 import type { ArkConfig, ArkConfigIssue } from './configTypes';
 
 export type EffectiveContractWarning = {
@@ -40,6 +44,11 @@ export type ResolveEffectiveContractInput = {
    * detect unreferenced ArkRules files (advisory drift).
    */
   discoveredArkRulesFiles?: readonly string[];
+  /**
+   * Governed project-relative paths. The child wall names slice rule files from
+   * this index. Absence keeps central `arkRules` only.
+   */
+  governedFiles?: readonly string[];
 };
 
 export class EffectiveContractError extends Error {
@@ -70,10 +79,12 @@ export function resolveEffectiveContract(
   input: ResolveEffectiveContractInput,
   source = 'ark.config.json'
 ): EffectiveContract {
-  const refs = input.config.arkRules;
+  const refs = input.config.arkRules ?? {};
   const warnings: EffectiveContractWarning[] = [];
+  const hasRefs = Object.keys(refs).length > 0;
+  const hasGoverned = Boolean(input.governedFiles && input.governedFiles.length > 0);
 
-  if (!refs || Object.keys(refs).length === 0) {
+  if (!hasRefs && !hasGoverned) {
     if (input.discoveredArkRulesFiles && input.discoveredArkRulesFiles.length > 0) {
       for (const file of [...input.discoveredArkRulesFiles].sort()) {
         warnings.push({
@@ -92,22 +103,40 @@ export function resolveEffectiveContract(
 
   const layerNames = new Set(input.config.layers.map((layer) => layer.name));
   const issues: ArkConfigIssue[] = [];
-  const parts: Array<{ layer: string; sourceFile: string; file: ReturnType<typeof loadArkRulesContract>['config'] }> =
-    [];
+  const parts: ArkRulesBuildPart[] = [];
   const referenced = new Set<string>();
+
+  const pushLoadIssue = (pathKey: string, rel: string, error: unknown) => {
+    if (error instanceof ArkRulesValidationError) {
+      for (const issue of error.issues) {
+        issues.push({
+          path: `${pathKey}${issue.path === '$' ? '' : issue.path.replace(/^\$/, '')}`,
+          message: `${rel}: ${issue.message}`,
+        });
+      }
+      return;
+    }
+    if (error instanceof SyntaxError) {
+      issues.push({
+        path: pathKey,
+        message: `referenced ArkRules file ${JSON.stringify(rel)} is not valid JSON: ${error.message}`,
+      });
+      return;
+    }
+    issues.push({
+      path: pathKey,
+      message: `referenced ArkRules file ${JSON.stringify(rel)} failed to load: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    });
+  };
 
   for (const layer of Object.keys(refs).sort()) {
     const rawPath = refs[layer];
     const pathKey = `$.arkRules[${JSON.stringify(layer)}]`;
-    if (typeof rawPath !== 'string' || rawPath.length === 0) {
-      issues.push({ path: pathKey, message: 'must be a non-empty relative path string' });
-      continue;
-    }
-    if (rawPath.startsWith('/') || /^[A-Za-z]:[\\/]/.test(rawPath)) {
-      issues.push({
-        path: pathKey,
-        message: 'must be a project-relative path (absolute paths are not allowed)',
-      });
+    const paths = Array.isArray(rawPath) ? rawPath : typeof rawPath === 'string' ? [rawPath] : null;
+    if (!paths || paths.length === 0 || paths.some((entry) => typeof entry !== 'string' || entry.length === 0)) {
+      issues.push({ path: pathKey, message: 'must be a non-empty path string or an array of paths' });
       continue;
     }
     if (!layerNames.has(layer)) {
@@ -117,43 +146,75 @@ export function resolveEffectiveContract(
       });
       continue;
     }
+    paths.forEach((raw, index) => {
+      const itemKey = paths.length === 1 && typeof rawPath === 'string' ? pathKey : `${pathKey}[${index}]`;
+      if (raw.startsWith('/') || /^[A-Za-z]:[\\/]/.test(raw)) {
+        issues.push({
+          path: itemKey,
+          message: 'must be a project-relative path (absolute paths are not allowed)',
+        });
+        return;
+      }
+      const rel = normalizeRel(raw);
+      referenced.add(rel);
+      const content = input.fileContents[rel] ?? input.fileContents[raw];
+      if (content === undefined) {
+        issues.push({
+          path: itemKey,
+          message: `referenced ArkRules file ${JSON.stringify(rel)} is missing`,
+        });
+        return;
+      }
+      try {
+        const loaded = loadArkRulesContract(JSON.parse(content), rel, layer);
+        parts.push({ layer, sourceFile: rel, file: loaded.config });
+      } catch (error) {
+        pushLoadIssue(itemKey, rel, error);
+      }
+    });
+  }
 
-    const rel = normalizeRel(rawPath);
-    referenced.add(rel);
-    const content = input.fileContents[rel] ?? input.fileContents[rawPath];
-    if (content === undefined) {
-      issues.push({
-        path: pathKey,
-        message: `referenced ArkRules file ${JSON.stringify(rel)} is missing`,
-      });
-      continue;
-    }
-
-    try {
-      const loaded = loadArkRulesContract(JSON.parse(content), rel, layer);
-      parts.push({ layer, sourceFile: rel, file: loaded.config });
-    } catch (error) {
-      if (error instanceof ArkRulesValidationError) {
-        for (const issue of error.issues) {
+  if (input.governedFiles && input.governedFiles.length > 0) {
+    const plan = resolveSliceRulePlan({
+      files: input.governedFiles,
+      rules: input.config.rules,
+      layers: [...layerNames],
+    });
+    for (const entry of plan) {
+      const content = input.fileContents[entry.path];
+      if (content === undefined) continue;
+      referenced.add(entry.path);
+      try {
+        const loaded = loadArkRulesContract(JSON.parse(content), entry.path, entry.layer);
+        const part: ArkRulesBuildPart = {
+          layer: entry.layer,
+          sourceFile: entry.path,
+          file: loaded.config,
+          childId: entry.childId,
+          defaultAppliesTo: entry.defaultAppliesTo,
+        };
+        const escapes = sliceScopeEscapes(part);
+        if (escapes.length > 0) {
           issues.push({
-            path: `${pathKey}${issue.path === '$' ? '' : issue.path.replace(/^\$/, '')}`,
-            message: `${rel}: ${issue.message}`,
+            path: entry.path,
+            message: `ARKRULE_SCOPE_ESCAPES_SLICE: ${entry.path} appliesTo ${escapes
+              .map((row) => row.pattern)
+              .join(', ')} escapes ${entry.childId}`,
           });
+          continue;
         }
-      } else if (error instanceof SyntaxError) {
-        issues.push({
-          path: pathKey,
-          message: `referenced ArkRules file ${JSON.stringify(rel)} is not valid JSON: ${error.message}`,
-        });
-      } else {
-        issues.push({
-          path: pathKey,
-          message: `referenced ArkRules file ${JSON.stringify(rel)} failed to load: ${
-            error instanceof Error ? error.message : String(error)
-          }`,
-        });
+        parts.push(part);
+      } catch (error) {
+        pushLoadIssue(entry.path, entry.path, error);
       }
     }
+  }
+
+  for (const dupe of duplicateArkRuleIds(parts)) {
+    issues.push({
+      path: `$.arkRules[${JSON.stringify(dupe.layer)}]`,
+      message: `ARKRULE_DUPLICATE_ID: ${dupe.id} is declared in ${dupe.sourceFiles.join(', ')}`,
+    });
   }
 
   if (input.discoveredArkRulesFiles) {
