@@ -6,6 +6,9 @@ import path from 'node:path';
 /** Kill hung gh instead of stalling CI. */
 export const SPAWN_TIMEOUT_MS = 8000;
 
+/** GitHub Actions app id: a required check bound to it can only be reported by a workflow job. */
+export const GITHUB_ACTIONS_APP_ID = 15368;
+
 function runGh(args, opts = {}) {
   const { run, ...rest } = opts;
   const spawn = typeof run === 'function' ? run : spawnSync;
@@ -18,8 +21,8 @@ function runGh(args, opts = {}) {
 
 const IF_LINE = /^[ \t]*(?:-\s+)?(?:"if"|'if'|if):\s*(.*?)\s*(?:#.*)?$/i;
 const CONTINUE_LINE = /^[ \t]*(?:-\s+)?(?:"continue-on-error"|'continue-on-error'|continue-on-error):\s*(.*?)\s*(?:#.*)?$/i;
-const SAFE_IF = /^(?:['"]?true['"]?|['"]?\$\{\{\s*(?:true|always\(\))\s*\}\}['"]?)$/i;
-const SAFE_NEEDS_IF = /^['"]?\$\{\{\s*always\(\)\s*\}\}['"]?$/i;
+const SAFE_IF = /^(?:['"]?true['"]?|['"]?(?:\$\{\{\s*(?:true|always\(\))\s*\}\}|always\(\))['"]?)$/i;
+const SAFE_NEEDS_IF = /^['"]?(?:\$\{\{\s*always\(\)\s*\}\}|always\(\))['"]?$/i;
 const SAFE_CONTINUE = /^['"]?false['"]?$/i;
 const ENV_PREFIX = /^(?:(?:env\s+)?(?:[A-Za-z_][A-Za-z0-9_]*=(?:"[^"]*"|'[^']*'|\S+)\s+)*)/;
 const DIRECT_ARK = /^(?:(?:npx(?:\s+(?:-y|--yes))?(?:\s+(?:-p\s+|--package[\s=])arkgate(?:@\S+)?)?|yarn)\s+(?:arkgate-check|ark-check)(?=\s|$)|pnpm(?:\s+--\S+)*\s+exec\s+(?:arkgate-check|ark-check)(?=\s|$)|node\s+(?:\S+\/)?bin\/(?:arkgate-check|ark-check)\.mjs(?=\s|$)|(?:arkgate-check|ark-check)(?=\s|$))/;
@@ -164,7 +167,7 @@ function propertyValue(line, pattern) {
   return line.match(pattern)?.[1]?.trim() ?? null;
 }
 
-function unsafeControl(lines, propertyIndent, needs = false) {
+function controlValues(lines, propertyIndent) {
   const atIndent = lines.filter((line) => {
     const indent = line.match(/^\s*/)?.[0].length ?? 0;
     return indent + (/^\s*-\s+/.test(line) ? 2 : 0) === propertyIndent;
@@ -173,9 +176,13 @@ function unsafeControl(lines, propertyIndent, needs = false) {
   const continuation = atIndent
     .map((line) => propertyValue(line, CONTINUE_LINE))
     .find((value) => value !== null);
+  return { condition, continuation };
+}
+
+function unsafeControl(lines, propertyIndent) {
+  const { condition, continuation } = controlValues(lines, propertyIndent);
   if (condition !== undefined && !SAFE_IF.test(condition)) return true;
-  if (continuation !== undefined && !SAFE_CONTINUE.test(continuation)) return true;
-  return needs && (condition === undefined || !SAFE_NEEDS_IF.test(condition));
+  return continuation !== undefined && !SAFE_CONTINUE.test(continuation);
 }
 
 function stepBounds(lines, runIndex, runIndent, inline) {
@@ -243,14 +250,90 @@ export function workflowRunText(text) {
   return commands.join('\n');
 }
 
-function jobCannotEnforce(job) {
+const NEEDS_LINE = /^\s*(?:"needs"|'needs'|needs):\s*(.*?)\s*(?:#.*)?$/;
+const JOB_ID = /^[A-Za-z0-9_-]+$/;
+
+function unquoteScalar(value) {
+  return String(value).trim().replace(/^(['"])(.*)\1$/, '$2').trim();
+}
+
+/** `needs:` as scalar, flow list, or block list. `valid: false` for expressions/malformed. */
+function jobNeeds(job) {
   const propertyIndent = jobPropertyIndent(job);
   const lines = job.body.split('\n');
-  const needs = lines.some((line) =>
-    (line.match(/^\s*/)?.[0].length ?? 0) === propertyIndent &&
-    /^\s*(?:"needs"|'needs'|needs):/.test(line)
+  const start = lines.findIndex((line) =>
+    (line.match(/^\s*/)?.[0].length ?? 0) === propertyIndent && NEEDS_LINE.test(line)
   );
-  return unsafeControl(lines, propertyIndent, needs);
+  if (start < 0) return { present: false, ids: [], valid: true };
+  const value = unquoteScalar(lines[start].match(NEEDS_LINE)[1]);
+  if (value) {
+    const raw = value.startsWith('[') && value.endsWith(']') ? value.slice(1, -1).split(',') : [value];
+    const ids = raw.map(unquoteScalar).filter((id) => JOB_ID.test(id));
+    return { present: true, ids, valid: ids.length > 0 && ids.length === raw.length };
+  }
+  const ids = [];
+  for (let index = start + 1; index < lines.length; index++) {
+    if (!lines[index].trim() || /^\s*#/.test(lines[index])) continue;
+    if ((lines[index].match(/^\s*/)?.[0].length ?? 0) <= propertyIndent) break;
+    const item = lines[index].match(/^\s*-\s*(['"]?)([A-Za-z0-9_-]+)\1\s*(?:#.*)?$/);
+    if (!item) return { present: true, ids: [], valid: false };
+    ids.push(item[2]);
+  }
+  return { present: true, ids, valid: ids.length > 0 };
+}
+
+/** 'always' | 'default' (absent, `true`, `${{ true }}` = implicit success()) | 'conditional'. */
+function jobConditionKind(job) {
+  const { condition } = controlValues(job.body.split('\n'), jobPropertyIndent(job));
+  if (condition === undefined) return 'default';
+  if (SAFE_NEEDS_IF.test(condition)) return 'always';
+  return SAFE_IF.test(condition) ? 'default' : 'conditional';
+}
+
+function jobIndex(jobs) {
+  return new Map(jobs.map((job) => [job.id, job]));
+}
+
+/**
+ * True when nothing in the `needs:` chain can intentionally skip this job.
+ *
+ * GitHub skips a job whose needed job failed, and a skipped job satisfies a required
+ * status check. An unconditional chain is still fail-closed for the *workflow*: its
+ * only skip path is an upstream failure that fails the same run. Whether that upstream
+ * failure also blocks the merge is a provider question, answered by required-status
+ * correlation over `upstreamJobs`. A conditional `if:` anywhere in the chain (for
+ * example a CI-profile output) is an intentional skip reported as success, so the job
+ * cannot enforce.
+ */
+function needsChainUnconditional(job, byId, seen = new Set()) {
+  const needs = jobNeeds(job);
+  if (!needs.present) return true;
+  if (!needs.valid || seen.has(job.id)) return false;
+  const nextSeen = new Set(seen).add(job.id);
+  return needs.ids.every((id) => {
+    const upstream = byId.get(id);
+    if (!upstream || nextSeen.has(id)) return false;
+    const kind = jobConditionKind(upstream);
+    if (kind === 'conditional') return false;
+    return kind === 'always' || needsChainUnconditional(upstream, byId, nextSeen);
+  });
+}
+
+function jobCannotEnforce(job, byId) {
+  if (unsafeControl(job.body.split('\n'), jobPropertyIndent(job))) return true;
+  if (jobConditionKind(job) === 'always') return false;
+  return !needsChainUnconditional(job, byId);
+}
+
+/** Jobs whose failure skips `job`; stops at `if: always()` upstreams, which still run. */
+function upstreamJobs(job, byId, out = new Map()) {
+  for (const id of jobNeeds(job).ids) {
+    const upstream = byId.get(id);
+    if (!upstream || out.has(id)) continue;
+    out.set(id, upstream);
+    if (jobConditionKind(upstream) !== 'always') upstreamJobs(upstream, byId, out);
+  }
+  return out;
 }
 
 function commandsRunArk(commands, script) {
@@ -263,7 +346,8 @@ function commandsEnforceArk(commands, script) {
 
 export function activeWorkflowRunText(text) {
   const jobs = workflowJobs(text);
-  return jobs.filter((job) => !jobCannotEnforce(job)).map((job) => workflowRunText(job.body)).join('\n');
+  const byId = jobIndex(jobs);
+  return jobs.filter((job) => !jobCannotEnforce(job, byId)).map((job) => workflowRunText(job.body)).join('\n');
 }
 
 export function runsArkCheck(text, script = '') {
@@ -322,12 +406,16 @@ function localArkContexts(root) {
   const known = new Set();
   const occurrences = new Map();
   const arkOccurrences = new Map();
+  // context -> contexts whose failure would skip it (null = an upstream has no literal context)
+  const upstream = new Map();
   let dynamic = false;
   for (const workflow of workflowFiles(root)) {
-    for (const job of workflowJobs(workflow.text)) {
+    const jobs = workflowJobs(workflow.text);
+    const byId = jobIndex(jobs);
+    for (const job of jobs) {
       const explicit = jobName(job);
       const matrix = jobHasMatrix(job);
-      const enforcing = !jobCannotEnforce(job) &&
+      const enforcing = !jobCannotEnforce(job, byId) &&
         commandsEnforceArk(workflowRunText(job.body), script);
       if (enforcing) {
         known.add(job.id);
@@ -339,7 +427,15 @@ function localArkContexts(root) {
       }
       const context = explicit.name ?? job.id;
       occurrences.set(context, (occurrences.get(context) ?? 0) + 1);
-      if (enforcing) arkOccurrences.set(context, (arkOccurrences.get(context) ?? 0) + 1);
+      if (enforcing) {
+        arkOccurrences.set(context, (arkOccurrences.get(context) ?? 0) + 1);
+        const skippers = jobConditionKind(job) === 'always' ? [] : [...upstreamJobs(job, byId).values()];
+        const names = skippers.map((needed) => {
+          const neededName = jobName(needed);
+          return neededName.dynamic || jobHasMatrix(needed) ? null : neededName.name ?? needed.id;
+        });
+        upstream.set(context, names.includes(null) ? null : names);
+      }
     }
   }
   const contexts = new Set();
@@ -347,7 +443,19 @@ function localArkContexts(root) {
     if (count === 1 && occurrences.get(context) === 1) contexts.add(context);
     else dynamic = true;
   }
-  return { contexts, known, dynamic };
+  return { contexts, known, dynamic, upstream };
+}
+
+/**
+ * Required-status names that must also be required so an upstream failure (which skips
+ * the Ark job, and a skipped job satisfies branch protection) still blocks the merge.
+ * Returns [] when the chain is closed, otherwise the missing names ('<dynamic>' when an
+ * upstream only has a matrix/expression name that cannot be required exactly).
+ */
+function unrequiredUpstream(local, context, requiredNames) {
+  const names = local.upstream.get(context);
+  if (names === null) return ['<dynamic>'];
+  return (names ?? []).filter((name) => !requiredNames.has(name));
 }
 
 /** Historical name retained; the set also contains literal, non-dynamic job names. */
@@ -357,17 +465,31 @@ export function jobIdsThatRunArkCheck(root) {
 
 export function isArkRequiredStatusCheck(root, requiredNames) {
   if (!Array.isArray(requiredNames) || requiredNames.length === 0) return false;
-  const local = localArkContexts(root).contexts;
-  return requiredNames.some((name) => local.has(String(name)));
+  const local = localArkContexts(root);
+  const required = new Set(requiredNames.map(String));
+  return [...required].some((name) =>
+    local.contexts.has(name) && unrequiredUpstream(local, name, required).length === 0
+  );
 }
 
-function classifyRequired(root, legacyContexts, checks, bindingField) {
-  const local = localArkContexts(root);
+/**
+ * `requiredNames` is every required context across classic protection and rulesets: an
+ * Ark context only counts as required when each job that can skip it is required too.
+ */
+function classifyRequired(local, legacyContexts, checks, bindingField, requiredNames) {
   const exact = (name) => local.contexts.has(String(name));
+  const closed = (name) => unrequiredUpstream(local, String(name), requiredNames).length === 0;
   const matching = checks.filter((check) => exact(check.context));
-  if (matching.some((check) => check[bindingField] == null || check[bindingField] === -1)) return true;
+  // Unbound (any source) or bound to the GitHub Actions app that runs the local workflow job.
+  const satisfiable = matching.filter((check) =>
+    check[bindingField] == null || check[bindingField] === -1 ||
+    check[bindingField] === GITHUB_ACTIONS_APP_ID
+  );
+  if (satisfiable.some((check) => closed(check.context))) return true;
   if (matching.length > 0) return 'unverified';
-  if (legacyContexts.some(exact)) return true;
+  const legacy = legacyContexts.filter(exact);
+  if (legacy.some(closed)) return true;
+  if (legacy.length > 0) return 'unverified';
   return local.dynamic && (legacyContexts.length > 0 || checks.length > 0)
     ? 'unverified'
     : false;
@@ -558,18 +680,32 @@ export function reportGithubBranchProtection(opts = {}) {
         })).filter((check) => check.context)
     : [];
   const hasWorkflowRule = rulesAvailable && rules.some((rule) => rule?.type === 'workflows');
+  const all = [...new Set([...contexts, ...checks.map((check) => check.context), ...statusRules.map((check) => check.context)])];
+  const requiredNames = new Set(all);
+  const local = localArkContexts(cwd);
   const classicRequired = classicAvailable
-    ? classifyRequired(cwd, contexts, checks, 'app_id')
+    ? classifyRequired(local, contexts, checks, 'app_id', requiredNames)
     : 'unverified';
   const rulesRequired = rulesAvailable
-    ? classifyRequired(cwd, [], statusRules, 'integration_id')
+    ? classifyRequired(local, [], statusRules, 'integration_id', requiredNames)
     : 'unverified';
   const arkCheckRequired = combineRequired(
     classicRequired, rulesRequired, classicAvailable, rulesAvailable, hasWorkflowRule
   );
-  const arkCheckSourceBound = arkCheckRequired === true ? false : 'unverified';
+  // true only when every required Ark check is bound to GitHub Actions; unbound or
+  // legacy-context-only requirements can be satisfied by any status writer.
+  const arkBindings = [
+    ...checks.map((check) => ({ context: check.context, id: check.app_id })),
+    ...statusRules.map((check) => ({ context: check.context, id: check.integration_id })),
+  ].filter((check) => local.contexts.has(check.context));
+  const arkCheckSourceBound = arkCheckRequired !== true
+    ? 'unverified'
+    : arkBindings.length > 0 && arkBindings.every((check) => check.id === GITHUB_ACTIONS_APP_ID);
   const available = arkCheckRequired === true || (classicAvailable && rulesAvailable);
-  const all = [...new Set([...contexts, ...checks.map((check) => check.context), ...statusRules.map((check) => check.context)])];
+  // Required Ark contexts that an unrequired upstream failure could skip (reported as success).
+  const arkCheckUpstreamNotRequired = [...new Set(all
+    .filter((name) => local.contexts.has(name))
+    .flatMap((name) => unrequiredUpstream(local, name, requiredNames)))];
   const error = `${classicResult.stderr || ''}${rulesResult.stderr || ''}`.slice(0, 400);
 
   let reason = available ? 'ok' : 'provider-enforcement-unverified';
@@ -607,6 +743,7 @@ export function reportGithubBranchProtection(opts = {}) {
     enforcesAdmins: classicAvailable ? Boolean(classic.enforcesAdmins) : null,
     arkCheckRequired,
     arkCheckSourceBound,
+    arkCheckUpstreamNotRequired,
     // hard merge remains false when status is not proven required
     hard: arkCheckRequired === true ? undefined : false,
     runtimeObserved: ciRuntime.runtimeObserved === true,

@@ -604,71 +604,6 @@ function unquoteYamlScalar(value) {
   return match ? match[2].trim() : text;
 }
 
-function jobCondition(lines, job) {
-  const condition = jobProperty(lines, job, 'if');
-  if (!condition) return 'default';
-  const value = unquoteYamlScalar(condition.value);
-  if (/^(?:\$\{\{\s*)?always\(\)(?:\s*\}\})?$/i.test(value)) return 'always';
-  if (/^(?:true|\$\{\{\s*true\s*\}\})$/i.test(value)) return 'true';
-  return 'conditional';
-}
-
-function jobNeeds(lines, job) {
-  const property = jobProperty(lines, job, 'needs');
-  if (!property) return { ids: [], indexes: [], valid: true };
-  const indexes = [property.index];
-  if (property.value) {
-    const value = unquoteYamlScalar(property.value);
-    const raw = value.startsWith('[') && value.endsWith(']')
-      ? value.slice(1, -1).split(',')
-      : [value];
-    const ids = raw.map(unquoteYamlScalar).filter((id) => /^[A-Za-z0-9_-]+$/.test(id));
-    return { ids, indexes, valid: ids.length === raw.length && ids.length > 0 };
-  }
-  const ids = [];
-  for (let index = property.index + 1; index < job.end; index += 1) {
-    if (!lines[index].trim() || /^\s*#/.test(lines[index])) {
-      indexes.push(index);
-      continue;
-    }
-    const indent = lines[index].match(/^\s*/)?.[0].length ?? 0;
-    if (indent <= job.propertyIndent) break;
-    indexes.push(index);
-    const item = lines[index].match(/^\s*-\s*(['"]?)([A-Za-z0-9_-]+)\1\s*(?:#.*)?$/);
-    if (!item) return { ids: [], indexes, valid: false };
-    ids.push(item[2]);
-  }
-  return { ids, indexes, valid: ids.length > 0 };
-}
-
-function withVerifiedDependencyJobs(content) {
-  const { lines, jobs } = workflowJobSections(content);
-  const byId = new Map(jobs.map((job) => [job.id, job]));
-  const guaranteed = (job, seen = new Set()) => {
-    if (!job || seen.has(job.id)) return false;
-    const condition = jobCondition(lines, job);
-    if (condition === 'conditional') return false;
-    if (condition === 'always') return true;
-    const needs = jobNeeds(lines, job);
-    if (!needs.valid) return false;
-    const nextSeen = new Set(seen).add(job.id);
-    return needs.ids.every((id) => guaranteed(byId.get(id), nextSeen));
-  };
-  for (const job of jobs) {
-    const needs = jobNeeds(lines, job);
-    if (
-      needs.valid &&
-      needs.ids.length > 0 &&
-      needs.ids.every((id) => guaranteed(byId.get(id)))
-    ) {
-      // The shared analyzer treats every `needs` as skippable. Hide it only after
-      // this dependency chain is proven unconditional; keep uncertain/skipped needs visible.
-      for (const index of needs.indexes) lines[index] = '';
-    }
-  }
-  return lines.join('\n');
-}
-
 function isGuaranteedJobCondition(value) {
   const text = unquoteYamlScalar(value);
   return (
@@ -732,13 +667,13 @@ export function inspectArkCiGate(root) {
     } catch {
       continue;
     }
-    const prepared = withVerifiedDependencyJobs(withFailClosedArkActions(content));
+    // The shared analyzer proves `needs:` chains (github-enforcement.mjs), so this
+    // file-level view and doctor merge-gate evidence cannot disagree.
+    const prepared = withFailClosedArkActions(content);
     const failClosed = FAIL_CLOSED_ARK_FLAG.test(
       enforcingArkRunText(prepared, failClosedScript)
     );
-    const visible = withVerifiedDependencyJobs(
-      neutralizeSkippableJobControls(withFailClosedArkActions(content))
-    );
+    const visible = neutralizeSkippableJobControls(prepared);
     const present =
       failClosed ||
       runsArkCheck(visible, declaredScript) ||

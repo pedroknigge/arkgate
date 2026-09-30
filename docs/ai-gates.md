@@ -941,6 +941,20 @@ but stays advisory.
 **command**. The hard merge boundary is making that job a **required GitHub status context** —
 not “workflow file present.”
 
+**Skipped jobs and `needs:`:** GitHub reports a skipped job as a status that satisfies branch
+protection. Doctor therefore counts an Ark job as fail-closed only when nothing can skip it on
+purpose:
+
+| Ark job shape | Workflow evidence | Required-status verdict (`ARK_DOCTOR_GITHUB=1`) |
+|---------------|-------------------|--------------------------------------------------|
+| No `if:`, or `if: true` / `always()` | fail-closed | required when its context is required |
+| `needs:` jobs with no conditional `if:` anywhere up the chain | fail-closed (it only skips when a needed job fails) | required only when every needed job is also required; otherwise `unverified` plus gap `enforcement-ark-check-upstream-not-required` |
+| Job-level `if:` on a profile output (or any other condition), or a conditional job in its `needs:` chain | not fail-closed (the skip reports success) | not counted |
+| `continue-on-error: true` on the job or the Ark step | not fail-closed | not counted |
+
+A required check bound to the GitHub Actions app counts. A check bound to another app stays
+`unverified`. Doctor queries branch protection only with `ARK_DOCTOR_GITHUB=1` and a working `gh`.
+
 Or use the repository's composite Action at a pinned release or commit. Pin the tag (or commit
 SHA) that matches the `arkgate` version in your `package.json` and write hook. The Action runs the
 checker from the ref you pin, so an older ref runs an older checker, and that checker rejects newer
