@@ -31,7 +31,11 @@ npm run check:architecture    # dogfood
 npm run check:layer-match
 npm run check:cli-pure
 npm run check:agent-skills    # Agent Skills layout + 100% product coverage (four planes + north star)
+npm run check:knip            # dead files, unused exports, unlisted/unused deps (knip.jsonc)
 ```
+
+A `src/domain` export that only its generated `bin/lib` mirror's consumers use carries a
+`@cliMirror` JSDoc tag, so `check:knip` does not report it (the generator drops the tag).
 
 After editing pure Domain algorithms, regenerate CLI artifacts:
 
