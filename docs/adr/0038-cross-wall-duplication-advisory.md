@@ -102,7 +102,7 @@ eight). Eligible files exclude tests, `.d.ts`, the default generated globs,
 files whose first five lines say `@generated`, `GENERATED FILE`,
 `DO NOT EDIT` or `generated from/by`, and files over 256 KB. Caps: files
 `graphScanLimit(n)` (floor 2500, cap 8000), 1 000 000 fingerprints, 50 000 seed
-pairs, 200 verified file pairs. Hitting any cap makes the section `partial`,
+pairs, 1000 compared file pairs (calibrated below). Hitting any cap makes the section `partial`,
 with the counts.
 
 ### D6 — No config
@@ -124,12 +124,37 @@ running in the write hook / MCP / ESLint / compact status / `--changed` /
 
 ## Calibration
 
-Recorded when `DU02` landed. Families counted with the constants above, crossing
-families only (the listed ones), on each tree's own `ark.config.json`:
+Recorded when `DU02` landed (2026-09-30, macOS arm64, Node 26). Each tree ran
+on its own `ark.config.json`; "families" counts listed crossing families.
 
 | Tree | Eligible files | Families | Notes |
 |------|---------------:|---------:|-------|
-| _to be filled by `DU02`_ | | | |
+| `copycat` journey fixture | 11 | 3 | exactly the planted copies: cross-slice, cross-sibling, cross-layer. The same-slice copy is counted (1 pair), the `@generated` copy skipped (1 file) |
+| `atlasgrid` journey fixture (12 configs) | 67–72 | 0 | parallel feature trees with look-alike files; no family under any setting swept |
+| mother repo (this tree) | 381 | 13 | all Tooling ↔ Kernel (`cross-layer-walled`): the standalone CLI keeps copies of Kernel logic it may not import, by design. 45 generated mirrors and 1 oversize bundle skipped; none is a member |
+| `deadwood`, `ledgerline`, `orderdesk`, `slicelaw` journey fixtures (11 configs) | 6–28 | 0 | |
+| `examples/` gallery starters (7) | 4–6 | 0 | |
+| maintainer eval fixtures: `cases` (17), `comparative` (10), `placement-ab` (8) | 1–4 | 0 | |
+
+Sweep: `CLONE_MIN_TOKENS` ∈ {40, 50, 60, 80} × `CLONE_NAME_AGREEMENT` ∈
+{0.4 … 0.8} × `CLONE_MIN_LINES` ∈ {3, 5, 8}, and `CLONE_BUCKET_CAP` ∈ {8, 16, 32}.
+
+- `copycat` lists its 3 planted families under **every** setting; `atlasgrid`
+  and every other corpus tree list 0 under every setting.
+- The mother repo goes from 26 families (40 / 0.4 / 3) to 3 (80 tokens). At 50
+  tokens it sits on a 11–15 plateau; 50 / 0.6 / 5 lists 13, every one a real
+  copy on inspection. The bucket cap does not move any count.
+- 50 tokens is also the floor the winnowing guarantee needs (`w + k − 1 = 50`),
+  so the jscpd starting points hold: 50 tokens, 5 lines, 0.6 name agreement,
+  bucket cap 16.
+- Compare cap: the plan started at 200 file pairs. The mother repo has 459
+  crossing file pairs; comparing 200 left the section `partial` in 0.42 s,
+  comparing all 459 took 0.58 s and found the same 13 families. The cap is
+  1000, so an ordinary tree stays `complete`.
+
+Gap, stated: the corpus holds no large UI-heavy field tree. JSX look-alikes are
+covered by the bucket cap, name agreement and unit tests, not by field data.
+A field tree that lists noise is the evidence that reopens D3.
 
 ## Consequences
 

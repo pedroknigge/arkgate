@@ -68,7 +68,7 @@ Authority is [ADR 0038](../../adr/0038-cross-wall-duplication-advisory.md). This
 | Eligibility | `bin/lib/duplication-io.mjs` | governed files minus tests, `.d.ts`, default generated globs, generated headers, files over 256 KB; walled layers first; `graphScanLimit(n)` files |
 | Phase 1 | `bin/lib/duplication-io.mjs` | stream: parse, fingerprint, append to typed arrays, release; 1 000 000 fingerprints cap |
 | Placement | `bin/lib/duplication-io.mjs` | per candidate file pair: `layerForRelativePath` + `findDeniedEdgeDecision` both ways, before any verification |
-| Phase 2 | `bin/lib/duplication-io.mjs` | verify at most 200 crossing file pairs: re-parse (cache of 8), extend, line span, name agreement |
+| Phase 2 | `bin/lib/duplication-io.mjs` | compare at most 1000 crossing file pairs (calibrated; ADR 0038): re-parse (cache of 8), extend, line span, name agreement |
 | Destination | `bin/lib/duplication-io.mjs` | shared root → universe common folder → the lower layer both may import → a layer both may import → `/ark-place` |
 | Doctor / report | `doctor-advisories.mjs`, `html-report-advisories.mjs` | `doctor.crossWallDuplication` JSON, Details section, `data-advisory="crossWallDuplication"` |
 

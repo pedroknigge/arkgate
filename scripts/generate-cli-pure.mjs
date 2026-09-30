@@ -36,6 +36,7 @@
  *   src/domain/literalPathDrift.ts → bin/lib/literal-path-drift.mjs
  *   src/domain/classSourceScan.ts → bin/lib/class-source-scan.mjs
  *   src/domain/orphanModules.ts → bin/lib/orphan-modules.mjs
+ *   src/domain/cloneDetection.ts → bin/lib/clone-detection.mjs
  *
  * Layer match remains scripts/generate-layer-match.mjs (R1).
  *
@@ -227,6 +228,11 @@ const MODULES = [
     canonical: 'src/domain/orphanModules.ts',
     derived: 'bin/lib/orphan-modules.mjs',
     label: 'files nothing imports + unused exports (ADR 0037; notAScore)',
+  },
+  {
+    canonical: 'src/domain/cloneDetection.ts',
+    derived: 'bin/lib/clone-detection.mjs',
+    label: 'copies across a wall: fingerprints, winnowing, families (ADR 0038; notAScore)',
   },
   {
     canonical: 'src/domain/agentProjectionTypes.ts',
