@@ -113,6 +113,7 @@ import {
   startResidentHookServer,
 } from './lib/resident-hook.mjs';
 import { resolveArchitectureSnapshot } from './lib/architecture-scan.mjs';
+import { projectImporterIndex } from './lib/import-graph-projection.mjs';
 import { runDoctor } from './lib/doctor-plan.mjs';
 import {
   evaluateWriteDesignDelta,
@@ -1284,7 +1285,9 @@ function createResidentDoctorSession(args, config, ts) {
   const resolutionInputs = snapshotInputPaths(snapshot.inputs);
   const ledger = createResidentInputLedger([...after.paths, ...resolutionInputs]);
   if (!ledger.matches([...after.paths, ...resolutionInputs])) return null;
-  return { root: args.root, files: after.files, ledger, resolutionInputs, rules, snapshot };
+  // Same importer index the cold doctor projects (ADR 0037), built once per snapshot.
+  const importGraph = projectImporterIndex(snapshot.facts);
+  return { root: args.root, files: after.files, ledger, resolutionInputs, rules, snapshot, importGraph };
 }
 
 function verifyResidentDoctorSession(session) {
@@ -1305,6 +1308,7 @@ function renderResidentDoctor(session, args, config, ts) {
     ts,
     parseHealth: session.snapshot.result.parseHealth,
     completeness: session.snapshot.result.completeness,
+    architectureFacts: { importGraph: session.importGraph },
     writeJson: (value) => {
       stdout += `${value}\n`;
     },
