@@ -1502,7 +1502,7 @@ async function main() {
       configWalkedUp: args.configWalkedUp === true,
       safety, designDelta,
       ts, parseHealth, completeness,
-      all: args.all === true, requireGates: args.requireGates === true,
+      all: args.all === true, changed: args.changed === true, requireGates: args.requireGates === true,
       warnings, architectureFacts: importGraph ? { importGraph } : undefined,
     });
     if (designDelta) process.exitCode = !designDelta.complete ? 2 : designDelta.valid ? 0 : 1; return;
@@ -1786,7 +1786,7 @@ async function main() {
           parseHealth,
           importGraph ? { importGraph } : undefined,
           activeViolations,
-          { details: true }
+          { details: true, changed: args.changed === true }
         ),
         // Doctor parity: always emit improvement compass when doctor would (reportParity).
         ...(designDepth?.improvementCompass

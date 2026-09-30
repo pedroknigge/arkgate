@@ -609,7 +609,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     options.parseHealth,
     options.facts ?? options.architectureFacts,
     activeViolations,
-    { details: options.all === true }
+    { details: options.all === true, changed: options.changed === true }
   );
   // After physical cohesion so a reshape pilot is a candidate (#309).
   const pilotLoop = summarizePilotLoop(

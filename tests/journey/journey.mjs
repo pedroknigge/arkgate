@@ -391,6 +391,7 @@ const FIXTURE_VIEWS = {
   slicelaw: { check: slicelawCheckView, doctor: slicelawDoctorView },
   orderdesk: { check: orderdeskCheckView, doctor: doctorView },
   deadwood: { check: checkView, doctor: deadwoodDoctorView },
+  copycat: { check: checkView, doctor: copycatDoctorView },
 };
 
 function configRejectionView(stderr) {
@@ -500,6 +501,78 @@ function judgeDeadwood(spec, steps) {
     }
     default:
       throw new JourneyError('case', `unknown deadwood case kind ${spec.kind}`);
+  }
+}
+
+/** ADR 0038: copies across a wall, without machine paths. */
+function copycatDoctorView(parsed) {
+  const section = parsed?.doctor?.crossWallDuplication ?? null;
+  if (!section) return { crossWallDuplication: null };
+  requireFields(section, ['status', 'families', 'totals', 'honesty'], 'doctor.crossWallDuplication');
+  const totals = section.totals ?? {};
+  return {
+    crossWallDuplication: {
+      status: String(section.status),
+      notAScore: section.notAScore === true,
+      headline: String(section.headline ?? ''),
+      next: section.next ?? null,
+      families: section.families.map((family) => ({
+        ruleId: String(family.ruleId),
+        crossing: String(family.crossing),
+        destination: family.destination ?? null,
+        names: family.names ?? null,
+        members: family.members.map((member) => ({
+          path: String(member.path),
+          layer: member.layer ?? null,
+          startLine: member.startLine,
+          endLine: member.endLine,
+        })),
+        line: String(family.line ?? ''),
+      })),
+      totals: {
+        filesEligible: totals.filesEligible,
+        filesFingerprinted: totals.filesFingerprinted,
+        filesSkipped: totals.filesSkipped,
+        candidateFilePairs: totals.candidateFilePairs,
+        pairsCrossBoundary: totals.pairsCrossBoundary,
+        pairsSameSliceUnexamined: totals.pairsSameSliceUnexamined,
+        pairsUnclassifiable: totals.pairsUnclassifiable,
+        families: totals.families,
+      },
+      honesty: section.honesty ?? [],
+    },
+  };
+}
+
+function judgeCopycat(spec, steps) {
+  const compactStep = steps.find((step) => step.command.includes('--doctor') && !step.command.includes('--all'));
+  const detailsStep = steps.find((step) => step.command.includes('--doctor') && step.command.includes('--all'));
+  const compact = compactStep?.output?.crossWallDuplication ?? null;
+  const details = detailsStep?.output?.crossWallDuplication ?? null;
+  const families = details?.families ?? [];
+  const listed = (file) => families.some((family) => family.members.some((member) => member.path === file));
+  switch (spec.kind) {
+    case 'copycat-family': {
+      const family = families.find((row) => stable(row.members.map((member) => member.path).sort()) === stable([...spec.files].sort())) ?? null;
+      const got = family ? { crossing: family.crossing, ruleId: family.ruleId, destination: family.destination } : null;
+      const want = { crossing: spec.crossing, ruleId: spec.ruleId, destination: spec.destination };
+      return { met: stable(got) === stable(want) && details?.status === 'complete', want, got };
+    }
+    case 'copycat-same-slice': {
+      const got = { listed: spec.files.filter(listed), sameSlice: details?.totals.pairsSameSliceUnexamined ?? null };
+      return { met: got.listed.length === 0 && got.sameSlice >= 1, want: { listed: [], sameSlice: '>= 1' }, got };
+    }
+    case 'copycat-generated': {
+      const got = { listed: listed(spec.file), generated: details?.totals.filesSkipped?.generated ?? null };
+      return { met: !got.listed && got.generated >= 1, want: { listed: false, generated: '>= 1' }, got };
+    }
+    case 'copycat-not-run': {
+      const got = { status: compact?.status ?? null, next: compact?.next ?? null, families: compact?.families.length ?? null };
+      const want = { status: 'not-run', next: 'arkgate-check --doctor --all', families: 0 };
+      return { met: stable(got) === stable(want), want, got };
+    }
+    default:
+      throw new JourneyError('case', `unknown copycat case kind ${spec.kind}`);
   }
 }
 
@@ -915,6 +988,9 @@ function evaluateJourneyCase(spec, steps) {
   }
   if (typeof spec.kind === 'string' && spec.kind.startsWith('deadwood-')) {
     return caseResult(spec, judgeDeadwood(spec, steps));
+  }
+  if (typeof spec.kind === 'string' && spec.kind.startsWith('copycat-')) {
+    return caseResult(spec, judgeCopycat(spec, steps));
   }
   if (typeof spec.kind === 'string' && spec.kind.startsWith('slicelaw-')) {
     return caseResult(spec, judgeSlicelaw(spec, steps));

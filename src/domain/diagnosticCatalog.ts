@@ -123,6 +123,22 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
     'Two or more modules import each other in a loop. Cycles make ownership unclear and break stable layer direction.',
     'Extract the shared dependency into a third module, invert one edge behind a port, or merge units that are truly one — then preflight again.'
   ),
+  entry(
+    'CROSS_WALL_DUPLICATE',
+    'layer',
+    'Code copied across a wall',
+    'Near-identical code sits on two sides of a slice wall (or in two layers that may not import each other). The wall would deny the import, so the code was copied instead. Status details (`--doctor --all`) and the report list it from token fingerprints taken at status time; they never enter the check, so the verdict does not change. Same-slice copies are counted, never listed.',
+    'Move one copy to a shared home the wall allows — a declared shared root, the universe common folder, or a layer both sides may import — then import it from both sides. One move at a time, through the write gate (/ark-place names the destination). Advisory only — it never fails a run.',
+    { oftenAdvisory: true }
+  ),
+  entry(
+    'CROSS_LAYER_DUPLICATE',
+    'layer',
+    'Code copied in two layers',
+    'Near-identical code sits in two layers, and at least one of them may import the other. Status details (`--doctor --all`) and the report list it from token fingerprints taken at status time; the verdict does not change.',
+    'Keep one copy in the lower layer both sides may import, and import it from the other. One move at a time, through the write gate. Advisory only — it never fails a run.',
+    { oftenAdvisory: true }
+  ),
 
   // ── capability / ambient ─────────────────────────────────────────────────
   entry(

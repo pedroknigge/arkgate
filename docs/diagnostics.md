@@ -29,6 +29,8 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 | [`LAYER_REFERENCE_VIOLATION`](#LAYER_REFERENCE_VIOLATION) | layer | Layer reference blocked (snippet / AI gate) |
 | [`SHARED_IMPORTS_SLICE`](#SHARED_IMPORTS_SLICE) | layer | A shared root imports a slice |
 | [`CIRCULAR_DEPENDENCY`](#CIRCULAR_DEPENDENCY) | layer | Dependency cycle |
+| [`CROSS_WALL_DUPLICATE`](#CROSS_WALL_DUPLICATE) | layer | Code copied across a wall |
+| [`CROSS_LAYER_DUPLICATE`](#CROSS_LAYER_DUPLICATE) | layer | Code copied in two layers |
 | [`FORBIDDEN_GLOBAL`](#FORBIDDEN_GLOBAL) | capability | Forbidden ambient global or dual import |
 | [`CAPABILITY_VIOLATION`](#CAPABILITY_VIOLATION) | capability | Denied effect capability |
 | [`RAW_EVENT_PUBLISH`](#RAW_EVENT_PUBLISH) | publish | Raw event publish |
@@ -818,6 +820,44 @@ declaration files, and `.ark/entry-points.json`:
 
 - **Why:** An export no governed file or test imports by name. Listed only in status details (`--doctor --all`) and the report. Default, namespace, star, dynamic and require use count as using every export, so those files are skipped.
 - **Fix:** Drop the export keyword (or the code) if nothing outside the file needs it, or keep it when it is public API an entry point exposes. Advisory only — it never fails a run.
+
+## Copies across a wall
+
+A slice wall denies the import. The cheapest way around it is to copy the
+code, and a copy is not an import. Status details (`arkgate-check --doctor --all`)
+and the HTML report list near-identical code whose copies sit on two sides of
+a wall, or in two layers, with a place the shared code could live. `--json`
+carries it under `doctor.crossWallDuplication`; without `--all` it says
+`not-run` and names the command. It is not a score and never changes the check.
+
+The copies come from token fingerprints taken while status runs: one parse per
+governed file with the TypeScript ArkGate already loaded. Tests, `.d.ts`,
+generated files (default globs, or a `@generated` / `GENERATED FILE` /
+`DO NOT EDIT` header in the first five lines) and files over 256 KB are never
+read for this. A copy is listed only when the import between its two files is
+one the check would deny, or when it sits in two layers. Copies inside one
+slice are counted, never listed. A path the wall cannot classify is counted,
+never listed. The constants are fixed: at least 50 tokens and 5 lines, and at
+least 60% of the names matching. When a cap stops the pass, the section says
+`partial` and how much was left.
+
+<a id="CROSS_WALL_DUPLICATE"></a>
+
+### `CROSS_WALL_DUPLICATE`
+
+**Code copied across a wall** · often advisory
+
+- **Why:** Near-identical code sits on two sides of a slice wall (`cross-slice`, `cross-parent`, `cross-sibling`) or in two layers that may not import each other (`cross-layer-walled`). The wall would deny the import, so the code was copied instead. Fingerprints are taken at status time and never enter the check, so the verdict does not change.
+- **Fix:** Move one copy to a shared home the wall allows — the declared shared root, the universe common folder, or a layer both sides may import — then import it from both sides. One move at a time, through the write gate (`/ark-place` names the destination). Advisory only — it never fails a run.
+
+<a id="CROSS_LAYER_DUPLICATE"></a>
+
+### `CROSS_LAYER_DUPLICATE`
+
+**Code copied in two layers** · often advisory
+
+- **Why:** Near-identical code sits in two layers, and at least one of them may import the other (`cross-layer`).
+- **Fix:** Keep one copy in the lower layer both sides may import, and import it from the other. One move at a time, through the write gate. Advisory only — it never fails a run.
 
 ## Port adapters
 

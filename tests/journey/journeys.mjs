@@ -34,6 +34,11 @@
  * ADR 0037 is `deadwood`: files nothing imports. One true orphan, one file only a
  * test imports, one file behind `import.meta.glob`, Next / package.json /
  * sidecar entries, and one unused export that only the details view lists.
+ *
+ * ADR 0038 is `copycat`: copies across a wall. A cross-slice, a cross-sibling
+ * and a cross-layer copy are listed with their destinations; a same-slice copy
+ * is counted, never listed; a generated copy is never fingerprinted; the
+ * compact status JSON says `not-run`.
  */
 const crossParentEdges = Object.freeze([
   Object.freeze({
@@ -192,6 +197,10 @@ export const JOURNEYS = Object.freeze({
   deadwood: Object.freeze([
     Object.freeze(['ark-check', '--doctor', '--json', '--no-cache']),
     Object.freeze(['ark-check', '--doctor', '--all', '--json', '--no-cache']),
+  ]),
+  copycat: Object.freeze([
+    Object.freeze(['ark-check', '--doctor', '--all', '--json', '--no-cache']),
+    Object.freeze(['ark-check', '--doctor', '--json', '--no-cache']),
   ]),
 });
 
@@ -773,6 +782,64 @@ export const JOURNEY_CASES = Object.freeze({
       note: 'formatDate in src/lib/format.ts is exported and never imported by name. Compact status defers it; details list it.',
       file: 'src/lib/format.ts',
       name: 'formatDate',
+    }),
+  ]),
+  copycat: Object.freeze([
+    Object.freeze({
+      id: 'cross-slice-listed',
+      owner: 'ADR 0038',
+      expect: 'pass',
+      kind: 'copycat-family',
+      note: 'The invoice total is copied from features/billing to features/invoices. The slice wall denies the import; the copy is listed with the shared root as destination.',
+      files: Object.freeze(['src/features/billing/invoice-total.ts', 'src/features/invoices/totals.ts']),
+      crossing: 'cross-slice',
+      ruleId: 'CROSS_WALL_DUPLICATE',
+      destination: Object.freeze({ kind: 'shared-root', path: 'src/shared/' }),
+    }),
+    Object.freeze({
+      id: 'cross-sibling-listed',
+      owner: 'ADR 0038',
+      expect: 'pass',
+      kind: 'copycat-family',
+      note: 'The ranking helper is copied between two child slices of modules/catalog. Listed with the universe common folder as destination.',
+      files: Object.freeze(['src/modules/catalog/browse/rank.ts', 'src/modules/catalog/search/rank.ts']),
+      crossing: 'cross-sibling',
+      ruleId: 'CROSS_WALL_DUPLICATE',
+      destination: Object.freeze({ kind: 'universe-common', path: 'src/modules/catalog/common/' }),
+    }),
+    Object.freeze({
+      id: 'cross-layer-listed',
+      owner: 'ADR 0038',
+      expect: 'pass',
+      kind: 'copycat-family',
+      note: 'The email validator sits in Domain and in Application. Application may import Domain, so the destination is Domain.',
+      files: Object.freeze(['src/application/signup/check-email.ts', 'src/domain/email.ts']),
+      crossing: 'cross-layer',
+      ruleId: 'CROSS_LAYER_DUPLICATE',
+      destination: Object.freeze({ kind: 'lower-layer', layer: 'Domain' }),
+    }),
+    Object.freeze({
+      id: 'same-slice-not-listed',
+      owner: 'ADR 0038',
+      expect: 'pass',
+      kind: 'copycat-same-slice',
+      note: 'A copy inside features/billing is counted as same slice and never listed.',
+      files: Object.freeze(['src/features/billing/line-format.ts', 'src/features/billing/line-format-legacy.ts']),
+    }),
+    Object.freeze({
+      id: 'generated-excluded',
+      owner: 'ADR 0038',
+      expect: 'pass',
+      kind: 'copycat-generated',
+      note: 'features/payments/fee-total.ts carries an @generated header. It is never fingerprinted, so it is in no family.',
+      file: 'src/features/payments/fee-total.ts',
+    }),
+    Object.freeze({
+      id: 'compact-not-run',
+      owner: 'ADR 0038',
+      expect: 'pass',
+      kind: 'copycat-not-run',
+      note: 'Compact status JSON says not-run and names the command that runs it.',
     }),
   ]),
 });
