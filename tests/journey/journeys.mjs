@@ -26,6 +26,11 @@
  * counting as an owed move. The seven #341 claims expect pass.
  * The journey stays green while a claim is unmet. When it starts holding,
  * status becomes `unexpected-pass` until that PR flips `expect` to `pass`.
+ *
+ * #343 is `orderdesk`: enforced `writes-via-aggregate` on tagged SQL in use cases.
+ * Probe A is caught today (`expect: 'pass'`). Probes B–G are still invisible
+ * (`expect: 'fail'` — the claim "this file is flagged" is unmet). The four
+ * negative shapes stay unflagged (`expect: 'pass'`).
  */
 const crossParentEdges = Object.freeze([
   Object.freeze({
@@ -180,6 +185,7 @@ export const JOURNEYS = Object.freeze({
     Object.freeze(['ark-check', '--json', '--no-cache', '--config', 'ark.config.pinned.json']),
     Object.freeze(['ark-check', '--doctor', '--json', '--no-cache', '--config', 'ark.config.pinned.json']),
   ]),
+  orderdesk: Object.freeze([Object.freeze(['ark-check', '--json', '--no-cache'])]),
 });
 
 export const JOURNEY_CASES = Object.freeze({
@@ -622,6 +628,96 @@ export const JOURNEY_CASES = Object.freeze({
         complianceDestination: 'src/features/projects/compliance',
         pinnedFrom: 'src/app/**',
       }),
+    }),
+  ]),
+  orderdesk: Object.freeze([
+    Object.freeze({
+      id: '343-probe-a',
+      owner: '#343',
+      expect: 'pass',
+      kind: 'orderdesk-probe',
+      file: 'src/lib/features/a/zz-probe-a-control.ts',
+      note: 'Probe A. Driver import plus `UPDATE orders SET` inside a tagged template. Caught on 4.8.24.',
+    }),
+    Object.freeze({
+      id: '343-probe-b',
+      owner: '#343',
+      expect: 'fail',
+      kind: 'orderdesk-probe',
+      file: 'src/lib/features/a/zz-probe-b-repo-tx.ts',
+      note: 'Probe B. The transaction type is imported from a PersistenceAdapters module (`a-db-executor`), not from the driver. Same `UPDATE orders SET`. Still invisible.',
+    }),
+    Object.freeze({
+      id: '343-probe-c',
+      owner: '#343',
+      expect: 'fail',
+      kind: 'orderdesk-probe',
+      file: 'src/lib/features/a/zz-probe-c-only.ts',
+      note: 'Probe C. Driver import plus `UPDATE ONLY orders SET`. Still invisible.',
+    }),
+    Object.freeze({
+      id: '343-probe-d',
+      owner: '#343',
+      expect: 'fail',
+      kind: 'orderdesk-probe',
+      file: 'src/lib/features/a/zz-probe-d-quoted.ts',
+      note: 'Probe D. Driver import plus `UPDATE "public"."orders" SET`. Still invisible.',
+    }),
+    Object.freeze({
+      id: '343-probe-e',
+      owner: '#343',
+      expect: 'fail',
+      kind: 'orderdesk-probe',
+      file: 'src/lib/features/a/zz-probe-e-merge.ts',
+      note: 'Probe E. Driver import plus `MERGE INTO` and `TRUNCATE`. Still invisible.',
+    }),
+    Object.freeze({
+      id: '343-probe-f',
+      owner: '#343',
+      expect: 'fail',
+      kind: 'orderdesk-probe',
+      file: 'src/lib/features/b/zz-probe-f-interp.ts',
+      note: 'Probe F. `sql` from drizzle-orm and `UPDATE ${ordersTable} SET`. Still invisible.',
+    }),
+    Object.freeze({
+      id: '343-probe-g',
+      owner: '#343',
+      expect: 'fail',
+      kind: 'orderdesk-probe',
+      file: 'src/lib/features/c/zz-probe-g-alias.ts',
+      note: 'Probe G. Driver import plus `UPDATE public.line_items li SET` (table alias). Still invisible.',
+    }),
+    Object.freeze({
+      id: '343-neg-for-update',
+      owner: '#343',
+      expect: 'pass',
+      kind: 'orderdesk-clear',
+      file: 'src/lib/features/a/zz-neg-for-update.ts',
+      note: 'Negative. `SELECT … FOR UPDATE OF r` is a row lock, not a write. Stays unflagged.',
+    }),
+    Object.freeze({
+      id: '343-neg-upsert',
+      owner: '#343',
+      expect: 'pass',
+      kind: 'orderdesk-clear',
+      file: 'src/lib/features/a/zz-neg-upsert.ts',
+      note: 'Negative. `INSERT … ON CONFLICT … DO UPDATE SET` stays unflagged.',
+    }),
+    Object.freeze({
+      id: '343-neg-js-comment',
+      owner: '#343',
+      expect: 'pass',
+      kind: 'orderdesk-clear',
+      file: 'src/lib/features/a/zz-neg-js-comment.ts',
+      note: 'Negative. A `// UPDATE orders SET x` comment stays unflagged.',
+    }),
+    Object.freeze({
+      id: '343-neg-sql-comment',
+      owner: '#343',
+      expect: 'pass',
+      kind: 'orderdesk-clear',
+      file: 'src/lib/features/a/zz-neg-sql-comment.ts',
+      note: 'Negative. A `-- UPDATE orders SET x` comment inside a tagged template stays unflagged.',
     }),
   ]),
 });

@@ -389,6 +389,7 @@ const FIXTURE_VIEWS = {
   ledgerline: { check: checkView, doctor: doctorView },
   atlasgrid: { check: atlasgridCheckView, doctor: atlasgridDoctorView },
   slicelaw: { check: slicelawCheckView, doctor: slicelawDoctorView },
+  orderdesk: { check: orderdeskCheckView, doctor: doctorView },
 };
 
 function configRejectionView(stderr) {
@@ -402,6 +403,34 @@ function projectFixture(fixture, step, parsed) {
   const project = step.includes('--doctor') ? views.doctor : views.check;
   if (fixture === 'atlasgrid') return project(parsed, step);
   return project(parsed);
+}
+
+function orderdeskCheckView(parsed) {
+  requireFields(parsed, ['valid', 'ok', 'completeness', 'violations'], 'check');
+  const violations = Array.isArray(parsed.violations) ? parsed.violations : [];
+  const writes = [];
+  for (const row of violations) {
+    if (!row || typeof row !== 'object') continue;
+    if (row.ruleId !== 'ARKRULE_STRUCTURE') continue;
+    const sensor = row.sensor ?? row.code;
+    if (sensor !== 'writes-via-aggregate' && !String(row.message ?? '').includes('writes-via-aggregate')) {
+      continue;
+    }
+    const severity =
+      typeof row.severity === 'string' ? row.severity : row.failsStrict === false ? 'warning' : 'error';
+    writes.push({
+      file: row.file == null ? null : String(row.file),
+      arkruleId: row.arkruleId == null ? null : String(row.arkruleId),
+      severity,
+    });
+  }
+  writes.sort(compareRows(['file', 'arkruleId']));
+  return {
+    valid: parsed.valid === true,
+    ok: parsed.ok === true,
+    completeness: String(parsed.completeness),
+    writes,
+  };
 }
 
 function slicelawCheckView(parsed) {
@@ -791,7 +820,29 @@ function caseResult(spec, judged) {
   };
 }
 
+function judgeOrderdesk(spec, steps) {
+  const check = selectStep(steps, { doctor: false, hierarchy: false })?.output ?? null;
+  const writes = Array.isArray(check?.writes) ? check.writes : [];
+  const row = writes.find((item) => item?.file === spec.file) ?? null;
+  const flagged = row != null;
+  const complete = check?.completeness === 'complete';
+  const wantFlagged = spec.kind === 'orderdesk-probe';
+  const met = complete && flagged === wantFlagged && (wantFlagged ? row?.severity === 'error' : true);
+  return {
+    met,
+    want: { file: spec.file, flagged: wantFlagged },
+    got: {
+      completeness: check?.completeness ?? null,
+      flagged,
+      severity: row?.severity ?? null,
+    },
+  };
+}
+
 function evaluateJourneyCase(spec, steps) {
+  if (typeof spec.kind === 'string' && spec.kind.startsWith('orderdesk-')) {
+    return caseResult(spec, judgeOrderdesk(spec, steps));
+  }
   if (typeof spec.kind === 'string' && spec.kind.startsWith('slicelaw-')) {
     return caseResult(spec, judgeSlicelaw(spec, steps));
   }

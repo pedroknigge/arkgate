@@ -1,0 +1,32 @@
+{
+  "$schema": "https://unpkg.com/arkgate@4/schemas/ark.config.schema.json",
+  "schemaVersion": "1.3",
+  "name": "orderdesk",
+  "include": ["src"],
+  "layers": [
+    {
+      "name": "ApplicationOrchestration",
+      "description": "Feature use cases that close an order, rename it, or reprice a line.",
+      "patterns": ["src/lib/features/**"]
+    },
+    {
+      "name": "PersistenceAdapters",
+      "description": "Transaction handle. The driver stays behind this adapter.",
+      "patterns": ["src/lib/repositories/**"]
+    }
+  ],
+  "rules": [
+    {
+      "from": "PersistenceAdapters",
+      "to": "ApplicationOrchestration",
+      "allowed": false,
+      "message": "A repository does not import a use case."
+    }
+  ],
+  "coverage": {
+    "maxFiles": 20000
+  },
+  "arkRules": {
+    "ApplicationOrchestration": "arkrules/ApplicationOrchestration.json"
+  }
+}

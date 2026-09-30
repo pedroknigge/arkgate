@@ -1,0 +1,212 @@
+{
+  "cases": [
+    {
+      "expect": "pass",
+      "got": {
+        "completeness": "complete",
+        "flagged": true,
+        "severity": "error"
+      },
+      "id": "343-probe-a",
+      "met": true,
+      "note": "Probe A. Driver import plus `UPDATE orders SET` inside a tagged template. Caught on 4.8.24.",
+      "owner": "#343",
+      "status": "pass",
+      "want": {
+        "file": "src/lib/features/a/zz-probe-a-control.ts",
+        "flagged": true
+      }
+    },
+    {
+      "expect": "fail",
+      "got": {
+        "completeness": "complete",
+        "flagged": false,
+        "severity": null
+      },
+      "id": "343-probe-b",
+      "met": false,
+      "note": "Probe B. The transaction type is imported from a PersistenceAdapters module (`a-db-executor`), not from the driver. Same `UPDATE orders SET`. Still invisible.",
+      "owner": "#343",
+      "status": "expected-fail",
+      "want": {
+        "file": "src/lib/features/a/zz-probe-b-repo-tx.ts",
+        "flagged": true
+      }
+    },
+    {
+      "expect": "fail",
+      "got": {
+        "completeness": "complete",
+        "flagged": false,
+        "severity": null
+      },
+      "id": "343-probe-c",
+      "met": false,
+      "note": "Probe C. Driver import plus `UPDATE ONLY orders SET`. Still invisible.",
+      "owner": "#343",
+      "status": "expected-fail",
+      "want": {
+        "file": "src/lib/features/a/zz-probe-c-only.ts",
+        "flagged": true
+      }
+    },
+    {
+      "expect": "fail",
+      "got": {
+        "completeness": "complete",
+        "flagged": false,
+        "severity": null
+      },
+      "id": "343-probe-d",
+      "met": false,
+      "note": "Probe D. Driver import plus `UPDATE \"public\".\"orders\" SET`. Still invisible.",
+      "owner": "#343",
+      "status": "expected-fail",
+      "want": {
+        "file": "src/lib/features/a/zz-probe-d-quoted.ts",
+        "flagged": true
+      }
+    },
+    {
+      "expect": "fail",
+      "got": {
+        "completeness": "complete",
+        "flagged": false,
+        "severity": null
+      },
+      "id": "343-probe-e",
+      "met": false,
+      "note": "Probe E. Driver import plus `MERGE INTO` and `TRUNCATE`. Still invisible.",
+      "owner": "#343",
+      "status": "expected-fail",
+      "want": {
+        "file": "src/lib/features/a/zz-probe-e-merge.ts",
+        "flagged": true
+      }
+    },
+    {
+      "expect": "fail",
+      "got": {
+        "completeness": "complete",
+        "flagged": false,
+        "severity": null
+      },
+      "id": "343-probe-f",
+      "met": false,
+      "note": "Probe F. `sql` from drizzle-orm and `UPDATE ${ordersTable} SET`. Still invisible.",
+      "owner": "#343",
+      "status": "expected-fail",
+      "want": {
+        "file": "src/lib/features/b/zz-probe-f-interp.ts",
+        "flagged": true
+      }
+    },
+    {
+      "expect": "fail",
+      "got": {
+        "completeness": "complete",
+        "flagged": false,
+        "severity": null
+      },
+      "id": "343-probe-g",
+      "met": false,
+      "note": "Probe G. Driver import plus `UPDATE public.line_items li SET` (table alias). Still invisible.",
+      "owner": "#343",
+      "status": "expected-fail",
+      "want": {
+        "file": "src/lib/features/c/zz-probe-g-alias.ts",
+        "flagged": true
+      }
+    },
+    {
+      "expect": "pass",
+      "got": {
+        "completeness": "complete",
+        "flagged": false,
+        "severity": null
+      },
+      "id": "343-neg-for-update",
+      "met": true,
+      "note": "Negative. `SELECT … FOR UPDATE OF r` is a row lock, not a write. Stays unflagged.",
+      "owner": "#343",
+      "status": "pass",
+      "want": {
+        "file": "src/lib/features/a/zz-neg-for-update.ts",
+        "flagged": false
+      }
+    },
+    {
+      "expect": "pass",
+      "got": {
+        "completeness": "complete",
+        "flagged": false,
+        "severity": null
+      },
+      "id": "343-neg-upsert",
+      "met": true,
+      "note": "Negative. `INSERT … ON CONFLICT … DO UPDATE SET` stays unflagged.",
+      "owner": "#343",
+      "status": "pass",
+      "want": {
+        "file": "src/lib/features/a/zz-neg-upsert.ts",
+        "flagged": false
+      }
+    },
+    {
+      "expect": "pass",
+      "got": {
+        "completeness": "complete",
+        "flagged": false,
+        "severity": null
+      },
+      "id": "343-neg-js-comment",
+      "met": true,
+      "note": "Negative. A `// UPDATE orders SET x` comment stays unflagged.",
+      "owner": "#343",
+      "status": "pass",
+      "want": {
+        "file": "src/lib/features/a/zz-neg-js-comment.ts",
+        "flagged": false
+      }
+    },
+    {
+      "expect": "pass",
+      "got": {
+        "completeness": "complete",
+        "flagged": false,
+        "severity": null
+      },
+      "id": "343-neg-sql-comment",
+      "met": true,
+      "note": "Negative. A `-- UPDATE orders SET x` comment inside a tagged template stays unflagged.",
+      "owner": "#343",
+      "status": "pass",
+      "want": {
+        "file": "src/lib/features/a/zz-neg-sql-comment.ts",
+        "flagged": false
+      }
+    }
+  ],
+  "fixture": "orderdesk",
+  "schemaVersion": 1,
+  "steps": [
+    {
+      "command": "ark-check --json --no-cache",
+      "exitCode": 1,
+      "filesDiff": {},
+      "output": {
+        "completeness": "complete",
+        "ok": false,
+        "valid": false,
+        "writes": [
+          {
+            "arkruleId": "writes-via-aggregate",
+            "file": "src/lib/features/a/zz-probe-a-control.ts",
+            "severity": "error"
+          }
+        ]
+      }
+    }
+  ]
+}
