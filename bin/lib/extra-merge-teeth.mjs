@@ -81,6 +81,42 @@ export function demoteExtraPlaneTeethUnderClassificationFloor(violations, classi
 }
 /** Stamp for extra-plane honesty: never one architecture score. */
 export const MERGE_PLANES_DUAL_STAMP = 'Structure = heuristics; invariants = catalog+coverage evidence (not business runtime); ArkRun = kernel usage + declarations (not a score); ArkOrder = the few big product choices (not a score). Extra planes never merge into one architecture score. Advisory ArkRules ≠ merge teeth. Advisory ArkRun ≠ merge teeth. Advisory ArkOrder ≠ merge teeth.';
+/**
+ * Doctor callers pass loosely typed ArkRules counts; the plane is active only
+ * when `active` is literally true. Counts pass through for countOrZero.
+ */
+export function mergePlanesArkRulesInput(arkRules) {
+    return {
+        active: arkRules?.active === true,
+        structureEnforced: arkRules?.structureEnforced,
+        structureTotal: arkRules?.structureTotal,
+        structureAdvisory: arkRules?.structureAdvisory,
+        invariantEnforced: arkRules?.invariantEnforced,
+        invariantTotal: arkRules?.invariantTotal,
+        invariantAdvisory: arkRules?.invariantAdvisory,
+        covered: arkRules?.covered,
+        uncovered: arkRules?.uncovered,
+    };
+}
+/** Thin status slice — counts only; residual null means unknown, not green. */
+export function projectExtraPlaneStatus(input = {}) {
+    const present = input.present === true;
+    const mode = input.mode === 'enforced' || input.mode === 'advisory' ? input.mode : null;
+    const residualRaw = input.residual;
+    let residual = null;
+    if (typeof residualRaw === 'number' && Number.isFinite(residualRaw) && residualRaw >= 0) {
+        residual = Math.floor(residualRaw);
+    }
+    if (!present)
+        residual = residual == null ? 0 : residual;
+    return {
+        notAScore: true,
+        present,
+        mode: present ? mode : null,
+        extraMergeTeeth: present && mode === 'enforced' && input.extraMergeTeeth === true,
+        residual,
+    };
+}
 function countOrZero(value) {
     return typeof value === 'number' && Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
 }

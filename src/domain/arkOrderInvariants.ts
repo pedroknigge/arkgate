@@ -385,6 +385,52 @@ function blastRadiusOf(
   };
 }
 
+/** Inputs a ξ transition needs, shared by proposePatternChange and applyProposedRelease. */
+type PatternTransitionInput = {
+  current: Release;
+  projector: (release: Release, sigma: SigmaRecord) => Projection;
+  maxXiKeys: number;
+  xiSchema?: XiSchema;
+  now: number;
+  catalogDigest?: string;
+  informationBudget?: InformationBudget;
+};
+
+/** The next frozen Release: ξ replaced, σ carried over, version + 1. */
+function successorRelease(input: PatternTransitionInput, xi: Record<string, unknown>): Release {
+  return createFrozenRelease({
+    xi,
+    sigma: { ...input.current.sigma },
+    version: input.current.version + 1,
+    now: input.now,
+    maxXiKeys: input.maxXiKeys,
+    xiSchema: input.xiSchema,
+    catalogDigest: input.catalogDigest,
+  });
+}
+
+/**
+ * Blast radius of moving from the current Release to `candidate`. Throws when the
+ * information budget denies the next pattern, or when the blast radius is empty.
+ */
+function transitionBlast(
+  input: PatternTransitionInput,
+  candidate: Release
+): { blastRadius: string[]; invalidations: string[] } {
+  const previous = input.projector(input.current, input.current.sigma);
+  const next = input.projector(candidate, candidate.sigma);
+  // A pattern the budget denies is never offered for review.
+  assertInformationBudget(next, input.informationBudget);
+  const { blastRadius, invalidations } = blastRadiusOf(previous, next);
+  if (blastRadius.length === 0) {
+    throw new ArkOrderError(
+      'ARKORDER_EMPTY_BLAST',
+      'pattern change has empty blast radius; that key is not an order parameter'
+    );
+  }
+  return { blastRadius, invalidations };
+}
+
 export function proposePatternChange(input: {
   current: Release;
   delta: Record<string, unknown>;
@@ -403,32 +449,14 @@ export function proposePatternChange(input: {
     }
     merged[key] = value;
   }
-  const candidate = createFrozenRelease({
-    xi: merged,
-    sigma: { ...input.current.sigma },
-    version: input.current.version + 1,
-    now: input.now,
-    maxXiKeys: input.maxXiKeys,
-    xiSchema: input.xiSchema,
-    catalogDigest: input.catalogDigest,
-  });
+  const candidate = successorRelease(input, merged);
   if (candidate.hash === input.current.hash) {
     throw new ArkOrderError(
       'ARKORDER_EMPTY_BLAST',
       'delta does not change ξ; that is not a pattern change'
     );
   }
-  const previous = input.projector(input.current, input.current.sigma);
-  const next = input.projector(candidate, candidate.sigma);
-  // A pattern the budget denies is never offered for review.
-  assertInformationBudget(next, input.informationBudget);
-  const { blastRadius, invalidations } = blastRadiusOf(previous, next);
-  if (blastRadius.length === 0) {
-    throw new ArkOrderError(
-      'ARKORDER_EMPTY_BLAST',
-      'pattern change has empty blast radius; that key is not an order parameter'
-    );
-  }
+  const { blastRadius, invalidations } = transitionBlast(input, candidate);
   return {
     nextXi: candidate.xi,
     blastRadius,
@@ -484,31 +512,14 @@ export function applyProposedRelease(input: {
       `proposal was computed against a different Release (base v${String(proposal.baseVersion)}, current v${input.current.version})`
     );
   }
-  const candidate = createFrozenRelease({
-    xi: { ...input.proposal.nextXi },
-    sigma: { ...input.current.sigma },
-    version: input.current.version + 1,
-    now: input.now,
-    maxXiKeys: input.maxXiKeys,
-    xiSchema: input.xiSchema,
-    catalogDigest: input.catalogDigest,
-  });
+  const candidate = successorRelease(input, { ...input.proposal.nextXi });
   if (xiRecordsEqual(candidate.xi, input.current.xi)) {
     throw new ArkOrderError(
       'ARKORDER_EMPTY_BLAST',
       'delta does not change ξ; that is not a pattern change'
     );
   }
-  const previous = input.projector(input.current, input.current.sigma);
-  const next = input.projector(candidate, candidate.sigma);
-  assertInformationBudget(next, input.informationBudget);
-  const { blastRadius, invalidations } = blastRadiusOf(previous, next);
-  if (blastRadius.length === 0) {
-    throw new ArkOrderError(
-      'ARKORDER_EMPTY_BLAST',
-      'pattern change has empty blast radius; that key is not an order parameter'
-    );
-  }
+  const { blastRadius, invalidations } = transitionBlast(input, candidate);
   if (
     !sameSortedList(proposal.blastRadius, blastRadius) ||
     !sameSortedList(proposal.invalidations, invalidations)

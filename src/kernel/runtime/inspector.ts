@@ -2,15 +2,10 @@
  * Opt-in ArkRun inspector. HTTP is dynamically imported so constructing a
  * kernel does not bind a port or load `node:http`.
  */
-import type { ArkRunGraph, ArkRunGraphQuery } from '../../domain/arkRunGraph';
 import {
   resolveArkRunInspectorBind,
-  type ArkRunInspectorBind,
-  type ArkRunInspectorOutboxMonitor,
-  type ArkRunInspectorSnapshot,
-  type ArkRunInspectorWorkflowsMonitor,
 } from '../../domain/arkRunInspector';
-import type { ArkRunInspectorHandle } from './inspectorListen';
+import type { ArkRunInspectorHandle, ArkRunInspectorListenSource } from './inspectorListen';
 
 export type { ArkRunInspectorHandle };
 
@@ -22,18 +17,8 @@ export type StartArkRunInspectorOptions = {
   sseIntervalMs?: number;
 };
 
-export type ArkRunInspectorSource = {
-  getInspectorSnapshot(bind: ArkRunInspectorBind): ArkRunInspectorSnapshot;
-  requestGraph(query?: ArkRunGraphQuery): ArkRunGraph;
-  /** OD04: pending/failed outbox summaries (EventBufferStore.list). */
-  listInspectorOutbox?(): Promise<ArkRunInspectorOutboxMonitor>;
-  /** OD04: workflow/saga summaries (WorkflowEngine.list). */
-  listInspectorWorkflows?(): Promise<ArkRunInspectorWorkflowsMonitor>;
-  /** Duck-typed kernel ports when explicit list* helpers are absent. */
-  outbox?: { list(status?: 'pending' | 'dispatched' | 'failed'): Promise<unknown[]> };
-  eventBuffer?: { list(status?: 'pending' | 'dispatched' | 'failed'): Promise<unknown[]> };
-  workflowEngine?: { list(workflowName?: string): Promise<unknown[]> };
-};
+/** What the inspector reads: snapshot, graph, and optional outbox / workflow monitors. */
+export type ArkRunInspectorSource = ArkRunInspectorListenSource;
 
 export async function startArkRunInspector(
   source: ArkRunInspectorSource,

@@ -357,6 +357,11 @@ jobs:
       - name: Dead code and dependencies (knip)
         run: npm run check:knip
 
+      # jscpd over src/bin/scripts (generated mirrors ignored in .jscpd.json); threshold 0
+      # fails on any new clone of 80+ tokens.
+      - name: Copy/paste duplication (jscpd)
+        run: npm run check:duplication
+
       - name: JavaScript syntax (bin/scripts/eval)
         run: npm run check:js
 

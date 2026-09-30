@@ -8,7 +8,7 @@
  * Pure CLI helper (bin/lib/ark-run-doctor.mjs). Zero Node I/O.
  */
 
-import { composeMergePlanesHonesty, extraMergeTeethAllowed, isArkRunRuleId, } from './extra-merge-teeth.mjs';
+import { composeMergePlanesHonesty, extraMergeTeethAllowed, isArkRunRuleId, mergePlanesArkRulesInput, projectExtraPlaneStatus, } from './extra-merge-teeth.mjs';
 import { unresolvableLayerFlowLayers } from './source-policy.mjs';
 export const ARK_RUN_DOCTOR_SCHEMA_VERSION = '1.0';
 const RESIDUAL_RULE_CAP = 12;
@@ -59,17 +59,7 @@ export function summarizeArkRunSection(input = {}) {
     const residualCount = uniqueIds.length;
     const mergePlanes = composeMergePlanesHonesty({
         classification: input.classification,
-        arkRules: {
-            active: input.arkRules?.active === true,
-            structureEnforced: input.arkRules?.structureEnforced,
-            structureTotal: input.arkRules?.structureTotal,
-            structureAdvisory: input.arkRules?.structureAdvisory,
-            invariantEnforced: input.arkRules?.invariantEnforced,
-            invariantTotal: input.arkRules?.invariantTotal,
-            invariantAdvisory: input.arkRules?.invariantAdvisory,
-            covered: input.arkRules?.covered,
-            uncovered: input.arkRules?.uncovered,
-        },
+        arkRules: mergePlanesArkRulesInput(input.arkRules),
         arkRun: {
             present: extra.present,
             mode: extra.mode,
@@ -112,22 +102,7 @@ export function summarizeArkRunSection(input = {}) {
 }
 /** Thin status slice — counts only; residual null means unknown, not green. */
 export function projectStatusArkRun(input = {}) {
-    const present = input.present === true;
-    const mode = closedMode(input.mode);
-    const residualRaw = input.residual;
-    let residual = null;
-    if (typeof residualRaw === 'number' && Number.isFinite(residualRaw) && residualRaw >= 0) {
-        residual = Math.floor(residualRaw);
-    }
-    if (!present)
-        residual = residual == null ? 0 : residual;
-    return {
-        notAScore: true,
-        present,
-        mode: present ? mode : null,
-        extraMergeTeeth: present && mode === 'enforced' && input.extraMergeTeeth === true,
-        residual,
-    };
+    return projectExtraPlaneStatus(input);
 }
 export function formatArkRunDoctorLines(section) {
     if (!section || section.notAScore !== true)

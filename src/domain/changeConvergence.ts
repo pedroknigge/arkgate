@@ -46,6 +46,13 @@ export type AnalyzeArchitectureConvergenceInput = {
   candidateDependencies: readonly ArchitectureDependency[];
 };
 
+/** Resolved import edges (`to` null/absent when unresolved) as convergence dependencies. */
+export function resolvedEdgeDependencies(
+  edges: readonly { from: string; to?: string | null }[]
+): ArchitectureDependency[] {
+  return edges.flatMap((edge) => (edge.to ? [{ from: edge.from, to: edge.to }] : []));
+}
+
 function dependencyKey(dependency: ArchitectureDependency): string {
   return `${dependency.from}->${dependency.to}`;
 }

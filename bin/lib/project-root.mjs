@@ -243,76 +243,45 @@ export function resolveEffectiveProjectRoot(startRoot, opts = {}) {
   // Writes adopt walked config root only with explicit opt-in.
   const adoptWalkedRoot = !writeMode || followConfigRoot;
 
+  /** Config found by walk-up (or at start); root follows it unless a plain write. */
+  const walkedResult = (found) => ({
+    root: adoptWalkedRoot ? found.root : start,
+    writeRoot: start,
+    config: configName,
+    configPath: found.configPath,
+    configRoot: found.root,
+    walkedUp: found.walkedUp,
+    configFound: true,
+    writeRootFollowedConfig: adoptWalkedRoot && found.walkedUp,
+  });
+  /** Everything stays at the start directory. */
+  const startResult = (configPath, configFound) => ({
+    root: start,
+    writeRoot: start,
+    config: configName,
+    configPath,
+    configRoot: start,
+    walkedUp: false,
+    configFound,
+    writeRootFollowedConfig: false,
+  });
+
   if (typeof configName === 'string' && path.isAbsolute(configName)) {
     const found = findNearestArkConfig(start, configName, opts);
-    if (found) {
-      const root = adoptWalkedRoot ? found.root : start;
-      return {
-        root,
-        writeRoot: start,
-        config: configName,
-        configPath: found.configPath,
-        configRoot: found.root,
-        walkedUp: found.walkedUp,
-        configFound: true,
-        writeRootFollowedConfig: adoptWalkedRoot && found.walkedUp,
-      };
-    }
-    return {
-      root: start,
-      writeRoot: start,
-      config: configName,
-      configPath: configName,
-      configRoot: start,
-      walkedUp: false,
-      configFound: false,
-      writeRootFollowedConfig: false,
-    };
+    return found ? walkedResult(found) : startResult(configName, false);
   }
 
   const localPath = path.join(start, configName);
   try {
     if (fs.statSync(localPath, { throwIfNoEntry: false })?.isFile()) {
-      return {
-        root: start,
-        writeRoot: start,
-        config: configName,
-        configPath: localPath,
-        configRoot: start,
-        walkedUp: false,
-        configFound: true,
-        writeRootFollowedConfig: false,
-      };
+      return startResult(localPath, true);
     }
   } catch {
     // fall through to walk-up
   }
 
   const found = findNearestArkConfig(start, configName, opts);
-  if (found) {
-    const root = adoptWalkedRoot ? found.root : start;
-    return {
-      root,
-      writeRoot: start,
-      config: configName,
-      configPath: found.configPath,
-      configRoot: found.root,
-      walkedUp: found.walkedUp,
-      configFound: true,
-      writeRootFollowedConfig: adoptWalkedRoot && found.walkedUp,
-    };
-  }
-
-  return {
-    root: start,
-    writeRoot: start,
-    config: configName,
-    configPath: localPath,
-    configRoot: start,
-    walkedUp: false,
-    configFound: false,
-    writeRootFollowedConfig: false,
-  };
+  return found ? walkedResult(found) : startResult(localPath, false);
 }
 
 /**

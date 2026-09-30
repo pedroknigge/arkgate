@@ -4,52 +4,52 @@
   "groups": [
     {
       "id": "config-loading",
-      "note": "4.8.4 pins (467–473 version parse, 493–551 walk/load/parse) drifted onto validateLayerOwners and JSDoc after LO01 owners + trustBoundary. Retargeted to the same migrateArkConfig / load / JSON.parse decisions. #297 added sharedImportsSlice and shifted these pins by one. #308 sliceIdentity schema shifted them by seven. #326 childSlices schema shifted the same decisions by 17 lines. #326 PR2 deny-cross-parent schema description shifted them by five. #326 PR3 siblings object schema plus validateChildSliceSiblings shifted the same decisions by 89 lines. #326 PR4 childSlices.allowedCrossSlice schema plus validateChildSliceAllowedCrossSlice shifted the same decisions by 94 lines (755–758, 760–761, 781–782, 787–788, 797–799, 810, 817, 826–831). #326 PR5 sliceAliases schema plus validateChildSliceAliases shifted the same decisions to 1023–1026, 1028–1029, 1049–1050, 1055–1056, 1065–1067, 1078, 1085, 1094–1100. The load pin includes the new call. JSON.parse moved to 1111 because that call sits above it. Skip the equivalent typeof guard (one line after the unversioned branch). The slice-wall split moved the childSlices / sharedImportsSlice schema and validators to configContractSlices.ts, so the same decisions sit at 557–560, 562–563, 583–584, 589–590, 599–601, 612, 619, 628–632 (one validateSliceContract call replaces three), and JSON.parse at 643. #341 validateArkRulesRefs shifted the same decisions by 40 lines (597–600, 602–603, 623–624, 629–630, 639–641, 651, 658, 667–672, JSON.parse at 683). The load pin includes that call.",
+      "note": "4.8.4 pins (467–473 version parse, 493–551 walk/load/parse) drifted onto validateLayerOwners and JSDoc after LO01 owners + trustBoundary. Retargeted to the same migrateArkConfig / load / JSON.parse decisions. #297 added sharedImportsSlice and shifted these pins by one. #308 sliceIdentity schema shifted them by seven. #326 childSlices schema shifted the same decisions by 17 lines. #326 PR2 deny-cross-parent schema description shifted them by five. #326 PR3 siblings object schema plus validateChildSliceSiblings shifted the same decisions by 89 lines. #326 PR4 childSlices.allowedCrossSlice schema plus validateChildSliceAllowedCrossSlice shifted the same decisions by 94 lines (755–758, 760–761, 781–782, 787–788, 797–799, 810, 817, 826–831). #326 PR5 sliceAliases schema plus validateChildSliceAliases shifted the same decisions to 1023–1026, 1028–1029, 1049–1050, 1055–1056, 1065–1067, 1078, 1085, 1094–1100. The load pin includes the new call. JSON.parse moved to 1111 because that call sits above it. Skip the equivalent typeof guard (one line after the unversioned branch). The slice-wall split moved the childSlices / sharedImportsSlice schema and validators to configContractSlices.ts, so the same decisions sit at 557–560, 562–563, 583–584, 589–590, 599–601, 612, 619, 628–632 (one validateSliceContract call replaces three), and JSON.parse at 643. #341 validateArkRulesRefs shifted the same decisions by 40 lines (597–600, 602–603, 623–624, 629–630, 639–641, 651, 658, 667–672, JSON.parse at 683). The load pin includes that call. The shared JSON-Schema walker moved to schemaValidation.ts (jscpd dedupe of configContract / arkRulesContract), which shifted the same decisions up by 136 lines (461–464, 466–467, 487–488, 493–494, 503–505, 515, 522, 531–536, JSON.parse at 547).",
       "targets": [
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 585,
-          "endLine": 588
+          "startLine": 449,
+          "endLine": 452
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 590,
-          "endLine": 591
+          "startLine": 454,
+          "endLine": 455
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 611,
-          "endLine": 612
+          "startLine": 475,
+          "endLine": 476
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 617,
-          "endLine": 618
+          "startLine": 481,
+          "endLine": 482
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 627,
-          "endLine": 629
+          "startLine": 491,
+          "endLine": 493
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 639,
-          "endLine": 639
+          "startLine": 503,
+          "endLine": 503
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 646,
-          "endLine": 646
+          "startLine": 510,
+          "endLine": 510
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 655,
-          "endLine": 660
+          "startLine": 519,
+          "endLine": 524
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 671,
-          "endLine": 671
+          "startLine": 535,
+          "endLine": 535
         }
       ]
     },
@@ -162,12 +162,12 @@
     },
     {
       "id": "policy-delta-ack-match",
-      "note": "DF04: policyDeltaAcknowledgementMatches hash + finding-id set equality. AP02 (#264) inserted adrPath JSDoc above the helper. #297 inserted the sharedImportsSlice compare. #308 inserted the sliceIdentity compare, so the helper moved again. #326 compareChildSlices shifted the same function by 93 lines (1077–1106). #326 PR3 sibling enforce-list compare shifted the same function to 1129–1158. #326 PR4 child allowance widening compare shifted the same function to 1207–1236. #326 PR5 compareSliceAliases shifted the same function to 1250–1279. Retargeted to the same body. #335 stopAt and #336 ratchet compares shifted the same function to 1298–1327. #341 arkRules path compare shifted the same function to 1345–1374.",
+      "note": "DF04: policyDeltaAcknowledgementMatches hash + finding-id set equality. AP02 (#264) inserted adrPath JSDoc above the helper. #297 inserted the sharedImportsSlice compare. #308 inserted the sliceIdentity compare, so the helper moved again. #326 compareChildSlices shifted the same function by 93 lines (1077–1106). #326 PR3 sibling enforce-list compare shifted the same function to 1129–1158. #326 PR4 child allowance widening compare shifted the same function to 1207–1236. #326 PR5 compareSliceAliases shifted the same function to 1250–1279. Retargeted to the same body. #335 stopAt and #336 ratchet compares shifted the same function to 1298–1327. #341 arkRules path compare shifted the same function to 1345–1374. The stringListDelta helper (jscpd dedupe of two list compares) shifted the same function to 1354–1383.",
       "targets": [
         {
           "file": "src/domain/policyDelta.ts",
-          "startLine": 1345,
-          "endLine": 1374
+          "startLine": 1354,
+          "endLine": 1383
         }
       ]
     },

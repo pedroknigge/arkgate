@@ -9,6 +9,27 @@ import { execCommandParts, execRunner } from '../ark-shared.mjs';
 export const PREFERRED_MCP_BIN = 'arkgate-mcp';
 
 /**
+ * Parse an existing config file (blank → `{}`) and Ark's generated one for an
+ * upsert merge. Null when either is unparsable or not a plain JSON object.
+ * @param {string|null|undefined} existingText
+ * @param {string} generatedText
+ * @returns {{ existing: Record<string, any>, generated: Record<string, any> } | null}
+ */
+export function parseJsonMergeInputs(existingText, generatedText) {
+  let existing;
+  let generated;
+  try {
+    existing = existingText && existingText.trim() ? JSON.parse(existingText) : {};
+    generated = JSON.parse(generatedText);
+  } catch {
+    return null;
+  }
+  if (!existing || typeof existing !== 'object' || Array.isArray(existing)) return null;
+  if (!generated || typeof generated !== 'object' || Array.isArray(generated)) return null;
+  return { existing, generated };
+}
+
+/**
  * Cursor project hooks (`.cursor/hooks.json`, schema version 1).
  * Hard write boundary for agent `Write` / `StrReplace` when hooks are trusted.
  * Repair envelope may emit; Cursor Write `updated_input` reinjection is not claimed.
@@ -225,16 +246,9 @@ export function opencodeProjectConfig(root) {
  * Preserves sibling events and non-Ark preToolUse entries. Returns null if unreadable.
  */
 export function mergeCursorArkHook(existingText, generatedText) {
-  let existing;
-  let generated;
-  try {
-    existing = existingText && existingText.trim() ? JSON.parse(existingText) : {};
-    generated = JSON.parse(generatedText);
-  } catch {
-    return null;
-  }
-  if (!existing || typeof existing !== 'object' || Array.isArray(existing)) return null;
-  if (!generated || typeof generated !== 'object' || Array.isArray(generated)) return null;
+  const parsed = parseJsonMergeInputs(existingText, generatedText);
+  if (!parsed) return null;
+  const { existing, generated } = parsed;
   const generatedHooks = generated.hooks;
   const generatedPre = Array.isArray(generatedHooks?.preToolUse) ? generatedHooks.preToolUse : [];
   const arkEntry = generatedPre.find(
@@ -292,16 +306,9 @@ function isArkHookCommand(entry) {
  * Idempotent: merging twice returns the same text. Returns null when unreadable.
  */
 export function mergeClaudeStyleArkHooks(existingText, generatedText) {
-  let existing;
-  let generated;
-  try {
-    existing = existingText && existingText.trim() ? JSON.parse(existingText) : {};
-    generated = JSON.parse(generatedText);
-  } catch {
-    return null;
-  }
-  if (!existing || typeof existing !== 'object' || Array.isArray(existing)) return null;
-  if (!generated || typeof generated !== 'object' || Array.isArray(generated)) return null;
+  const parsed = parseJsonMergeInputs(existingText, generatedText);
+  if (!parsed) return null;
+  const { existing, generated } = parsed;
   const generatedHooks = generated.hooks;
   if (!generatedHooks || typeof generatedHooks !== 'object') return null;
   if (
@@ -464,16 +471,9 @@ export function removeAntigravityArkHook(existingText, generatedText) {
  * Preserves sibling named hooks and unknown top-level keys. Returns null if unreadable.
  */
 export function mergeAntigravityArkHook(existingText, generatedText) {
-  let existing;
-  let generated;
-  try {
-    existing = existingText && existingText.trim() ? JSON.parse(existingText) : {};
-    generated = JSON.parse(generatedText);
-  } catch {
-    return null;
-  }
-  if (!existing || typeof existing !== 'object' || Array.isArray(existing)) return null;
-  if (!generated || typeof generated !== 'object' || Array.isArray(generated)) return null;
+  const parsed = parseJsonMergeInputs(existingText, generatedText);
+  if (!parsed) return null;
+  const { existing, generated } = parsed;
   const arkGate = generated['ark-write-gate'];
   if (!arkGate || typeof arkGate !== 'object') return null;
   const next = { ...existing, 'ark-write-gate': arkGate };

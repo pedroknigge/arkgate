@@ -32,6 +32,7 @@ npm run check:layer-match
 npm run check:cli-pure
 npm run check:agent-skills    # Agent Skills layout + 100% product coverage (four planes + north star)
 npm run check:knip            # dead files, unused exports, unlisted/unused deps (knip.jsonc)
+npm run check:duplication     # jscpd copy/paste gate (threshold 0; generated mirrors ignored)
 ```
 
 A `src/domain` export that only its generated `bin/lib` mirror's consumers use carries a
@@ -78,9 +79,13 @@ Maintainer-only local notes may live under gitignored `internal/` — never comm
 1. **Behavior change ⇒ test.** Prefer real CLI binaries against temp fixtures.
 2. **Gates agree.** CLI, MCP, ESLint share semantics; change them together.
 3. **Incomplete analysis cannot look green** (`complete | partial | unavailable`).
-4. **CI green:** typecheck, coverage on PRs, build, `check:architecture`.
+4. **CI green:** typecheck, `check:knip`, `check:duplication`, coverage on PRs, build, `check:architecture`.
    Mutation runs on `main` and at publish.
 5. **Small diffs.** No new abstraction without a second concrete use.
+   A copied block of 80+ tokens fails `check:duplication`: extract a shared helper in the
+   right layer. When two blocks must diverge, wrap one in `// jscpd:ignore-start` /
+   `// jscpd:ignore-end` with the reason on the start line. A new generated mirror
+   (`generate:*` output) goes into `.jscpd.json` `ignore`.
 6. **Honest docs.** Do not claim npm-published status before `npm view` succeeds.
    Packed `README.md` and `docs/README.md` must not say npm `latest` remains an
    older version than this package — this tarball publishes as `latest`.

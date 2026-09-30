@@ -298,38 +298,38 @@ export function arkPackageVersion() {
 }
 
 /**
+ * Rewrite the value of a YAML `description:` line, preserving its quoting.
+ * `transform` returns the new value, or null to keep the line untouched.
+ */
+function rewriteDescriptionYamlLine(line, transform) {
+  const match = String(line).match(/^(description:\s*)(.*)$/);
+  if (!match) return line;
+  let raw = match[2] ?? '';
+  const quoted =
+    (raw.startsWith('"') && raw.endsWith('"') && raw.length >= 2) ||
+    (raw.startsWith("'") && raw.endsWith("'") && raw.length >= 2);
+  const quote = quoted ? raw[0] : '';
+  const value = quoted ? raw.slice(1, -1) : raw;
+  const next = transform(value);
+  if (next === null) return line;
+  if (!quoted) return `${match[1]}${next}`;
+  const escaped = next.replaceAll('\\', '\\\\').replaceAll(quote, `\\${quote}`);
+  return `${match[1]}${quote}${escaped}${quote}`;
+}
+
+/**
  * Rewrite a YAML `description:` line with a visible `arkgate@<version>. ` prefix.
  * Preserves quoting. Hosts show this string in the skill picker (unlike arkVersion).
  */
 function stampDescriptionYamlLine(line, version) {
-  const match = String(line).match(/^(description:\s*)(.*)$/);
-  if (!match) return line;
-  let raw = match[2] ?? '';
-  const quoted =
-    (raw.startsWith('"') && raw.endsWith('"') && raw.length >= 2) ||
-    (raw.startsWith("'") && raw.endsWith("'") && raw.length >= 2);
-  const quote = quoted ? raw[0] : '';
-  const value = quoted ? raw.slice(1, -1) : raw;
-  const stamped = stampSkillDescription(value, version);
-  if (!quoted) return `${match[1]}${stamped}`;
-  const escaped = stamped.replaceAll('\\', '\\\\').replaceAll(quote, `\\${quote}`);
-  return `${match[1]}${quote}${escaped}${quote}`;
+  return rewriteDescriptionYamlLine(line, (value) => stampSkillDescription(value, version));
 }
 
 function managedDescriptionYamlLine(line) {
-  const match = String(line).match(/^(description:\s*)(.*)$/);
-  if (!match) return line;
-  let raw = match[2] ?? '';
-  const quoted =
-    (raw.startsWith('"') && raw.endsWith('"') && raw.length >= 2) ||
-    (raw.startsWith("'") && raw.endsWith("'") && raw.length >= 2);
-  const quote = quoted ? raw[0] : '';
-  const value = quoted ? raw.slice(1, -1) : raw;
-  const stripped = stripSkillDescriptionVersion(value);
-  if (stripped === value) return line;
-  if (!quoted) return `${match[1]}${stripped}`;
-  const escaped = stripped.replaceAll('\\', '\\\\').replaceAll(quote, `\\${quote}`);
-  return `${match[1]}${quote}${escaped}${quote}`;
+  return rewriteDescriptionYamlLine(line, (value) => {
+    const stripped = stripSkillDescriptionVersion(value);
+    return stripped === value ? null : stripped;
+  });
 }
 
 // Insert `arkVersion: <v>` and a visible `arkgate@<v>. ` description prefix.
@@ -818,20 +818,15 @@ function readCodexHomeCatalogMetadata(file, kind) {
   }
 }
 
-function codexHomeCatalogState(skillsDir) {
-  const catalog = readCodexHomeCatalogMetadata(
-    path.join(skillsDir, CODEX_HOME_CATALOG),
-    'catalog'
-  );
-  const pending = readCodexHomeCatalogMetadata(
-    path.join(skillsDir, CODEX_HOME_PENDING_CATALOG),
-    'pending'
-  );
+/**
+ * Merge a home skill catalog and its pending catalog metadata: the floor is the
+ * newer of the two versions; either file present means metadata is in play.
+ * @param {{ exists: boolean, valid: boolean, version: string|null }} catalog
+ * @param {{ exists: boolean, valid: boolean, version: string|null }} pending
+ */
+export function homeCatalogFloorState(catalog, pending) {
   let floorVersion = catalog.version;
-  if (
-    pending.version &&
-    (!floorVersion || isVersionOlder(floorVersion, pending.version))
-  ) {
+  if (pending.version && (!floorVersion || isVersionOlder(floorVersion, pending.version))) {
     floorVersion = pending.version;
   }
   return {
@@ -841,6 +836,18 @@ function codexHomeCatalogState(skillsDir) {
     metadataInvalid:
       (catalog.exists && !catalog.valid) || (pending.exists && !pending.valid),
   };
+}
+
+function codexHomeCatalogState(skillsDir) {
+  const catalog = readCodexHomeCatalogMetadata(
+    path.join(skillsDir, CODEX_HOME_CATALOG),
+    'catalog'
+  );
+  const pending = readCodexHomeCatalogMetadata(
+    path.join(skillsDir, CODEX_HOME_PENDING_CATALOG),
+    'pending'
+  );
+  return homeCatalogFloorState(catalog, pending);
 }
 
 function newerCodexHomeCatalogVersion(skillsDir, packageVersion, state = null) {

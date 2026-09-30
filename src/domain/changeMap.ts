@@ -120,7 +120,11 @@ function requiredString(
   return undefined;
 }
 
-function canonicalProjectPath(value: string): string | undefined {
+/**
+ * Canonical project-relative POSIX path, or undefined when the value is empty,
+ * absolute, contains NUL, escapes the root, or is not already in canonical form.
+ */
+export function canonicalProjectPath(value: string): string | undefined {
   const portable = value.replace(/\\/g, '/');
   if (!portable || portable.startsWith('/') || /^[A-Za-z]:\//.test(portable) || portable.includes('\0')) {
     return undefined;

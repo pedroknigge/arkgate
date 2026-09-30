@@ -3,6 +3,7 @@
  */
 import type { ResolvedDependencyFact } from './resolvedCandidateFactsTypes';
 import { XI_TTL_KEY_RE } from './arkOrderTypes';
+import { globToRegExp } from './layerMatch';
 import { sourceHasPersistenceWrite, sourceImportsPersistenceDriverText } from './persistenceWriteHint';
 
 const ARKORDER_PLANE_FACTORY = 'createOrderPlane';
@@ -56,95 +57,9 @@ export type ResolvedArkOrderBudgetLeakFact = {
   kind: string;
 };
 
-/**
- * XIWRITE-001: same engine as `globToRegExp` in src/domain/layerMatch.ts.
- * Inlined so generate:cli-pure emits self-contained bin/lib/ark-order-facts.mjs /
- * ark-order-sensors.mjs
- * (layerMatch is derived to bin/ark-layer-match.mjs, not a bin/lib sibling).
- */
-const appliesToRegexpCache = new Map<string, RegExp>();
-
-function escapeAppliesToLiteral(ch: string): string {
-  return /[.*+?^${}()|[\]\\]/.test(ch) ? `\\${ch}` : ch;
-}
-
-function normalizeAppliesToGlob(pattern: string): string {
-  let out = '';
-  for (let i = 0; i < pattern.length; i += 1) {
-    const c = pattern[i];
-    if (c === '\\' && i + 1 < pattern.length) {
-      const next = pattern[i + 1]!;
-      if ('*?{}[],'.includes(next) || next === '\\') {
-        out += '\\' + next;
-        i += 1;
-        continue;
-      }
-      out += '/';
-      continue;
-    }
-    out += c;
-  }
-  return out;
-}
-
-function appliesToBracesBalanced(glob: string): boolean {
-  let depth = 0;
-  for (let i = 0; i < glob.length; i += 1) {
-    const c = glob[i];
-    if (c === '\\') {
-      i += 1;
-      continue;
-    }
-    if (c === '{') depth += 1;
-    else if (c === '}') {
-      depth -= 1;
-      if (depth < 0) return false;
-    }
-  }
-  return depth === 0;
-}
-
+/** XIWRITE-001 `appliesTo` globs use the layer-glob engine (`globToRegExp`). */
 export function arkOrderGlobToRegExp(pattern: string): RegExp {
-  const cached = appliesToRegexpCache.get(pattern);
-  if (cached) return cached;
-  const glob = normalizeAppliesToGlob(pattern);
-  const useBraces = appliesToBracesBalanced(glob);
-  let out = '';
-  let braceDepth = 0;
-  for (let i = 0; i < glob.length; i += 1) {
-    const c = glob[i];
-    if (c === '\\' && i + 1 < glob.length) {
-      out += escapeAppliesToLiteral(glob[i + 1]!);
-      i += 1;
-    } else if (c === '*') {
-      if (glob[i + 1] === '*') {
-        if (glob[i + 2] === '/') {
-          out += '(?:.*/)?';
-          i += 2;
-        } else {
-          out += '.*';
-          i += 1;
-        }
-      } else {
-        out += '[^/]*';
-      }
-    } else if (c === '?') {
-      out += '[^/]';
-    } else if (c === '{' && useBraces) {
-      out += '(?:';
-      braceDepth += 1;
-    } else if (c === '}' && useBraces && braceDepth > 0) {
-      out += ')';
-      braceDepth -= 1;
-    } else if (c === ',' && useBraces && braceDepth > 0) {
-      out += '|';
-    } else {
-      out += escapeAppliesToLiteral(c);
-    }
-  }
-  const re = new RegExp(`^${out}$`);
-  appliesToRegexpCache.set(pattern, re);
-  return re;
+  return globToRegExp(pattern);
 }
 
 function escapeRegExp(value: string): string {

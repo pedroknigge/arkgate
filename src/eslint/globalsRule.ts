@@ -7,14 +7,14 @@
  */
 import path from 'node:path';
 import { forbiddenGlobalForModuleSpecifier } from '../domain/capabilities';
-import { layerForRelativePath } from '../domain/layerMatch';
 import {
   isLocallyBound,
   isValueIdentifierReference,
   memberExpressionPath,
+  moduleSourceListeners,
   staticKeyName,
 } from './astHelpers';
-import { configForRule, findConfigPath, sourceIsInAnalysisScope } from './contractLoad';
+import { configForRule, findConfigPath, lintedFileInScope } from './contractLoad';
 import {
   lintedFilename,
   reportAdapterDiagnostic,
@@ -73,12 +73,9 @@ export const noForbiddenGlobals: ArkRule = {
     let layerName = 'this layer';
 
     if (config && root && filename) {
-      const absFile = path.isAbsolute(filename) ? filename : path.resolve(filename);
-      const relFile = path.relative(root, absFile).split(path.sep).join('/');
-      if (!sourceIsInAnalysisScope(config, relFile)) return {} as RuleListener;
-      const layer = config.layers?.find(
-        (l) => l.name === layerForRelativePath(relFile, config.layers)
-      );
+      const located = lintedFileInScope(config, root, filename);
+      if (!located) return {} as RuleListener;
+      const { layer } = located;
       if (layer?.forbiddenGlobals?.length) {
         globals = new Set(layer.forbiddenGlobals);
         layerName = layer.name;
@@ -170,6 +167,8 @@ export const noForbiddenGlobals: ArkRule = {
       checkPattern(pattern, base);
     };
 
+    const moduleListeners = moduleSourceListeners(context, reportModule);
+
     return {
       MemberExpression(node) {
         if (node.parent?.type === 'MemberExpression' && node.parent.object === node) return;
@@ -192,91 +191,16 @@ export const noForbiddenGlobals: ArkRule = {
         checkDestructure(node.left, (node as AstNode & { right?: AstNode }).right);
       },
       CallExpression(node) {
-        const call = node as AstNode & {
-          callee?: { type?: string; name?: string };
-          arguments?: Array<{ type?: string; value?: unknown }>;
-        };
-        if (
-          call.callee?.type === 'Identifier' &&
-          call.callee.name === 'require' &&
-          call.arguments?.[0]?.type === 'Literal' &&
-          !isLocallyBound(context, node, 'require')
-        ) {
-          reportModule(node, call.arguments[0].value, false, 'require');
-        }
+        moduleListeners.CallExpression(node);
         if (scopeAware) return;
-        const callee = call.callee?.type === 'Identifier' ? call.callee.name : undefined;
+        const callee = node.callee?.type === 'Identifier' ? node.callee.name : undefined;
         if (callee && forbidden.has(callee)) report(node, callee);
       },
-      ImportDeclaration(node) {
-        const importNode = node as AstNode & {
-          source?: { value?: unknown };
-          importKind?: string;
-          specifiers?: Array<{ importKind?: string; type?: string }>;
-        };
-        const named = (importNode.specifiers ?? []).filter(
-          (specifier) => specifier.type === 'ImportSpecifier'
-        );
-        const allNamedTypeOnly =
-          named.length > 0 &&
-          named.length === (importNode.specifiers ?? []).length &&
-          named.every((specifier) => specifier.importKind === 'type');
-        reportModule(
-          node,
-          importNode.source?.value,
-          importNode.importKind === 'type' || allNamedTypeOnly,
-          'import'
-        );
-      },
-      ImportExpression(node) {
-        const importNode = node as AstNode & { source?: { type?: string; value?: unknown } };
-        if (importNode.source?.type === 'Literal') {
-          reportModule(node, importNode.source.value, false, 'dynamic-import');
-        }
-      },
-      TSImportEqualsDeclaration(node) {
-        const importNode = node as AstNode & {
-          importKind?: string;
-          isTypeOnly?: boolean;
-          moduleReference?: { expression?: { value?: unknown } };
-        };
-        reportModule(
-          node,
-          importNode.moduleReference?.expression?.value,
-          importNode.importKind === 'type' || importNode.isTypeOnly === true,
-          'require'
-        );
-      },
-      ExportNamedDeclaration(node) {
-        const exportNode = node as AstNode & {
-          source?: { value?: unknown };
-          exportKind?: string;
-          specifiers?: Array<{ exportKind?: string }>;
-        };
-        if (!exportNode.source) return;
-        const specifiers = (exportNode.specifiers ?? []) as Array<{ exportKind?: string }>;
-        const allTypeOnly =
-          specifiers.length > 0 &&
-          specifiers.every((specifier) => specifier.exportKind === 'type');
-        reportModule(
-          node,
-          exportNode.source.value,
-          exportNode.exportKind === 'type' || allTypeOnly,
-          'export'
-        );
-      },
-      ExportAllDeclaration(node) {
-        const exportNode = node as AstNode & {
-          source?: { value?: unknown };
-          exportKind?: string;
-        };
-        reportModule(
-          node,
-          exportNode.source?.value,
-          exportNode.exportKind === 'type',
-          'export'
-        );
-      },
+      ImportDeclaration: moduleListeners.ImportDeclaration,
+      ImportExpression: moduleListeners.ImportExpression,
+      TSImportEqualsDeclaration: moduleListeners.TSImportEqualsDeclaration,
+      ExportNamedDeclaration: moduleListeners.ExportNamedDeclaration,
+      ExportAllDeclaration: moduleListeners.ExportAllDeclaration,
       NewExpression(node) {
         if (scopeAware) return;
         const callee = node.callee?.type === 'Identifier' ? node.callee.name : undefined;

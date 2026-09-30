@@ -448,12 +448,12 @@ function runPackedMissingHostCheck(candidateTarball, workRoot) {
   };
 }
 
-function writeJson(file, value) {
+export function writeJson(file, value) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, `${JSON.stringify(value, null, 2)}\n`);
 }
 
-function writeText(file, value) {
+export function writeText(file, value) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, value);
 }

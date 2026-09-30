@@ -127,6 +127,23 @@ import {
 const arkCheckBin = fileURLToPath(new URL('./ark-check.mjs', import.meta.url));
 const arkMcpLauncher = fileURLToPath(new URL('./ark-mcp.mjs', import.meta.url));
 
+/** MCP tool result for a thrown error: its message as text, flagged isError. */
+function toolErrorResult(error) {
+  return {
+    content: [{ type: 'text', text: error instanceof Error ? error.message : String(error) }],
+    isError: true,
+  };
+}
+
+/** MCP tool result for a `{ valid }` verdict: pretty JSON text + structuredContent. */
+function validityToolResult(result) {
+  return {
+    content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+    structuredContent: result,
+    isError: !result.valid,
+  };
+}
+
 /**
  * W4 — opt-in hook repair payload.
  * True when CLI `--hook-repair` or env ARK_HOOK_REPAIR is 1/true/yes.
@@ -2789,16 +2806,9 @@ export async function runArkMcp({ hookInput, hookRoot } = {}) {
         }),
         { root: args.root, acknowledgement, failClosed: true }
       );
-      return {
-        content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
-        structuredContent: result,
-        isError: !result.valid,
-      };
+      return validityToolResult(result);
     } catch (error) {
-      return {
-        content: [{ type: 'text', text: error instanceof Error ? error.message : String(error) }],
-        isError: true,
-      };
+      return toolErrorResult(error);
     }
   }
 
@@ -2985,16 +2995,9 @@ export async function runArkMcp({ hookInput, hookRoot } = {}) {
         tsconfig: args.tsconfig,
         manifest: projectManifest,
       });
-      return {
-        content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
-        structuredContent: result,
-        isError: !result.valid,
-      };
+      return validityToolResult(result);
     } catch (error) {
-      return {
-        content: [{ type: 'text', text: error instanceof Error ? error.message : String(error) }],
-        isError: true,
-      };
+      return toolErrorResult(error);
     }
   }
 
@@ -3035,10 +3038,7 @@ export async function runArkMcp({ hookInput, hookRoot } = {}) {
         isError: binding?.status === 'mismatch',
       };
     } catch (error) {
-      return {
-        content: [{ type: 'text', text: error instanceof Error ? error.message : String(error) }],
-        isError: true,
-      };
+      return toolErrorResult(error);
     }
   }
 
@@ -3056,10 +3056,7 @@ export async function runArkMcp({ hookInput, hookRoot } = {}) {
         structuredContent: payload,
       };
     } catch (error) {
-      return {
-        content: [{ type: 'text', text: error instanceof Error ? error.message : String(error) }],
-        isError: true,
-      };
+      return toolErrorResult(error);
     }
   }
 
@@ -3093,10 +3090,7 @@ export async function runArkMcp({ hookInput, hookRoot } = {}) {
         isError: false,
       };
     } catch (error) {
-      return {
-        content: [{ type: 'text', text: error instanceof Error ? error.message : String(error) }],
-        isError: true,
-      };
+      return toolErrorResult(error);
     }
   }
 

@@ -157,6 +157,7 @@ or `dist/` except `ark-mcp` loading the built library. Shared CLI logic lives in
 | `src/domain/adapterContract.ts` | `bin/lib/adapter-contract.mjs` | (same `cli-pure` scripts); facade factories + re-exports |
 | `src/domain/configContract.ts` | `bin/lib/config-contract.mjs` + `schemas/ark.config.schema.json` | (same `cli-pure` scripts) |
 | `src/domain/configContractSlices.ts` | `bin/lib/config-contract-slices.mjs` | (same `cli-pure` scripts); slice schema + validators split out of configContract |
+| `src/domain/schemaValidation.ts` | `bin/lib/schema-validation.mjs` | (same `cli-pure` scripts); JSON-Schema-subset walker shared by configContract + arkRulesContract |
 | `src/domain/configVersionFloor.ts` | bundled in `bin/lib/analysis-engine.mjs` | `generate:analysis-engine` / `check:analysis-engine`; minimum-version floor per new config key (#338) |
 | `src/domain/configExtras.ts` | `bin/lib/config-extras.mjs` | (same `cli-pure` scripts); arkRun / arkOrder extra defaults |
 | `src/domain/projectIdentity.ts` | `bin/lib/project-identity.mjs` + `schemas/ark.project-identity.schema.json` | (same `cli-pure` scripts) |
@@ -194,7 +195,9 @@ or `dist/` except `ark-mcp` loading the built library. Shared CLI logic lives in
 | `src/domain/changeConvergence.ts` | bundled in `bin/lib/analysis-engine.mjs` | `generate:analysis-engine` / `check:analysis-engine` |
 | Tooling `bin/lib/*.source.mjs` + design-delta schema source | compact shipped `design-delta.mjs`, `enforcement-state.mjs`, `hook-templates.mjs`, and design-delta schema | `generate:packaged-tooling` / `check:packaged-tooling` |
 
-Parity/drift tests + CI enforce generated files stay in sync.
+Parity/drift tests + CI enforce generated files stay in sync. Generated mirrors are listed in
+`.jscpd.json` `ignore`, so `npm run check:duplication` (jscpd, threshold 0) only sees hand-written
+code; `tests/unit/scripts/jscpdConfig.test.ts` keeps that list equal to the generator outputs.
 
 The project is only considered Ark-enforced when the write gate, CI gate, and runtime path all pass.
 

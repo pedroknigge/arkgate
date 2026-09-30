@@ -67,15 +67,17 @@ const config = {
     // decisions. The load pin includes the new call. JSON.parse is 1111.
     // The slice-wall split (configContractSlices.ts) moved them to 557-643; one
     // validateSliceContract call replaces the three slice validators.
-    'src/domain/configContract.ts:585-588',
-    'src/domain/configContract.ts:590-591',
-    'src/domain/configContract.ts:611-612',
-    'src/domain/configContract.ts:617-618',
-    'src/domain/configContract.ts:627-629',
-    'src/domain/configContract.ts:639-639',
-    'src/domain/configContract.ts:646-646',
-    'src/domain/configContract.ts:655-660',
-    'src/domain/configContract.ts:671-671',
+    // The shared schema walker (schemaValidation.ts, jscpd dedupe) and knip's unused-export
+    // cleanup moved the same decisions to 449-535; JSON.parse is 535.
+    'src/domain/configContract.ts:449-452',
+    'src/domain/configContract.ts:454-455',
+    'src/domain/configContract.ts:475-476',
+    'src/domain/configContract.ts:481-482',
+    'src/domain/configContract.ts:491-493',
+    'src/domain/configContract.ts:503-503',
+    'src/domain/configContract.ts:510-510',
+    'src/domain/configContract.ts:519-524',
+    'src/domain/configContract.ts:535-535',
     // DF04 — selective pure truth islands (fail-closed / ack / promote honesty).
     // peerIsolationDecision is the killable fail-closed core; findDeniedEdgeDecision wires it.
     // #297 inserted the shared-imports-slice hop. Slice-id JSDoc and #308
@@ -95,7 +97,9 @@ const config = {
     // #326 PR4 child allowance widening compare shifted it to 1207-1236.
     // #326 PR5 compareSliceAliases shifted it to 1250-1279.
     // #335 stopAt and #336 ratchet compares shifted it to 1298-1327.
-    'src/domain/policyDelta.ts:1345-1374',
+    // #341 arkRules path compare shifted it to 1345-1374; the stringListDelta
+    // helper (jscpd dedupe) shifted it to 1354-1383.
+    'src/domain/policyDelta.ts:1354-1383',
     // #291 declaration witness shifted formatCoverageDiscards / budgetDetail /
     // canPromoteInvariant. #307/#310 classifyCoverage shifted them again.
     // #322 declaration-miss shifted them once more.

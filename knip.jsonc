@@ -73,6 +73,7 @@
     "bin/lib/project-identity.mjs": ["exports", "types"],
     "bin/lib/remediation.mjs": ["exports", "types"],
     "bin/lib/rules-inventory.mjs": ["exports", "types"],
+    "bin/lib/schema-validation.mjs": ["exports", "types"],
     "bin/lib/sensor-promotion.mjs": ["exports", "types"],
     "bin/lib/source-policy.mjs": ["exports", "types"],
     "bin/lib/status-manifest.mjs": ["exports", "types"],

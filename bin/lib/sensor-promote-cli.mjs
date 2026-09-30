@@ -11,18 +11,9 @@ import path from 'node:path';
 
 import { arkCommand } from '../ark-shared.mjs';
 import { collectGovernedFiles, normalize } from './scan-files.mjs';
+// Same palette and TTY test as the entry's stderr output.
+import { color } from './violations.mjs';
 
-// Same shape and the same TTY test as the entry's own `color`: this module is
-// the only other writer to that terminal, and a second copy is cheaper than
-// exporting the entry's internals into a cycle.
-const useColor = process.stderr.isTTY && !process.env.NO_COLOR;
-const color = {
-  red: (s) => (useColor ? `\x1b[31m${s}\x1b[0m` : s),
-  yellow: (s) => (useColor ? `\x1b[33m${s}\x1b[0m` : s),
-  green: (s) => (useColor ? `\x1b[32m${s}\x1b[0m` : s),
-  dim: (s) => (useColor ? `\x1b[2m${s}\x1b[0m` : s),
-  bold: (s) => (useColor ? `\x1b[1m${s}\x1b[0m` : s),
-};
 
 /**
  * A rule id or a source path comes out of the project's own ArkRules JSON and

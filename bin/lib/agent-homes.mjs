@@ -13,6 +13,7 @@ import {
   arkPackageVersion,
   assessSkillCatalogParity,
   detectActiveAgentHost,
+  homeCatalogFloorState,
   isValidSemver,
   isVersionOlder,
   skillTemplateNames,
@@ -129,17 +130,7 @@ function readHomeCatalogFloor(skillsDir) {
   };
   const catalog = readOne(path.join(skillsDir, HOME_SKILL_CATALOG));
   const pending = readOne(path.join(skillsDir, HOME_SKILL_PENDING_CATALOG));
-  let floorVersion = catalog.version;
-  if (pending.version && (!floorVersion || isVersionOlder(floorVersion, pending.version))) {
-    floorVersion = pending.version;
-  }
-  return {
-    floorVersion,
-    pendingVersion: pending.version,
-    hasMetadata: catalog.exists || pending.exists,
-    metadataInvalid:
-      (catalog.exists && !catalog.valid) || (pending.exists && !pending.valid),
-  };
+  return homeCatalogFloorState(catalog, pending);
 }
 
 function homeInPlay(parity, catalogState) {
