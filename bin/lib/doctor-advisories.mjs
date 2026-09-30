@@ -20,6 +20,11 @@ import {
 import { printParseHealthSection, summarizeParseHealth } from './parse-health.mjs';
 import { detectGraphBlindSpots, printGraphBlindSection } from './graph-blind.mjs';
 import {
+  computeOrphanModules,
+  printOrphanModulesCompactLine,
+  printOrphanModulesSection,
+} from './orphan-modules-io.mjs';
+import {
   formatArkRulesDoctorLines,
   summarizeRulesUnderContract,
 } from './rules-under-contract.mjs';
@@ -143,6 +148,7 @@ export function printCompactExtraDoctorLines(advisories, io) {
     io.line(io.warn, flatMoves[0].evidence);
     if (flatMoves.length > 1) io.line(' ', `${flatMoves.length - 1} more flat-parent suggestion(s) in --doctor --all`);
   }
+  printOrphanModulesCompactLine(advisories?.orphanModules, io);
   const noDomain = advisories?.noDomainFrontend;
   if (noDomain?.ask) {
     console.log('');
@@ -237,8 +243,12 @@ function classificationFromCoverage(cov) {
   };
 }
 
-/** `activeViolations` must already exclude frozen baseline keys (report residual parity). */
-export function computeDoctorAdvisories(root, config, cov, rules, files, ts, parseHealth, facts, activeViolations) {
+/**
+ * `activeViolations` must already exclude frozen baseline keys (report residual parity).
+ * `facts.importGraph` is the scan's importer index; `view.details` (Details / report) adds
+ * the unused-exports tier.
+ */
+export function computeDoctorAdvisories(root, config, cov, rules, files, ts, parseHealth, facts, activeViolations, view = {}) {
   const physicalCohesion = computePhysicalCohesion(root, files);
   const decisionMemory = computeReshapeDecisionMemory(root, files);
   physicalCohesion.reshapeDecisions = decisionMemory.summary;
@@ -325,6 +335,14 @@ export function computeDoctorAdvisories(root, config, cov, rules, files, ts, par
     parseHealth: parseHealth ?? summarizeParseHealth(),
     // Y09 direction: advisory graph-blind spots (template-interpolation); never hard verdict.
     graphBlindSpots: detectGraphBlindSpots(ts, root, files),
+    // ADR 0037: files nothing imports (projection of the resolved import edges; notAScore).
+    orphanModules: computeOrphanModules({
+      root,
+      config: { ...config, rules: rules ?? config?.rules },
+      ts,
+      importGraph: facts?.importGraph,
+      details: view.details === true,
+    }),
     // AR12 — Rules under contract (honest counts; real test I/O, never empty-fileContents stub).
     // P1M: pass classification so extraMergeTeeth cannot arm at 0% governed.
     stewardNudge: collectStewardNudge(root, config),
@@ -389,6 +407,7 @@ export function printDoctorAdvisories(advisories, io) {
   printReshapeDecisionsSection(advisories.physicalCohesion?.reshapeDecisions, io);
   printParseHealthSection(advisories.parseHealth, io);
   printGraphBlindSection(advisories.graphBlindSpots, io);
+  printOrphanModulesSection(advisories.orphanModules, io);
   const nudge = advisories.stewardNudge;
   if ((nudge?.needsStewards || nudge?.drift || nudge?.emptyStewardsPastGrace) && nudge.ask) {
     console.log('');

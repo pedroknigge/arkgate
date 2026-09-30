@@ -390,6 +390,7 @@ const FIXTURE_VIEWS = {
   atlasgrid: { check: atlasgridCheckView, doctor: atlasgridDoctorView },
   slicelaw: { check: slicelawCheckView, doctor: slicelawDoctorView },
   orderdesk: { check: orderdeskCheckView, doctor: doctorView },
+  deadwood: { check: checkView, doctor: deadwoodDoctorView },
 };
 
 function configRejectionView(stderr) {
@@ -431,6 +432,75 @@ function orderdeskCheckView(parsed) {
     completeness: String(parsed.completeness),
     writes,
   };
+}
+
+/** ADR 0037: the files-nothing-imports section, without machine paths. */
+function deadwoodDoctorView(parsed) {
+  const section = parsed?.doctor?.orphanModules ?? null;
+  if (!section) return { orphanModules: null };
+  requireFields(section, ['status', 'orphans', 'testOnly', 'totals', 'unusedExports'], 'doctor.orphanModules');
+  const unused = section.unusedExports ?? {};
+  return {
+    orphanModules: {
+      status: String(section.status),
+      notAScore: section.notAScore === true,
+      headline: String(section.headline ?? ''),
+      orphans: section.orphans
+        .map((item) => ({ path: String(item.path), certainty: String(item.certainty), layer: item.layer ?? null }))
+        .sort(compareRows(['path'])),
+      testOnly: { count: section.testOnly.count, sample: [...section.testOnly.sample].sort() },
+      totals: section.totals,
+      entrySources: section.entryEvidence?.bySource ?? {},
+      frameworks: section.frameworks ?? [],
+      honesty: section.honesty ?? [],
+      unusedExports: {
+        status: String(unused.status),
+        files: (unused.files ?? [])
+          .map((row) => ({ path: String(row.path), exports: [...row.exports].sort() }))
+          .sort(compareRows(['path'])),
+      },
+    },
+  };
+}
+
+function judgeDeadwood(spec, steps) {
+  const compactStep = steps.find((step) => step.command.includes('--doctor') && !step.command.includes('--all'));
+  const detailsStep = steps.find((step) => step.command.includes('--doctor') && step.command.includes('--all'));
+  const compact = compactStep?.output?.orphanModules ?? null;
+  const details = detailsStep?.output?.orphanModules ?? null;
+  const certaintyOf = (view, file) => view?.orphans.find((item) => item.path === file)?.certainty ?? null;
+  switch (spec.kind) {
+    case 'deadwood-orphan-listed': {
+      const got = { compact: certaintyOf(compact, spec.file), details: certaintyOf(details, spec.file) };
+      return { met: got.compact === 'no-importer' && got.details === 'no-importer', want: { file: spec.file, certainty: 'no-importer' }, got };
+    }
+    case 'deadwood-test-only': {
+      const got = { listed: certaintyOf(compact, spec.file) !== null, inTestOnly: compact?.testOnly.sample.includes(spec.file) === true };
+      return { met: !got.listed && got.inTestOnly, want: { file: spec.file, listed: false, inTestOnly: true }, got };
+    }
+    case 'deadwood-maybe-dynamic': {
+      const got = { certainty: certaintyOf(compact, spec.file), status: compact?.status ?? null };
+      return { met: got.certainty === 'maybe-dynamic' && got.status === 'partial', want: { file: spec.file, certainty: 'maybe-dynamic', status: 'partial' }, got };
+    }
+    case 'deadwood-entry-suppressed': {
+      const listed = spec.files.filter((file) => certaintyOf(compact, file) !== null || certaintyOf(details, file) !== null);
+      const sources = Object.keys(compact?.entrySources ?? {}).sort();
+      const want = ['framework', 'package-json', 'sidecar'];
+      return { met: listed.length === 0 && stable(sources) === stable(want), want: { listed: [], sources: want }, got: { listed, sources } };
+    }
+    case 'deadwood-unused-export': {
+      const row = details?.unusedExports.files.find((item) => item.path === spec.file) ?? null;
+      const got = {
+        compactStatus: compact?.unusedExports.status ?? null,
+        compactFiles: compact?.unusedExports.files.length ?? null,
+        details: row ? row.exports : null,
+      };
+      const met = got.compactStatus === 'deferred' && got.compactFiles === 0 && stable(got.details) === stable([spec.name]);
+      return { met, want: { compactStatus: 'deferred', details: [spec.name] }, got };
+    }
+    default:
+      throw new JourneyError('case', `unknown deadwood case kind ${spec.kind}`);
+  }
 }
 
 function slicelawCheckView(parsed) {
@@ -842,6 +912,9 @@ function judgeOrderdesk(spec, steps) {
 function evaluateJourneyCase(spec, steps) {
   if (typeof spec.kind === 'string' && spec.kind.startsWith('orderdesk-')) {
     return caseResult(spec, judgeOrderdesk(spec, steps));
+  }
+  if (typeof spec.kind === 'string' && spec.kind.startsWith('deadwood-')) {
+    return caseResult(spec, judgeDeadwood(spec, steps));
   }
   if (typeof spec.kind === 'string' && spec.kind.startsWith('slicelaw-')) {
     return caseResult(spec, judgeSlicelaw(spec, steps));

@@ -1,0 +1,6 @@
+{
+  "schemaVersion": "1",
+  "entryPoints": [
+    { "glob": "src/lib/plugins/**", "reason": "loaded by name from the plugin manifest" }
+  ]
+}

@@ -9,6 +9,10 @@
       "maxPeakRssBytes": 471859200,
       "rationale": "ark-check --json --no-cache over the fixture. 450 MiB ceiling."
     },
+    "doctor": {
+      "maxPeakRssBytes": 524288000,
+      "rationale": "ark-check --doctor --json --no-cache over the fixture: the scan, the compact importer index doctor keeps for files nothing imports (ADR 0037), and every advisory section. 500 MiB ceiling; recorded 196 MB at n=2000 (macOS arm64, Node 26)."
+    },
     "hookWrite": {
       "maxPeakRssBytes": 209715200,
       "rationale": "One-line Write through the PreToolUse hook. It must not walk or parse the tree: 200 MiB ceiling (loading TypeScript is most of the floor)."

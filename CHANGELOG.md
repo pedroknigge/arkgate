@@ -6,6 +6,23 @@ in the immutable pre-2.0 archive linked below.
 ## Unreleased
 
 ### Added
+- Status lists the files nothing imports. A governed file with no importer —
+  no governed file, test, project script, or known entry point — shows in
+  `--doctor --all`, the HTML report, and `--doctor --json` under
+  `doctor.orphanModules`; compact status prints one count line at most. It
+  reads the import edges the check already resolved, so the verdict and
+  `factsHash` do not change. Entry points come from `package.json` (built
+  `dist/` paths map back to source), CI workflow run steps, Next / Vite / Nest /
+  Vercel / Storybook conventions, the arkRun / arkOrder roots, config and setup
+  files, ambient declaration files, and an optional `.ark/entry-points.json`
+  (glob + reason + optional `reviewBy`; not a config key). Files only tests
+  import are counted, not listed. When a dynamic import, `import.meta.glob`, a
+  quoted path, or an unresolved import may still reach a file, the item says
+  so and the list is `partial`. `--doctor --all` and `--report` also list
+  exports nothing imports by name. New catalog ids `ORPHAN_MODULE` and
+  `UNUSED_EXPORT` (advisory). Never a score, never in the write hook, MCP
+  write tools, ESLint, or `--strict-merge`. No new skill; `/ark-explore` maps
+  the list and `/ark-fix` deletes one file at a time through the write gate.
 - Soft doctor residual when Domain is declared but empty and the UI holds the
   rules (`noDomainFrontend`). Projects empty Domain + presentation share, or
   the existing `domain-logic-in-ui` smell. Friendly next step: one Domain file
@@ -68,6 +85,13 @@ in the immutable pre-2.0 archive linked below.
   Required CI is still the shared merge line. No new skill, schema, or host.
 
 ### Fixed
+- `--policy-base` and MCP policy-delta now judge an advisory → enforced
+  invariant promotion with the declared `coverage.coverageRoots`, the same way
+  `--promote` does. Before, a covered promotion with roots declared came out
+  `judgment-required` ("Declare coverage.coverageRoots…") while `--promote`
+  allowed it.
+- The flat-parent suggestion in status reads the resolved importer index
+  instead of re-reading every file for import text.
 - Doctor sees CI jobs gated by `needs:`: a job that runs the fail-closed Ark check behind unconditional jobs (such as a CI-profile job) now counts as a merge gate; `ciMergeBoundary.ci.workflowPresent` / `merge-gate` no longer report it absent. Jobs a profile output can skip, jobs with `continue-on-error`, and chains with a conditional job still do not count.
 - With `ARK_DOCTOR_GITHUB=1`, the Ark check counts as required only when every job that can skip it is required too (a skipped job satisfies branch protection); otherwise the doctor reports `unverified`, `arkCheckUpstreamNotRequired`, and the gap `enforcement-ark-check-upstream-not-required`. Required checks bound to the GitHub Actions app now correlate (`arkCheckSourceBound: true`).
 - Write hook and `ark-check` now agree on overlapping layer globs: the hook

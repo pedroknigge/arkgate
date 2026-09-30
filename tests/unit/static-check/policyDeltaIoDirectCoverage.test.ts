@@ -9,6 +9,7 @@ import {
   readPolicyAcknowledgement,
   resolvePolicyBaseConfig,
 } from '../../../bin/lib/policy-delta-io.mjs';
+import { loadSensorMap } from '../../../bin/lib/sensor-promote-io.mjs';
 
 const roots: string[] = [];
 
@@ -344,5 +345,55 @@ describe('policy-delta I/O direct coverage', () => {
       classification: 'strengthening',
       valid: true,
     });
+  });
+
+  it('classifies a declared-roots advisory to enforced promotion the same way --promote does', () => {
+    const root = temporaryRoot();
+    const invariantFile = (mode: 'advisory' | 'enforced') => ({
+      schemaVersion: '1.0',
+      layer: 'DomainModel',
+      invariants: [{ id: 'INV-ORDER-002', description: 'Order total is never negative', mode }],
+    });
+    const config = {
+      ...BASE_CONFIG,
+      arkRules: { DomainModel: 'arkrules/DomainModel.json' },
+      coverage: { coverageRoots: ['tests'] },
+    };
+    fs.mkdirSync(path.join(root, 'src'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src', 'order.ts'), 'export const order = 1;\n');
+    fs.mkdirSync(path.join(root, 'tests'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'tests', 'order.test.ts'),
+      "it('INV-ORDER-002 keeps totals non-negative', () => {});\n"
+    );
+    writeJson(root, 'ark.config.json', config);
+    writeJson(root, 'arkrules/DomainModel.json', invariantFile('advisory'));
+    git(root, ['init']);
+    git(root, ['checkout', '-b', 'main']);
+    git(root, ['add', '.']);
+    git(root, ['commit', '-m', 'base']);
+
+    // --promote's judge sees the declared roots and allows the promotion.
+    const sensorMap = loadSensorMap(root, config) as {
+      ok: boolean;
+      map: { invariants: Array<{ id: string; promotable: boolean }> };
+    };
+    expect(sensorMap.ok).toBe(true);
+    const row = sensorMap.map.invariants.find((entry) => entry.id === 'INV-ORDER-002');
+    expect(row?.promotable).toBe(true);
+
+    // The policy delta must reach the same verdict for the same edit.
+    writeJson(root, 'arkrules/DomainModel.json', invariantFile('enforced'));
+    const result = analyzePolicyTransition({
+      root,
+      configPath: 'ark.config.json',
+      candidateConfig: config,
+      strictMerge: true,
+      baseRef: 'HEAD',
+    });
+    const ids = (result?.findings ?? []).map((finding: { id: string }) => finding.id);
+    expect(ids.some((id: string) => id.endsWith(':arkrule-invariant-promoted'))).toBe(true);
+    expect(ids.some((id: string) => id.endsWith(':arkrule-invariant-promote-refused'))).toBe(false);
+    expect(result).toMatchObject({ classification: 'strengthening', valid: true });
   });
 });

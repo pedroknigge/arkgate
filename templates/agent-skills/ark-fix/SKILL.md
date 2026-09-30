@@ -25,6 +25,16 @@ Write an **extraction card** (`docs/brownfield-adoption.md` §6) — never mecha
 never silent B apply. **Kill-switch** required. `multiPilotBatchForbidden` — never
 multi-pilot batch. Execute that work on **`/ark-autopilot`**.
 
+## Files nothing imports (one delete at a time)
+
+When `doctor.orphanModules` lists a file with `certainty: no-importer`, nothing
+imports it and no entry point covers it. Delete **one** file through the write
+gate, run `arkgate-check` and status again, then the next. A `maybe-dynamic` or
+`maybe-unresolved` item may still be loaded: open what its evidence names
+first. If a framework or loader uses the file, add a glob with a reason to
+`.ark/entry-points.json` instead — never edit `ark.config.json` for it. No batch
+delete, no codemod.
+
 ## Dual engine (mandatory)
 
 | Engine | Role |

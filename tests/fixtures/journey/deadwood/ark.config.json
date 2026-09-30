@@ -1,0 +1,8 @@
+{
+  "include": ["src"],
+  "layers": [
+    { "name": "App", "patterns": ["src/app/**", "src/middleware.ts"] },
+    { "name": "Lib", "patterns": ["src/lib/**", "src/index.ts"] }
+  ],
+  "rules": [{ "from": "Lib", "to": "App", "allowed": false }]
+}

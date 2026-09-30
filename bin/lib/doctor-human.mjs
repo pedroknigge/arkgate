@@ -169,7 +169,7 @@ export function printDoctorCompactHuman(view) {
       adrPresence: view.adrPresence,
       statesTransitions: view.statesTransitions, statusTransitionCatalog: view.statusTransitionCatalog, noDomainFrontend: view.noDomainFrontend, invariantTestsPath: view.invariantTestsPath, invariantCoverageRoots: view.invariantCoverageRoots,
     },
-    { line, warn }
+    { line, warn, color }
   );
 
   if (violations.length === 0) {

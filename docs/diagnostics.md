@@ -85,6 +85,8 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 | [`ANALYSIS_HOST_UNAVAILABLE`](#ANALYSIS_HOST_UNAVAILABLE) | analysis | Analysis host unavailable |
 | [`LITERAL_PATH_DRIFT`](#LITERAL_PATH_DRIFT) | drift | Literal path moved by a rename |
 | [`LITERAL_PATH_UNRESOLVED`](#LITERAL_PATH_UNRESOLVED) | drift | Literal path does not resolve |
+| [`ORPHAN_MODULE`](#ORPHAN_MODULE) | drift | File nothing imports |
+| [`UNUSED_EXPORT`](#UNUSED_EXPORT) | drift | Export nothing imports by name |
 | [`ADAPTER_NOT_ALLOWED_FOR_PORT`](#ADAPTER_NOT_ALLOWED_FOR_PORT) | adapter | Adapter not allowed for port |
 | [`FORBIDDEN_PATTERN`](#FORBIDDEN_PATTERN) | snippet-policy | Forbidden regex pattern |
 | [`FORBIDDEN_SUBSTRING`](#FORBIDDEN_SUBSTRING) | snippet-policy | Forbidden substring |
@@ -774,6 +776,48 @@ candidates out of 9536 literals, nearly all of them illustrative. Listing that
 by default would be ArkGate's inability to resolve a string presented as a fact
 about your code. The count is always printed, so opting out of the list is
 never opting out of knowing.
+
+## Files nothing imports
+
+Status (`arkgate-check --doctor`) reads the import edges the check already
+resolved. A governed file that nothing imports — no governed file, no test,
+no project script, no known entry point — is listed in status details
+(`--doctor --all`), in `--json` under `doctor.orphanModules`, and in the
+HTML report. The compact status prints one count line at most. It is not a
+score and never changes the check.
+
+Entry points come from a closed list: `package.json` (`main`, `module`,
+`types`, `exports`, `bin`, scripts) and CI workflow run steps, framework
+conventions (Next, Vite, Nest, Vercel, Storybook), the arkRun / arkOrder /
+slice-wall roots in `ark.config.json`, config and setup files, ambient
+declaration files, and `.ark/entry-points.json`:
+
+```json
+{
+  "schemaVersion": "1",
+  "entryPoints": [
+    { "glob": "src/plugins/**", "reason": "loaded by name at runtime", "reviewBy": "2027-01-01" }
+  ]
+}
+```
+
+<a id="ORPHAN_MODULE"></a>
+
+### `ORPHAN_MODULE`
+
+**File nothing imports** · often advisory
+
+- **Why:** No governed file, test or entry point imports this module. It is the leftover an agent leaves when a rewrite lands next to the old file. Status reads it from the import facts the check already resolved, so it never changes the verdict. When a dynamic import, an unresolved import or an unmapped entry could reach the file, the item says so (`maybe-dynamic`, `maybe-unresolved`) and the list is `partial`.
+- **Fix:** Delete the file through the write gate, one file at a time. If a framework, a script or a runtime loader uses it, add a glob with a reason to `.ark/entry-points.json` (optional `reviewBy`) instead. Advisory only — it never fails a run.
+
+<a id="UNUSED_EXPORT"></a>
+
+### `UNUSED_EXPORT`
+
+**Export nothing imports by name** · often advisory
+
+- **Why:** An export no governed file or test imports by name. Listed only in status details (`--doctor --all`) and the report. Default, namespace, star, dynamic and require use count as using every export, so those files are skipped.
+- **Fix:** Drop the export keyword (or the code) if nothing outside the file needs it, or keep it when it is public API an entry point exposes. Advisory only — it never fails a run.
 
 ## Port adapters
 

@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-09-29 (Engineering: `RL824` **doing** — Patch **4.8.24** slices follow-ups (#335–#338), product audit, lower memory per validation; `RL823` **done** — Patch **4.8.23** on npm `latest`; `RL822` **done** — Patch **4.8.22** on npm `latest`; `RL821` **done** — Patch **4.8.21** on npm `latest`; `RL820` **done** — Patch **4.8.20** on npm `latest`; `RL819` **done** — Patch **4.8.19** on npm `latest`; `RL818` **done** — Patch **4.8.18** on npm `latest`; `RL817` **done** — Patch **4.8.17** on npm `latest`; `AP02` **done** — P2 §3 ADR path on policy weaken / new layer edge (#264); `RL816` **done** — Patch **4.8.16** on npm `latest`; `CR01` **done** — P2 §10 coverageRoots required when any invariant is enforced; `RL815` **done** — Patch **4.8.15** on npm `latest`; `DF243`/`DF246`/`DF247` **done** — dogfood honesty 4.8.15 slice 2; `LC01` **done** — opt-in `--local` / multi-worktree cheap check (#251); `SC01` **done** — narrow status/transition catalog (opt-in sensor); `GS01` **done** — guide states/transitions artifact (doctor next step) (#248); `AP01` **done** — soft ADR presence when `--require-gates` (#242); `LO01` **done** — optional layer owners + `requireLayerOwners` (#241); `HR01` **done** — write hook layer specificity matches ark-check (#237); `UC01` **done** — unclassified include is not a green check (#233); `WG01` **done** — write-gate fail-closed host parity (#231); `RL814` **done** — Patch **4.8.14** on npm `latest`; `SK216` **done** — skill catalog 100% product capacity, issue #216 + PR-gate fail-closed; `RL813` **done** — Patch **4.8.13** on npm `latest`; `RL812` **done** — tag `v4.8.12` cut, publish-npm failed branch coverage; Patch **4.8.12** ArkOrder first-contact **prepared** (tag stands); `AO17` **done**; `RL811` **done**; Patch **4.8.11** nested `--config` + Shape dogfood **done** — 4.8.11 published on npm `latest`, MCP Registry, and website; does not close `Z09` / `K01`; no schemaVersion bump; Release `RL810` **done** — 4.8.10 published; Patch **4.8.10** field first-aggregate sensors `HINT01`–`IN01` **done**; Release `RL89` **done** — 4.8.9 published; Patch `AH01`/`CS01`/`CI01`/`UP01`/`PX01`/`INT01` **done** and field-adopter ArkOrder `AO10`–`AO16` **done**; Release `RL88` **done** — 4.8.8 published; Phase **LD** `LD01`–`LD06` **done** (4.8.7 published); Patch `ST02` **done** — unlabeled public story; Patch `ST01` **done** — beginner-clear STAR openings; Patch `AO09` **done** — ArkOrder recomputable-status honesty; Phase **LV** ArkOrder valved loop `LV01`–`LV09` **done** (4.8.6 published); Phase **XP** ArkOrder x ArkRun convergence **done** (`XP01`-`XP08`); Patch **4.8.5** `AGY01`+XP **done** — published; Patch **4.8.5** `AGY01` **done** — Antigravity skill refresh (`--antigravity-home` + default tools + dogfood `.agents/skills`); published; Patch **4.8.4** **done** — three false greens closed (coverage certifying tests no runner runs, an empty analysis passing), `--path-drift`, `--sensors`/`--promote`, peer isolation, git install without a build allowlist entry, and honest `--plan`; Phase OR `OR01`–`OR08` **done**; `K01` remains parked; Z09 still parked; npm `latest` is **4.8.11**)
+- **Status date:** 2026-09-30 (Engineering: `CR02` **done** — policy-delta promotion sees coverageRoots; Phase **OM** `OM01`–`OM07` **done** — files nothing imports (ADR 0037; unreleased); `RL824` **doing** — Patch **4.8.24** slices follow-ups (#335–#338), product audit, lower memory per validation; `RL823` **done** — Patch **4.8.23** on npm `latest`; `RL822` **done** — Patch **4.8.22** on npm `latest`; `RL821` **done** — Patch **4.8.21** on npm `latest`; `RL820` **done** — Patch **4.8.20** on npm `latest`; `RL819` **done** — Patch **4.8.19** on npm `latest`; `RL818` **done** — Patch **4.8.18** on npm `latest`; `RL817` **done** — Patch **4.8.17** on npm `latest`; `AP02` **done** — P2 §3 ADR path on policy weaken / new layer edge (#264); `RL816` **done** — Patch **4.8.16** on npm `latest`; `CR01` **done** — P2 §10 coverageRoots required when any invariant is enforced; `RL815` **done** — Patch **4.8.15** on npm `latest`; `DF243`/`DF246`/`DF247` **done** — dogfood honesty 4.8.15 slice 2; `LC01` **done** — opt-in `--local` / multi-worktree cheap check (#251); `SC01` **done** — narrow status/transition catalog (opt-in sensor); `GS01` **done** — guide states/transitions artifact (doctor next step) (#248); `AP01` **done** — soft ADR presence when `--require-gates` (#242); `LO01` **done** — optional layer owners + `requireLayerOwners` (#241); `HR01` **done** — write hook layer specificity matches ark-check (#237); `UC01` **done** — unclassified include is not a green check (#233); `WG01` **done** — write-gate fail-closed host parity (#231); `RL814` **done** — Patch **4.8.14** on npm `latest`; `SK216` **done** — skill catalog 100% product capacity, issue #216 + PR-gate fail-closed; `RL813` **done** — Patch **4.8.13** on npm `latest`; `RL812` **done** — tag `v4.8.12` cut, publish-npm failed branch coverage; Patch **4.8.12** ArkOrder first-contact **prepared** (tag stands); `AO17` **done**; `RL811` **done**; Patch **4.8.11** nested `--config` + Shape dogfood **done** — 4.8.11 published on npm `latest`, MCP Registry, and website; does not close `Z09` / `K01`; no schemaVersion bump; Release `RL810` **done** — 4.8.10 published; Patch **4.8.10** field first-aggregate sensors `HINT01`–`IN01` **done**; Release `RL89` **done** — 4.8.9 published; Patch `AH01`/`CS01`/`CI01`/`UP01`/`PX01`/`INT01` **done** and field-adopter ArkOrder `AO10`–`AO16` **done**; Release `RL88` **done** — 4.8.8 published; Phase **LD** `LD01`–`LD06` **done** (4.8.7 published); Patch `ST02` **done** — unlabeled public story; Patch `ST01` **done** — beginner-clear STAR openings; Patch `AO09` **done** — ArkOrder recomputable-status honesty; Phase **LV** ArkOrder valved loop `LV01`–`LV09` **done** (4.8.6 published); Phase **XP** ArkOrder x ArkRun convergence **done** (`XP01`-`XP08`); Patch **4.8.5** `AGY01`+XP **done** — published; Patch **4.8.5** `AGY01` **done** — Antigravity skill refresh (`--antigravity-home` + default tools + dogfood `.agents/skills`); published; Patch **4.8.4** **done** — three false greens closed (coverage certifying tests no runner runs, an empty analysis passing), `--path-drift`, `--sensors`/`--promote`, peer isolation, git install without a build allowlist entry, and honest `--plan`; Phase OR `OR01`–`OR08` **done**; `K01` remains parked; Z09 still parked; npm `latest` is **4.8.11**)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -97,6 +97,12 @@ lift DF freezes on scores, new skill names, sensors, or LLM verdicts.
   ([layer description](docs/plans/layer-description-projection/README.md)) projects the
   existing optional `layers[].description` to place / doctor / coverage / report and
   strips it from `policyHash`. Absence stays silent and must not invent residual.
+  **Exception:** Phase **OM**
+  ([orphan module advisory](docs/plans/orphan-module-advisory/README.md),
+  [ADR 0037](docs/adr/0037-orphan-module-advisory.md)) projects the existing resolved
+  import edges to doctor Details / JSON / report as files nothing imports. Closed entry
+  sources, sidecar `.ark/entry-points.json` (no config key), honest `partial`. Never in
+  the write hook, MCP write tools, ESLint, or `--strict-merge`; never flips `valid`.
 
 ### Hard lines
 
@@ -580,6 +586,35 @@ close `Z09` / `K01`.
 | Order | ID | Status | Size | Depends on | Outcome |
 |---:|---|---|---:|---|---|
 | 299 | `RL824` | `doing` | S | RL823 | Prepare **4.8.24** (#339: #335/#336/#337/#338 + audit + memory). After merge: annotated tag `v4.8.24` + GitHub Release (no npm claim until `npm view arkgate@4.8.24 version` confirms, #314) + `gh workflow run publish-npm.yml -f tag=v4.8.24 -f dry_run=false`. Does not close `Z09` / `K01` |
+
+### Patch — policy-delta promotion sees coverageRoots
+
+`--policy-base` / MCP policy-delta evaluated invariant coverage without the
+declared `coverage.coverageRoots`, so a covered advisory → enforced promotion
+came out `judgment-required` while `--promote` allowed the same edit. No schema
+bump. Does not close `Z09` / `K01`.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 300 | `CR02` | `done` | S | RL824 | `policy-delta-io.mjs` passes `coverageRoots` (and stats) to `evaluateInvariantCoverage`; a declared-roots promotion classifies as strengthening, matching `--promote`. Failing test first (`policyDeltaIoDirectCoverage.test.ts`). No schema bump |
+
+### Phase OM — Orphan module advisory
+
+Plan: [docs/plans/orphan-module-advisory/README.md](docs/plans/orphan-module-advisory/README.md).
+Projects existing resolved import facts ([ADR 0026](docs/adr/0026-gate-waist-facts-in-verdict-out.md) D2;
+[ADR 0037](docs/adr/0037-orphan-module-advisory.md)).
+No `schemaVersion` bump. No config key (sidecar `.ark/entry-points.json`). No new skill name.
+Does not close `Z09` / `K01`. Never in the write hook, MCP write tools, or `--strict-merge`.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 301 | `OM01` | `done` | S | CR02 | ADR 0037: orphan advisory projects resolved facts; closed entry-evidence sources; sidecar not config; honesty states; ROADMAP freeze exception. Plan lock only |
+| 302 | `OM02` | `done` | M | OM01 | `runArchitectureScan({ graphProjection })` returns a compact importer index for doctor/report; verdict + `factsHash` byte-identical; doctor memory scenario in `bench:memory` |
+| 303 | `OM03` | `done` | M | OM01 | `entry-points-io.mjs`: package.json main/exports/bin/scripts per workspace (dist→src via bundler entry map / tsconfig), Next/Vite/Nest/Vercel/Storybook conventions, arkRun/arkOrder roots, config + ambient files, `.ark/entry-points.json` with `reviewBy` |
+| 304 | `OM04` | `done` | L | OM02+OM03 | Domain `orphanModules.ts` + test/outside-include importer pass + dynamic reach; `doctor.orphanModules` JSON + Details + HTML parity; `ORPHAN_MODULE`; journey `deadwood` |
+| 305 | `OM05` | `done` | M | OM04 | Tier 2 `UNUSED_EXPORT` in `--doctor --all` / `--report` only; conservative on default/namespace/star; bounded parse |
+| 306 | `OM06` | `done` | S | OM02 | `flat-parent-pilot` reads the importer index instead of its lexical re-read; atlasgrid `pr6-doctor` golden unchanged |
+| 307 | `OM07` | `done` | S | OM04+OM05 | Docs (package-surface, agent-guide, diagnostics, voice) + deepen `/ark-explore` `/ark-fix`; CHANGELOG |
 
 ### Patch — pre-hook write gate first, MCP prepare fallback (issue #277)
 

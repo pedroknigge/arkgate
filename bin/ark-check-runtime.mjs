@@ -1429,7 +1429,7 @@ async function main() {
 
   const {
     violations: rawViolations, warnings, safety, parseHealth, completeness, completenessReasons,
-    mode, policyHash, resolverIdentity, factsHash, candidateTreeHash,
+    mode, policyHash, resolverIdentity, factsHash, candidateTreeHash, importGraph,
   } = runArchitectureScan({
     root,
     config,
@@ -1441,6 +1441,8 @@ async function main() {
     files: args.changed ? files : [],
     ts,
     args,
+    // ADR 0037: doctor / report read a compact importer index, never the verdict path.
+    graphProjection: Boolean(args.doctor || args.report) && !args.changed,
   });
 
   if (args.changed) pruneScopedPatternWarnings(warnings, root, loadGovernedFiles);
@@ -1501,7 +1503,7 @@ async function main() {
       safety, designDelta,
       ts, parseHealth, completeness,
       all: args.all === true, requireGates: args.requireGates === true,
-      warnings,
+      warnings, architectureFacts: importGraph ? { importGraph } : undefined,
     });
     if (designDelta) process.exitCode = !designDelta.complete ? 2 : designDelta.valid ? 0 : 1; return;
   }
@@ -1782,8 +1784,9 @@ async function main() {
           files,
           ts,
           parseHealth,
-          undefined,
-          activeViolations
+          importGraph ? { importGraph } : undefined,
+          activeViolations,
+          { details: true }
         ),
         // Doctor parity: always emit improvement compass when doctor would (reportParity).
         ...(designDepth?.improvementCompass

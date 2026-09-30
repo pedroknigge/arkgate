@@ -747,6 +747,50 @@ TS/TSX gate the type-aware passes use, because a comment is not code and the
 class was first found in a `.css` file. Generated files are skipped, and every
 file the walk refuses is counted by reason in the output.
 
+### Files nothing imports
+
+A rewrite often lands next to the old file, and the old one stays. Nothing
+imports it. Status reads that from the import edges the check already resolved,
+so it costs no second analysis and never changes the check.
+
+```bash
+npx arkgate-check --doctor            # one dim count line at most
+npx arkgate-check --doctor --all      # the list, plus exports nothing imports by name
+npx arkgate-check --doctor --json     # doctor.orphanModules
+```
+
+```text
+Nothing imports src/lib/legacy-pricing.ts, and no entry point covers it.
+Next: Delete it through the write gate, or add it to .ark/entry-points.json if a framework loads it.
+```
+
+A file is listed only when no governed file, no test, no project script and no
+known entry point imports it. Entry points come from `package.json` (`main`,
+`exports`, `bin`, scripts — built `dist/` paths map back to source), CI workflow
+run steps, framework conventions (Next routes and `middleware`, Vite
+`index.html`, Nest `main`, Vercel `api/`, Storybook stories), the arkRun /
+arkOrder roots in `ark.config.json`, config and setup files, ambient declaration
+files, and `.ark/entry-points.json`. A file only tests import is counted, not
+listed.
+
+When a dynamic import, `import.meta.glob`, `new URL(…, import.meta.url)`, a
+quoted path, or an import that did not resolve could still reach a file, the
+item says so (`maybe-dynamic`, `maybe-unresolved`) and the section is
+`partial`. Read those before deleting. A framework or loader ArkGate does not
+know goes in the sidecar, with a reason and an optional review date:
+
+```json
+{
+  "schemaVersion": "1",
+  "entryPoints": [
+    { "glob": "src/plugins/**", "reason": "loaded by name from the plugin manifest", "reviewBy": "2027-01-01" }
+  ]
+}
+```
+
+Delete one file at a time through the write gate (`/ark-fix`), then run status
+again. Never delete a `maybe-*` item without reading what may load it.
+
 ### Presets
 
 - `hexagonal` / `layered` / `feature-sliced` / `monorepo` / **`ui-surface`** (UI/Vite/Remotion-style) / **`vertical-slice`** (features/* + peerIsolation) / **`ddd-bounded-contexts`** (contexts/*/domain|application|infra + shared kernel)
