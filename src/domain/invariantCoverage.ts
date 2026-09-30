@@ -105,9 +105,9 @@ export type InvariantCoverageEvidence = {
   coverageRootsDeclared?: boolean;
 };
 
-export type InvariantUncoveredKind = 'never-had-tests' | 'tests-disappeared';
+type InvariantUncoveredKind = 'never-had-tests' | 'tests-disappeared';
 
-export type InvariantCoverageRuleId =
+type InvariantCoverageRuleId =
   | 'INVARIANT_UNCOVERED'
   | 'INVARIANT_COVERAGE_OUTSIDE_ROOTS';
 
@@ -230,6 +230,7 @@ export type InvariantCoverageStats = {
  * Human-readable discard tail. Empty when the scan discarded nothing.
  * `omitBudget` drops the budget clause and the load totals for messages whose
  * own text already carries them — the same number twice reads as two facts.
+ * @cliMirror bin/lib/rules-under-contract.mjs
  */
 export function formatCoverageDiscards(
   stats: InvariantCoverageStats | undefined,

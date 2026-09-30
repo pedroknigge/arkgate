@@ -5,9 +5,7 @@ import type { ResolvedDependencyFact } from './resolvedCandidateFactsTypes';
 import { XI_TTL_KEY_RE } from './arkOrderTypes';
 import { sourceHasPersistenceWrite, sourceImportsPersistenceDriverText } from './persistenceWriteHint';
 
-export const ARKORDER_PLANE_FACTORY = 'createOrderPlane';
-
-export const ARKORDER_FORBIDDEN_METHODS = ['update', 'patch', 'set', 'mutate'] as const;
+const ARKORDER_PLANE_FACTORY = 'createOrderPlane';
 
 export type ResolvedArkOrderPlaneCallFact = {
   file: string;
@@ -262,7 +260,7 @@ const WRAPPED_IDENTIFIER_RE =
   /^\s*(?:<[^<>]*>\s*)?([A-Za-z_$][\w$]*)\s*!?\s*(?:\b(?:as|satisfies)\b[\s\S]*)?$/;
 
 /** Identifiers bound to `createOrderPlane(...)` in this file. */
-export function arkOrderPlaneBindings(content: string): string[] {
+function arkOrderPlaneBindings(content: string): string[] {
   const source = stripCommentsPreservingLines(content);
   const names = new Set<string>();
   const re = new RegExp(PLANE_BINDING_RE.source, 'g');
@@ -326,7 +324,7 @@ function specifierResolvesToPlaneRoot(
  * named import from a declared plane root. `isArkOrderFile` reports an `arkgate/order`
  * import, which admits the conventional names file-wide.
  */
-export function arkOrderPlaneReceivers(
+function arkOrderPlaneReceivers(
   file: string,
   content: string,
   options: ArkOrderPlaneReceiverOptions = {}

@@ -10,7 +10,6 @@ import {
   shouldShowNewHereNudge,
 } from '../ark-shared.mjs';
 import * as arkShared from '../ark-shared.mjs';
-import { summarizeRulesUnderContract } from './rules-under-contract.mjs';
 import { describePackageVersionDualTruth } from './field-install.mjs';
 import { withPinDependentGateFiles } from './pin-dependent-gates.mjs';
 import { detectAgentHomeGaps } from './agent-homes.mjs';
@@ -25,7 +24,6 @@ import { collectInvariantCoverageResiduals } from './invariant-tests-path.mjs';
 import { anyChildWallAdvisory, applyAdvisorySiblingRatchet, sliceAliasOwesMove } from '../ark-layer-match.mjs';
 export { printAdrPresenceHint };
 export { printDoctorCompactHuman, printDoctorDetailsHuman };
-export { summarizeRulesUnderContract };
 /** Optional S3 dual-match classifier when ark-shared exports it (soft dep for S5 landing). */
 const matchingLayersForRelativePath =
   typeof arkShared.matchingLayersForRelativePath === 'function'
@@ -974,4 +972,3 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   printDoctorCompactHuman(humanView);
   if (options.all) printDoctorDetailsHuman(humanView);
 }
-

@@ -26,7 +26,7 @@ function skipTrivia(text: string, start: number): number {
 }
 
 /** Remove comments and trailing commas outside string literals. */
-export function stripJsonc(input: string): string {
+function stripJsonc(input: string): string {
   const text = input.replace(/^﻿/, '');
   let out = '';
   let index = 0;

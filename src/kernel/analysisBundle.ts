@@ -13,6 +13,7 @@ import type {
 import { analyzeCanonicalResolvedProject } from './resolvedAnalysis';
 import { preflightCanonicalChange, preflightResolvedChange } from './resolvedChangePreflight';
 import type { ArkgatePinEvidence } from '../domain/configVersionFloor';
+import type { InvariantCoverageStats } from '../domain/invariantCoverage';
 
 const trustedResolvedFacts = new WeakSet<ResolvedCandidateFacts>();
 
@@ -47,7 +48,7 @@ export function analyzeTrustedResolvedProject(input: {
     coverageBudgetExhausted?: boolean;
     /** Declared `coverage.coverageRoots`: where the project says its runner runs. */
     coverageRoots?: readonly string[];
-    stats?: import('../domain/invariantCoverage').InvariantCoverageStats;
+    stats?: InvariantCoverageStats;
   };
   fileHints?: Readonly<
     Record<

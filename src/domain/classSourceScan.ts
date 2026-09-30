@@ -9,7 +9,7 @@
  * No filesystem, no TypeScript compiler (Domain stays zero-dependency).
  */
 
-export const MEMBER_MODIFIERS = new Set([
+const MEMBER_MODIFIERS = new Set([
   'public',
   'private',
   'protected',
@@ -88,7 +88,7 @@ function skipRegexLiteral(src: string, index: number): number {
  * Index after a string / comment / regex literal starting at `index`, or `index`
  * when none starts there.
  */
-export function skipStringOrComment(src: string, index: number): number {
+function skipStringOrComment(src: string, index: number): number {
   const ch = src[index];
   if (ch === '/' && src[index + 1] === '/') {
     const nl = src.indexOf('\n', index);
@@ -114,7 +114,7 @@ export function skipStringOrComment(src: string, index: number): number {
   return index;
 }
 
-export function skipWsAndComments(src: string, index: number): number {
+function skipWsAndComments(src: string, index: number): number {
   let i = index;
   while (i < src.length) {
     if (/\s/.test(src[i]!)) {
@@ -130,7 +130,7 @@ export function skipWsAndComments(src: string, index: number): number {
   return i;
 }
 
-export function readIdent(src: string, index: number): { ident: string; end: number } | null {
+function readIdent(src: string, index: number): { ident: string; end: number } | null {
   const ch = src[index];
   if (!ch || !/[A-Za-z_$]/.test(ch)) return null;
   let j = index + 1;
@@ -143,7 +143,7 @@ export function readIdent(src: string, index: number): { ident: string; end: num
  * never closes. Strings and comments are skipped. For `<`/`>`, an arrow `=>` is not
  * a closing angle.
  */
-export function skipBalanced(
+function skipBalanced(
   src: string,
   openIndex: number,
   openCh: string,

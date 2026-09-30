@@ -207,7 +207,7 @@ function stopAtEntryIssue(raw, layerFolders) {
     return null;
 }
 /** String form unchanged. Object form carries composition roots the walk stops at. */
-export function validateSharedImportsSlice(candidate, issues) {
+function validateSharedImportsSlice(candidate, issues) {
     const rules = candidate.rules;
     if (!Array.isArray(rules))
         return;
@@ -277,7 +277,7 @@ const SIBLING_MODES = ['deny', 'advisory'];
  * The message names both forms so a bad value is obvious at config load.
  */
 const SIBLINGS_FORM_MESSAGE = 'must be "deny", "advisory", or { "default": "deny" | "advisory", "enforce": ["<child id or subtree path>"], "ratchet": true | false }';
-export function validateChildSliceSiblings(candidate, issues) {
+function validateChildSliceSiblings(candidate, issues) {
     const rules = candidate.rules;
     if (!Array.isArray(rules))
         return;
@@ -374,7 +374,7 @@ function childCrossSlicePatternIssue(raw) {
 function childCrossSlicePatternKey(raw) {
     return trimTrailingSlashes(raw.trim().replace(/\\/g, '/')).toLowerCase();
 }
-export function validateChildSliceAllowedCrossSlice(candidate, issues) {
+function validateChildSliceAllowedCrossSlice(candidate, issues) {
     const rules = candidate.rules;
     if (!Array.isArray(rules))
         return;
@@ -648,7 +648,7 @@ function globsCanMatchSame(left, right, i, j, memo) {
     return matched;
 }
 const ARK_RULES_FILE_MESSAGE = 'must be a filename with exactly one <Layer> token and no slash or wildcard (arkrules.<Layer>.json)';
-export function validateChildSliceArkRulesFile(candidate, issues) {
+function validateChildSliceArkRulesFile(candidate, issues) {
     const rules = candidate.rules;
     if (!Array.isArray(rules))
         return;
@@ -670,7 +670,7 @@ export function validateChildSliceArkRulesFile(candidate, issues) {
         }
     });
 }
-export function validateChildSliceAliases(candidate, issues) {
+function validateChildSliceAliases(candidate, issues) {
     const rules = candidate.rules;
     if (!Array.isArray(rules))
         return;

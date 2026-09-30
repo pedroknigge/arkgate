@@ -35,7 +35,7 @@ const THIS_FIELD_ASSIGNMENT_RE = /\bthis\.[A-Za-z_][A-Za-z0-9_]*\s*=(?!=)/g;
 export function expectedDomainInvariantWordsPhrase() {
     return `${DOMAIN_INVARIANT_WORDS.join(', ')}, or events-array .push(`;
 }
-export function referencesGuardOrPublish(source) {
+function referencesGuardOrPublish(source) {
     return DOMAIN_INVARIANT_WORD_RE.test(source) || DOMAIN_EVENTS_PUSH_RE.test(source);
 }
 export function isIdiomaticEventsReset(source, assignIndex, methodName) {
@@ -468,10 +468,10 @@ export function collectEmptyInvariantCatalogFindings(input) {
         },
     ];
 }
-export function isPersistenceDriverLayer(layer) {
+function isPersistenceDriverLayer(layer) {
     return layer === 'PersistenceAdapters';
 }
-export function sourceImportsPersistenceDriver(content, resolvedImports) {
+function sourceImportsPersistenceDriver(content, resolvedImports) {
     if (sourceImportsPersistenceDriverText(content))
         return true;
     if (!resolvedImports)

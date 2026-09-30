@@ -8,8 +8,8 @@
  * Pure CLI helper (bin/lib/team-parliament.mjs). Zero Node I/O.
  */
 
-export const TEAM_PERSONAS = ['touch', 'contributor', 'agent', 'steward'];
-export const CONTRACT_DIFF_KINDS = [
+const TEAM_PERSONAS = ['touch', 'contributor', 'agent', 'steward'];
+const CONTRACT_DIFF_KINDS = [
     'unchanged',
     'tighten',
     'loosen',
@@ -42,7 +42,7 @@ export function isLawRelativePath(relPath) {
 }
 const PRODUCT_SOURCE = /\.(tsx?|jsx?|mjs|cjs)$/i;
 /** Governable product source (not law, not tests-only heuristic — basename extension). */
-export function isProductSourceRelativePath(relPath) {
+function isProductSourceRelativePath(relPath) {
     const n = posixRel(relPath);
     if (!n || isLawRelativePath(n))
         return false;
@@ -103,20 +103,20 @@ export function classifyBaselineKeyDelta(baseKeys, candidateKeys) {
         kinds.push('baseline-shrink');
     return { grow, shrink, kinds };
 }
-export function normalizeStewardId(value) {
+function normalizeStewardId(value) {
     if (typeof value !== 'string')
         return null;
     const trimmed = value.trim().replace(/^@/, '').toLowerCase();
     return trimmed.length > 0 ? trimmed : null;
 }
 /** GitHub handle (login), not a display name. Spaces and emails are not handles. */
-export function isGitHubHandle(value) {
+function isGitHubHandle(value) {
     const id = normalizeStewardId(value);
     if (!id || isAutomationAuthor(id) || id.includes(' ') || id.includes('@'))
         return false;
     return /^(?!-)[a-z0-9-]{1,39}(?<!-)$/.test(id);
 }
-export function isGitHubEmail(value) {
+function isGitHubEmail(value) {
     if (typeof value !== 'string')
         return false;
     const email = value.trim().toLowerCase();
@@ -130,7 +130,7 @@ export function isGitHubEmail(value) {
     return dot > 0 && dot < parts[1].length - 1;
 }
 /** `123+login@users.noreply.github.com` or `login@users.noreply.github.com` → login. */
-export function githubHandleFromEmail(email) {
+function githubHandleFromEmail(email) {
     if (typeof email !== 'string')
         return null;
     const match = email.trim().match(/^(?:\d+\+)?([^@]+)@users\.noreply\.github\.com$/i);
@@ -153,7 +153,7 @@ export function canonicalStewardId(value) {
         return id;
     return null;
 }
-export function formatStewardMention(id) {
+function formatStewardMention(id) {
     return id.includes('@') ? id : `@${id}`;
 }
 /**
@@ -181,7 +181,7 @@ export function isSteward(author, stewards) {
     return stewards.some((entry) => canonicalStewardId(entry) === who);
 }
 const BOT_STEWARD = /bot\b|\[bot\]|dependabot|renovate|github-actions|imgbot|codecov/i;
-export function isAutomationAuthor(value) {
+function isAutomationAuthor(value) {
     const id = normalizeStewardId(value);
     return !id || BOT_STEWARD.test(id);
 }
@@ -321,6 +321,9 @@ export function personaCheckBudget(persona) {
         denyLoosenUnlessSteward: true,
     };
 }
+/**
+ * Narrow a string to a team persona.
+ */
 export function isTeamPersona(value) {
     return TEAM_PERSONAS.includes(value);
 }

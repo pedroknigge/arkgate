@@ -42,14 +42,13 @@ export const COMMAND_GATE_JSON_FILES = [
 // Primary CLI names (product) + one-major aliases. migrate-commands must strip ALL of these
 // before re-emitting a single preferred bin — otherwise a partial rename leaves
 // args: ["ark-mcp", "arkgate-mcp", ...] which breaks stdio MCP hosts.
-export const ARK_MCP_BINS = new Set(['arkgate-mcp', 'ark-mcp']);
-export const ARK_CHECK_BINS = new Set(['arkgate-check', 'ark-check']);
-export const ARK_CLI_BINS = new Set(['arkgate', 'ark']);
+const ARK_MCP_BINS = new Set(['arkgate-mcp', 'ark-mcp']);
+const ARK_CHECK_BINS = new Set(['arkgate-check', 'ark-check']);
+const ARK_CLI_BINS = new Set(['arkgate', 'ark']);
 // PREFERRED_MCP_BIN lives in hook-templates.mjs (re-exported above).
 export const PREFERRED_CHECK_BIN = 'arkgate-check';
-export const PREFERRED_CLI_BIN = 'arkgate';
 // Runner argv noise that is not a bin argument (pnpm exec form).
-export const MCP_RUNNER_ARGV = new Set(['exec', '--config.verify-deps-before-run=false']);
+const MCP_RUNNER_ARGV = new Set(['exec', '--config.verify-deps-before-run=false']);
 // The runner token immediately before an ark command in a text command string.
 // Matches npm/yarn runners and both pnpm forms (legacy `pnpm exec` + verify-deps-safe form).
 // Longer bin names first so `arkgate-check` is not partially matched as `ark`.

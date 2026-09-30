@@ -10,8 +10,7 @@
 
 import { XI_TTL_KEY_RE } from './ark-order-types.mjs';
 import { sourceHasPersistenceWrite, sourceImportsPersistenceDriverText } from './persistence-write-hint.mjs';
-export const ARKORDER_PLANE_FACTORY = 'createOrderPlane';
-export const ARKORDER_FORBIDDEN_METHODS = ['update', 'patch', 'set', 'mutate'];
+const ARKORDER_PLANE_FACTORY = 'createOrderPlane';
 /**
  * XIWRITE-001: same engine as `globToRegExp` in src/domain/layerMatch.ts.
  * Inlined so generate:cli-pure emits self-contained bin/lib/ark-order-facts.mjs /
@@ -195,7 +194,7 @@ const TRAILING_IDENTIFIER_RE = /([A-Za-z_$][\w$]*)\s*!?\s*\??\s*$/;
 /** Leading identifier inside a parenthesized receiver: `x as T`, `<T>x`, `x!`, `x`. */
 const WRAPPED_IDENTIFIER_RE = /^\s*(?:<[^<>]*>\s*)?([A-Za-z_$][\w$]*)\s*!?\s*(?:\b(?:as|satisfies)\b[\s\S]*)?$/;
 /** Identifiers bound to `createOrderPlane(...)` in this file. */
-export function arkOrderPlaneBindings(content) {
+function arkOrderPlaneBindings(content) {
     const source = stripCommentsPreservingLines(content);
     const names = new Set();
     const re = new RegExp(PLANE_BINDING_RE.source, 'g');
@@ -260,7 +259,7 @@ function specifierResolvesToPlaneRoot(file, specifier, planeRoots) {
  * named import from a declared plane root. `isArkOrderFile` reports an `arkgate/order`
  * import, which admits the conventional names file-wide.
  */
-export function arkOrderPlaneReceivers(file, content, options = {}) {
+function arkOrderPlaneReceivers(file, content, options = {}) {
     const source = stripCommentsPreservingLines(content);
     const names = new Set(arkOrderPlaneBindings(content));
     const annotated = new RegExp(ORDER_PLANE_ANNOTATION_RE.source, 'g');

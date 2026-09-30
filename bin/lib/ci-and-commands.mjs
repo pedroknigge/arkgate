@@ -16,23 +16,11 @@ import {
   buildAgentProjectionBlock,
 } from './agent-projection.mjs';
 import { getDiagnosticCatalogEntry } from './diagnostic-catalog.mjs';
-import { falseGreenAdoptionGap } from './field-install.mjs';
 import { renderHostSupportMatrixMarkdown } from './host-support-matrix.mjs';
 import { PREFERRED_MCP_BIN } from './hook-templates.mjs';
 import { hasCheckArchitectureScript, readPackageJson } from './gate-files.mjs';
 import { arkPackageVersion } from './skill-install.mjs';
 import { arkgateIsProjectDependency, pinnedArkgateRunner } from './package-manager.mjs';
-
-// Field-install helpers re-exported for callers that import from this module.
-export {
-  ensureBaselineFlagInCheckCommand,
-  syncBaselineIntoCheckSurfaces,
-  pinArkgateDevDependency,
-  IO_DIR_SEGMENTS,
-  detectContractFalseGreenRisk,
-  FALSE_GREEN_GAP_ID,
-  falseGreenAdoptionGap,
-} from './field-install.mjs';
 
 export function checkArgsForRoot(root, { requireGates = false } = {}) {
   const baselineFlag = fs.existsSync(path.join(root, '.ark-baseline.json'))
@@ -41,7 +29,6 @@ export function checkArgsForRoot(root, { requireGates = false } = {}) {
   const profile = requireGates ? '--strict-merge' : '--strict-config';
   return `--root . --config ark.config.json ${profile}${baselineFlag}`;
 }
-
 
 export function packageManager(root) {
   const pm = localPackageManager(root);

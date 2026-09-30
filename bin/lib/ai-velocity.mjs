@@ -49,7 +49,7 @@ export const DESIGN_WEAK_PLACEMENT_CANDIDATES = [
  * @param {object} config
  * @param {string} filePath relative
  */
-export function layerForPlacement(root, config, filePath) {
+function layerForPlacement(root, config, filePath) {
   const layers = config?.layers || [];
   if (!layers.length) return null;
   return layerForFile(root, filePath, layers) || null;

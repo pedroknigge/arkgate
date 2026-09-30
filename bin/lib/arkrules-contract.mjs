@@ -9,7 +9,7 @@
  */
 
 export const ARK_RULES_SCHEMA_VERSION = '1.0';
-export const ARK_RULES_SCHEMA_URL = 'https://unpkg.com/arkgate/schemas/ark.arkrules.schema.json';
+const ARK_RULES_SCHEMA_URL = 'https://unpkg.com/arkgate/schemas/ark.arkrules.schema.json';
 /** Closed sensor vocabulary — keep in lockstep with arkRulesTypes.ARK_RULE_SENSOR_IDS. */
 export const ARK_RULE_SENSORS = [
     'aggregate-private-state',
@@ -351,7 +351,7 @@ function provenanceFor(part, localId) {
  * True when every path the glob can match stays under the slice root.
  * A wider prefix, a `**` that is not the last segment, or `..` escapes.
  */
-export function appliesToPatternInsideSlice(pattern, sliceRoot) {
+function appliesToPatternInsideSlice(pattern, sliceRoot) {
     const root = sliceRoot.replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
     const value = pattern.trim().replace(/\\/g, '/').replace(/^\.\//, '').toLowerCase();
     if (!value || !root || value.includes('..'))

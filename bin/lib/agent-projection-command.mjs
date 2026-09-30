@@ -43,7 +43,7 @@ function packageVersionFallback() {
  * Resolve catalog short-list entries (ruleId + title) from the public catalog.
  * @param {readonly string[]|null|undefined} [ruleIds]
  */
-export function resolveProjectionCatalogShortList(ruleIds) {
+function resolveProjectionCatalogShortList(ruleIds) {
   const ids =
     Array.isArray(ruleIds) && ruleIds.length > 0 ? ruleIds : DEFAULT_AGENT_PROJECTION_RULE_IDS;
   return ids.map((ruleId) => {
@@ -67,7 +67,7 @@ export function resolveProjectionCatalogShortList(ruleIds) {
  *   checkCommand?: string|null,
  * }} [options]
  */
-export function collectAgentProjectionFacts(options = {}) {
+function collectAgentProjectionFacts(options = {}) {
   const startRoot = path.resolve(options.root || process.cwd());
   const configName = options.config || 'ark.config.json';
   let resolvedRoot = startRoot;
@@ -134,7 +134,7 @@ export function collectAgentProjectionFacts(options = {}) {
  * Build projection block + meta for a project (no write).
  * @param {Parameters<typeof collectAgentProjectionFacts>[0]} [options]
  */
-export function buildProjectAgentProjection(options = {}) {
+function buildProjectAgentProjection(options = {}) {
   const facts = collectAgentProjectionFacts(options);
   const block = buildAgentProjectionBlock(facts);
   const meta = buildAgentProjectionMeta(facts);
@@ -211,7 +211,7 @@ export function planAgentProjectionRefresh(options = {}) {
  * @param {ReturnType<typeof planAgentProjectionRefresh>} plan
  * @param {{ write?: boolean }} [opts]
  */
-export function applyAgentProjectionRefresh(plan, opts = {}) {
+function applyAgentProjectionRefresh(plan, opts = {}) {
   const shouldWrite = opts.write !== false;
   if (!plan.wouldWrite) {
     return { wrote: false, action: plan.action, path: plan.path };

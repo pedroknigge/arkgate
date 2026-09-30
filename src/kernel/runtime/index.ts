@@ -10,14 +10,10 @@ export type {
 } from './transport';
 export {
   ARK_RUN_COMPONENT_LIFETIMES,
-  ARK_RUN_DECISION_TAPE_RESIDUAL_KINDS,
   ARK_RUN_INFORMATION_PACKAGE_SCHEMA_VERSION,
   appendDecisionTape,
   buildDependencyInformationPackage,
-  sanitizeDecisionTapeRecord,
   type ArkRunComponentLifetime,
-  type ArkRunDecisionTapeRecord,
-  type ArkRunDecisionTapeResidualKind,
   type ArkRunExtendedInfo,
   type ArkRunInformationPackageComponent,
   type DependencyInformationPackage,

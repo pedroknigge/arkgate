@@ -23,9 +23,9 @@ export const ARKRUN_ONE_BREATH =
 export const ARKRUN_FIRST_CONTACT_NEXT =
   'Next: /ark-runtime to wire one candidate.';
 
-export type ArkRunDoctorMode = 'advisory' | 'enforced';
+type ArkRunDoctorMode = 'advisory' | 'enforced';
 
-export type ArkRunDoctorResidual = {
+type ArkRunDoctorResidual = {
   count: number;
   ruleIds: string[];
 };

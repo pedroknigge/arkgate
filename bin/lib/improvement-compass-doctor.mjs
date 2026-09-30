@@ -2,11 +2,7 @@
  * Doctor adapter for the Domain improvement compass (notAScore projection).
  * Keeps doctor-plan.mjs inside its module budget; pure assembly only.
  */
-import {
-  buildImprovementCompass,
-  formatImprovementCompassDoctorLines,
-  primaryImprovementCompassNextAction,
-} from './improvement-compass.mjs';
+import { buildImprovementCompass } from './improvement-compass.mjs';
 
 /**
  * @param {{
@@ -92,22 +88,3 @@ export function buildDoctorImprovementCompass(input = {}) {
   });
 }
 
-export {
-  formatImprovementCompassDoctorLines,
-  primaryImprovementCompassNextAction,
-};
-
-/**
- * Human doctor section (never a score bar).
- * @param {import('./improvement-compass.mjs').ImprovementCompass} compass
- * @param {{ line: Function, warn: string, ok: string, color: { bold: Function } }} io
- */
-export function printImprovementCompassSection(compass, io) {
-  const { line, warn, ok, color } = io;
-  console.log('');
-  console.log(color.bold('Improvement compass (not a score)'));
-  const mark = compass.topResidual.length > 0 ? warn : ok;
-  for (const text of formatImprovementCompassDoctorLines(compass)) {
-    line(mark, text);
-  }
-}

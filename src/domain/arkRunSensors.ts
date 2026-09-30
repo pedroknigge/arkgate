@@ -54,7 +54,7 @@ export type ArkRunEditorSensorId = (typeof ARKRUN_EDITOR_SENSOR_IDS)[number];
 
 const EDITOR_SENSOR_SET = new Set<string>(ARKRUN_EDITOR_SENSOR_IDS);
 
-export function isArkRunEditorSensor(sensor: string): sensor is ArkRunEditorSensorId {
+function isArkRunEditorSensor(sensor: string): sensor is ArkRunEditorSensorId {
   return EDITOR_SENSOR_SET.has(sensor);
 }
 

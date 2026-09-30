@@ -508,4 +508,9 @@ Object.defineProperty(configs, 'recommended', {
 plugin.configs = configs;
 
 export { configs };
+/**
+ * `plugin` and the default export are both public API of `arkgate/eslint`
+ * (tests/unit/publish/eslint-cjs-shape.test.ts pins `require('arkgate/eslint').plugin`).
+ * @alias
+ */
 export default plugin;

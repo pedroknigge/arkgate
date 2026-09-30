@@ -16,7 +16,7 @@ export const ARK_CONFIG_SCHEMA_VERSION = '1.3';
 /** Closed layer trust tags. Optional; absence is silent. Not a schemaVersion bump. */
 export const LAYER_TRUST_BOUNDARIES = ['public', 'auth', 'admin', 'internal'];
 /** Future house: empty globs are expected; missing owners stay silent even when required. */
-export function isFutureHouseLayer(layer) {
+function isFutureHouseLayer(layer) {
     return layer?.optional === true || layer?.reserved === true || layer?.allowEmpty === true;
 }
 /**
@@ -409,7 +409,7 @@ function validateNode(value, schema, path, root, issues) {
     }
 }
 /** The schema walk has no oneOf, so string-or-array `arkRules` values are checked here. */
-export function validateArkRulesRefs(candidate, issues) {
+function validateArkRulesRefs(candidate, issues) {
     const refs = candidate.arkRules;
     if (refs === undefined || !isObject(refs))
         return;

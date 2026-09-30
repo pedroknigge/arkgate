@@ -19,7 +19,7 @@ import { withArkConfigMetadata } from './config-contract.mjs';
 const PRESETS_DIR = path.dirname(fileURLToPath(import.meta.url));
 const ARKRULES_TEMPLATES_DIR = path.join(PRESETS_DIR, '../../templates/arkrules');
 
-export function denyUpward(names) {
+function denyUpward(names) {
   const rules = [];
   for (let i = 0; i < names.length; i += 1) {
     for (let j = i + 1; j < names.length; j += 1) {
@@ -33,7 +33,7 @@ export function denyUpward(names) {
  * peerIsolation matrix: deny only when importer/importee sit under different slices.
  * Covers same-layer and cross-layer pairs (honest DDD / vertical-slice isolation).
  */
-export function peerIsolationEdges(layerNames, sliceFolders, message) {
+function peerIsolationEdges(layerNames, sliceFolders, message) {
   const rules = [];
   for (const from of layerNames) {
     for (const to of layerNames) {
@@ -57,7 +57,7 @@ export function peerIsolationEdges(layerNames, sliceFolders, message) {
 // Framework internals under `src/kernel/**` are NOT application architecture — a broad
 // `src/**/domain/**` would otherwise swallow `src/kernel/domain`. Do NOT use `**/kernel/**`
 // (that carves out legitimate `src/shared/kernel/**` SharedKernel paths).
-export const FRAMEWORK_INTERNAL_EXCLUDE = ['src/kernel/**', '**/src/kernel/**'];
+const FRAMEWORK_INTERNAL_EXCLUDE = ['src/kernel/**', '**/src/kernel/**'];
 
 /**
  * Shared high-spec domain globs. Prefer these over Application/Presentation scatter
@@ -217,18 +217,6 @@ export const APPLICATION_LIB_ORCHESTRATION_PATTERNS = Object.freeze([
   '**/lib/api-handlers/**',
 ]);
 
-/**
- * AR08 — attach lean arkRules map. Keys are always exact project layer names.
- * Sensor roles (domain-structure / orchestration / adapter-thin / generic) are
- * independent of display names so renamed layers still get the right starter.
- */
-export const DEFAULT_ARKRULES_REFS = {
-  DomainModel: 'arkrules/DomainModel.json',
-  ApplicationOrchestration: 'arkrules/ApplicationOrchestration.json',
-  PresentationAdapters: 'arkrules/PresentationAdapters.json',
-  PersistenceAdapters: 'arkrules/PersistenceAdapters.json',
-};
-
 /** Sensor roles used when selecting or synthesizing per-layer templates. */
 export const ARKRULES_SENSOR_ROLES = Object.freeze({
   DOMAIN_STRUCTURE: 'domain-structure',
@@ -241,7 +229,7 @@ export const ARKRULES_SENSOR_ROLES = Object.freeze({
  * Exact-name aliases → sensor role. Prefer this table over heuristics when the
  * project uses a known vocabulary (hexagonal, monorepo field renames, etc.).
  */
-export const LAYER_SENSOR_ROLE_ALIASES = Object.freeze({
+const LAYER_SENSOR_ROLE_ALIASES = Object.freeze({
   // Domain / pure model
   DomainModel: ARKRULES_SENSOR_ROLES.DOMAIN_STRUCTURE,
   Domain: ARKRULES_SENSOR_ROLES.DOMAIN_STRUCTURE,
@@ -448,7 +436,7 @@ export function writeArkRulesTemplates(root, config, { force = false } = {}) {
   return written;
 }
 
-export function presetWithOverlays(baseConfig, root) {
+function presetWithOverlays(baseConfig, root) {
   const config = root ? applyFrameworkLayoutOverlays(baseConfig, root) : baseConfig;
   return withArkConfigMetadata(withDefaultArkRules(config));
 }

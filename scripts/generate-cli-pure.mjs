@@ -347,8 +347,16 @@ function transpileCanonicalSource(canonicalRel, canonicalTs, importRewriteMap) {
   return rewriteRelativeDomainImports(stripped, importRewriteMap, canonicalRel);
 }
 
+/**
+ * `@cliMirror` marks a Domain export that only this mirror's bin consumers use (knip.jsonc
+ * `tags`). The mirror's own exports are not checked, so the tag is dropped here.
+ */
+function stripCliMirrorTags(source) {
+  return source.replace(/^[ \t]*\*[ \t]*@cliMirror\b[^\n]*\n/gm, '');
+}
+
 function buildDerivedSource(canonicalRel, derivedRel, transpiledSource) {
-  return `${banner(canonicalRel, derivedRel)}\n${transpiledSource}`;
+  return `${banner(canonicalRel, derivedRel)}\n${stripCliMirrorTags(transpiledSource)}`;
 }
 
 function normalizeNewlines(s) {

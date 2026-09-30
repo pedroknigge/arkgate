@@ -88,7 +88,7 @@ export function execRunner(root) {
 }
 
 /** The exact arkgate version that ships this CLI (the package.json next to bin/). */
-export function shippedArkgateVersion() {
+function shippedArkgateVersion() {
   try {
     const pkg = JSON.parse(fs.readFileSync(new URL('../../package.json', import.meta.url), 'utf8'));
     return typeof pkg.version === 'string' && pkg.version ? pkg.version : null;
@@ -114,7 +114,7 @@ export function arkgateIsProjectDependency(root) {
 }
 
 /** `arkgate@<exact shipped version>` — the package an unpinned project runs through npx. */
-export function pinnedArkgateSpec(version = shippedArkgateVersion()) {
+function pinnedArkgateSpec(version = shippedArkgateVersion()) {
   return version ? `arkgate@${version}` : 'arkgate';
 }
 
@@ -199,7 +199,7 @@ export function isNpmYarnWorkspaceRoot(root) {
  * Normalize a version/range/spec into an installable package argument for arkgate.
  * Accepts `latest`, `^3.8.2`, `arkgate@latest`, or a full package name.
  */
-export function normalizeArkgateInstallSpec(versionSpec) {
+function normalizeArkgateInstallSpec(versionSpec) {
   const raw = typeof versionSpec === 'string' && versionSpec.trim() ? versionSpec.trim() : 'latest';
   if (raw.startsWith('arkgate@') || raw === 'arkgate') return raw === 'arkgate' ? 'arkgate@latest' : raw;
   if (raw.includes('/') || raw.startsWith('file:') || raw.startsWith('link:')) return raw;

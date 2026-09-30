@@ -145,13 +145,13 @@ export type StatusManifest = {
   arkOrder?: ArkOrderStatusSlice;
 };
 
-export type StatusContractSlice = {
+type StatusContractSlice = {
   valid: false;
   /** Validator messages (`<json path>: <message>`), in validator order. */
   errors: string[];
 };
 
-export type StatusVsBaseSlice = {
+type StatusVsBaseSlice = {
   baseRef: string;
   line: string;
   pinLocal: string | null;

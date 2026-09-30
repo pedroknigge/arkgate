@@ -8,48 +8,48 @@
       "targets": [
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 597,
-          "endLine": 600
+          "startLine": 585,
+          "endLine": 588
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 602,
-          "endLine": 603
+          "startLine": 590,
+          "endLine": 591
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 623,
-          "endLine": 624
+          "startLine": 611,
+          "endLine": 612
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 629,
-          "endLine": 630
+          "startLine": 617,
+          "endLine": 618
+        },
+        {
+          "file": "src/domain/configContract.ts",
+          "startLine": 627,
+          "endLine": 629
         },
         {
           "file": "src/domain/configContract.ts",
           "startLine": 639,
-          "endLine": 641
+          "endLine": 639
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 651,
-          "endLine": 651
+          "startLine": 646,
+          "endLine": 646
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 658,
-          "endLine": 658
+          "startLine": 655,
+          "endLine": 660
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 667,
-          "endLine": 672
-        },
-        {
-          "file": "src/domain/configContract.ts",
-          "startLine": 683,
-          "endLine": 683
+          "startLine": 671,
+          "endLine": 671
         }
       ]
     },
@@ -177,8 +177,8 @@
       "targets": [
         {
           "file": "src/domain/invariantCoverage.ts",
-          "startLine": 893,
-          "endLine": 942
+          "startLine": 894,
+          "endLine": 943
         }
       ]
     },
@@ -188,13 +188,13 @@
       "targets": [
         {
           "file": "src/domain/invariantCoverage.ts",
-          "startLine": 234,
-          "endLine": 253
+          "startLine": 235,
+          "endLine": 254
         },
         {
           "file": "src/domain/invariantCoverage.ts",
-          "startLine": 754,
-          "endLine": 758
+          "startLine": 755,
+          "endLine": 759
         }
       ]
     },

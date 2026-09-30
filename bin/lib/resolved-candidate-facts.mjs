@@ -58,7 +58,7 @@ import {
   normalize,
 } from './scan-files.mjs';
 
-export const RESOLVED_FACTS_RESOLVER_IDENTITY = 'arkgate-typescript-resolver@1';
+const RESOLVED_FACTS_RESOLVER_IDENTITY = 'arkgate-typescript-resolver@1';
 
 const IN_MEMORY_STORES = new Set([
   'InMemoryAuditStore',

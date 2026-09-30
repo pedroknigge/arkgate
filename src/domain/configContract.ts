@@ -35,23 +35,11 @@ import { canonicalStewardId } from './teamParliament';
 
 export type {
   ArkConfig,
-  ArkConfigArkRulesRefs,
-  ArkConfigArkOrder,
-  ArkConfigArkOrderMode,
-  ArkConfigArkRun,
-  ArkConfigArkRunMode,
-  ArkConfigCoverage,
-  ArkConfigCyclePolicy,
   ArkConfigIssue,
   ArkConfigLayer,
-  ArkConfigLayerTrustBoundary,
   ArkConfigLoadResult,
-  ArkConfigMigratedFrom,
   ArkConfigMigrationResult,
   ArkConfigRule,
-  ArkConfigSafety,
-  ArkConfigSharedImportsSlice,
-  ArkConfigSliceIdentity,
   ArkConfigSchemaVersion,
 } from './configTypes';
 
@@ -61,7 +49,7 @@ export const ARK_CONFIG_SCHEMA_VERSION: ArkConfigSchemaVersion = '1.3';
 export const LAYER_TRUST_BOUNDARIES = ['public', 'auth', 'admin', 'internal'] as const;
 
 /** Future house: empty globs are expected; missing owners stay silent even when required. */
-export function isFutureHouseLayer(
+function isFutureHouseLayer(
   layer: Pick<ArkConfigLayer, 'optional' | 'reserved' | 'allowEmpty'> | null | undefined
 ): boolean {
   return layer?.optional === true || layer?.reserved === true || layer?.allowEmpty === true;
@@ -494,7 +482,7 @@ function validateNode(
 }
 
 /** The schema walk has no oneOf, so string-or-array `arkRules` values are checked here. */
-export function validateArkRulesRefs(candidate: Record<string, unknown>, issues: ArkConfigIssue[]): void {
+function validateArkRulesRefs(candidate: Record<string, unknown>, issues: ArkConfigIssue[]): void {
   const refs = candidate.arkRules;
   if (refs === undefined || !isObject(refs)) return;
   for (const [layer, value] of Object.entries(refs)) {

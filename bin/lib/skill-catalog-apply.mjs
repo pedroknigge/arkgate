@@ -19,7 +19,7 @@ function skillName(skill) {
   return Array.isArray(skill) ? skill[0] : skill?.name || skill;
 }
 
-export function projectCatalogReady(root, skillNames) {
+function projectCatalogReady(root, skillNames) {
   return skillNames.some((name) => fs.existsSync(path.join(root, canonicalSkillPath(name))));
 }
 

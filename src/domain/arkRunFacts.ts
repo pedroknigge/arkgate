@@ -28,15 +28,15 @@ export const ARKRUN_KERNEL_FACTORY_CALLEES = [
  * count as a kernel factory only when `ArkModule` is imported from a kernel module
  * (`arkgate/nestjs`). A bare `.forRoot(` on any other receiver never counts.
  */
-export const ARKRUN_NEST_KERNEL_MODULE = 'ArkModule';
-export const ARKRUN_NEST_FACTORY_METHODS = ['forRoot', 'forRootAsync'] as const;
+const ARKRUN_NEST_KERNEL_MODULE = 'ArkModule';
+const ARKRUN_NEST_FACTORY_METHODS = ['forRoot', 'forRootAsync'] as const;
 
 /**
  * Kernel types whose annotated bindings (`ark: ArkKernel`, constructor-injected
  * `private readonly ark: ArkKernel`) are traced as kernel receivers when the type
  * is imported from a kernel module.
  */
-export const ARKRUN_KERNEL_RECEIVER_TYPES = [
+const ARKRUN_KERNEL_RECEIVER_TYPES = [
   'ArkKernel',
   'EventBus',
   'EventPublisher',

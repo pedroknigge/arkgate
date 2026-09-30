@@ -132,7 +132,7 @@ export function globToRegExp(pattern) {
  * Used for path-anchored ranking so a domain folder glob can beat a broad
  * Application bag like src/lib when the file actually sits under domain/.
  */
-export function concreteGlobSegments(pattern) {
+function concreteGlobSegments(pattern) {
     const glob = normalizeGlobSeparators(String(pattern));
     return glob
         .split('/')
@@ -393,7 +393,7 @@ function bindAnchoredSlice(parts, pattern, offset, identity = 'path') {
  * literal, and everything after it. Literals before the last literal drop.
  * Returns null when the pattern has no literal.
  */
-export function starsKeptSegmentIndexes(segments) {
+function starsKeptSegmentIndexes(segments) {
     let lastLiteral = -1;
     for (let at = 0; at < segments.length; at += 1) {
         if (segments[at] !== '*')
@@ -782,7 +782,7 @@ function literalsMatch(shape, parts) {
  * New-id shapes (`*` for a star) that a 4.8.23 stars id maps to. Empty when the id is
  * already a new id or no shape takes it. Config load rejects more than one.
  */
-export function legacyStarsIdTargets(folders, id) {
+function legacyStarsIdTargets(folders, id) {
     const parts = id.split('/').filter(Boolean).map((part) => part.toLowerCase());
     const shapes = starsUniverseShapes(folders);
     if (parts.length === 0 || shapes.some((shape) => literalsMatch(shape.literals, parts)))
@@ -1164,7 +1164,7 @@ function isCommonFolderName(segment, commonFolders) {
  * (`features/projects/rfi/domain/**`) belongs to that child. A child id that
  * does not extend the universe id is not used; the caller warns.
  */
-export function resolveChildSliceId(relPath, universeId, child) {
+function resolveChildSliceId(relPath, universeId, child) {
     if (!relPath || !child?.sliceFolders?.length)
         return {};
     const raw = sliceIdForPath(relPath, child.sliceFolders, child.sliceIdentity);
@@ -1225,7 +1225,7 @@ export function importerInEnforcedSubtree(fromPath, fromChild, entries) {
  * value deny every one. An object denies the importer only when it is listed,
  * unless `default` is already `deny`.
  */
-export function siblingCrossingAdvisory(siblings, fromPath, fromChild) {
+function siblingCrossingAdvisory(siblings, fromPath, fromChild) {
     if (siblings == null || siblings === 'deny')
         return false;
     if (siblings === 'advisory')
@@ -1308,7 +1308,7 @@ function childAllowanceSpansUniverses(from, to) {
  * Universe wall, then the child wall. An allow from the child wall never
  * overturns a universe deny: that deny returns before the child wall runs.
  */
-export function evaluateNestedSliceWall(input) {
+function evaluateNestedSliceWall(input) {
     const universe = peerIsolationDecision({
         fromPath: input.fromPath,
         toPath: input.toPath,

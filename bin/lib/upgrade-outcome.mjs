@@ -144,7 +144,7 @@ function sampleForViolation(violation, ruleId) {
  * @param {string} stdout
  * @returns {Record<string, unknown>|null}
  */
-export function parseCheckStdout(stdout) {
+function parseCheckStdout(stdout) {
   const text = typeof stdout === 'string' ? stdout.trim() : '';
   if (!text) return null;
   try {

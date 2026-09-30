@@ -14,12 +14,10 @@ import {
   DEEPENING_CANDIDATE_CAP,
 } from './deepening-coach.mjs';
 
-export { buildDeepeningCandidates, ARK_DEEPENING_COACH_SCHEMA_VERSION, DEEPENING_CANDIDATE_CAP };
-
 /** Recent-window commit cap for hot-path heuristic (budget). */
-export const HOT_PATH_COMMIT_LIMIT = 200;
+const HOT_PATH_COMMIT_LIMIT = 200;
 /** Max listed hot paths. */
-export const HOT_PATH_LIST_CAP = 8;
+const HOT_PATH_LIST_CAP = 8;
 /** Minimum change hits before a path is “elevated”. */
 export const HOT_PATH_MIN_HITS = 3;
 /** Kill hung git instead of stalling CI. */

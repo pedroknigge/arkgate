@@ -13,7 +13,7 @@ import {
   isIdiomaticEventsReset,
 } from './arkRuleSensors';
 
-export type RulesInventoryConfidence = 'direct-evidence' | 'heuristic';
+type RulesInventoryConfidence = 'direct-evidence' | 'heuristic';
 
 export type RulesInventoryCandidate = {
   id: string;
@@ -45,7 +45,7 @@ export type RulesInventoryResult = {
   notAScore: true;
 };
 
-export type RulesInventoryLayerContext = {
+type RulesInventoryLayerContext = {
   name: string;
   intentPrefixes?: readonly string[];
 };

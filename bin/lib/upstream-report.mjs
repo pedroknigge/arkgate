@@ -10,7 +10,7 @@ import readline from 'node:readline/promises';
 import { __packageRoot } from './gate-files.mjs';
 
 export const UPSTREAM_OWNER_REPO = 'pedroknigge/arkgate';
-export const SUBMIT_PROMPT = 'Type submit to send';
+const SUBMIT_PROMPT = 'Type submit to send';
 
 export function ownerRepoFromGithubUrl(url) {
   if (typeof url !== 'string' || url.trim() === '') return null;
@@ -22,7 +22,7 @@ export function ownerRepoFromGithubUrl(url) {
   return `${owner}/${repo}`;
 }
 
-export function resolveUpstreamRepo(pkg) {
+function resolveUpstreamRepo(pkg) {
   const fromBugs = ownerRepoFromGithubUrl(pkg?.bugs?.url);
   if (fromBugs) return fromBugs;
   const repository = pkg?.repository;
@@ -32,7 +32,7 @@ export function resolveUpstreamRepo(pkg) {
   return UPSTREAM_OWNER_REPO;
 }
 
-export function posixSingleQuote(value) {
+function posixSingleQuote(value) {
   return `'${String(value).replace(/'/g, `'\\''`)}'`;
 }
 
@@ -40,7 +40,7 @@ export function formatGhIssueCreateCommand({ repo, title, body }) {
   return `gh issue create --repo ${posixSingleQuote(repo)} --title ${posixSingleQuote(title)} --body ${posixSingleQuote(body)}`;
 }
 
-export function reportUsage() {
+function reportUsage() {
   return `arkgate report (alias ark report) — draft an upstream GitHub issue for ArkGate.
 
 Target: pedroknigge/arkgate (this package's package.json bugs.url). Never the consumer repo.
@@ -59,7 +59,7 @@ gh issue create --repo pedroknigge/arkgate command, then exits 2.
 `;
 }
 
-export function lastCheckSnippet(latest) {
+function lastCheckSnippet(latest) {
   if (!latest || typeof latest !== 'object') return null;
   const at =
     typeof latest.generatedAt === 'string'
@@ -83,7 +83,7 @@ export function lastCheckSnippet(latest) {
   return { at, verdict, activeViolations: active };
 }
 
-export function readLastCheckSnapshot(root) {
+function readLastCheckSnapshot(root) {
   const latestPath = path.join(root, '.ark', 'reports', 'latest.json');
   try {
     return JSON.parse(fs.readFileSync(latestPath, 'utf8'));
@@ -92,7 +92,7 @@ export function readLastCheckSnapshot(root) {
   }
 }
 
-export function buildIssueDraft({ repo, arkgateVersion, lastCheck, finding, title }) {
+function buildIssueDraft({ repo, arkgateVersion, lastCheck, finding, title }) {
   const resolvedTitle =
     typeof title === 'string' && title.trim()
       ? title.trim()
@@ -127,7 +127,7 @@ export function buildIssueDraft({ repo, arkgateVersion, lastCheck, finding, titl
   return { repo, title: resolvedTitle, body: lines.join('\n') };
 }
 
-export function defaultRunGh(argv, options = {}) {
+function defaultRunGh(argv, options = {}) {
   const env = { ...(options.env ?? process.env) };
   delete env.GH_REPO;
   const result = spawnSync('gh', argv, {
@@ -182,7 +182,7 @@ async function defaultPromptSubmit(stdin, stdout) {
   }
 }
 
-export function parseReportArgv(argv = []) {
+function parseReportArgv(argv = []) {
   const out = {
     submit: false,
     iConfirmSubmit: false,

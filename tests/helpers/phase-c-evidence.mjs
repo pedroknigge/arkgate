@@ -1,6 +1,5 @@
 /**
- * Shared Phase C verification helpers — one code path for vitest assertions and
- * {SCRATCH} artifact capture (see scripts/capture-phase-c-evidence.mjs).
+ * Shared Phase C verification helpers for tests/unit/mcp/phase-c.test.ts.
  */
 import { spawn, spawnSync, execSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -10,16 +9,6 @@ import { fileURLToPath } from 'node:url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const REPO_ROOT = path.resolve(HERE, '../..');
-
-export const EVIDENCE_FILES = [
-  'vitest-phase-c.log',
-  'vitest-static-check.log',
-  'mcp-recommend-parity.json',
-  'session-context-hint.txt',
-  'phase-c-docs.txt',
-  'eval-cases.log',
-  'check-architecture.log',
-];
 
 let mcpRuntimeDir;
 
@@ -108,29 +97,6 @@ function seedGreenfield(root) {
     path.join(root, 'package.json'),
     `${JSON.stringify({ name: 'greenfield', version: '0.0.0' }, null, 2)}\n`
   );
-}
-
-export function captureVitestPhaseC(scratchDir, env = {}) {
-  const result = spawnSync(
-    'npm',
-    ['run', 'test:run', '--', 'tests/unit/mcp/phase-c.test.ts'],
-    { cwd: REPO_ROOT, encoding: 'utf8', env: { ...process.env, ...env } }
-  );
-  const output = `${result.stdout || ''}${result.stderr || ''}`;
-  writeScratch(scratchDir, 'vitest-phase-c.log', output);
-  assertOk(result.status === 0, `vitest phase-c failed (exit ${result.status})`);
-  return output;
-}
-
-export function captureVitestStaticCheck(scratchDir) {
-  const result = spawnSync('npm', ['run', 'test:run', '--', 'tests/unit/static-check/'], {
-    cwd: REPO_ROOT,
-    encoding: 'utf8',
-  });
-  const output = `${result.stdout || ''}${result.stderr || ''}`;
-  writeScratch(scratchDir, 'vitest-static-check.log', output);
-  assertOk(result.status === 0, `vitest static-check failed (exit ${result.status})`);
-  return output;
 }
 
 export async function captureMcpRecommendParity(scratchDir) {
@@ -263,56 +229,3 @@ export function capturePhaseCDocs(scratchDir) {
   return output;
 }
 
-export function captureEvalCases(scratchDir) {
-  const lines = [];
-
-  const skip = spawnSync('node', [path.join(REPO_ROOT, 'eval/run.mjs')], {
-    cwd: REPO_ROOT,
-    encoding: 'utf8',
-    env: { ...process.env, ARK_EVAL_CASE: 'enthusiast-greenfield-crud' },
-  });
-  lines.push('=== ARK_EVAL_CASE=enthusiast-greenfield-crud ===');
-  lines.push(`${skip.stdout}${skip.stderr}`);
-  assertOk(`${skip.stdout}${skip.stderr}`.includes('SKIPPED'), 'greenfield-crud eval did not report SKIPPED');
-
-  const wrongLayerCase = path.join(REPO_ROOT, 'eval/cases/enthusiast-wrong-layer');
-  const pre = spawnSync(
-    'node',
-    [path.join(REPO_ROOT, 'bin/ark-check.mjs'), '--root', wrongLayerCase, '--config', 'ark.config.json'],
-    { encoding: 'utf8' }
-  );
-  lines.push('=== enthusiast-wrong-layer pre-check ===');
-  lines.push(`exit: ${pre.status}`);
-  lines.push(`${pre.stdout}${pre.stderr}`);
-  assertOk(pre.status === 1, `enthusiast-wrong-layer pre-check expected exit 1, got ${pre.status}`);
-
-  writeScratch(scratchDir, 'eval-cases.log', `${lines.join('\n')}\n`);
-  return lines.join('\n');
-}
-
-export function captureCheckArchitecture(scratchDir) {
-  const result = spawnSync('npm', ['run', 'check:architecture'], {
-    cwd: REPO_ROOT,
-    encoding: 'utf8',
-  });
-  const output = `${result.stdout || ''}${result.stderr || ''}`;
-  writeScratch(scratchDir, 'check-architecture.log', output);
-  assertOk(result.status === 0, `check:architecture failed (exit ${result.status})`);
-  assertOk(output.includes('Ark check passed'), 'check:architecture output missing pass marker');
-  return output;
-}
-
-export async function runAllPhaseCEvidence(scratchDir) {
-  fs.mkdirSync(scratchDir, { recursive: true });
-  captureVitestPhaseC(scratchDir, { PHASE_C_SCRATCH: scratchDir });
-  captureVitestStaticCheck(scratchDir);
-  await captureMcpRecommendParity(scratchDir);
-  captureSessionContextHint(scratchDir);
-  capturePhaseCDocs(scratchDir);
-  captureEvalCases(scratchDir);
-  captureCheckArchitecture(scratchDir);
-
-  const missing = EVIDENCE_FILES.filter((name) => !fs.existsSync(path.join(scratchDir, name)));
-  assertOk(missing.length === 0, `missing scratch artifacts: ${missing.join(', ')}`);
-  return EVIDENCE_FILES.map((name) => path.join(scratchDir, name));
-}
