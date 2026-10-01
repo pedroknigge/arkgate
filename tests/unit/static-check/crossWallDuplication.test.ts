@@ -8,7 +8,8 @@ import os from 'node:os';
 import path from 'node:path';
 import ts from 'typescript';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { TOKEN_IDENT, TOKEN_LITERAL } from '../../../bin/lib/clone-detection.mjs';
+import { TOKEN_IDENT, TOKEN_LITERAL, isGeneratedHeader } from '../../../bin/lib/clone-detection.mjs';
+import { collectGovernedFiles } from '../../../bin/lib/scan-files.mjs';
 import {
   computeCrossWallDuplication,
   crossWallDuplicationHtml,
@@ -296,5 +297,39 @@ describe('status wiring', () => {
     expect(JSON.stringify(before)).not.toMatch(/crossWallDuplication|fingerprint/);
     expect(details.doctor.violations).toEqual(compact.doctor.violations);
     expect(details.doctor.completeness).toEqual(compact.doctor.completeness);
+  });
+});
+
+describe('self-host: the mother repo', () => {
+  const repo = path.resolve('.');
+  const config = JSON.parse(fs.readFileSync(path.join(repo, 'ark.config.json'), 'utf8'));
+  const real = fs.realpathSync(repo);
+  const governed = collectGovernedFiles(repo, config).map((file: string) =>
+    path.relative(real, file).split(path.sep).join('/')
+  );
+  const mirrors = governed.filter((rel: string) => isGeneratedHeader(fs.readFileSync(path.join(repo, rel), 'utf8')));
+
+  it('generated mirrors produce zero families, next to their canonical sources', () => {
+    // bin/lib/*.mjs and bin/ark-layer-match.mjs mirror src/domain/*.ts (cli-pure,
+    // layer-match, analysis-engine, packaged-tooling). The Tooling ↔ DomainModel
+    // pair would be a layer crossing if the mirrors were read.
+    expect(mirrors.length).toBeGreaterThan(30);
+    const canonical = governed.filter((rel: string) => rel.startsWith('src/domain/'));
+    const result = computeCrossWallDuplication({ root: repo, config, ts, files: [...mirrors, ...canonical], details: true });
+    expect(result.families).toEqual([]);
+    expect(result.truncated).toBe(0);
+    // The bundled analysis engine is also over the size cap; it is skipped either way.
+    expect(result.totals.filesSkipped.generated + result.totals.filesSkipped.oversize).toBe(mirrors.length);
+    expect(result.totals.filesFingerprinted).toBe(canonical.length);
+  });
+
+  it('the whole tree lists no generated file and stays complete', () => {
+    const result = computeCrossWallDuplication({ root: repo, config, ts, files: governed, details: true });
+    expect(result.status).toBe('complete');
+    expect(result.totals.filesSkipped.generated + result.totals.filesSkipped.oversize).toBeGreaterThanOrEqual(mirrors.length);
+    const members = result.families.flatMap((family: { members: Array<{ path: string }> }) =>
+      family.members.map((member) => member.path)
+    );
+    for (const member of members) expect(mirrors, member).not.toContain(member);
   });
 });

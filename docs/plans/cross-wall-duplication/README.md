@@ -5,7 +5,7 @@
 > [ROADMAP.md](../../../ROADMAP.md). Hub: [AGENTS.md](../../../AGENTS.md) ·
 > [Package surface](../../package-surface.md) · [ADR index](../../adr/README.md)
 
-**Status:** Plan lock (`DU01`); `DU02`–`DU05` queued; `DU06` parked.<br>
+**Status:** Implemented on the tree (`DU01`–`DU05` done; not yet released); `DU06` parked.<br>
 **Slug:** `cross-wall-duplication`<br>
 **Kind:** epic / advisory with new, bounded evidence<br>
 **Prefix:** `DU`<br>
@@ -59,7 +59,7 @@ Authority is [ADR 0038](../../adr/0038-cross-wall-duplication-advisory.md). This
 | D5 | Typed arrays, one file's text at a time, caps → `partial`. |
 | D6 | No config. A `.ark/duplication-acks.json` sidecar is parked (`DU06`). |
 
-## 4. Design
+## 4. Design (as built)
 
 | Piece | Where | What |
 |-------|-------|------|

@@ -6,6 +6,24 @@ in the immutable pre-2.0 archive linked below.
 ## Unreleased
 
 ### Added
+- Status lists code copied across a wall. When a slice wall denies an import,
+  the cheapest way around it is a copy, and a copy is not an import.
+  `--doctor --all`, the HTML report and `--doctor --all --json` (under
+  `doctor.crossWallDuplication`) now list near-identical code whose copies sit
+  on two sides of a slice wall, in two child slices of one universe, or in two
+  layers, with a place the shared code could live (the declared shared root,
+  the universe common folder, or the lower layer both sides may import).
+  Copies inside one slice are counted, never listed. It reads token
+  fingerprints taken while status runs, with the TypeScript ArkGate already
+  loaded; they never enter the check, so the verdict and `factsHash` do not
+  change. Tests, `.d.ts`, generated files and files over 256 KB are skipped.
+  Fixed thresholds (at least 50 tokens, 5 lines, most names matching), no
+  config key. Compact status never runs it; its JSON says `not-run` and names
+  the command. When a cap stops the pass the section says `partial` and how
+  much was left. New catalog ids `CROSS_WALL_DUPLICATE` and
+  `CROSS_LAYER_DUPLICATE` (advisory). Never a score, never in the write hook,
+  MCP, ESLint, `--changed`, or `--strict-merge`. No new skill; `/ark-place`
+  names the destination and `/ark-fix` moves one copy at a time.
 - Status lists the files nothing imports. A governed file with no importer —
   no governed file, test, project script, or known entry point — shows in
   `--doctor --all`, the HTML report, and `--doctor --json` under

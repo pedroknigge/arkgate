@@ -635,10 +635,10 @@ Does not close `Z09` / `K01`.
 | Order | ID | Status | Size | Depends on | Outcome |
 |---:|---|---|---:|---|---|
 | 308 | `DU01` | `done` | S | OM07 | ADR 0038: fingerprints are doctor-time Tooling evidence, crossing-only via `findDeniedEdgeDecision`, fixed constants, Details-only, no config; freeze exception. Plan lock only |
-| 309 | `DU02` | `todo` | M | DU01 | Domain `cloneDetection.ts`: rolling hash + winnowing + pair buckets + extend + families; property tests; constants calibrated on copycat/atlasgrid/mother/eval corpora |
-| 310 | `DU03` | `todo` | M | DU02 | `duplication-io.mjs`: AST-token stream from the loaded `ts`, eligibility (tests/generated/.d.ts/header/oversize), two-phase bounded memory, caps → `partial` |
-| 311 | `DU04` | `todo` | M | DU03 | Crossing classification + destination hint; `doctor.crossWallDuplication` JSON + Details + HTML parity; `CROSS_WALL_DUPLICATE` / `CROSS_LAYER_DUPLICATE`; journey `copycat` |
-| 312 | `DU05` | `todo` | S | DU04 | `doctorAll` memory scenario; self-host zero-noise test; docs + deepen `/ark-place` `/ark-fix`; CHANGELOG |
+| 309 | `DU02` | `done` | M | DU01 | Domain `cloneDetection.ts`: rolling hash + winnowing + pair buckets + extend + families; property tests; constants calibrated on copycat/atlasgrid/mother/eval corpora (ADR 0038 table; compare cap 200 → 1000) |
+| 310 | `DU03` | `done` | M | DU02 | `duplication-io.mjs`: AST-token stream from the loaded `ts`, eligibility (tests/generated/.d.ts/header/oversize), two-phase bounded memory, caps → `partial` |
+| 311 | `DU04` | `done` | M | DU03 | Crossing classification + destination hint; `doctor.crossWallDuplication` JSON + Details + HTML parity; `CROSS_WALL_DUPLICATE` / `CROSS_LAYER_DUPLICATE`; journey `copycat` |
+| 312 | `DU05` | `done` | S | DU04 | `doctorAll` memory scenario (500 MiB ceiling; 193 MB at n=2000); self-host zero-noise test; docs + deepen `/ark-place` `/ark-fix`; CHANGELOG |
 | 313 | `DU06` | `parked` | S | DU05 + field demand | Optional `.ark/duplication-acks.json` sidecar with `reviewBy` (contract-smell-acks precedent) |
 
 ### Patch — pre-hook write gate first, MCP prepare fallback (issue #277)

@@ -109,7 +109,7 @@ const BUDGETS = [
   { path: 'bin/lib/entry-points-io.mjs', max: 430 },
   { path: 'bin/lib/orphan-modules-io.mjs', max: 585 },
   // ADR 0038 copies across a wall. Measured at landing; ceilings are that plus a few lines.
-  { path: 'src/domain/cloneDetection.ts', max: 635 },
+  { path: 'src/domain/cloneDetection.ts', max: 645 },
   { path: 'bin/lib/duplication-io.mjs', max: 575 },
   // Y01: bounded explicit verdict memory kept out of the X04 sensor/doctor orchestrator.
   { path: 'bin/lib/reshape-decisions.mjs', max: 300 },

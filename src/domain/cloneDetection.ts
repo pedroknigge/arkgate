@@ -14,7 +14,15 @@ const ARK_CLONE_DETECTION_SCHEMA_VERSION = '1.0' as const;
 
 /** Token alphabet: identifiers and literals collapse; every other node is `2 + kind`. */
 export const TOKEN_IDENT = 0;
+/**
+ * Literals and JSX text.
+ * @cliMirror bin/lib/duplication-io.mjs
+ */
 export const TOKEN_LITERAL = 1;
+/**
+ * Every other node kind is emitted as `TOKEN_KIND_OFFSET + kind`.
+ * @cliMirror bin/lib/duplication-io.mjs
+ */
 export const TOKEN_KIND_OFFSET = 2;
 
 /*
@@ -27,14 +35,17 @@ export const CLONE_GRAM = 20;
 export const CLONE_WINDOW = 31;
 /** Minimum extended run, in tokens (`>= CLONE_WINDOW + CLONE_GRAM - 1` keeps the guarantee). */
 export const CLONE_MIN_TOKENS = 50;
-/** Minimum span on each side, in lines. */
+/**
+ * Minimum span on each side, in lines.
+ * @cliMirror bin/lib/duplication-io.mjs
+ */
 export const CLONE_MIN_LINES = 5;
 /** Share of identifiers that must match position by position. */
-export const CLONE_NAME_AGREEMENT = 0.6;
+const CLONE_NAME_AGREEMENT = 0.6;
 /** A fingerprint shared by more places than this is boilerplate: skipped and counted. */
 export const CLONE_BUCKET_CAP = 16;
 /** Seed pairs kept before the candidate list is `partial`. */
-export const CLONE_MAX_SEED_PAIRS = 50_000;
+const CLONE_MAX_SEED_PAIRS = 50_000;
 /** Families listed. The totals always carry the full count. */
 export const CLONE_FAMILY_LIST_CAP = 8;
 /** Seeds kept per file pair; more seeds are the same copy seen again. */
@@ -90,7 +101,7 @@ export type FilePairCandidate = {
 
 export type CloneMatch = { aStart: number; aEnd: number; bStart: number; bEnd: number; tokens: number };
 
-export type CloneSpan = {
+type CloneSpan = {
   path: string;
   /** Token offsets, end exclusive. */
   start: number;
@@ -459,7 +470,10 @@ function dirOf(rel: string): string {
   return at === -1 ? '.' : rel.slice(0, at);
 }
 
-/** The pair that names a family: listing priority, then the best name agreement. */
+/**
+ * The pair that names a family: listing priority, then the best name agreement.
+ * @cliMirror bin/lib/duplication-io.mjs
+ */
 export function primaryPair(family: { pairs: readonly FamilyPair[] }): FamilyPair | undefined {
   return [...family.pairs].sort(
     (left, right) =>
