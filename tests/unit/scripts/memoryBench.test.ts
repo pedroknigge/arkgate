@@ -20,13 +20,13 @@ describe('memory regression guard', () => {
     expect(result.status, result.stderr || result.stdout).toBe(0);
     const report = JSON.parse(result.stdout);
     expect(report).toMatchObject({ schemaVersion: 1, tool: 'memory-bench', ok: true, failures: [] });
-    const { check, doctor, hookWrite, hookPatch, mcp } = report.scenarios;
+    const { check, doctor, doctorAll, hookWrite, hookPatch, mcp } = report.scenarios;
     // The fixture carries one real cross-sibling import: check fails, the Write
     // hook allows a clean one-line write, the complete patch preflight denies.
     expect(check.status).toBe(1);
     expect(hookWrite.status).toBe(0);
     expect(hookPatch.status).toBe(2);
-    for (const row of [check, doctor, hookWrite, hookPatch, mcp]) {
+    for (const row of [check, doctor, doctorAll, hookWrite, hookPatch, mcp]) {
       expect(row.peakRssBytes).toBeGreaterThan(0);
     }
     // A one-line write never walks or parses the tree: it stays well below the
@@ -42,6 +42,7 @@ describe('memory regression guard', () => {
       scenarios: {
         check: { peakRssBytes: 1 },
         doctor: { peakRssBytes: 1 },
+        doctorAll: { peakRssBytes: 1 },
         hookWrite: { peakRssBytes: 1 },
         hookPatch: { peakRssBytes: 1 },
         mcp: { calls: 50, warmupCalls: 10, failedCalls: 0, heapGrowthBytes: 0, peakRssBytes: 1 },

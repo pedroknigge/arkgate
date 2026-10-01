@@ -41,6 +41,7 @@
     "**/bin/lib/arkrules-sensors.mjs",
     "**/bin/lib/baseline-key.mjs",
     "**/bin/lib/class-source-scan.mjs",
+    "**/bin/lib/clone-detection.mjs",
     "**/bin/lib/config-contract-slices.mjs",
     "**/bin/lib/config-contract.mjs",
     "**/bin/lib/config-extras.mjs",

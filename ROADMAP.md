@@ -103,6 +103,13 @@ lift DF freezes on scores, new skill names, sensors, or LLM verdicts.
   import edges to doctor Details / JSON / report as files nothing imports. Closed entry
   sources, sidecar `.ark/entry-points.json` (no config key), honest `partial`. Never in
   the write hook, MCP write tools, ESLint, or `--strict-merge`; never flips `valid`.
+  **Exception:** Phase **DU**
+  ([cross-wall duplication](docs/plans/cross-wall-duplication/README.md),
+  [ADR 0038](docs/adr/0038-cross-wall-duplication-advisory.md)) adds one new evidence
+  source — AST-token fingerprints — computed in Tooling at `--doctor --all` / `--report`
+  time only, and lists copies whose members sit on two sides of a wall or in two layers.
+  Never in facts, `factsHash`, the verdict, the write hook, MCP, ESLint, compact status,
+  `--changed`, or `--strict-merge`. Fixed calibrated constants. No config key. No new skill.
 
 ### Hard lines
 
@@ -615,6 +622,24 @@ Does not close `Z09` / `K01`. Never in the write hook, MCP write tools, or `--st
 | 305 | `OM05` | `done` | M | OM04 | Tier 2 `UNUSED_EXPORT` in `--doctor --all` / `--report` only; conservative on default/namespace/star; bounded parse |
 | 306 | `OM06` | `done` | S | OM02 | `flat-parent-pilot` reads the importer index instead of its lexical re-read; atlasgrid `pr6-doctor` golden unchanged |
 | 307 | `OM07` | `done` | S | OM04+OM05 | Docs (package-surface, agent-guide, diagnostics, voice) + deepen `/ark-explore` `/ark-fix`; CHANGELOG |
+
+### Phase DU — Cross-wall duplication advisory
+
+Plan: [docs/plans/cross-wall-duplication/README.md](docs/plans/cross-wall-duplication/README.md).
+**Exception to the ADR 0026 advisory freeze** ([ADR 0038](docs/adr/0038-cross-wall-duplication-advisory.md)):
+one new evidence source (AST-token fingerprints) computed in Tooling at `--doctor --all` /
+`--report` time; never in facts, the verdict, the write hook, MCP, or `--strict-merge`.
+Fixed constants. No config key. No new skill. No `schemaVersion` bump.
+Does not close `Z09` / `K01`.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 308 | `DU01` | `done` | S | OM07 | ADR 0038: fingerprints are doctor-time Tooling evidence, crossing-only via `findDeniedEdgeDecision`, fixed constants, Details-only, no config; freeze exception. Plan lock only |
+| 309 | `DU02` | `done` | M | DU01 | Domain `cloneDetection.ts`: rolling hash + winnowing + pair buckets + extend + families; property tests; constants calibrated on copycat/atlasgrid/mother/eval corpora (ADR 0038 table; compare cap 200 → 1000) |
+| 310 | `DU03` | `done` | M | DU02 | `duplication-io.mjs`: AST-token stream from the loaded `ts`, eligibility (tests/generated/.d.ts/header/oversize), two-phase bounded memory, caps → `partial` |
+| 311 | `DU04` | `done` | M | DU03 | Crossing classification + destination hint; `doctor.crossWallDuplication` JSON + Details + HTML parity; `CROSS_WALL_DUPLICATE` / `CROSS_LAYER_DUPLICATE`; journey `copycat` |
+| 312 | `DU05` | `done` | S | DU04 | `doctorAll` memory scenario (500 MiB ceiling; 193 MB at n=2000); self-host zero-noise test; docs + deepen `/ark-place` `/ark-fix`; CHANGELOG |
+| 313 | `DU06` | `parked` | S | DU05 + field demand | Optional `.ark/duplication-acks.json` sidecar with `reviewBy` (contract-smell-acks precedent) |
 
 ### Patch — pre-hook write gate first, MCP prepare fallback (issue #277)
 

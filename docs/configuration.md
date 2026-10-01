@@ -295,6 +295,8 @@ Rule fields:
   when both paths classify. Applies to **any** declared `from`→`to` pair, not only self-edges.
   Missing paths, empty slice folders, or unclassifiable slices **fail closed** (deny — cannot
   prove same-slice).
+  The wall denies imports; status details (`--doctor --all`) list code copied across it
+  (`doctor.crossWallDuplication`, advisory, no config key).
 - `sliceFolders` is a bare name or a starred prefix. A bare name (`features`) stays an
   unanchored one-segment match: `src/lib/features/projects/rfi/x.ts` with `["features"]` is
   `features/projects`. The next segment is never a filename, so

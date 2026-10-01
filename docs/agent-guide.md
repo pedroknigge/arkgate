@@ -791,6 +791,34 @@ know goes in the sidecar, with a reason and an optional review date:
 Delete one file at a time through the write gate (`/ark-fix`), then run status
 again. Never delete a `maybe-*` item without reading what may load it.
 
+### Copies across a wall
+
+A slice wall denies the import. The cheapest way around it is to copy the code,
+and a copy is not an import, so the check cannot see it. Status details can.
+
+```bash
+npx arkgate-check --doctor --all            # the list, with a place the shared code could live
+npx arkgate-check --doctor --all --json     # doctor.crossWallDuplication
+```
+
+```text
+This code is copied between src/features/billing and src/features/invoices (34 of 35 names match).
+The wall stops the import, not the copy. Next: move it to src/shared/ with /ark-place.
+```
+
+A copy is listed only when its two files sit on two sides of a wall the check
+would enforce — two slices, two child slices of one universe — or in two
+layers. Copies inside one slice are counted, never listed: the slice may
+import its own code. The suggested home comes from your config: the declared
+`sharedRoots`, the universe common folder (`childSlices.commonFolders`), or the
+lower layer both sides may import. When none fits, it says `/ark-place`.
+
+Compact status never runs this; its JSON says `not-run` and names the command.
+Tests, `.d.ts`, generated files and files over 256 KB are never read for it. The
+thresholds are fixed (at least 50 tokens and 5 lines, and most names matching);
+there is no config key. Move one copy at a time through the write gate
+(`/ark-fix`), import it from both sides, then run status again.
+
 ### Presets
 
 - `hexagonal` / `layered` / `feature-sliced` / `monorepo` / **`ui-surface`** (UI/Vite/Remotion-style) / **`vertical-slice`** (features/* + peerIsolation) / **`ddd-bounded-contexts`** (contexts/*/domain|application|infra + shared kernel)

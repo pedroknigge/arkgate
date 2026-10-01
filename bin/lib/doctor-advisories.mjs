@@ -25,6 +25,10 @@ import {
   printOrphanModulesSection,
 } from './orphan-modules-io.mjs';
 import {
+  computeCrossWallDuplication,
+  printCrossWallDuplicationSection,
+} from './duplication-io.mjs';
+import {
   formatArkRulesDoctorLines,
   summarizeRulesUnderContract,
 } from './rules-under-contract.mjs';
@@ -246,7 +250,8 @@ function classificationFromCoverage(cov) {
 /**
  * `activeViolations` must already exclude frozen baseline keys (report residual parity).
  * `facts.importGraph` is the scan's importer index; `view.details` (Details / report) adds
- * the unused-exports tier.
+ * the unused-exports tier and copies across a wall. `view.changed` (a changed-files scope)
+ * keeps copies across a wall `not-run`.
  */
 export function computeDoctorAdvisories(root, config, cov, rules, files, ts, parseHealth, facts, activeViolations, view = {}) {
   const physicalCohesion = computePhysicalCohesion(root, files);
@@ -343,6 +348,16 @@ export function computeDoctorAdvisories(root, config, cov, rules, files, ts, par
       importGraph: facts?.importGraph,
       details: view.details === true,
     }),
+    // ADR 0038: copies across a wall (doctor-time token fingerprints; Details / report only).
+    crossWallDuplication: computeCrossWallDuplication({
+      root,
+      config,
+      rules: rules ?? config?.rules,
+      ts,
+      files: aliasFiles,
+      details: view.details === true,
+      changed: view.changed === true,
+    }),
     // AR12 — Rules under contract (honest counts; real test I/O, never empty-fileContents stub).
     // P1M: pass classification so extraMergeTeeth cannot arm at 0% governed.
     stewardNudge: collectStewardNudge(root, config),
@@ -408,6 +423,7 @@ export function printDoctorAdvisories(advisories, io) {
   printParseHealthSection(advisories.parseHealth, io);
   printGraphBlindSection(advisories.graphBlindSpots, io);
   printOrphanModulesSection(advisories.orphanModules, io);
+  printCrossWallDuplicationSection(advisories.crossWallDuplication, io);
   const nudge = advisories.stewardNudge;
   if ((nudge?.needsStewards || nudge?.drift || nudge?.emptyStewardsPastGrace) && nudge.ask) {
     console.log('');
