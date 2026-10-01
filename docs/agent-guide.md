@@ -621,6 +621,9 @@ block a promotion, and the surface names which one fired:
 - **`no-coverage-evidence`** — an invariant whose evidence does not support
   promotion. The text is `canPromoteInvariant`'s own, so this surface can never
   promise a promotion the gate then refuses.
+- **`probe-survived`** — the committed invariant probe shows the covering tests
+  still pass with the rule broken, or never call it. Same judge; named apart
+  because the fix is a stronger test. See [Probe an invariant](#probe-an-invariant).
 
 It needs no TypeScript and runs no analysis: the contract, the ArkRules
 documents it points at, and the coverage evidence walk (a filesystem walk plus a
@@ -674,6 +677,63 @@ one comes back pretty-printed, because the write is a JSON round-trip rather
 than a targeted text edit. Exit 0 for a preview or a successful write, 1 for an
 unknown rule id or a refused write, 2 for bad arguments or ArkRules references
 that will not load.
+
+### Probe an invariant
+
+A test title that names an invariant counts as coverage. That proves the test
+exists, not that it would fail if the rule broke. The probe checks that, on
+request:
+
+```bash
+npx arkgate-check --probe-invariants                 # every invariant with a coverage.symbol
+npx arkgate-check --probe-invariants=INV-REFUND-WINDOW
+npx arkgate-check --probe-invariants --write         # save .ark/invariant-probe.json
+npx arkgate-check --probe-invariants --runner vitest # only when the runner is unclear
+```
+
+```text
+INV-REFUND-WINDOW: the tests still pass when the guard is negated (src/domain/refunds/refundPolicy.ts:14).
+The test names the rule but does not pin it. Next: add a case that fails when the rule is broken, then re-run with --write.
+```
+
+For each invariant with a `coverage.symbol`, it copies the project to a
+temporary folder, then runs only the covering tests (titles that name the id,
+and tests that import the symbol's file), with your own runner (vitest, jest or
+`node --test`):
+
+1. unchanged — they must pass;
+2. with the file throwing on load — a test must fail, or the copy is not the one
+   the tests load (`inconclusive`);
+3. with the symbol throwing when called — a test must fail, or the tests never
+   call it (`not-reached`);
+4. with at most three small changes inside the symbol (negate a guard, drop a
+   `throw`, flip or shift a comparison, shift a constant) — each must make a test
+   fail, or the change went unnoticed (`survived`).
+
+Every row reads `killed`, `survived`, `not-reached`, `inconclusive` or
+`unprobeable` (no symbol, a type or interface, no covering test — a declaration
+is not a test). It is not a score.
+
+**Your files are never changed.** Every change happens in the copy, which is
+removed when the run ends, including on Ctrl-C. `--write` adds only
+`.ark/invariant-probe.json`. Exit 0 when nothing survived or went unreached,
+1 when something did, 2 when it could not run (`reasonCode` in the JSON).
+
+**What the result can do.** Only refuse. When the committed file has a fresh
+`survived` or `not-reached` row, `--promote` and the policy delta refuse to
+promote that invariant to `enforced` (blocker `probe-survived`). Fresh means
+the symbol file, every covering test and the invariant are unchanged since the
+run; anything else is stale and changes nothing, like `killed`, `inconclusive`
+or no file at all. Status and `--rules-inventory` show the state per invariant
+(`INVARIANT_PROBE_SURVIVED` when it refuses). CI sees the refusal only if you
+commit the file.
+
+**Trust.** Running the probe runs your tests, exactly like `npm test`; you start
+it, nothing else does. It never runs from the write hook, MCP, ESLint, the
+GitHub Action or `--strict-merge`, and refuses to combine with them. The runner
+gets a short list of environment variables (no tokens, proxies pointed at a
+dead port, `HOME` and the temp folder inside the copy). That is best effort,
+not a sandbox.
 
 ### Literal path drift after a rename (`--path-drift`)
 
@@ -746,6 +806,78 @@ path is written by hand (`.ts .tsx .mts
 TS/TSX gate the type-aware passes use, because a comment is not code and the
 class was first found in a `.css` file. Generated files are skipped, and every
 file the walk refuses is counted by reason in the output.
+
+### Files nothing imports
+
+A rewrite often lands next to the old file, and the old one stays. Nothing
+imports it. Status reads that from the import edges the check already resolved,
+so it costs no second analysis and never changes the check.
+
+```bash
+npx arkgate-check --doctor            # one dim count line at most
+npx arkgate-check --doctor --all      # the list, plus exports nothing imports by name
+npx arkgate-check --doctor --json     # doctor.orphanModules
+```
+
+```text
+Nothing imports src/lib/legacy-pricing.ts, and no entry point covers it.
+Next: Delete it through the write gate, or add it to .ark/entry-points.json if a framework loads it.
+```
+
+A file is listed only when no governed file, no test, no project script and no
+known entry point imports it. Entry points come from `package.json` (`main`,
+`exports`, `bin`, scripts — built `dist/` paths map back to source), CI workflow
+run steps, framework conventions (Next routes and `middleware`, Vite
+`index.html`, Nest `main`, Vercel `api/`, Storybook stories), the arkRun /
+arkOrder roots in `ark.config.json`, config and setup files, ambient declaration
+files, and `.ark/entry-points.json`. A file only tests import is counted, not
+listed.
+
+When a dynamic import, `import.meta.glob`, `new URL(…, import.meta.url)`, a
+quoted path, or an import that did not resolve could still reach a file, the
+item says so (`maybe-dynamic`, `maybe-unresolved`) and the section is
+`partial`. Read those before deleting. A framework or loader ArkGate does not
+know goes in the sidecar, with a reason and an optional review date:
+
+```json
+{
+  "schemaVersion": "1",
+  "entryPoints": [
+    { "glob": "src/plugins/**", "reason": "loaded by name from the plugin manifest", "reviewBy": "2027-01-01" }
+  ]
+}
+```
+
+Delete one file at a time through the write gate (`/ark-fix`), then run status
+again. Never delete a `maybe-*` item without reading what may load it.
+
+### Copies across a wall
+
+A slice wall denies the import. The cheapest way around it is to copy the code,
+and a copy is not an import, so the check cannot see it. Status details can.
+
+```bash
+npx arkgate-check --doctor --all            # the list, with a place the shared code could live
+npx arkgate-check --doctor --all --json     # doctor.crossWallDuplication
+```
+
+```text
+This code is copied between src/features/billing and src/features/invoices (34 of 35 names match).
+The wall stops the import, not the copy. Next: move it to src/shared/ with /ark-place.
+```
+
+A copy is listed only when its two files sit on two sides of a wall the check
+would enforce — two slices, two child slices of one universe — or in two
+layers. Copies inside one slice are counted, never listed: the slice may
+import its own code. The suggested home comes from your config: the declared
+`sharedRoots`, the universe common folder (`childSlices.commonFolders`), or the
+lower layer both sides may import. When none fits, it says `/ark-place`.
+
+Compact status never runs this; its JSON says `not-run` and names the command.
+Tests, `.d.ts`, generated files and files over 256 KB are never read for it. The
+thresholds are fixed (at least 50 tokens and 5 lines, and most names matching);
+there is no config key. Move one copy at a time through the write gate
+(`/ark-fix`), import it from both sides, then run status again.
 
 ### Presets
 

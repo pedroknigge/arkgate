@@ -39,6 +39,8 @@ These make the deny real. Keep them.
 | [0011](0011-resolved-candidate-facts-boundary.md) | Versioned facts in; Kernel classifies. Incomplete never looks green. |
 | [0026](0026-gate-waist-facts-in-verdict-out.md) | The check waist is config + resolved facts → one result. Advisory projects facts. Skills stay the edge. |
 | [0035](0035-layer-description-projection.md) | Project existing `layers[].description` (app-context caption). Strip from `policyHash` like `stewards`. Absence silent. Not a second verdict. |
+| [0037](0037-orphan-module-advisory.md) | Files nothing imports: doctor projects the resolved import edges. Closed entry sources, `.ark/entry-points.json` sidecar, honest `partial`. Never a gate input. |
+| [0038](0038-cross-wall-duplication-advisory.md) | Copies across a wall: doctor-time token fingerprints (refines 0026 D2 narrowly). Crossing-only via the gate's classifier, fixed constants, Details only, no config. Never a gate input. |
 | [0017](0017-mcp-project-identity-binding.md) | MCP verdicts need an explicit project root. `ark://manifest` is unverified. |
 | [0018](0018-shared-skill-catalogs-are-monotonic.md) | Shared home skills never downgrade. |
 | [0019](0019-codex-operation-scoped-hard-write.md) | Codex hard write is only a complete trusted local `apply_patch`. |
@@ -55,6 +57,7 @@ Optional extra rules *inside* a layer. Off unless you turn them on.
 | [0013](0013-arkrules-structural-sensors.md) | Closed sensor list. Direct facts block; inference advises. |
 | [0032](0032-writes-via-aggregate-sensor.md) | Application/Feature persistence **writes** belong behind an aggregate + adapter. Advisory default. |
 | [0014](0014-arkrules-invariant-catalog.md) | Invariants are data, not executable code. Advisory until promoted. |
+| [0039](0039-invariant-mutation-probe.md) | Owner-invoked mutation probe runs covering tests in a temp copy, outside the gate path (refines 0014 D3 / 0016). A fresh survived / not-reached artifact refuses promotion; nothing else changes. Not a score. |
 | [0015](0015-arkrules-migration-skills.md) | Deepen, don't mint migration names. Amended by [0036](0036-skill-catalog-product-capacity.md): first-class doors + one-release stubs. |
 | [0016](0016-arkrules-no-executable-core.md) | No user predicates in the gate. No LLM pass/fail. |
 

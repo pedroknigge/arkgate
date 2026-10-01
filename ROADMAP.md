@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-09-29 (Engineering: `RL824` **doing** — Patch **4.8.24** slices follow-ups (#335–#338), product audit, lower memory per validation; `RL823` **done** — Patch **4.8.23** on npm `latest`; `RL822` **done** — Patch **4.8.22** on npm `latest`; `RL821` **done** — Patch **4.8.21** on npm `latest`; `RL820` **done** — Patch **4.8.20** on npm `latest`; `RL819` **done** — Patch **4.8.19** on npm `latest`; `RL818` **done** — Patch **4.8.18** on npm `latest`; `RL817` **done** — Patch **4.8.17** on npm `latest`; `AP02` **done** — P2 §3 ADR path on policy weaken / new layer edge (#264); `RL816` **done** — Patch **4.8.16** on npm `latest`; `CR01` **done** — P2 §10 coverageRoots required when any invariant is enforced; `RL815` **done** — Patch **4.8.15** on npm `latest`; `DF243`/`DF246`/`DF247` **done** — dogfood honesty 4.8.15 slice 2; `LC01` **done** — opt-in `--local` / multi-worktree cheap check (#251); `SC01` **done** — narrow status/transition catalog (opt-in sensor); `GS01` **done** — guide states/transitions artifact (doctor next step) (#248); `AP01` **done** — soft ADR presence when `--require-gates` (#242); `LO01` **done** — optional layer owners + `requireLayerOwners` (#241); `HR01` **done** — write hook layer specificity matches ark-check (#237); `UC01` **done** — unclassified include is not a green check (#233); `WG01` **done** — write-gate fail-closed host parity (#231); `RL814` **done** — Patch **4.8.14** on npm `latest`; `SK216` **done** — skill catalog 100% product capacity, issue #216 + PR-gate fail-closed; `RL813` **done** — Patch **4.8.13** on npm `latest`; `RL812` **done** — tag `v4.8.12` cut, publish-npm failed branch coverage; Patch **4.8.12** ArkOrder first-contact **prepared** (tag stands); `AO17` **done**; `RL811` **done**; Patch **4.8.11** nested `--config` + Shape dogfood **done** — 4.8.11 published on npm `latest`, MCP Registry, and website; does not close `Z09` / `K01`; no schemaVersion bump; Release `RL810` **done** — 4.8.10 published; Patch **4.8.10** field first-aggregate sensors `HINT01`–`IN01` **done**; Release `RL89` **done** — 4.8.9 published; Patch `AH01`/`CS01`/`CI01`/`UP01`/`PX01`/`INT01` **done** and field-adopter ArkOrder `AO10`–`AO16` **done**; Release `RL88` **done** — 4.8.8 published; Phase **LD** `LD01`–`LD06` **done** (4.8.7 published); Patch `ST02` **done** — unlabeled public story; Patch `ST01` **done** — beginner-clear STAR openings; Patch `AO09` **done** — ArkOrder recomputable-status honesty; Phase **LV** ArkOrder valved loop `LV01`–`LV09` **done** (4.8.6 published); Phase **XP** ArkOrder x ArkRun convergence **done** (`XP01`-`XP08`); Patch **4.8.5** `AGY01`+XP **done** — published; Patch **4.8.5** `AGY01` **done** — Antigravity skill refresh (`--antigravity-home` + default tools + dogfood `.agents/skills`); published; Patch **4.8.4** **done** — three false greens closed (coverage certifying tests no runner runs, an empty analysis passing), `--path-drift`, `--sensors`/`--promote`, peer isolation, git install without a build allowlist entry, and honest `--plan`; Phase OR `OR01`–`OR08` **done**; `K01` remains parked; Z09 still parked; npm `latest` is **4.8.11**)
+- **Status date:** 2026-09-30 (Engineering: Phase **IP** `IP01`–`IP06` **done** — opt-in `--probe-invariants`, a fresh survived / not-reached probe refuses promotion (ADR 0039; unreleased; new schema export, likely a minor); `CR02` **done** — policy-delta promotion sees coverageRoots; Phase **OM** `OM01`–`OM07` **done** — files nothing imports (ADR 0037; unreleased); `RL824` **doing** — Patch **4.8.24** slices follow-ups (#335–#338), product audit, lower memory per validation; `RL823` **done** — Patch **4.8.23** on npm `latest`; `RL822` **done** — Patch **4.8.22** on npm `latest`; `RL821` **done** — Patch **4.8.21** on npm `latest`; `RL820` **done** — Patch **4.8.20** on npm `latest`; `RL819` **done** — Patch **4.8.19** on npm `latest`; `RL818` **done** — Patch **4.8.18** on npm `latest`; `RL817` **done** — Patch **4.8.17** on npm `latest`; `AP02` **done** — P2 §3 ADR path on policy weaken / new layer edge (#264); `RL816` **done** — Patch **4.8.16** on npm `latest`; `CR01` **done** — P2 §10 coverageRoots required when any invariant is enforced; `RL815` **done** — Patch **4.8.15** on npm `latest`; `DF243`/`DF246`/`DF247` **done** — dogfood honesty 4.8.15 slice 2; `LC01` **done** — opt-in `--local` / multi-worktree cheap check (#251); `SC01` **done** — narrow status/transition catalog (opt-in sensor); `GS01` **done** — guide states/transitions artifact (doctor next step) (#248); `AP01` **done** — soft ADR presence when `--require-gates` (#242); `LO01` **done** — optional layer owners + `requireLayerOwners` (#241); `HR01` **done** — write hook layer specificity matches ark-check (#237); `UC01` **done** — unclassified include is not a green check (#233); `WG01` **done** — write-gate fail-closed host parity (#231); `RL814` **done** — Patch **4.8.14** on npm `latest`; `SK216` **done** — skill catalog 100% product capacity, issue #216 + PR-gate fail-closed; `RL813` **done** — Patch **4.8.13** on npm `latest`; `RL812` **done** — tag `v4.8.12` cut, publish-npm failed branch coverage; Patch **4.8.12** ArkOrder first-contact **prepared** (tag stands); `AO17` **done**; `RL811` **done**; Patch **4.8.11** nested `--config` + Shape dogfood **done** — 4.8.11 published on npm `latest`, MCP Registry, and website; does not close `Z09` / `K01`; no schemaVersion bump; Release `RL810` **done** — 4.8.10 published; Patch **4.8.10** field first-aggregate sensors `HINT01`–`IN01` **done**; Release `RL89` **done** — 4.8.9 published; Patch `AH01`/`CS01`/`CI01`/`UP01`/`PX01`/`INT01` **done** and field-adopter ArkOrder `AO10`–`AO16` **done**; Release `RL88` **done** — 4.8.8 published; Phase **LD** `LD01`–`LD06` **done** (4.8.7 published); Patch `ST02` **done** — unlabeled public story; Patch `ST01` **done** — beginner-clear STAR openings; Patch `AO09` **done** — ArkOrder recomputable-status honesty; Phase **LV** ArkOrder valved loop `LV01`–`LV09` **done** (4.8.6 published); Phase **XP** ArkOrder x ArkRun convergence **done** (`XP01`-`XP08`); Patch **4.8.5** `AGY01`+XP **done** — published; Patch **4.8.5** `AGY01` **done** — Antigravity skill refresh (`--antigravity-home` + default tools + dogfood `.agents/skills`); published; Patch **4.8.4** **done** — three false greens closed (coverage certifying tests no runner runs, an empty analysis passing), `--path-drift`, `--sensors`/`--promote`, peer isolation, git install without a build allowlist entry, and honest `--plan`; Phase OR `OR01`–`OR08` **done**; `K01` remains parked; Z09 still parked; npm `latest` is **4.8.11**)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -97,6 +97,27 @@ lift DF freezes on scores, new skill names, sensors, or LLM verdicts.
   ([layer description](docs/plans/layer-description-projection/README.md)) projects the
   existing optional `layers[].description` to place / doctor / coverage / report and
   strips it from `policyHash`. Absence stays silent and must not invent residual.
+  **Exception:** Phase **OM**
+  ([orphan module advisory](docs/plans/orphan-module-advisory/README.md),
+  [ADR 0037](docs/adr/0037-orphan-module-advisory.md)) projects the existing resolved
+  import edges to doctor Details / JSON / report as files nothing imports. Closed entry
+  sources, sidecar `.ark/entry-points.json` (no config key), honest `partial`. Never in
+  the write hook, MCP write tools, ESLint, or `--strict-merge`; never flips `valid`.
+  **Exception:** Phase **DU**
+  ([cross-wall duplication](docs/plans/cross-wall-duplication/README.md),
+  [ADR 0038](docs/adr/0038-cross-wall-duplication-advisory.md)) adds one new evidence
+  source — AST-token fingerprints — computed in Tooling at `--doctor --all` / `--report`
+  time only, and lists copies whose members sit on two sides of a wall or in two layers.
+  Never in facts, `factsHash`, the verdict, the write hook, MCP, ESLint, compact status,
+  `--changed`, or `--strict-merge`. Fixed calibrated constants. No config key. No new skill.
+- Running user code from ArkGate ([ADR 0016](docs/adr/0016-arkrules-no-executable-core.md):
+  no arbitrary user code execution in the gate path). **Exception:** Phase **IP**
+  ([invariant mutation probe](docs/plans/invariant-mutation-probe/README.md),
+  [ADR 0039](docs/adr/0039-invariant-mutation-probe.md)) runs the project's own covering
+  tests in a temporary copy, only when the owner invokes `--probe-invariants`. Selective
+  per-invariant evidence — not a mutation score (the "100% mutation" freeze holds). The
+  artifact can only subtract promotability. Never in the write hook, MCP, ESLint,
+  `action.yml`, or `--strict-merge`. No config key. No new skill.
 
 ### Hard lines
 
@@ -580,6 +601,72 @@ close `Z09` / `K01`.
 | Order | ID | Status | Size | Depends on | Outcome |
 |---:|---|---|---:|---|---|
 | 299 | `RL824` | `doing` | S | RL823 | Prepare **4.8.24** (#339: #335/#336/#337/#338 + audit + memory). After merge: annotated tag `v4.8.24` + GitHub Release (no npm claim until `npm view arkgate@4.8.24 version` confirms, #314) + `gh workflow run publish-npm.yml -f tag=v4.8.24 -f dry_run=false`. Does not close `Z09` / `K01` |
+
+### Patch — policy-delta promotion sees coverageRoots
+
+`--policy-base` / MCP policy-delta evaluated invariant coverage without the
+declared `coverage.coverageRoots`, so a covered advisory → enforced promotion
+came out `judgment-required` while `--promote` allowed the same edit. No schema
+bump. Does not close `Z09` / `K01`.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 300 | `CR02` | `done` | S | RL824 | `policy-delta-io.mjs` passes `coverageRoots` (and stats) to `evaluateInvariantCoverage`; a declared-roots promotion classifies as strengthening, matching `--promote`. Failing test first (`policyDeltaIoDirectCoverage.test.ts`). No schema bump |
+
+### Phase OM — Orphan module advisory
+
+Plan: [docs/plans/orphan-module-advisory/README.md](docs/plans/orphan-module-advisory/README.md).
+Projects existing resolved import facts ([ADR 0026](docs/adr/0026-gate-waist-facts-in-verdict-out.md) D2;
+[ADR 0037](docs/adr/0037-orphan-module-advisory.md)).
+No `schemaVersion` bump. No config key (sidecar `.ark/entry-points.json`). No new skill name.
+Does not close `Z09` / `K01`. Never in the write hook, MCP write tools, or `--strict-merge`.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 301 | `OM01` | `done` | S | CR02 | ADR 0037: orphan advisory projects resolved facts; closed entry-evidence sources; sidecar not config; honesty states; ROADMAP freeze exception. Plan lock only |
+| 302 | `OM02` | `done` | M | OM01 | `runArchitectureScan({ graphProjection })` returns a compact importer index for doctor/report; verdict + `factsHash` byte-identical; doctor memory scenario in `bench:memory` |
+| 303 | `OM03` | `done` | M | OM01 | `entry-points-io.mjs`: package.json main/exports/bin/scripts per workspace (dist→src via bundler entry map / tsconfig), Next/Vite/Nest/Vercel/Storybook conventions, arkRun/arkOrder roots, config + ambient files, `.ark/entry-points.json` with `reviewBy` |
+| 304 | `OM04` | `done` | L | OM02+OM03 | Domain `orphanModules.ts` + test/outside-include importer pass + dynamic reach; `doctor.orphanModules` JSON + Details + HTML parity; `ORPHAN_MODULE`; journey `deadwood` |
+| 305 | `OM05` | `done` | M | OM04 | Tier 2 `UNUSED_EXPORT` in `--doctor --all` / `--report` only; conservative on default/namespace/star; bounded parse |
+| 306 | `OM06` | `done` | S | OM02 | `flat-parent-pilot` reads the importer index instead of its lexical re-read; atlasgrid `pr6-doctor` golden unchanged |
+| 307 | `OM07` | `done` | S | OM04+OM05 | Docs (package-surface, agent-guide, diagnostics, voice) + deepen `/ark-explore` `/ark-fix`; CHANGELOG |
+
+### Phase DU — Cross-wall duplication advisory
+
+Plan: [docs/plans/cross-wall-duplication/README.md](docs/plans/cross-wall-duplication/README.md).
+**Exception to the ADR 0026 advisory freeze** ([ADR 0038](docs/adr/0038-cross-wall-duplication-advisory.md)):
+one new evidence source (AST-token fingerprints) computed in Tooling at `--doctor --all` /
+`--report` time; never in facts, the verdict, the write hook, MCP, or `--strict-merge`.
+Fixed constants. No config key. No new skill. No `schemaVersion` bump.
+Does not close `Z09` / `K01`.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 308 | `DU01` | `done` | S | OM07 | ADR 0038: fingerprints are doctor-time Tooling evidence, crossing-only via `findDeniedEdgeDecision`, fixed constants, Details-only, no config; freeze exception. Plan lock only |
+| 309 | `DU02` | `done` | M | DU01 | Domain `cloneDetection.ts`: rolling hash + winnowing + pair buckets + extend + families; property tests; constants calibrated on copycat/atlasgrid/mother/eval corpora (ADR 0038 table; compare cap 200 → 1000) |
+| 310 | `DU03` | `done` | M | DU02 | `duplication-io.mjs`: AST-token stream from the loaded `ts`, eligibility (tests/generated/.d.ts/header/oversize), two-phase bounded memory, caps → `partial` |
+| 311 | `DU04` | `done` | M | DU03 | Crossing classification + destination hint; `doctor.crossWallDuplication` JSON + Details + HTML parity; `CROSS_WALL_DUPLICATE` / `CROSS_LAYER_DUPLICATE`; journey `copycat` |
+| 312 | `DU05` | `done` | S | DU04 | `doctorAll` memory scenario (500 MiB ceiling; 193 MB at n=2000); self-host zero-noise test; docs + deepen `/ark-place` `/ark-fix`; CHANGELOG |
+| 313 | `DU06` | `parked` | S | DU05 + field demand | Optional `.ark/duplication-acks.json` sidecar with `reviewBy` (contract-smell-acks precedent) |
+
+### Phase IP — Invariant mutation probe
+
+Plan: [docs/plans/invariant-mutation-probe/README.md](docs/plans/invariant-mutation-probe/README.md).
+[ADR 0039](docs/adr/0039-invariant-mutation-probe.md) refines ADR 0014 D3 / ADR 0016: owner-invoked
+execution **outside** the gate path; the artifact can only subtract promotability. Selective
+per-invariant evidence — **not** a mutation score (the "100% mutation" freeze holds). Never in
+the write hook, MCP, ESLint, `action.yml`, or `--strict-merge`. No config key. No new skill.
+New public schema export (`./schema/invariant-probe`): the release train is likely a minor
+(4.9.0); the maintainer confirms. Does not close `Z09` / `K01`.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 314 | `IP01` | `done` | S | CR02 + OM04 | ADR 0039: trust model, asymmetric evidence, hash-bound freshness, wiring canaries, closed operators, `--write` persistence; freeze exception. Plan lock only |
+| 315 | `IP02` | `done` | M | IP01 | Domain `invariantProbe.ts` + `invariantProbeSchema.ts` → `schemas/ark.invariant-probe.schema.json` + `./schema/invariant-probe` export; `testFilesNamingInvariant` |
+| 316 | `IP03` | `done` | L | IP02 | Tooling sites (AST) + temp workspace (link farm, owner marker, cleanup) + runner adapters vitest/jest/node:test (no shell, group-kill timeout, env allowlist) |
+| 317 | `IP04` | `done` | M | IP03 | `arkgate-check --probe-invariants[=<id>] [--write] [--json] [--runner]`; check-args conflicts; baseline → load canary → reach canary → mutants; exit 0/1/2 |
+| 318 | `IP05` | `done` | M | IP04 | `InvariantCoverageEvidence.probe` (additive); `canPromoteInvariant` refuses fresh survived/not-reached; wired in sensor-promote-io + policy-delta-io + doctor ArkRules lines + rules-inventory; `INVARIANT_PROBE_SURVIVED` |
+| 319 | `IP06` | `done` | M | IP05 | Journey `probeline` (node:test, zero deps); docs (configuration coverage paragraph, agent-guide, package-surface, diagnostics); deepen `/ark-contract` `/ark-coverage`; CHANGELOG |
 
 ### Patch — pre-hook write gate first, MCP prepare fallback (issue #277)
 

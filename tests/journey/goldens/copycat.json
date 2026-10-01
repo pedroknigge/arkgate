@@ -1,0 +1,272 @@
+{
+  "cases": [
+    {
+      "expect": "pass",
+      "got": {
+        "crossing": "cross-slice",
+        "destination": {
+          "kind": "shared-root",
+          "path": "src/shared/"
+        },
+        "ruleId": "CROSS_WALL_DUPLICATE"
+      },
+      "id": "cross-slice-listed",
+      "met": true,
+      "note": "The invoice total is copied from features/billing to features/invoices. The slice wall denies the import; the copy is listed with the shared root as destination.",
+      "owner": "ADR 0038",
+      "status": "pass",
+      "want": {
+        "crossing": "cross-slice",
+        "destination": {
+          "kind": "shared-root",
+          "path": "src/shared/"
+        },
+        "ruleId": "CROSS_WALL_DUPLICATE"
+      }
+    },
+    {
+      "expect": "pass",
+      "got": {
+        "crossing": "cross-sibling",
+        "destination": {
+          "kind": "universe-common",
+          "path": "src/modules/catalog/common/"
+        },
+        "ruleId": "CROSS_WALL_DUPLICATE"
+      },
+      "id": "cross-sibling-listed",
+      "met": true,
+      "note": "The ranking helper is copied between two child slices of modules/catalog. Listed with the universe common folder as destination.",
+      "owner": "ADR 0038",
+      "status": "pass",
+      "want": {
+        "crossing": "cross-sibling",
+        "destination": {
+          "kind": "universe-common",
+          "path": "src/modules/catalog/common/"
+        },
+        "ruleId": "CROSS_WALL_DUPLICATE"
+      }
+    },
+    {
+      "expect": "pass",
+      "got": {
+        "crossing": "cross-layer",
+        "destination": {
+          "kind": "lower-layer",
+          "layer": "Domain"
+        },
+        "ruleId": "CROSS_LAYER_DUPLICATE"
+      },
+      "id": "cross-layer-listed",
+      "met": true,
+      "note": "The email validator sits in Domain and in Application. Application may import Domain, so the destination is Domain.",
+      "owner": "ADR 0038",
+      "status": "pass",
+      "want": {
+        "crossing": "cross-layer",
+        "destination": {
+          "kind": "lower-layer",
+          "layer": "Domain"
+        },
+        "ruleId": "CROSS_LAYER_DUPLICATE"
+      }
+    },
+    {
+      "expect": "pass",
+      "got": {
+        "listed": [],
+        "sameSlice": 1
+      },
+      "id": "same-slice-not-listed",
+      "met": true,
+      "note": "A copy inside features/billing is counted as same slice and never listed.",
+      "owner": "ADR 0038",
+      "status": "pass",
+      "want": {
+        "listed": [],
+        "sameSlice": ">= 1"
+      }
+    },
+    {
+      "expect": "pass",
+      "got": {
+        "generated": 1,
+        "listed": false
+      },
+      "id": "generated-excluded",
+      "met": true,
+      "note": "features/payments/fee-total.ts carries an @generated header. It is never fingerprinted, so it is in no family.",
+      "owner": "ADR 0038",
+      "status": "pass",
+      "want": {
+        "generated": ">= 1",
+        "listed": false
+      }
+    },
+    {
+      "expect": "pass",
+      "got": {
+        "families": 0,
+        "next": "arkgate-check --doctor --all",
+        "status": "not-run"
+      },
+      "id": "compact-not-run",
+      "met": true,
+      "note": "Compact status JSON says not-run and names the command that runs it.",
+      "owner": "ADR 0038",
+      "status": "pass",
+      "want": {
+        "families": 0,
+        "next": "arkgate-check --doctor --all",
+        "status": "not-run"
+      }
+    }
+  ],
+  "fixture": "copycat",
+  "schemaVersion": 1,
+  "steps": [
+    {
+      "command": "ark-check --doctor --all --json --no-cache",
+      "exitCode": 0,
+      "filesDiff": {
+        ".ark/ci-merge-boundary.json": "added"
+      },
+      "output": {
+        "crossWallDuplication": {
+          "families": [
+            {
+              "crossing": "cross-slice",
+              "destination": {
+                "kind": "shared-root",
+                "path": "src/shared/"
+              },
+              "line": "This code is copied between src/features/billing and src/features/invoices (34 of 35 names match). The wall stops the import, not the copy. Next: move it to src/shared/ with /ark-place.",
+              "members": [
+                {
+                  "endLine": 14,
+                  "layer": "Features",
+                  "path": "src/features/billing/invoice-total.ts",
+                  "startLine": 1
+                },
+                {
+                  "endLine": 15,
+                  "layer": "Features",
+                  "path": "src/features/invoices/totals.ts",
+                  "startLine": 2
+                }
+              ],
+              "names": {
+                "same": 34,
+                "total": 35
+              },
+              "ruleId": "CROSS_WALL_DUPLICATE"
+            },
+            {
+              "crossing": "cross-sibling",
+              "destination": {
+                "kind": "universe-common",
+                "path": "src/modules/catalog/common/"
+              },
+              "line": "This code is copied between src/modules/catalog/browse and src/modules/catalog/search (44 of 45 names match). The wall stops the import, not the copy. Next: move it to src/modules/catalog/common/ with /ark-place.",
+              "members": [
+                {
+                  "endLine": 12,
+                  "layer": "Modules",
+                  "path": "src/modules/catalog/browse/rank.ts",
+                  "startLine": 2
+                },
+                {
+                  "endLine": 11,
+                  "layer": "Modules",
+                  "path": "src/modules/catalog/search/rank.ts",
+                  "startLine": 1
+                }
+              ],
+              "names": {
+                "same": 44,
+                "total": 45
+              },
+              "ruleId": "CROSS_WALL_DUPLICATE"
+            },
+            {
+              "crossing": "cross-layer",
+              "destination": {
+                "kind": "lower-layer",
+                "layer": "Domain"
+              },
+              "line": "This code is copied between the Application and Domain layers (21 of 22 names match). Next: keep it in Domain, the layer both sides may import, with /ark-place.",
+              "members": [
+                {
+                  "endLine": 16,
+                  "layer": "Application",
+                  "path": "src/application/signup/check-email.ts",
+                  "startLine": 2
+                },
+                {
+                  "endLine": 15,
+                  "layer": "Domain",
+                  "path": "src/domain/email.ts",
+                  "startLine": 1
+                }
+              ],
+              "names": {
+                "same": 21,
+                "total": 22
+              },
+              "ruleId": "CROSS_LAYER_DUPLICATE"
+            }
+          ],
+          "headline": "3 copies cross a wall or a layer.",
+          "honesty": [],
+          "next": null,
+          "notAScore": true,
+          "status": "complete",
+          "totals": {
+            "candidateFilePairs": 4,
+            "families": 3,
+            "filesEligible": 11,
+            "filesFingerprinted": 10,
+            "filesSkipped": {
+              "cap": 0,
+              "declaration": 0,
+              "generated": 1,
+              "oversize": 0,
+              "parseError": 0,
+              "test": 0,
+              "unreadable": 0
+            },
+            "pairsCrossBoundary": 3,
+            "pairsSameSliceUnexamined": 1,
+            "pairsUnclassifiable": 0
+          }
+        }
+      }
+    },
+    {
+      "command": "ark-check --doctor --json --no-cache",
+      "exitCode": 0,
+      "filesDiff": {},
+      "output": {
+        "crossWallDuplication": {
+          "families": [],
+          "headline": "Copies across a wall are checked in status details.",
+          "honesty": [],
+          "next": "arkgate-check --doctor --all",
+          "notAScore": true,
+          "status": "not-run",
+          "totals": {
+            "candidateFilePairs": 0,
+            "families": 0,
+            "filesEligible": 0,
+            "filesFingerprinted": 0,
+            "filesSkipped": {},
+            "pairsCrossBoundary": 0,
+            "pairsSameSliceUnexamined": 0,
+            "pairsUnclassifiable": 0
+          }
+        }
+      }
+    }
+  ]
+}

@@ -16,6 +16,7 @@ import {
   invariantIdsFromCatalog,
   loadInvariantCoverageInputs,
 } from './invariant-coverage-io.mjs';
+import { attachProbeEvidence } from './invariant-probe-io.mjs';
 
 /**
  * The root as the filesystem sees it. Comparing a realpath against a lexical
@@ -79,28 +80,11 @@ export function loadSensorMap(root, config, facts) {
   }));
 
   const catalogued = loaded.arkRules.invariants ?? [];
-  let coverageRows = [];
-  let partial = false;
-  if (catalogued.length > 0) {
-    const inputs = loadInvariantCoverageInputs(root, facts ?? { files: [] }, {
-      invariantIds: invariantIdsFromCatalog(loaded.arkRules),
-      ...coverageOptionsFromConfig(config),
-    });
-    const coverage = evaluateInvariantCoverage({
-      arkRules: loaded.arkRules,
-      fileContents: inputs.fileContents,
-      testFiles: inputs.testFiles,
-      testGlobsMissing: inputs.testGlobsMissing,
-      coverageBudgetExhausted: inputs.coverageBudgetExhausted === true,
-      ...(inputs.stats ? { coverageStats: inputs.stats } : {}),
-      // The declared roots decide `outsideDeclaredRoots`, which is one of the
-      // four reasons canPromoteInvariant refuses. Dropping them here would make
-      // this surface promise a promotion the gate then denies.
-      ...(inputs.coverageRoots ? { coverageRoots: inputs.coverageRoots } : {}),
-    });
-    coverageRows = coverage.coverage ?? [];
-    partial = coverage.partial === true;
-  }
+  const evaluated = evaluateCatalogCoverage(root, config, facts, loaded.arkRules);
+  // ADR 0039: a committed probe artifact can only subtract promotability.
+  // Read-only here — this path never runs a test.
+  const coverageRows = attachProbeEvidence(root, evaluated.rows, catalogued).rows;
+  const partial = evaluated.partial;
   const evidenceById = new Map(coverageRows.map((row) => [row.invariantId, row]));
 
   const invariants = catalogued.map((entry) => ({
@@ -118,6 +102,33 @@ export function loadSensorMap(root, config, facts) {
     coverage: { partial, evaluated: catalogued.length > 0 },
     arkRulesActive: true,
   };
+}
+
+/**
+ * Invariant coverage rows for a loaded catalog, evaluated the way the
+ * promotion judge needs them (declared `coverageRoots` included). `inputs` is
+ * the loaded file set, reused by the probe to pick covering tests.
+ */
+export function evaluateCatalogCoverage(root, config, facts, arkRules) {
+  const catalogued = arkRules?.invariants ?? [];
+  if (catalogued.length === 0) return { rows: [], partial: false, inputs: null };
+  const inputs = loadInvariantCoverageInputs(root, facts ?? { files: [] }, {
+    invariantIds: invariantIdsFromCatalog(arkRules),
+    ...coverageOptionsFromConfig(config),
+  });
+  const coverage = evaluateInvariantCoverage({
+    arkRules,
+    fileContents: inputs.fileContents,
+    testFiles: inputs.testFiles,
+    testGlobsMissing: inputs.testGlobsMissing,
+    coverageBudgetExhausted: inputs.coverageBudgetExhausted === true,
+    ...(inputs.stats ? { coverageStats: inputs.stats } : {}),
+    // The declared roots decide `outsideDeclaredRoots`, which is one of the
+    // four reasons canPromoteInvariant refuses. Dropping them here would make
+    // this surface promise a promotion the gate then denies.
+    ...(inputs.coverageRoots ? { coverageRoots: inputs.coverageRoots } : {}),
+  });
+  return { rows: coverage.coverage ?? [], partial: coverage.partial === true, inputs };
 }
 
 /**

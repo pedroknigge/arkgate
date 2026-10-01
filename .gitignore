@@ -41,6 +41,8 @@ release/artifacts/
 
 # Ark generated reports / local state
 .ark/
+# Journey fixture sidecar (files-nothing-imports entry globs) is fixture data.
+!tests/fixtures/journey/deadwood/.ark/
 .orderfield/
 .tmp-*
 .ark-mcp-runtime-*/

@@ -123,6 +123,22 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
     'Two or more modules import each other in a loop. Cycles make ownership unclear and break stable layer direction.',
     'Extract the shared dependency into a third module, invert one edge behind a port, or merge units that are truly one — then preflight again.'
   ),
+  entry(
+    'CROSS_WALL_DUPLICATE',
+    'layer',
+    'Code copied across a wall',
+    'Near-identical code sits on two sides of a slice wall (or in two layers that may not import each other). The wall would deny the import, so the code was copied instead. Status details (`--doctor --all`) and the report list it from token fingerprints taken at status time; they never enter the check, so the verdict does not change. Same-slice copies are counted, never listed.',
+    'Move one copy to a shared home the wall allows — a declared shared root, the universe common folder, or a layer both sides may import — then import it from both sides. One move at a time, through the write gate (/ark-place names the destination). Advisory only — it never fails a run.',
+    { oftenAdvisory: true }
+  ),
+  entry(
+    'CROSS_LAYER_DUPLICATE',
+    'layer',
+    'Code copied in two layers',
+    'Near-identical code sits in two layers, and at least one of them may import the other. Status details (`--doctor --all`) and the report list it from token fingerprints taken at status time; the verdict does not change.',
+    'Keep one copy in the lower layer both sides may import, and import it from the other. One move at a time, through the write gate. Advisory only — it never fails a run.',
+    { oftenAdvisory: true }
+  ),
 
   // ── capability / ambient ─────────────────────────────────────────────────
   entry(
@@ -287,6 +303,14 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
     'Covering test outside the declared coverage roots',
     'The only test naming this invariant sits outside coverage.coverageRoots — the places the project declares its runner executes. ArkGate matches declared text and never executes tests, so it cannot tell whether that file is ever run: coverage there is a test that exists, not a test that runs.',
     'Move the test under a declared coverage root, or add its root to coverage.coverageRoots in ark.config.json. Advisory: it never fails strict, but promotion to enforced refuses on it.',
+    { oftenAdvisory: true }
+  ),
+  entry(
+    'INVARIANT_PROBE_SURVIVED',
+    'arkrules',
+    'Covering tests do not pin the invariant',
+    'The committed invariant probe (.ark/invariant-probe.json, written by arkgate-check --probe-invariants --write) shows, for files that have not changed since, that the covering tests still pass with the invariant\'s symbol broken on purpose (survived) or never call it (not reached). The test names the rule but does not pin it. A status and inventory line only: it never enters the check, so the verdict does not change.',
+    'Add a test case that fails when the rule is broken (the line names the change that went unnoticed), then re-run arkgate-check --probe-invariants --write and commit the file. Promotion to enforced refuses while the fresh artifact says survived or not reached; a stale, killed, inconclusive or missing result changes nothing.',
     { oftenAdvisory: true }
   ),
   entry(
@@ -784,6 +808,22 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
     'Literal path does not resolve',
     'A literal that looks like a repo path does not resolve under this root, and no rename explains where it went. Unlike LITERAL_PATH_DRIFT this is a candidate, not a verdict: with nothing to anchor it, ArkGate cannot tell a dead reference from an illustrative path in a comment, an example in documentation, or a path belonging to another tree.',
     'Read the candidate and decide: fix the path, or leave it. Advisory only — it never fails a run and is never rewritten by --write, because there is no destination to propose. Run `--path-drift --all` to list the sweep.',
+    { oftenAdvisory: true }
+  ),
+  entry(
+    'ORPHAN_MODULE',
+    'drift',
+    'File nothing imports',
+    'No governed file, test or entry point imports this module. It is the leftover an agent leaves when a rewrite lands next to the old file. Status reads it from the import facts the check already resolved, so it never changes the verdict. When a dynamic import, an unresolved import or an unmapped entry could reach the file, the item says so (maybe-dynamic, maybe-unresolved) and the list is partial.',
+    'Delete the file through the write gate, one file at a time. If a framework, a script or a runtime loader uses it, add a glob with a reason to .ark/entry-points.json (optional reviewBy) instead. Advisory only — it never fails a run.',
+    { oftenAdvisory: true }
+  ),
+  entry(
+    'UNUSED_EXPORT',
+    'drift',
+    'Export nothing imports by name',
+    'An export no governed file or test imports by name. Listed only in status details (`--doctor --all`) and the report. Default, namespace, star, dynamic and require use count as using every export, so those files are skipped.',
+    'Drop the export keyword (or the code) if nothing outside the file needs it, or keep it when it is public API an entry point exposes. Advisory only — it never fails a run.',
     { oftenAdvisory: true }
   ),
 

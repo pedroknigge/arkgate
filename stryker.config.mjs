@@ -104,9 +104,9 @@ const config = {
     // canPromoteInvariant. #307/#310 classifyCoverage shifted them again.
     // #322 declaration-miss shifted them once more.
     // Pins stay on those decisions, not on the classifier.
-    'src/domain/invariantCoverage.ts:235-254',
-    'src/domain/invariantCoverage.ts:755-759',
-    'src/domain/invariantCoverage.ts:894-943',
+    'src/domain/invariantCoverage.ts:244-263',
+    'src/domain/invariantCoverage.ts:764-768',
+    'src/domain/invariantCoverage.ts:903-961',
     'src/kernel/semanticAnalysis.ts:18-49',
     'src/kernel/semanticAnalysis.ts:78-258',
     // runtimeIds removed the module sequence above Saga: same body at 186-236.

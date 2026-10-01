@@ -132,6 +132,13 @@ Top-level fields:
   `enforced`. Declaring nothing stays silent unless any invariant is already enforced — then
   missing roots fail closed (`INVARIANT_COVERAGE_ROOTS_MISSING`), because otherwise coverage can
   certify a test the project never declared a runner root for.
+
+  ArkGate never executes tests — except the opt-in `arkgate-check --probe-invariants`, which
+  you run yourself: it breaks an invariant's `coverage.symbol` on purpose in a temporary copy
+  and runs only its covering tests with your own runner. Its committed result
+  (`.ark/invariant-probe.json`) can only **refuse** a promotion, never grant one, and it is
+  never part of a check or the merge gate. No config key. See
+  [Probe an invariant](agent-guide.md#probe-an-invariant).
 - **`arkRules`** (optional, schema `1.1+`) — map of layer name → one project-relative path, or a
   list of paths merged into that layer's catalog (`"DomainModel": "arkrules/DomainModel.json"`
   or `"DomainModel": ["arkrules/DomainModel.json", "arkrules/DomainModel.shared.json"]`). A
@@ -295,6 +302,8 @@ Rule fields:
   when both paths classify. Applies to **any** declared `from`→`to` pair, not only self-edges.
   Missing paths, empty slice folders, or unclassifiable slices **fail closed** (deny — cannot
   prove same-slice).
+  The wall denies imports; status details (`--doctor --all`) list code copied across it
+  (`doctor.crossWallDuplication`, advisory, no config key).
 - `sliceFolders` is a bare name or a starred prefix. A bare name (`features`) stays an
   unanchored one-segment match: `src/lib/features/projects/rfi/x.ts` with `["features"]` is
   `features/projects`. The next segment is never a filename, so

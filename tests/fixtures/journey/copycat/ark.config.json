@@ -1,0 +1,80 @@
+{
+  "include": [
+    "src"
+  ],
+  "layers": [
+    {
+      "name": "Domain",
+      "patterns": [
+        "src/domain/**"
+      ]
+    },
+    {
+      "name": "Application",
+      "patterns": [
+        "src/application/**"
+      ]
+    },
+    {
+      "name": "Features",
+      "patterns": [
+        "src/features/**",
+        "src/shared/**"
+      ]
+    },
+    {
+      "name": "Modules",
+      "patterns": [
+        "src/modules/**"
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "from": "Domain",
+      "to": "Application",
+      "allowed": false
+    },
+    {
+      "from": "Domain",
+      "to": "Features",
+      "allowed": false
+    },
+    {
+      "from": "Domain",
+      "to": "Modules",
+      "allowed": false
+    },
+    {
+      "from": "Features",
+      "to": "Features",
+      "allowed": false,
+      "peerIsolation": true,
+      "sliceFolders": [
+        "features"
+      ],
+      "sharedRoots": [
+        "shared"
+      ]
+    },
+    {
+      "from": "Modules",
+      "to": "Modules",
+      "allowed": false,
+      "peerIsolation": true,
+      "sliceFolders": [
+        "modules"
+      ],
+      "childSlices": {
+        "sliceFolders": [
+          "modules/*/*"
+        ],
+        "sliceIdentity": "stars",
+        "commonFolders": [
+          "common"
+        ],
+        "siblings": "deny"
+      }
+    }
+  ]
+}

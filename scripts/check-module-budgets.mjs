@@ -88,7 +88,9 @@ const BUDGETS = [
   // Deep-module coach advisory HTML section (hot paths + deepening) — was 320.
   // #326 PR6 flat-parent section call. The HTML body lives in flat-parent-pilot.mjs.
   // Measured 372. Ceiling is that measurement plus a few lines.
-  { path: 'bin/lib/html-report-advisories.mjs', max: 375 },
+  // ADR 0038 copies-across-a-wall section call (import + one line); the HTML body
+  // lives in duplication-io.mjs. Measured 376; ceiling is that plus a few lines.
+  { path: 'bin/lib/html-report-advisories.mjs', max: 380 },
   // Deep-module coach pure deepening candidates (Domain; notAScore).
   { path: 'src/domain/deepeningCoach.ts', max: 320 },
   { path: 'src/domain/teamParliament.ts', max: 540 },
@@ -101,6 +103,24 @@ const BUDGETS = [
   { path: 'bin/lib/physical-cohesion.mjs', max: 260 },
   // #326 PR6 flat-parent suggestion. Measured 253. Ceiling is that measurement plus a few lines.
   { path: 'bin/lib/flat-parent-pilot.mjs', max: 256 },
+  // ADR 0037 files nothing imports. Measured at landing; ceilings are that plus a few lines.
+  { path: 'src/domain/orphanModules.ts', max: 365 },
+  { path: 'bin/lib/import-graph-projection.mjs', max: 120 },
+  { path: 'bin/lib/entry-points-io.mjs', max: 430 },
+  // ADR 0039 moved the outside-importer walk to outside-importers.mjs (shared with the probe). Measured 458.
+  { path: 'bin/lib/orphan-modules-io.mjs', max: 585 },
+  { path: 'bin/lib/outside-importers.mjs', max: 205 },
+  // ADR 0038 copies across a wall. Measured at landing; ceilings are that plus a few lines.
+  { path: 'src/domain/cloneDetection.ts', max: 645 },
+  { path: 'bin/lib/duplication-io.mjs', max: 575 },
+  // ADR 0039 invariant mutation probe. Measured at landing; ceilings are that plus a few lines.
+  { path: 'src/domain/invariantProbe.ts', max: 640 },
+  { path: 'src/domain/invariantProbeSchema.ts', max: 190 },
+  { path: 'bin/lib/invariant-probe-cli.mjs', max: 360 },
+  { path: 'bin/lib/invariant-probe-io.mjs', max: 175 },
+  { path: 'bin/lib/invariant-probe-runner.mjs', max: 280 },
+  { path: 'bin/lib/invariant-probe-sites.mjs', max: 185 },
+  { path: 'bin/lib/invariant-probe-workspace.mjs', max: 195 },
   // Y01: bounded explicit verdict memory kept out of the X04 sensor/doctor orchestrator.
   { path: 'bin/lib/reshape-decisions.mjs', max: 300 },
   // Y03/Z02: count-only completeness evidence from the existing scan, not a second scanner.

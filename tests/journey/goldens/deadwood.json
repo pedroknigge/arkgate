@@ -1,0 +1,218 @@
+{
+  "cases": [
+    {
+      "expect": "pass",
+      "got": {
+        "compact": "no-importer",
+        "details": "no-importer"
+      },
+      "id": "orphan-listed",
+      "met": true,
+      "note": "Nothing imports src/lib/legacy-pricing.ts and no entry covers it. Listed as no-importer in the compact JSON and in details.",
+      "owner": "ADR 0037",
+      "status": "pass",
+      "want": {
+        "certainty": "no-importer",
+        "file": "src/lib/legacy-pricing.ts"
+      }
+    },
+    {
+      "expect": "pass",
+      "got": {
+        "inTestOnly": true,
+        "listed": false
+      },
+      "id": "test-only-tier",
+      "met": true,
+      "note": "Only a test imports src/lib/only-tested.ts. It is counted in the test-only tier, never listed.",
+      "owner": "ADR 0037",
+      "status": "pass",
+      "want": {
+        "file": "src/lib/only-tested.ts",
+        "inTestOnly": true,
+        "listed": false
+      }
+    },
+    {
+      "expect": "pass",
+      "got": {
+        "certainty": "maybe-dynamic",
+        "status": "partial"
+      },
+      "id": "maybe-dynamic",
+      "met": true,
+      "note": "import.meta.glob reaches src/lib/handlers/refund.ts. Listed as maybe-dynamic, and the section is partial.",
+      "owner": "ADR 0037",
+      "status": "pass",
+      "want": {
+        "certainty": "maybe-dynamic",
+        "file": "src/lib/handlers/refund.ts",
+        "status": "partial"
+      }
+    },
+    {
+      "expect": "pass",
+      "got": {
+        "listed": [],
+        "sources": [
+          "framework",
+          "package-json",
+          "sidecar"
+        ]
+      },
+      "id": "entry-suppressed",
+      "met": true,
+      "note": "A Next route, Next middleware, a package.json export mapped through tsconfig outDir/rootDir, and a sidecar glob keep their files off the list.",
+      "owner": "ADR 0037",
+      "status": "pass",
+      "want": {
+        "listed": [],
+        "sources": [
+          "framework",
+          "package-json",
+          "sidecar"
+        ]
+      }
+    },
+    {
+      "expect": "pass",
+      "got": {
+        "compactFiles": 0,
+        "compactStatus": "deferred",
+        "details": [
+          "formatDate"
+        ]
+      },
+      "id": "unused-export-details-only",
+      "met": true,
+      "note": "formatDate in src/lib/format.ts is exported and never imported by name. Compact status defers it; details list it.",
+      "owner": "ADR 0037",
+      "status": "pass",
+      "want": {
+        "compactStatus": "deferred",
+        "details": [
+          "formatDate"
+        ]
+      }
+    }
+  ],
+  "fixture": "deadwood",
+  "schemaVersion": 1,
+  "steps": [
+    {
+      "command": "ark-check --doctor --json --no-cache",
+      "exitCode": 0,
+      "filesDiff": {
+        ".ark/ci-merge-boundary.json": "added"
+      },
+      "output": {
+        "orphanModules": {
+          "entrySources": {
+            "framework": 2,
+            "package-json": 1,
+            "sidecar": 1
+          },
+          "frameworks": [
+            "next"
+          ],
+          "headline": "2 governed files nothing imports.",
+          "honesty": [],
+          "notAScore": true,
+          "orphans": [
+            {
+              "certainty": "maybe-dynamic",
+              "layer": "Lib",
+              "path": "src/lib/handlers/refund.ts"
+            },
+            {
+              "certainty": "no-importer",
+              "layer": "Lib",
+              "path": "src/lib/legacy-pricing.ts"
+            }
+          ],
+          "status": "partial",
+          "testOnly": {
+            "count": 1,
+            "sample": [
+              "src/lib/only-tested.ts"
+            ]
+          },
+          "totals": {
+            "entries": 4,
+            "governed": 10,
+            "imported": 3,
+            "listed": 2,
+            "maybeDynamic": 1,
+            "maybeUnresolved": 0,
+            "outsideOnly": 0,
+            "testOnly": 1
+          },
+          "unusedExports": {
+            "files": [],
+            "status": "deferred"
+          }
+        }
+      }
+    },
+    {
+      "command": "ark-check --doctor --all --json --no-cache",
+      "exitCode": 0,
+      "filesDiff": {},
+      "output": {
+        "orphanModules": {
+          "entrySources": {
+            "framework": 2,
+            "package-json": 1,
+            "sidecar": 1
+          },
+          "frameworks": [
+            "next"
+          ],
+          "headline": "2 governed files nothing imports.",
+          "honesty": [],
+          "notAScore": true,
+          "orphans": [
+            {
+              "certainty": "maybe-dynamic",
+              "layer": "Lib",
+              "path": "src/lib/handlers/refund.ts"
+            },
+            {
+              "certainty": "no-importer",
+              "layer": "Lib",
+              "path": "src/lib/legacy-pricing.ts"
+            }
+          ],
+          "status": "partial",
+          "testOnly": {
+            "count": 1,
+            "sample": [
+              "src/lib/only-tested.ts"
+            ]
+          },
+          "totals": {
+            "entries": 4,
+            "governed": 10,
+            "imported": 3,
+            "listed": 2,
+            "maybeDynamic": 1,
+            "maybeUnresolved": 0,
+            "outsideOnly": 0,
+            "testOnly": 1
+          },
+          "unusedExports": {
+            "files": [
+              {
+                "exports": [
+                  "formatDate"
+                ],
+                "path": "src/lib/format.ts"
+              }
+            ],
+            "status": "complete"
+          }
+        }
+      }
+    }
+  ]
+}

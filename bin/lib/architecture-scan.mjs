@@ -32,6 +32,7 @@ import {
 } from './invariant-tests-path.mjs';
 import { loadArkRuleFileHints } from './arkrule-file-hints.mjs';
 import { collectGovernedFiles } from './scan-files.mjs';
+import { projectImporterIndex } from './import-graph-projection.mjs';
 
 const HINT_CACHE_CAP = 16;
 /** Process-local hint map keyed by scoped path + content hash. Not a second engine. */
@@ -291,8 +292,14 @@ export function resolveArchitectureSnapshot({
 
 /**
  * Full architecture scan for governed files.
- * @returns {{ violations: object[], warnings: object[] }}
+ *
+ * `graphProjection: true` (doctor / report) also returns `importGraph`, a compact
+ * importer index projected from the resolved facts before they are released
+ * (ADR 0037 D1). The verdict fields are the same object either way.
+ * @returns {{ violations: object[], warnings: object[], importGraph?: object }}
  */
 export function runArchitectureScan(options) {
-  return resolveArchitectureSnapshot({ ...options, captureInputs: false }).result;
+  const snapshot = resolveArchitectureSnapshot({ ...options, captureInputs: false });
+  if (options?.graphProjection !== true) return snapshot.result;
+  return { ...snapshot.result, importGraph: projectImporterIndex(snapshot.facts) };
 }

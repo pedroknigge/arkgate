@@ -6,6 +6,12 @@
  * childSlices, ArkRules) and records, per fresh child process, its peak RSS:
  *
  *   check        — `ark-check --json --no-cache` over the whole tree
+ *   doctor       — `ark-check --doctor --json --no-cache`: the scan plus the
+ *                  compact importer index doctor keeps for files nothing
+ *                  imports (ADR 0037) and every advisory section
+ *   doctorAll    — `ark-check --doctor --all --json --no-cache`: status
+ *                  details, including the token-fingerprint pass for copies
+ *                  across a wall (ADR 0038) and unused exports
  *   hookWrite    — `ark-mcp --hook` for a one-line Write (must stay near the
  *                  process floor: it may not walk or parse the repo)
  *   hookPatch    — `ark-mcp --hook` for a complete ApplyPatch (atomic
@@ -322,7 +328,7 @@ async function runMcp(work, root, target, calls) {
 export function memoryBudgetFailures(report, budgets) {
   const failures = [];
   const scenarios = budgets.scenarios;
-  for (const name of ['check', 'hookWrite', 'hookPatch']) {
+  for (const name of ['check', 'doctor', 'doctorAll', 'hookWrite', 'hookPatch']) {
     const row = report.scenarios[name];
     const budget = scenarios[name];
     if (!row || !budget) continue;
@@ -363,6 +369,8 @@ async function main() {
     const firstLine = original.split('\n')[0];
     const scenarios = {
       check: runProbed(workDir, 'check', [CHECK, '--root', root, '--config', 'ark.config.json', '--json', '--no-cache']),
+      doctor: runProbed(workDir, 'doctor', [CHECK, '--root', root, '--config', 'ark.config.json', '--doctor', '--json', '--no-cache']),
+      doctorAll: runProbed(workDir, 'doctor-all', [CHECK, '--root', root, '--config', 'ark.config.json', '--doctor', '--all', '--json', '--no-cache']),
       hookWrite: runProbed(workDir, 'hook-write', [MCP, '--hook', '--root', root, '--config', 'ark.config.json'], {
         input: JSON.stringify({ tool_name: 'Write', tool_input: { file_path: targetAbs, content: `${original}export const oneLine = 1;\n` } }),
       }),

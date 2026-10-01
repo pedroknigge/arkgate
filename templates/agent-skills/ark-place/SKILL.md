@@ -35,6 +35,12 @@ right house. Skills never enforce — CLI / hooks / CI do.
   adapter or a Domain / auth-tag policy — not another SQLite / JSON-file store
   or admin literal in the page. Soft. Silent when those houses are absent or
   the shortcut is already in the right house. No `/ark-prototype`.
+- When doctor JSON `crossWallDuplication` (status details, `--doctor --all`) lists a
+  family, its `destination` is where the one shared copy goes: the declared shared
+  root, the universe common folder, or the lower layer both sides may import. Write
+  it there and import it from both sides — never a third copy, never a new
+  `allowedCrossSlice` to reach across the wall. `ask-place` means pick a home both
+  sides may import. Advisory. No `/ark-dedupe`.
 - When the matched layer has `layers[].description`, print that caption next to the
   layer name and globs. Omit when absent — do not invent a caption or `/ark-describe`.
 - When the matched layer has `layers[].trustBoundary`, print `trust: <tag>` next

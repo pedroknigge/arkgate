@@ -134,6 +134,9 @@ Three beats when a line teaches:
 | ArkRun is experimental. In-memory. Data is gone on restart. | The kernel is production-ready |
 | The agent PATCHed the billing plan as if it were a seat count. The write didn’t land. Next: `proposeRelease` then `apply`, not `update`. | Freeze ξ. Four verbs. Haken slaving. |
 | Status: one light, one next step. | Become an architect in 60 seconds |
+| Nothing imports src/lib/legacy-pricing.ts, and no entry point covers it. Next: delete it through the write gate. | Dead code detected! Auto-removing unused files |
+| This code is copied between features/billing and features/invoices. The wall stops the import, not the copy. Next: move it to shared/ with `/ark-place`. | 12.4% duplication! Refactor score: C |
+| INV-REFUND-WINDOW: the tests still pass when the refund guard is negated. The test names the rule but does not pin it. Next: add a case that fails when the window is crossed. | Mutation score 67%! 2 of 3 mutants killed |
 
 **Brands, then the common word:** ArkGate, ArkRules, ArkRun, ArkOrder. Gloss once.
 
@@ -212,6 +215,9 @@ a product PR — that is an owner `--contract-session` (config change).
 - ArkRun as Postgres, an outbox, or Temporal
 - ArkOrder as durable storage, a second npm package, or a replacement for ArkRun
 - New skill *names* without a live queue item
+- “Dead code” for a file nothing imports — say what was seen (nothing imports it), and say when a dynamic import may still load it
+- A duplication percentage or score for copies — name the two places and the wall between them, and where the shared code could live
+- A mutation score or percentage for the invariant probe — say which change went unnoticed, where, and which test to add
 - “the house stays up” / “training wheels” / “mimo” on first contact
 
 ---

@@ -1139,6 +1139,14 @@ async function main() {
     return;
   }
 
+  if (args.probeInvariants) {
+    // ADR 0039: owner-invoked, outside the gate path. Loaded only here; parseArgs
+    // refuses every pairing with --strict-merge, --changed, --local or --doctor.
+    const { runProbeInvariants } = await import('./lib/invariant-probe-cli.mjs');
+    await runProbeInvariants(args, readConfig);
+    return;
+  }
+
   if (args.sensors) {
     const { runSensors } = await import('./lib/sensor-promote-cli.mjs');
     await withSensorsPartialModeHonesty(args, () => runSensors(args, readConfig));
@@ -1429,7 +1437,7 @@ async function main() {
 
   const {
     violations: rawViolations, warnings, safety, parseHealth, completeness, completenessReasons,
-    mode, policyHash, resolverIdentity, factsHash, candidateTreeHash,
+    mode, policyHash, resolverIdentity, factsHash, candidateTreeHash, importGraph,
   } = runArchitectureScan({
     root,
     config,
@@ -1441,6 +1449,8 @@ async function main() {
     files: args.changed ? files : [],
     ts,
     args,
+    // ADR 0037: doctor / report read a compact importer index, never the verdict path.
+    graphProjection: Boolean(args.doctor || args.report) && !args.changed,
   });
 
   if (args.changed) pruneScopedPatternWarnings(warnings, root, loadGovernedFiles);
@@ -1500,8 +1510,8 @@ async function main() {
       configWalkedUp: args.configWalkedUp === true,
       safety, designDelta,
       ts, parseHealth, completeness,
-      all: args.all === true, requireGates: args.requireGates === true,
-      warnings,
+      all: args.all === true, changed: args.changed === true, requireGates: args.requireGates === true,
+      warnings, architectureFacts: importGraph ? { importGraph } : undefined,
     });
     if (designDelta) process.exitCode = !designDelta.complete ? 2 : designDelta.valid ? 0 : 1; return;
   }
@@ -1782,8 +1792,9 @@ async function main() {
           files,
           ts,
           parseHealth,
-          undefined,
-          activeViolations
+          importGraph ? { importGraph } : undefined,
+          activeViolations,
+          { details: true, changed: args.changed === true }
         ),
         // Doctor parity: always emit improvement compass when doctor would (reportParity).
         ...(designDepth?.improvementCompass

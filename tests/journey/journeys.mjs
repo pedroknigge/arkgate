@@ -30,6 +30,22 @@
  * #343 is `orderdesk`: enforced `writes-via-aggregate` on tagged SQL in use cases.
  * Probes A–G are flagged. `FOR UPDATE`, an upsert `DO UPDATE`, a JS comment,
  * and a SQL `--` comment stay unflagged.
+ *
+ * ADR 0037 is `deadwood`: files nothing imports. One true orphan, one file only a
+ * test imports, one file behind `import.meta.glob`, Next / package.json /
+ * sidecar entries, and one unused export that only the details view lists.
+ *
+ * ADR 0039 is `probeline`: the invariant probe on a zero-dependency node:test
+ * project. One invariant is killed, one survives (a happy-path-only test), one
+ * is never reached (the test loads the file but never calls the symbol), and
+ * one is an interface (unprobeable). The report changes no file; `--write` adds
+ * only `.ark/invariant-probe.json`; `--promote` then refuses the survivor and
+ * the unreached invariant with blocker `probe-survived`.
+ *
+ * ADR 0038 is `copycat`: copies across a wall. A cross-slice, a cross-sibling
+ * and a cross-layer copy are listed with their destinations; a same-slice copy
+ * is counted, never listed; a generated copy is never fingerprinted; the
+ * compact status JSON says `not-run`.
  */
 const crossParentEdges = Object.freeze([
   Object.freeze({
@@ -185,6 +201,19 @@ export const JOURNEYS = Object.freeze({
     Object.freeze(['ark-check', '--doctor', '--json', '--no-cache', '--config', 'ark.config.pinned.json']),
   ]),
   orderdesk: Object.freeze([Object.freeze(['ark-check', '--json', '--no-cache'])]),
+  deadwood: Object.freeze([
+    Object.freeze(['ark-check', '--doctor', '--json', '--no-cache']),
+    Object.freeze(['ark-check', '--doctor', '--all', '--json', '--no-cache']),
+  ]),
+  copycat: Object.freeze([
+    Object.freeze(['ark-check', '--doctor', '--all', '--json', '--no-cache']),
+    Object.freeze(['ark-check', '--doctor', '--json', '--no-cache']),
+  ]),
+  probeline: Object.freeze([
+    Object.freeze(['ark-check', '--probe-invariants', '--json']),
+    Object.freeze(['ark-check', '--probe-invariants', '--write', '--json']),
+    Object.freeze(['ark-check', '--promote', '--json', '--no-cache']),
+  ]),
 });
 
 export const JOURNEY_CASES = Object.freeze({
@@ -717,6 +746,169 @@ export const JOURNEY_CASES = Object.freeze({
       kind: 'orderdesk-clear',
       file: 'src/lib/features/a/zz-neg-sql-comment.ts',
       note: 'Negative. A `-- UPDATE orders SET x` comment inside a tagged template stays unflagged.',
+    }),
+  ]),
+  deadwood: Object.freeze([
+    Object.freeze({
+      id: 'orphan-listed',
+      owner: 'ADR 0037',
+      expect: 'pass',
+      kind: 'deadwood-orphan-listed',
+      note: 'Nothing imports src/lib/legacy-pricing.ts and no entry covers it. Listed as no-importer in the compact JSON and in details.',
+      file: 'src/lib/legacy-pricing.ts',
+    }),
+    Object.freeze({
+      id: 'test-only-tier',
+      owner: 'ADR 0037',
+      expect: 'pass',
+      kind: 'deadwood-test-only',
+      note: 'Only a test imports src/lib/only-tested.ts. It is counted in the test-only tier, never listed.',
+      file: 'src/lib/only-tested.ts',
+    }),
+    Object.freeze({
+      id: 'maybe-dynamic',
+      owner: 'ADR 0037',
+      expect: 'pass',
+      kind: 'deadwood-maybe-dynamic',
+      note: 'import.meta.glob reaches src/lib/handlers/refund.ts. Listed as maybe-dynamic, and the section is partial.',
+      file: 'src/lib/handlers/refund.ts',
+    }),
+    Object.freeze({
+      id: 'entry-suppressed',
+      owner: 'ADR 0037',
+      expect: 'pass',
+      kind: 'deadwood-entry-suppressed',
+      note: 'A Next route, Next middleware, a package.json export mapped through tsconfig outDir/rootDir, and a sidecar glob keep their files off the list.',
+      files: Object.freeze([
+        'src/app/page.tsx',
+        'src/middleware.ts',
+        'src/index.ts',
+        'src/lib/plugins/audit.ts',
+      ]),
+    }),
+    Object.freeze({
+      id: 'unused-export-details-only',
+      owner: 'ADR 0037',
+      expect: 'pass',
+      kind: 'deadwood-unused-export',
+      note: 'formatDate in src/lib/format.ts is exported and never imported by name. Compact status defers it; details list it.',
+      file: 'src/lib/format.ts',
+      name: 'formatDate',
+    }),
+  ]),
+  copycat: Object.freeze([
+    Object.freeze({
+      id: 'cross-slice-listed',
+      owner: 'ADR 0038',
+      expect: 'pass',
+      kind: 'copycat-family',
+      note: 'The invoice total is copied from features/billing to features/invoices. The slice wall denies the import; the copy is listed with the shared root as destination.',
+      files: Object.freeze(['src/features/billing/invoice-total.ts', 'src/features/invoices/totals.ts']),
+      crossing: 'cross-slice',
+      ruleId: 'CROSS_WALL_DUPLICATE',
+      destination: Object.freeze({ kind: 'shared-root', path: 'src/shared/' }),
+    }),
+    Object.freeze({
+      id: 'cross-sibling-listed',
+      owner: 'ADR 0038',
+      expect: 'pass',
+      kind: 'copycat-family',
+      note: 'The ranking helper is copied between two child slices of modules/catalog. Listed with the universe common folder as destination.',
+      files: Object.freeze(['src/modules/catalog/browse/rank.ts', 'src/modules/catalog/search/rank.ts']),
+      crossing: 'cross-sibling',
+      ruleId: 'CROSS_WALL_DUPLICATE',
+      destination: Object.freeze({ kind: 'universe-common', path: 'src/modules/catalog/common/' }),
+    }),
+    Object.freeze({
+      id: 'cross-layer-listed',
+      owner: 'ADR 0038',
+      expect: 'pass',
+      kind: 'copycat-family',
+      note: 'The email validator sits in Domain and in Application. Application may import Domain, so the destination is Domain.',
+      files: Object.freeze(['src/application/signup/check-email.ts', 'src/domain/email.ts']),
+      crossing: 'cross-layer',
+      ruleId: 'CROSS_LAYER_DUPLICATE',
+      destination: Object.freeze({ kind: 'lower-layer', layer: 'Domain' }),
+    }),
+    Object.freeze({
+      id: 'same-slice-not-listed',
+      owner: 'ADR 0038',
+      expect: 'pass',
+      kind: 'copycat-same-slice',
+      note: 'A copy inside features/billing is counted as same slice and never listed.',
+      files: Object.freeze(['src/features/billing/line-format.ts', 'src/features/billing/line-format-legacy.ts']),
+    }),
+    Object.freeze({
+      id: 'generated-excluded',
+      owner: 'ADR 0038',
+      expect: 'pass',
+      kind: 'copycat-generated',
+      note: 'features/payments/fee-total.ts carries an @generated header. It is never fingerprinted, so it is in no family.',
+      file: 'src/features/payments/fee-total.ts',
+    }),
+    Object.freeze({
+      id: 'compact-not-run',
+      owner: 'ADR 0038',
+      expect: 'pass',
+      kind: 'copycat-not-run',
+      note: 'Compact status JSON says not-run and names the command that runs it.',
+    }),
+  ]),
+  probeline: Object.freeze([
+    Object.freeze({
+      id: 'killed',
+      owner: 'ADR 0039',
+      expect: 'pass',
+      kind: 'probeline-verdict',
+      note: 'The refund window guard is pinned by a day-30 and a day-31 test: negating the guard, dropping the throw and flipping the comparison are all caught.',
+      invariantId: 'INV-WINDOW-KILLED',
+      verdict: 'killed',
+    }),
+    Object.freeze({
+      id: 'survived',
+      owner: 'ADR 0039',
+      expect: 'pass',
+      kind: 'probeline-verdict',
+      note: 'The order-total test checks the happy path only, so removing the negative-total throw goes unnoticed.',
+      invariantId: 'INV-TOTAL-SURVIVES',
+      verdict: 'survived',
+    }),
+    Object.freeze({
+      id: 'not-reached',
+      owner: 'ADR 0039',
+      expect: 'pass',
+      kind: 'probeline-verdict',
+      note: 'The currency test loads the file (the load canary is caught) but never calls roundToCents (the reach canary is not).',
+      invariantId: 'INV-UNREACHED',
+      verdict: 'not-reached',
+    }),
+    Object.freeze({
+      id: 'unprobeable',
+      owner: 'ADR 0039',
+      expect: 'pass',
+      kind: 'probeline-verdict',
+      note: 'RefundPolicy is a TypeScript interface: a declaration with no behavior to change.',
+      invariantId: 'INV-TYPE-ONLY',
+      verdict: 'unprobeable',
+    }),
+    Object.freeze({
+      id: 'report-only-then-write',
+      owner: 'ADR 0039',
+      expect: 'pass',
+      kind: 'probeline-files',
+      note: 'The report changes no file in the project; --write adds only .ark/invariant-probe.json.',
+    }),
+    Object.freeze({
+      id: 'promote-reads-probe',
+      owner: 'ADR 0039',
+      expect: 'pass',
+      kind: 'probeline-promote',
+      note: '--promote refuses the survivor and the unreached invariant with blocker probe-survived, and allows the killed one.',
+      want: Object.freeze({
+        'INV-WINDOW-KILLED': Object.freeze({ promotable: true, blocker: null }),
+        'INV-TOTAL-SURVIVES': Object.freeze({ promotable: false, blocker: 'probe-survived' }),
+        'INV-UNREACHED': Object.freeze({ promotable: false, blocker: 'probe-survived' }),
+      }),
     }),
   ]),
 });

@@ -14,6 +14,8 @@ import { formatArkRunHtml } from './ark-run-report.mjs';
 import { formatArkOrderHtml } from './ark-order-report.mjs';
 import { primaryImprovementCompassNextAction } from './improvement-compass.mjs';
 import { flatParentPilotHtml } from './flat-parent-pilot.mjs';
+import { orphanModulesHtml } from './orphan-modules-io.mjs';
+import { crossWallDuplicationHtml } from './duplication-io.mjs';
 
 // htmlEscape is injected by the caller (html-report.mjs) — importing it back
 // would be a dependency cycle, and the repo's own gate blocks that. The
@@ -362,6 +364,8 @@ export function renderAdvisorySections(advisories, escape) {
     physicalCohesionHtml(advisories.physicalCohesion),
     parseHealthHtml(advisories.parseHealth),
     graphBlindSpotsHtml(advisories.graphBlindSpots, esc),
+    orphanModulesHtml(advisories.orphanModules, esc),
+    crossWallDuplicationHtml(advisories.crossWallDuplication, esc),
     rulesUnderContractHtml(advisories.rulesUnderContract),
     formatArkRunHtml(advisories.arkRun, esc),
     formatArkOrderHtml(advisories.arkOrder, esc),

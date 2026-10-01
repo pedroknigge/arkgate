@@ -390,6 +390,9 @@ const FIXTURE_VIEWS = {
   atlasgrid: { check: atlasgridCheckView, doctor: atlasgridDoctorView },
   slicelaw: { check: slicelawCheckView, doctor: slicelawDoctorView },
   orderdesk: { check: orderdeskCheckView, doctor: doctorView },
+  deadwood: { check: checkView, doctor: deadwoodDoctorView },
+  copycat: { check: checkView, doctor: copycatDoctorView },
+  probeline: { check: probelineView, doctor: probelineView },
 };
 
 function configRejectionView(stderr) {
@@ -431,6 +434,226 @@ function orderdeskCheckView(parsed) {
     completeness: String(parsed.completeness),
     writes,
   };
+}
+
+/** ADR 0037: the files-nothing-imports section, without machine paths. */
+function deadwoodDoctorView(parsed) {
+  const section = parsed?.doctor?.orphanModules ?? null;
+  if (!section) return { orphanModules: null };
+  requireFields(section, ['status', 'orphans', 'testOnly', 'totals', 'unusedExports'], 'doctor.orphanModules');
+  const unused = section.unusedExports ?? {};
+  return {
+    orphanModules: {
+      status: String(section.status),
+      notAScore: section.notAScore === true,
+      headline: String(section.headline ?? ''),
+      orphans: section.orphans
+        .map((item) => ({ path: String(item.path), certainty: String(item.certainty), layer: item.layer ?? null }))
+        .sort(compareRows(['path'])),
+      testOnly: { count: section.testOnly.count, sample: [...section.testOnly.sample].sort() },
+      totals: section.totals,
+      entrySources: section.entryEvidence?.bySource ?? {},
+      frameworks: section.frameworks ?? [],
+      honesty: section.honesty ?? [],
+      unusedExports: {
+        status: String(unused.status),
+        files: (unused.files ?? [])
+          .map((row) => ({ path: String(row.path), exports: [...row.exports].sort() }))
+          .sort(compareRows(['path'])),
+      },
+    },
+  };
+}
+
+function judgeDeadwood(spec, steps) {
+  const compactStep = steps.find((step) => step.command.includes('--doctor') && !step.command.includes('--all'));
+  const detailsStep = steps.find((step) => step.command.includes('--doctor') && step.command.includes('--all'));
+  const compact = compactStep?.output?.orphanModules ?? null;
+  const details = detailsStep?.output?.orphanModules ?? null;
+  const certaintyOf = (view, file) => view?.orphans.find((item) => item.path === file)?.certainty ?? null;
+  switch (spec.kind) {
+    case 'deadwood-orphan-listed': {
+      const got = { compact: certaintyOf(compact, spec.file), details: certaintyOf(details, spec.file) };
+      return { met: got.compact === 'no-importer' && got.details === 'no-importer', want: { file: spec.file, certainty: 'no-importer' }, got };
+    }
+    case 'deadwood-test-only': {
+      const got = { listed: certaintyOf(compact, spec.file) !== null, inTestOnly: compact?.testOnly.sample.includes(spec.file) === true };
+      return { met: !got.listed && got.inTestOnly, want: { file: spec.file, listed: false, inTestOnly: true }, got };
+    }
+    case 'deadwood-maybe-dynamic': {
+      const got = { certainty: certaintyOf(compact, spec.file), status: compact?.status ?? null };
+      return { met: got.certainty === 'maybe-dynamic' && got.status === 'partial', want: { file: spec.file, certainty: 'maybe-dynamic', status: 'partial' }, got };
+    }
+    case 'deadwood-entry-suppressed': {
+      const listed = spec.files.filter((file) => certaintyOf(compact, file) !== null || certaintyOf(details, file) !== null);
+      const sources = Object.keys(compact?.entrySources ?? {}).sort();
+      const want = ['framework', 'package-json', 'sidecar'];
+      return { met: listed.length === 0 && stable(sources) === stable(want), want: { listed: [], sources: want }, got: { listed, sources } };
+    }
+    case 'deadwood-unused-export': {
+      const row = details?.unusedExports.files.find((item) => item.path === spec.file) ?? null;
+      const got = {
+        compactStatus: compact?.unusedExports.status ?? null,
+        compactFiles: compact?.unusedExports.files.length ?? null,
+        details: row ? row.exports : null,
+      };
+      const met = got.compactStatus === 'deferred' && got.compactFiles === 0 && stable(got.details) === stable([spec.name]);
+      return { met, want: { compactStatus: 'deferred', details: [spec.name] }, got };
+    }
+    default:
+      throw new JourneyError('case', `unknown deadwood case kind ${spec.kind}`);
+  }
+}
+
+/** ADR 0038: copies across a wall, without machine paths. */
+function copycatDoctorView(parsed) {
+  const section = parsed?.doctor?.crossWallDuplication ?? null;
+  if (!section) return { crossWallDuplication: null };
+  requireFields(section, ['status', 'families', 'totals', 'honesty'], 'doctor.crossWallDuplication');
+  const totals = section.totals ?? {};
+  return {
+    crossWallDuplication: {
+      status: String(section.status),
+      notAScore: section.notAScore === true,
+      headline: String(section.headline ?? ''),
+      next: section.next ?? null,
+      families: section.families.map((family) => ({
+        ruleId: String(family.ruleId),
+        crossing: String(family.crossing),
+        destination: family.destination ?? null,
+        names: family.names ?? null,
+        members: family.members.map((member) => ({
+          path: String(member.path),
+          layer: member.layer ?? null,
+          startLine: member.startLine,
+          endLine: member.endLine,
+        })),
+        line: String(family.line ?? ''),
+      })),
+      totals: {
+        filesEligible: totals.filesEligible,
+        filesFingerprinted: totals.filesFingerprinted,
+        filesSkipped: totals.filesSkipped,
+        candidateFilePairs: totals.candidateFilePairs,
+        pairsCrossBoundary: totals.pairsCrossBoundary,
+        pairsSameSliceUnexamined: totals.pairsSameSliceUnexamined,
+        pairsUnclassifiable: totals.pairsUnclassifiable,
+        families: totals.families,
+      },
+      honesty: section.honesty ?? [],
+    },
+  };
+}
+
+function judgeCopycat(spec, steps) {
+  const compactStep = steps.find((step) => step.command.includes('--doctor') && !step.command.includes('--all'));
+  const detailsStep = steps.find((step) => step.command.includes('--doctor') && step.command.includes('--all'));
+  const compact = compactStep?.output?.crossWallDuplication ?? null;
+  const details = detailsStep?.output?.crossWallDuplication ?? null;
+  const families = details?.families ?? [];
+  const listed = (file) => families.some((family) => family.members.some((member) => member.path === file));
+  switch (spec.kind) {
+    case 'copycat-family': {
+      const family = families.find((row) => stable(row.members.map((member) => member.path).sort()) === stable([...spec.files].sort())) ?? null;
+      const got = family ? { crossing: family.crossing, ruleId: family.ruleId, destination: family.destination } : null;
+      const want = { crossing: spec.crossing, ruleId: spec.ruleId, destination: spec.destination };
+      return { met: stable(got) === stable(want) && details?.status === 'complete', want, got };
+    }
+    case 'copycat-same-slice': {
+      const got = { listed: spec.files.filter(listed), sameSlice: details?.totals.pairsSameSliceUnexamined ?? null };
+      return { met: got.listed.length === 0 && got.sameSlice >= 1, want: { listed: [], sameSlice: '>= 1' }, got };
+    }
+    case 'copycat-generated': {
+      const got = { listed: listed(spec.file), generated: details?.totals.filesSkipped?.generated ?? null };
+      return { met: !got.listed && got.generated >= 1, want: { listed: false, generated: '>= 1' }, got };
+    }
+    case 'copycat-not-run': {
+      const got = { status: compact?.status ?? null, next: compact?.next ?? null, families: compact?.families.length ?? null };
+      const want = { status: 'not-run', next: 'arkgate-check --doctor --all', families: 0 };
+      return { met: stable(got) === stable(want), want, got };
+    }
+    default:
+      throw new JourneyError('case', `unknown copycat case kind ${spec.kind}`);
+  }
+}
+
+/** ADR 0039: probe rows and promotion rows, without hashes, durations or the node version. */
+function probelineView(parsed) {
+  if (parsed?.probeInvariants) {
+    const probe = parsed.probeInvariants;
+    requireFields(probe, ['status', 'rows', 'totals'], 'probeInvariants');
+    return {
+      probeInvariants: {
+        status: String(probe.status),
+        notAScore: probe.notAScore === true,
+        runner: probe.runner ? String(probe.runner.id) : null,
+        rows: probe.rows.map((row) => ({
+          invariantId: String(row.invariantId),
+          verdict: String(row.verdict),
+          reason: String(row.reason),
+          symbol: row.symbol ?? null,
+          symbolFile: row.symbolFile ?? null,
+          tests: row.tests.map((test) => String(test.path)),
+          baseline: row.baseline ? String(row.baseline.status) : null,
+          wiring: row.wiring ?? null,
+          mutants: row.mutants.map((mutant) => ({
+            operator: String(mutant.operator),
+            line: mutant.line,
+            original: String(mutant.original),
+            replacement: String(mutant.replacement),
+            status: String(mutant.status),
+          })),
+          line: String(row.line ?? ''),
+        })),
+        totals: probe.totals,
+        written: probe.written ?? null,
+      },
+    };
+  }
+  const promote = parsed?.promote ?? null;
+  if (!promote) return { promote: null };
+  return {
+    promote: {
+      invariants: (promote.rows ?? [])
+        .filter((row) => row.kind === 'invariant')
+        .map((row) => ({
+          id: String(row.id),
+          mode: String(row.mode),
+          promotable: row.promotable === true,
+          blocker: row.blocker ?? null,
+          reason: String(row.reason ?? ''),
+        }))
+        .sort(compareRows(['id'])),
+    },
+  };
+}
+
+function judgeProbeline(spec, steps) {
+  const [report, written, promote] = steps;
+  switch (spec.kind) {
+    case 'probeline-verdict': {
+      const row = report?.output?.probeInvariants?.rows.find((entry) => entry.invariantId === spec.invariantId) ?? null;
+      const got = row ? row.verdict : null;
+      return { met: got === spec.verdict, want: spec.verdict, got };
+    }
+    case 'probeline-files': {
+      const got = { report: report?.filesDiff ?? null, write: written?.filesDiff ?? null };
+      const want = { report: {}, write: { '.ark/invariant-probe.json': 'added' } };
+      return { met: stable(got) === stable(want), want, got };
+    }
+    case 'probeline-promote': {
+      const rows = promote?.output?.promote?.invariants ?? [];
+      const got = Object.fromEntries(
+        Object.keys(spec.want).map((id) => {
+          const row = rows.find((entry) => entry.id === id);
+          return [id, row ? { promotable: row.promotable, blocker: row.blocker } : null];
+        })
+      );
+      return { met: stable(got) === stable(spec.want), want: spec.want, got };
+    }
+    default:
+      throw new JourneyError('case', `unknown probeline case kind ${spec.kind}`);
+  }
 }
 
 function slicelawCheckView(parsed) {
@@ -842,6 +1065,15 @@ function judgeOrderdesk(spec, steps) {
 function evaluateJourneyCase(spec, steps) {
   if (typeof spec.kind === 'string' && spec.kind.startsWith('orderdesk-')) {
     return caseResult(spec, judgeOrderdesk(spec, steps));
+  }
+  if (typeof spec.kind === 'string' && spec.kind.startsWith('deadwood-')) {
+    return caseResult(spec, judgeDeadwood(spec, steps));
+  }
+  if (typeof spec.kind === 'string' && spec.kind.startsWith('copycat-')) {
+    return caseResult(spec, judgeCopycat(spec, steps));
+  }
+  if (typeof spec.kind === 'string' && spec.kind.startsWith('probeline-')) {
+    return caseResult(spec, judgeProbeline(spec, steps));
   }
   if (typeof spec.kind === 'string' && spec.kind.startsWith('slicelaw-')) {
     return caseResult(spec, judgeSlicelaw(spec, steps));

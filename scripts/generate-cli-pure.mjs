@@ -35,6 +35,10 @@
  *   src/domain/persistenceWriteHint.ts → bin/lib/persistence-write-hint.mjs
  *   src/domain/literalPathDrift.ts → bin/lib/literal-path-drift.mjs
  *   src/domain/classSourceScan.ts → bin/lib/class-source-scan.mjs
+ *   src/domain/orphanModules.ts → bin/lib/orphan-modules.mjs
+ *   src/domain/cloneDetection.ts → bin/lib/clone-detection.mjs
+ *   src/domain/invariantProbe.ts → bin/lib/invariant-probe.mjs
+ *   src/domain/invariantProbeSchema.ts → schemas/ark.invariant-probe.schema.json
  *
  * Layer match remains scripts/generate-layer-match.mjs (R1).
  *
@@ -99,6 +103,17 @@ const MODULES = [
     canonical: 'src/domain/classSourceScan.ts',
     derived: 'bin/lib/class-source-scan.mjs',
     label: 'class-source tokenizer shared by ArkRules sensors + invariant coverage',
+  },
+  {
+    canonical: 'src/domain/invariantProbe.ts',
+    derived: 'bin/lib/invariant-probe.mjs',
+    label: 'invariant mutation probe: operators, canaries, verdict fold, freshness (ADR 0039; not a score)',
+  },
+  {
+    canonical: 'src/domain/invariantProbeSchema.ts',
+    schemaDerived: 'schemas/ark.invariant-probe.schema.json',
+    schemaExport: 'ARK_INVARIANT_PROBE_SCHEMA',
+    label: '.ark/invariant-probe.json artifact schema (ADR 0039)',
   },
   {
     canonical: 'src/domain/invariantCoverage.ts',
@@ -221,6 +236,16 @@ const MODULES = [
     canonical: 'src/domain/deepeningCoach.ts',
     derived: 'bin/lib/deepening-coach.mjs',
     label: 'deepening candidates pure projection (deep-module coach; notAScore)',
+  },
+  {
+    canonical: 'src/domain/orphanModules.ts',
+    derived: 'bin/lib/orphan-modules.mjs',
+    label: 'files nothing imports + unused exports (ADR 0037; notAScore)',
+  },
+  {
+    canonical: 'src/domain/cloneDetection.ts',
+    derived: 'bin/lib/clone-detection.mjs',
+    label: 'copies across a wall: fingerprints, winnowing, families (ADR 0038; notAScore)',
   },
   {
     canonical: 'src/domain/agentProjectionTypes.ts',

@@ -1,13 +1,14 @@
 /**
  * Importer graph for the flat-parent doctor suggestion.
  *
- * Prefers the resolved dependency facts ark-check already built (tsconfig
- * paths included). Without facts it scans the text and resolves relative
+ * Prefers the importer index the scan projected from resolved facts (ADR 0037),
+ * then raw resolved dependency facts (tsconfig paths included). Without either it scans the text and resolves relative
  * specifiers plus tsconfig path aliases, so an `@/…` importer is never
  * invisible. Advisory input only.
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import { importerGraphFromIndex } from './import-graph-projection.mjs';
 import { readTsconfigAliases, resolveSpecifierToRel } from './import-resolve.mjs';
 
 const SPEC_MARKS = [' from "', " from '", ' from `', 'require("', "require('", 'import("', "import('"];
@@ -112,6 +113,7 @@ function addEdge(graph, target, importer) {
  * @param {{ root: string, files: string[], facts?: object, ts?: object }} input
  */
 export function flatParentImporterGraph({ root, files, facts, ts }) {
+  if (facts?.importGraph) return importerGraphFromIndex(facts.importGraph);
   const graph = new Map();
   const fileSet = new Set(files);
   const dependencies = Array.isArray(facts?.dependencies) ? facts.dependencies : null;

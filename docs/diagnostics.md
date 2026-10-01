@@ -29,6 +29,8 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 | [`LAYER_REFERENCE_VIOLATION`](#LAYER_REFERENCE_VIOLATION) | layer | Layer reference blocked (snippet / AI gate) |
 | [`SHARED_IMPORTS_SLICE`](#SHARED_IMPORTS_SLICE) | layer | A shared root imports a slice |
 | [`CIRCULAR_DEPENDENCY`](#CIRCULAR_DEPENDENCY) | layer | Dependency cycle |
+| [`CROSS_WALL_DUPLICATE`](#CROSS_WALL_DUPLICATE) | layer | Code copied across a wall |
+| [`CROSS_LAYER_DUPLICATE`](#CROSS_LAYER_DUPLICATE) | layer | Code copied in two layers |
 | [`FORBIDDEN_GLOBAL`](#FORBIDDEN_GLOBAL) | capability | Forbidden ambient global or dual import |
 | [`CAPABILITY_VIOLATION`](#CAPABILITY_VIOLATION) | capability | Denied effect capability |
 | [`RAW_EVENT_PUBLISH`](#RAW_EVENT_PUBLISH) | publish | Raw event publish |
@@ -52,6 +54,7 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 | [`INVARIANT_UNCOVERED`](#INVARIANT_UNCOVERED) | arkrules | Invariant without coverage evidence |
 | [`INVARIANT_COVERAGE_OUTSIDE_ROOTS`](#INVARIANT_COVERAGE_OUTSIDE_ROOTS) | arkrules | Covering test outside the declared coverage roots |
 | [`INVARIANT_COVERAGE_ROOTS_MISSING`](#INVARIANT_COVERAGE_ROOTS_MISSING) | arkrules | Coverage roots missing while an invariant is enforced |
+| [`INVARIANT_PROBE_SURVIVED`](#INVARIANT_PROBE_SURVIVED) | arkrules | Covering tests do not pin the invariant |
 | [`INVARIANT_TESTS_PATH_MISSING`](#INVARIANT_TESTS_PATH_MISSING) | arkrules | Domain-invariant tests path missing under adopted |
 | [`ARKRUN_MISSING_ROOT`](#ARKRUN_MISSING_ROOT) | arkrun | No kernel factory in composition roots |
 | [`ARKRUN_KERNEL_IN_DOMAIN`](#ARKRUN_KERNEL_IN_DOMAIN) | arkrun | Domain-role layer imports the kernel |
@@ -85,6 +88,8 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 | [`ANALYSIS_HOST_UNAVAILABLE`](#ANALYSIS_HOST_UNAVAILABLE) | analysis | Analysis host unavailable |
 | [`LITERAL_PATH_DRIFT`](#LITERAL_PATH_DRIFT) | drift | Literal path moved by a rename |
 | [`LITERAL_PATH_UNRESOLVED`](#LITERAL_PATH_UNRESOLVED) | drift | Literal path does not resolve |
+| [`ORPHAN_MODULE`](#ORPHAN_MODULE) | drift | File nothing imports |
+| [`UNUSED_EXPORT`](#UNUSED_EXPORT) | drift | Export nothing imports by name |
 | [`ADAPTER_NOT_ALLOWED_FOR_PORT`](#ADAPTER_NOT_ALLOWED_FOR_PORT) | adapter | Adapter not allowed for port |
 | [`FORBIDDEN_PATTERN`](#FORBIDDEN_PATTERN) | snippet-policy | Forbidden regex pattern |
 | [`FORBIDDEN_SUBSTRING`](#FORBIDDEN_SUBSTRING) | snippet-policy | Forbidden substring |
@@ -382,6 +387,17 @@ Declaring nothing is silent unless any catalogued invariant is enforced — then
 - **Fix:** Add `coverage.coverageRoots` in `ark.config.json` pointing at the folder the test runner uses, then re-run. `testGlobs` alone is not enough. Fail-closed until that path is present. Not freezable.
 
 No enforced invariant, or roots already declared, stays silent. This is not a new config key. Promotion to enforced also refuses without roots.
+
+<a id="INVARIANT_PROBE_SURVIVED"></a>
+
+### `INVARIANT_PROBE_SURVIVED`
+
+**Covering tests do not pin the invariant** · often advisory
+
+- **Why:** The committed invariant probe (`.ark/invariant-probe.json`, written by `arkgate-check --probe-invariants --write`) shows, for files that have not changed since, that the covering tests still pass with the invariant's `coverage.symbol` broken on purpose (`survived`), or never call it (`not-reached`). The test names the rule but does not pin it.
+- **Fix:** Add a test case that fails when the rule is broken — the line names the change that went unnoticed — then re-run `arkgate-check --probe-invariants --write` and commit the file. Promotion to `enforced` refuses while the fresh artifact says `survived` or `not-reached`.
+
+A status (`--doctor`) and `--rules-inventory` line only. It never enters the check, so `valid`, `--strict-merge` and the exit code do not change. A stale row (the symbol file, a covering test or the invariant changed since the run), `killed`, `inconclusive`, `unprobeable`, or no artifact at all changes nothing. The probe is opt-in, runs your own test runner in a temporary copy, and is not a mutation score — see [Probe an invariant](agent-guide.md#probe-an-invariant).
 
 <a id="INVARIANT_TESTS_PATH_MISSING"></a>
 
@@ -774,6 +790,86 @@ candidates out of 9536 literals, nearly all of them illustrative. Listing that
 by default would be ArkGate's inability to resolve a string presented as a fact
 about your code. The count is always printed, so opting out of the list is
 never opting out of knowing.
+
+## Files nothing imports
+
+Status (`arkgate-check --doctor`) reads the import edges the check already
+resolved. A governed file that nothing imports — no governed file, no test,
+no project script, no known entry point — is listed in status details
+(`--doctor --all`), in `--json` under `doctor.orphanModules`, and in the
+HTML report. The compact status prints one count line at most. It is not a
+score and never changes the check.
+
+Entry points come from a closed list: `package.json` (`main`, `module`,
+`types`, `exports`, `bin`, scripts) and CI workflow run steps, framework
+conventions (Next, Vite, Nest, Vercel, Storybook), the arkRun / arkOrder /
+slice-wall roots in `ark.config.json`, config and setup files, ambient
+declaration files, and `.ark/entry-points.json`:
+
+```json
+{
+  "schemaVersion": "1",
+  "entryPoints": [
+    { "glob": "src/plugins/**", "reason": "loaded by name at runtime", "reviewBy": "2027-01-01" }
+  ]
+}
+```
+
+<a id="ORPHAN_MODULE"></a>
+
+### `ORPHAN_MODULE`
+
+**File nothing imports** · often advisory
+
+- **Why:** No governed file, test or entry point imports this module. It is the leftover an agent leaves when a rewrite lands next to the old file. Status reads it from the import facts the check already resolved, so it never changes the verdict. When a dynamic import, an unresolved import or an unmapped entry could reach the file, the item says so (`maybe-dynamic`, `maybe-unresolved`) and the list is `partial`.
+- **Fix:** Delete the file through the write gate, one file at a time. If a framework, a script or a runtime loader uses it, add a glob with a reason to `.ark/entry-points.json` (optional `reviewBy`) instead. Advisory only — it never fails a run.
+
+<a id="UNUSED_EXPORT"></a>
+
+### `UNUSED_EXPORT`
+
+**Export nothing imports by name** · often advisory
+
+- **Why:** An export no governed file or test imports by name. Listed only in status details (`--doctor --all`) and the report. Default, namespace, star, dynamic and require use count as using every export, so those files are skipped.
+- **Fix:** Drop the export keyword (or the code) if nothing outside the file needs it, or keep it when it is public API an entry point exposes. Advisory only — it never fails a run.
+
+## Copies across a wall
+
+A slice wall denies the import. The cheapest way around it is to copy the
+code, and a copy is not an import. Status details (`arkgate-check --doctor --all`)
+and the HTML report list near-identical code whose copies sit on two sides of
+a wall, or in two layers, with a place the shared code could live. `--json`
+carries it under `doctor.crossWallDuplication`; without `--all` it says
+`not-run` and names the command. It is not a score and never changes the check.
+
+The copies come from token fingerprints taken while status runs: one parse per
+governed file with the TypeScript ArkGate already loaded. Tests, `.d.ts`,
+generated files (default globs, or a `@generated` / `GENERATED FILE` /
+`DO NOT EDIT` header in the first five lines) and files over 256 KB are never
+read for this. A copy is listed only when the import between its two files is
+one the check would deny, or when it sits in two layers. Copies inside one
+slice are counted, never listed. A path the wall cannot classify is counted,
+never listed. The constants are fixed: at least 50 tokens and 5 lines, and at
+least 60% of the names matching. When a cap stops the pass, the section says
+`partial` and how much was left.
+
+<a id="CROSS_WALL_DUPLICATE"></a>
+
+### `CROSS_WALL_DUPLICATE`
+
+**Code copied across a wall** · often advisory
+
+- **Why:** Near-identical code sits on two sides of a slice wall (`cross-slice`, `cross-parent`, `cross-sibling`) or in two layers that may not import each other (`cross-layer-walled`). The wall would deny the import, so the code was copied instead. Fingerprints are taken at status time and never enter the check, so the verdict does not change.
+- **Fix:** Move one copy to a shared home the wall allows — the declared shared root, the universe common folder, or a layer both sides may import — then import it from both sides. One move at a time, through the write gate (`/ark-place` names the destination). Advisory only — it never fails a run.
+
+<a id="CROSS_LAYER_DUPLICATE"></a>
+
+### `CROSS_LAYER_DUPLICATE`
+
+**Code copied in two layers** · often advisory
+
+- **Why:** Near-identical code sits in two layers, and at least one of them may import the other (`cross-layer`).
+- **Fix:** Keep one copy in the lower layer both sides may import, and import it from the other. One move at a time, through the write gate. Advisory only — it never fails a run.
 
 ## Port adapters
 

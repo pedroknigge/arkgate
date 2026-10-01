@@ -6,6 +6,70 @@ in the immutable pre-2.0 archive linked below.
 ## Unreleased
 
 ### Added
+- `arkgate-check --probe-invariants[=<id>]` checks that the tests covering an
+  invariant actually pin it. A test title that names the rule proves the test
+  exists, not that it would fail if the rule broke. For each invariant with a
+  `coverage.symbol`, the probe copies the project to a temporary folder and
+  runs only the covering tests (titles that name the id, and tests that import
+  the symbol's file) with your own runner — vitest, jest or `node --test`:
+  unchanged, then with the file throwing on load, then with the symbol
+  throwing when called, then with at most three small changes inside it
+  (negate a guard, drop a `throw`, flip or shift a comparison, shift a
+  constant). Each invariant reads `killed`, `survived`, `not-reached`,
+  `inconclusive` or `unprobeable`, with the change that went unnoticed and the
+  line. Your files are never changed. Report by default; `--write` saves
+  `.ark/invariant-probe.json` (new schema export `arkgate/schema/invariant-probe`).
+  Exit 0 when nothing survived, 1 when something did, 2 when it could not run.
+  Not a score.
+- Promotion reads the committed probe result. When `.ark/invariant-probe.json`
+  has a fresh `survived` or `not-reached` row — the symbol file, its covering
+  tests and the invariant unchanged since the run — `--promote` and the policy
+  delta refuse to promote that invariant to `enforced` (blocker
+  `probe-survived`). A stale, `killed`, `inconclusive` or missing result
+  changes nothing, so every promotion without the file behaves as before.
+  Status and `--rules-inventory` show the probe state per invariant when the
+  file exists; new catalog id `INVARIANT_PROBE_SURVIVED` (advisory, never in
+  the check). The probe runs only when you start it: never from the write
+  hook, MCP, ESLint, the GitHub Action or `--strict-merge`, and it refuses to
+  combine with them. The runner gets a short environment allowlist (no
+  tokens); that is best effort, not a sandbox. No config key, no new skill;
+  `/ark-contract` and `/ark-coverage` explain the blocker and the next test to
+  write.
+- Status lists code copied across a wall. When a slice wall denies an import,
+  the cheapest way around it is a copy, and a copy is not an import.
+  `--doctor --all`, the HTML report and `--doctor --all --json` (under
+  `doctor.crossWallDuplication`) now list near-identical code whose copies sit
+  on two sides of a slice wall, in two child slices of one universe, or in two
+  layers, with a place the shared code could live (the declared shared root,
+  the universe common folder, or the lower layer both sides may import).
+  Copies inside one slice are counted, never listed. It reads token
+  fingerprints taken while status runs, with the TypeScript ArkGate already
+  loaded; they never enter the check, so the verdict and `factsHash` do not
+  change. Tests, `.d.ts`, generated files and files over 256 KB are skipped.
+  Fixed thresholds (at least 50 tokens, 5 lines, most names matching), no
+  config key. Compact status never runs it; its JSON says `not-run` and names
+  the command. When a cap stops the pass the section says `partial` and how
+  much was left. New catalog ids `CROSS_WALL_DUPLICATE` and
+  `CROSS_LAYER_DUPLICATE` (advisory). Never a score, never in the write hook,
+  MCP, ESLint, `--changed`, or `--strict-merge`. No new skill; `/ark-place`
+  names the destination and `/ark-fix` moves one copy at a time.
+- Status lists the files nothing imports. A governed file with no importer —
+  no governed file, test, project script, or known entry point — shows in
+  `--doctor --all`, the HTML report, and `--doctor --json` under
+  `doctor.orphanModules`; compact status prints one count line at most. It
+  reads the import edges the check already resolved, so the verdict and
+  `factsHash` do not change. Entry points come from `package.json` (built
+  `dist/` paths map back to source), CI workflow run steps, Next / Vite / Nest /
+  Vercel / Storybook conventions, the arkRun / arkOrder roots, config and setup
+  files, ambient declaration files, and an optional `.ark/entry-points.json`
+  (glob + reason + optional `reviewBy`; not a config key). Files only tests
+  import are counted, not listed. When a dynamic import, `import.meta.glob`, a
+  quoted path, or an unresolved import may still reach a file, the item says
+  so and the list is `partial`. `--doctor --all` and `--report` also list
+  exports nothing imports by name. New catalog ids `ORPHAN_MODULE` and
+  `UNUSED_EXPORT` (advisory). Never a score, never in the write hook, MCP
+  write tools, ESLint, or `--strict-merge`. No new skill; `/ark-explore` maps
+  the list and `/ark-fix` deletes one file at a time through the write gate.
 - Soft doctor residual when Domain is declared but empty and the UI holds the
   rules (`noDomainFrontend`). Projects empty Domain + presentation share, or
   the existing `domain-logic-in-ui` smell. Friendly next step: one Domain file
@@ -68,6 +132,13 @@ in the immutable pre-2.0 archive linked below.
   Required CI is still the shared merge line. No new skill, schema, or host.
 
 ### Fixed
+- `--policy-base` and MCP policy-delta now judge an advisory → enforced
+  invariant promotion with the declared `coverage.coverageRoots`, the same way
+  `--promote` does. Before, a covered promotion with roots declared came out
+  `judgment-required` ("Declare coverage.coverageRoots…") while `--promote`
+  allowed it.
+- The flat-parent suggestion in status reads the resolved importer index
+  instead of re-reading every file for import text.
 - Doctor sees CI jobs gated by `needs:`: a job that runs the fail-closed Ark check behind unconditional jobs (such as a CI-profile job) now counts as a merge gate; `ciMergeBoundary.ci.workflowPresent` / `merge-gate` no longer report it absent. Jobs a profile output can skip, jobs with `continue-on-error`, and chains with a conditional job still do not count.
 - With `ARK_DOCTOR_GITHUB=1`, the Ark check counts as required only when every job that can skip it is required too (a skipped job satisfies branch protection); otherwise the doctor reports `unverified`, `arkCheckUpstreamNotRequired`, and the gap `enforcement-ark-check-upstream-not-required`. Required checks bound to the GitHub Actions app now correlate (`arkCheckSourceBound: true`).
 - Write hook and `ark-check` now agree on overlapping layer globs: the hook
