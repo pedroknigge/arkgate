@@ -306,6 +306,14 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
     { oftenAdvisory: true }
   ),
   entry(
+    'INVARIANT_PROBE_SURVIVED',
+    'arkrules',
+    'Covering tests do not pin the invariant',
+    'The committed invariant probe (.ark/invariant-probe.json, written by arkgate-check --probe-invariants --write) shows, for files that have not changed since, that the covering tests still pass with the invariant\'s symbol broken on purpose (survived) or never call it (not reached). The test names the rule but does not pin it. A status and inventory line only: it never enters the check, so the verdict does not change.',
+    'Add a test case that fails when the rule is broken (the line names the change that went unnoticed), then re-run arkgate-check --probe-invariants --write and commit the file. Promotion to enforced refuses while the fresh artifact says survived or not reached; a stale, killed, inconclusive or missing result changes nothing.',
+    { oftenAdvisory: true }
+  ),
+  entry(
     'INVARIANT_TESTS_PATH_MISSING',
     'arkrules',
     'Domain-invariant tests path missing under adopted',

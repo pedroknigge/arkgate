@@ -54,6 +54,7 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 | [`INVARIANT_UNCOVERED`](#INVARIANT_UNCOVERED) | arkrules | Invariant without coverage evidence |
 | [`INVARIANT_COVERAGE_OUTSIDE_ROOTS`](#INVARIANT_COVERAGE_OUTSIDE_ROOTS) | arkrules | Covering test outside the declared coverage roots |
 | [`INVARIANT_COVERAGE_ROOTS_MISSING`](#INVARIANT_COVERAGE_ROOTS_MISSING) | arkrules | Coverage roots missing while an invariant is enforced |
+| [`INVARIANT_PROBE_SURVIVED`](#INVARIANT_PROBE_SURVIVED) | arkrules | Covering tests do not pin the invariant |
 | [`INVARIANT_TESTS_PATH_MISSING`](#INVARIANT_TESTS_PATH_MISSING) | arkrules | Domain-invariant tests path missing under adopted |
 | [`ARKRUN_MISSING_ROOT`](#ARKRUN_MISSING_ROOT) | arkrun | No kernel factory in composition roots |
 | [`ARKRUN_KERNEL_IN_DOMAIN`](#ARKRUN_KERNEL_IN_DOMAIN) | arkrun | Domain-role layer imports the kernel |
@@ -386,6 +387,17 @@ Declaring nothing is silent unless any catalogued invariant is enforced — then
 - **Fix:** Add `coverage.coverageRoots` in `ark.config.json` pointing at the folder the test runner uses, then re-run. `testGlobs` alone is not enough. Fail-closed until that path is present. Not freezable.
 
 No enforced invariant, or roots already declared, stays silent. This is not a new config key. Promotion to enforced also refuses without roots.
+
+<a id="INVARIANT_PROBE_SURVIVED"></a>
+
+### `INVARIANT_PROBE_SURVIVED`
+
+**Covering tests do not pin the invariant** · often advisory
+
+- **Why:** The committed invariant probe (`.ark/invariant-probe.json`, written by `arkgate-check --probe-invariants --write`) shows, for files that have not changed since, that the covering tests still pass with the invariant's `coverage.symbol` broken on purpose (`survived`), or never call it (`not-reached`). The test names the rule but does not pin it.
+- **Fix:** Add a test case that fails when the rule is broken — the line names the change that went unnoticed — then re-run `arkgate-check --probe-invariants --write` and commit the file. Promotion to `enforced` refuses while the fresh artifact says `survived` or `not-reached`.
+
+A status (`--doctor`) and `--rules-inventory` line only. It never enters the check, so `valid`, `--strict-merge` and the exit code do not change. A stale row (the symbol file, a covering test or the invariant changed since the run), `killed`, `inconclusive`, `unprobeable`, or no artifact at all changes nothing. The probe is opt-in, runs your own test runner in a temporary copy, and is not a mutation score — see [Probe an invariant](agent-guide.md#probe-an-invariant).
 
 <a id="INVARIANT_TESTS_PATH_MISSING"></a>
 
