@@ -12,13 +12,10 @@
  * only while a file without an importer remains. Advisory only — never a gate
  * input, never in the write hook, MCP write tools, ESLint or --strict-merge.
  */
-import fs from 'node:fs';
 import path from 'node:path';
 import { globToRegExp, layerForRelativePath } from '../ark-layer-match.mjs';
-import { namedModuleBindings } from './ast-scan.mjs';
-import { ambientEntries, collectEntryPoints, entriesBySource, probeGoverned } from './entry-points-io.mjs';
+import { ambientEntries, collectEntryPoints, entriesBySource } from './entry-points-io.mjs';
 import { graphScanLimit } from './graph-blind.mjs';
-import { coverageOptionsFromConfig, matchSimpleGlob } from './invariant-coverage-io.mjs';
 import {
   ORPHAN_MODULE_NEXT,
   deferredUnusedExports,
@@ -29,30 +26,19 @@ import {
   unavailableOrphanModules,
   unusedExportLine,
 } from './orphan-modules.mjs';
-import { readTsconfigAliases, resolveSpecifierToRel } from './import-resolve.mjs';
+import {
+  MAX_EXTERNAL_IMPORTER_FILES,
+  createResolver,
+  dirOf,
+  fileImports,
+  readSource,
+  stripExt,
+  testPathMatcher,
+  walkExternalSources,
+} from './outside-importers.mjs';
 
-const MAX_EXTERNAL_IMPORTER_FILES = 5000;
-const MAX_FILE_BYTES = 256 * 1024;
-const MAX_WALK_DEPTH = 8;
 const MAX_EXPORT_PARSE_FILES = 3000;
 const PRINT_CAP = 10;
-const SOURCE_FILE = /\.[cm]?[jt]sx?$/;
-const DECLARATION_FILE = /\.d\.[cm]?ts$/;
-const TEST_FILE = /\.(?:test|spec)(?:-d)?\.[cm]?[jt]sx?$|(?:^|\/)(?:tests?|__tests__|__mocks__|e2e)\//i;
-/** Data trees and build output: never importers of product source. */
-const SKIP_DIRS = new Set([
-  'node_modules',
-  'dist',
-  'build',
-  'out',
-  'coverage',
-  'fixture',
-  'fixtures',
-  '__fixtures__',
-  'testdata',
-  'docs',
-  'documentation',
-]);
 const QUOTED = /(['"`])([^'"`\n]{1,300})\1/g;
 const TEMPLATE_HEAD = /\b(?:import|require)\s*\(\s*(?:`([^`$]*)\$\{|(['"])([^'"\n]+)\2\s*\+)/g;
 const META_GLOB = /import\.meta\.glob(?:Eager)?\s*(?:<[^>]*>)?\s*\(\s*(\[[^\]]*\]|(['"`])[^'"`\n]+\2)/g;
@@ -63,22 +49,6 @@ const GENERATED_MARK = /GENERATED FILE|@generated|DO NOT EDIT|\bgenerated (?:fro
 const GENERATED_HEADER_CHARS = 1200;
 const PATH_IN_HEADER = /[\w@.-][\w@./-]*\.[cm]?[jt]sx?(?![\w/])/g;
 
-function readSource(absolute) {
-  try {
-    const stat = fs.statSync(absolute);
-    if (!stat.isFile()) return { skip: true };
-    if (stat.size > MAX_FILE_BYTES) return { oversize: true };
-    return { text: fs.readFileSync(absolute, 'utf8') };
-  } catch {
-    return { skip: true };
-  }
-}
-
-function dirOf(rel) {
-  const at = rel.lastIndexOf('/');
-  return at === -1 ? '' : rel.slice(0, at);
-}
-
 /** `from`'s directory joined with a relative literal; null for bare / escaping. */
 function relativeTo(fromRel, literal) {
   if (typeof literal !== 'string') return null;
@@ -88,40 +58,6 @@ function relativeTo(fromRel, literal) {
   const joined = path.posix.normalize(base ? `${base}/${raw}` : raw);
   if (joined === '..' || joined.startsWith('../')) return null;
   return joined.replace(/^\.\//, '');
-}
-
-function stripExt(rel) {
-  return rel.replace(DECLARATION_FILE, '').replace(SOURCE_FILE, '');
-}
-
-/** Non-governed project files (tests and other source), sorted, bounded. */
-function walkExternalSources(root, governed) {
-  const files = [];
-  let capped = 0;
-  const visit = (dirRel, depth) => {
-    if (depth > MAX_WALK_DEPTH) return;
-    let entries;
-    try {
-      entries = fs.readdirSync(dirRel ? path.join(root, dirRel) : root, { withFileTypes: true });
-    } catch {
-      return;
-    }
-    entries.sort((left, right) => (left.name < right.name ? -1 : left.name > right.name ? 1 : 0));
-    for (const entry of entries) {
-      if (entry.name.startsWith('.')) continue;
-      const rel = dirRel ? `${dirRel}/${entry.name}` : entry.name;
-      if (entry.isDirectory()) {
-        if (!SKIP_DIRS.has(entry.name)) visit(rel, depth + 1);
-        continue;
-      }
-      if (!entry.isFile() || !SOURCE_FILE.test(entry.name) || DECLARATION_FILE.test(entry.name)) continue;
-      if (governed.has(rel)) continue;
-      if (files.length >= MAX_EXTERNAL_IMPORTER_FILES) capped += 1;
-      else files.push(rel);
-    }
-  };
-  visit('', 0);
-  return { files, capped };
 }
 
 /** A generated copy names the file it was generated from in its header. */
@@ -141,32 +77,6 @@ function generatedSources(rel, text, governed) {
 function inComment(text, index) {
   const prefix = text.slice(text.lastIndexOf('\n', index - 1) + 1, index);
   return /^\s*(?:\*|\/\*|\/\/)/.test(prefix) || /(?:^|[^:'"`])\/\//.test(prefix);
-}
-
-/** Module specifiers of a file. With bindings, named imports keep their names. */
-function fileImports(ts, rel, text, withBindings) {
-  const imports = [];
-  // Static declarations per specifier. preProcessFile also lists dynamic
-  // import() / require() sites: any occurrence past the static ones uses the
-  // whole module, so it counts as '*'.
-  const statics = new Map();
-  if (withBindings) {
-    const sourceFile = ts.createSourceFile(rel, text, ts.ScriptTarget.Latest, false);
-    for (const statement of sourceFile.statements) {
-      const specifier = statement.moduleSpecifier;
-      if (!specifier || !ts.isStringLiteralLike(specifier)) continue;
-      if (!ts.isImportDeclaration(statement) && !ts.isExportDeclaration(statement)) continue;
-      imports.push({ specifier: specifier.text, names: namedModuleBindings(ts, statement) ?? '*' });
-      statics.set(specifier.text, (statics.get(specifier.text) ?? 0) + 1);
-    }
-  }
-  const pre = ts.preProcessFile(text, true, true);
-  for (const item of [...pre.importedFiles, ...pre.referencedFiles]) {
-    const left = statics.get(item.fileName) ?? 0;
-    if (left > 0) statics.set(item.fileName, left - 1);
-    else imports.push({ specifier: item.fileName, names: '*' });
-  }
-  return imports;
 }
 
 /** Exported names, or null when not knowable (`export *`, `export =`, destructuring). */
@@ -201,29 +111,6 @@ function exportedNames(ts, sourceFile) {
     }
   }
   return names;
-}
-
-/**
- * Relative and tsconfig-alias specifiers → a governed file (same lexical
- * resolver as the flat-parent graph and the write hook). Bare packages are
- * never project files.
- */
-function createResolver(ts, root, governed) {
-  const aliases = readTsconfigAliases(ts, root);
-  const memo = new Map();
-  return (specifier, fromRel) => {
-    const key = `${dirOf(fromRel)}\0${specifier}`;
-    if (memo.has(key)) return memo.get(key);
-    let hit = null;
-    try {
-      const rel = resolveSpecifierToRel(specifier, fromRel, root, aliases);
-      hit = rel ? (governed.has(rel) ? rel : probeGoverned(stripExt(rel), governed)) : null;
-    } catch {
-      hit = null;
-    }
-    memo.set(key, hit);
-    return hit;
-  };
 }
 
 /**
@@ -301,8 +188,7 @@ function addUse(namedUse, file, names) {
  * Compact runs resolve only specifiers whose stem matches a candidate.
  */
 function scanOutside({ root, ts, config, governed, candidates, details, governedScan }) {
-  const testGlobs = coverageOptionsFromConfig(config).testGlobs ?? [];
-  const isTest = (rel) => TEST_FILE.test(rel) || testGlobs.some((glob) => matchSimpleGlob(glob, rel));
+  const isTest = testPathMatcher(config);
   const candidateSet = new Set(candidates);
   const stems = new Set();
   const byBase = new Map();
