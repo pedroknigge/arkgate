@@ -168,6 +168,8 @@ or `dist/` except `ark-mcp` loading the built library. Shared CLI logic lives in
 | `src/domain/deepeningCoach.ts` | `bin/lib/deepening-coach.mjs` | (same `cli-pure` scripts); deep-module coach deepening candidates (notAScore) |
 | `src/domain/orphanModules.ts` | `bin/lib/orphan-modules.mjs` | (same `cli-pure` scripts); files nothing imports + unused exports (notAScore; ADR 0037) |
 | `src/domain/cloneDetection.ts` | `bin/lib/clone-detection.mjs` | (same `cli-pure` scripts); copies across a wall: fingerprints, winnowing, families (notAScore; ADR 0038) |
+| `src/domain/invariantProbe.ts` | `bin/lib/invariant-probe.mjs` | (same `cli-pure` scripts); invariant mutation probe: operators, canaries, verdict fold, freshness (not a score; ADR 0039) |
+| `src/domain/invariantProbeSchema.ts` | `schemas/ark.invariant-probe.schema.json` | (same `cli-pure` scripts); `.ark/invariant-probe.json` artifact schema (ADR 0039) |
 | `src/domain/agentProjectionTypes.ts` | `bin/lib/agent-projection-types.mjs` | (same `cli-pure` scripts); Shape split child |
 | `src/domain/agentProjectionFormatters.ts` | `bin/lib/agent-projection-formatters.mjs` | (same `cli-pure` scripts); Shape split child |
 | `src/domain/agentProjectionMerge.ts` | `bin/lib/agent-projection-merge.mjs` | (same `cli-pure` scripts); Shape split child |
@@ -237,6 +239,7 @@ retained shipped rationale live under `docs/plans/`:
 | [observability-tui](docs/plans/observability-tui/README.md) | Shipped in **4.8.8** (`OD01`–`OD04` done; **published**) | ANSI dashboard over loopback inspector JSON; queue summaries and explicit in-memory durability facts. Not a gate verdict; does not close K01 |
 | [orphan-module-advisory](docs/plans/orphan-module-advisory/README.md) | Implemented on the tree (`OM01`–`OM07`; unreleased) | Files nothing imports: doctor Details / JSON / report project the resolved import edges; closed entry sources; `.ark/entry-points.json` sidecar; honest `partial`. Never a gate input ([ADR 0037](docs/adr/0037-orphan-module-advisory.md)) |
 | [cross-wall-duplication](docs/plans/cross-wall-duplication/README.md) | Implemented on the tree (`DU01`–`DU05`; unreleased; `DU06` parked) | Copies across a wall: doctor Details / JSON / report list near-identical code whose copies sit on two sides of a slice wall or in two layers, with a destination hint. Doctor-time token fingerprints, never facts or a gate input ([ADR 0038](docs/adr/0038-cross-wall-duplication-advisory.md)) |
+| [invariant-mutation-probe](docs/plans/invariant-mutation-probe/README.md) | Implemented on the tree (`IP01`–`IP06`; unreleased) | Opt-in `--probe-invariants`: mutate the declared symbol in a temp copy, run only the covering tests with the project's runner; a fresh survived / not-reached artifact refuses promotion. Owner-invoked, outside the gate path; not a score ([ADR 0039](docs/adr/0039-invariant-mutation-probe.md)) |
 | [shared-home-skills-truth](docs/plans/shared-home-skills-truth/README.md) | Superseded (absorbed into 4.6.0 PL06–PL07) | Historical seed only — do not run as a separate 4.5.8 patch train |
 
 Do not treat a plan as authorization to start work until its IDs appear as `doing`/`todo` in

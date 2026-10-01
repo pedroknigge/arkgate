@@ -16,6 +16,7 @@ import {
   invariantIdsFromCatalog,
   loadInvariantCoverageInputs,
 } from './invariant-coverage-io.mjs';
+import { formatProbeStatusLines, probeStatusSection } from './invariant-probe-io.mjs';
 import {
   composeMergePlanesHonesty,
   demoteExtraPlaneTeethUnderClassificationFloor,
@@ -218,6 +219,7 @@ export function summarizeRulesUnderContract(root, config, facts, classification,
     const covById = new Map(
       (coverage.coverage ?? []).map((row) => [row.invariantId, row])
     );
+    const probeSection = probeStatusSection(root, loaded.arkRules.invariants);
     const byLayer = loaded.arkRules.byLayer ?? {};
     const layers = Object.keys(byLayer)
       .sort((a, b) => a.localeCompare(b))
@@ -349,6 +351,8 @@ export function summarizeRulesUnderContract(root, config, facts, classification,
               .rulesMigration,
           }),
       ...(coverageInputs.stats ? { coverageStats: coverageInputs.stats } : {}),
+      // ADR 0039: only when a probe artifact exists — absence stays silent.
+      ...(probeSection ? { probe: probeSection } : {}),
       mergePlanes,
       notAScore: true,
       note: 'ArkRules plane (intra-layer) — counts and catalog, never a score. Green with uncovered residual must say so. Structure sensors are heuristics; invariants are catalog+coverage evidence, not a business runtime.',
@@ -388,6 +392,7 @@ export function formatArkRulesEvidenceLines(section) {
   }
   const discard = formatCoverageDiscards(section.coverageStats);
   if (discard) lines.push(`ArkRules:${discard}`);
+  lines.push(...formatProbeStatusLines(section.probe));
   return lines;
 }
 
@@ -788,6 +793,7 @@ export function buildRulesInventoryPayload(root, config, files) {
         coverageEvidence = {
           symbolEvidence: section.symbolEvidence ?? [],
           discarded: section.coverageStats?.discarded ?? null,
+          ...(section.probe ? { probe: section.probe } : {}),
         };
       }
     } catch {

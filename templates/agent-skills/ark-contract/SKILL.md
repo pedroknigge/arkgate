@@ -52,6 +52,23 @@ If the host supports **parallel subagents**, fan out read-only scouts; otherwise
 2. Path honest and tightening → execute **`/ark-autopilot`**.
 3. One kernel candidate → **`/ark-runtime`**. One order-plane candidate → **`/ark-order`**.
 
+## Promoting an invariant (advisory → enforced)
+
+Promotion goes through one judge. Run `arkgate-check --promote [<id>] --json` first and read
+each invariant row's `blocker`:
+
+- `no-coverage-evidence` — no test title or declared symbol, partial scan, outside
+  `coverage.coverageRoots`, or no roots declared. Write the evidence or the roots (`/ark-adopt`).
+- `probe-survived` — the committed `.ark/invariant-probe.json` shows, for files unchanged
+  since the run, that the covering tests still pass with the rule broken (`survived`) or never
+  call the symbol (`not-reached`). The fix is a **stronger test**, not more evidence text: add
+  the case the line names, then re-run `arkgate-check --probe-invariants=<id> --write` and
+  commit the file. Never delete or hand-edit the artifact to get past the refusal.
+
+The probe runs the project's own tests in a temporary copy; ask the owner before you run it.
+It is opt-in and not a score: a missing, stale, `killed` or `inconclusive` result changes
+nothing. Only then `--promote <id> --apply`.
+
 ## Completion contract (skill incomplete if missing)
 
 Skill incomplete if missing any field below.

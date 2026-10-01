@@ -392,6 +392,7 @@ const FIXTURE_VIEWS = {
   orderdesk: { check: orderdeskCheckView, doctor: doctorView },
   deadwood: { check: checkView, doctor: deadwoodDoctorView },
   copycat: { check: checkView, doctor: copycatDoctorView },
+  probeline: { check: probelineView, doctor: probelineView },
 };
 
 function configRejectionView(stderr) {
@@ -573,6 +574,85 @@ function judgeCopycat(spec, steps) {
     }
     default:
       throw new JourneyError('case', `unknown copycat case kind ${spec.kind}`);
+  }
+}
+
+/** ADR 0039: probe rows and promotion rows, without hashes, durations or the node version. */
+function probelineView(parsed) {
+  if (parsed?.probeInvariants) {
+    const probe = parsed.probeInvariants;
+    requireFields(probe, ['status', 'rows', 'totals'], 'probeInvariants');
+    return {
+      probeInvariants: {
+        status: String(probe.status),
+        notAScore: probe.notAScore === true,
+        runner: probe.runner ? String(probe.runner.id) : null,
+        rows: probe.rows.map((row) => ({
+          invariantId: String(row.invariantId),
+          verdict: String(row.verdict),
+          reason: String(row.reason),
+          symbol: row.symbol ?? null,
+          symbolFile: row.symbolFile ?? null,
+          tests: row.tests.map((test) => String(test.path)),
+          baseline: row.baseline ? String(row.baseline.status) : null,
+          wiring: row.wiring ?? null,
+          mutants: row.mutants.map((mutant) => ({
+            operator: String(mutant.operator),
+            line: mutant.line,
+            original: String(mutant.original),
+            replacement: String(mutant.replacement),
+            status: String(mutant.status),
+          })),
+          line: String(row.line ?? ''),
+        })),
+        totals: probe.totals,
+        written: probe.written ?? null,
+      },
+    };
+  }
+  const promote = parsed?.promote ?? null;
+  if (!promote) return { promote: null };
+  return {
+    promote: {
+      invariants: (promote.rows ?? [])
+        .filter((row) => row.kind === 'invariant')
+        .map((row) => ({
+          id: String(row.id),
+          mode: String(row.mode),
+          promotable: row.promotable === true,
+          blocker: row.blocker ?? null,
+          reason: String(row.reason ?? ''),
+        }))
+        .sort(compareRows(['id'])),
+    },
+  };
+}
+
+function judgeProbeline(spec, steps) {
+  const [report, written, promote] = steps;
+  switch (spec.kind) {
+    case 'probeline-verdict': {
+      const row = report?.output?.probeInvariants?.rows.find((entry) => entry.invariantId === spec.invariantId) ?? null;
+      const got = row ? row.verdict : null;
+      return { met: got === spec.verdict, want: spec.verdict, got };
+    }
+    case 'probeline-files': {
+      const got = { report: report?.filesDiff ?? null, write: written?.filesDiff ?? null };
+      const want = { report: {}, write: { '.ark/invariant-probe.json': 'added' } };
+      return { met: stable(got) === stable(want), want, got };
+    }
+    case 'probeline-promote': {
+      const rows = promote?.output?.promote?.invariants ?? [];
+      const got = Object.fromEntries(
+        Object.keys(spec.want).map((id) => {
+          const row = rows.find((entry) => entry.id === id);
+          return [id, row ? { promotable: row.promotable, blocker: row.blocker } : null];
+        })
+      );
+      return { met: stable(got) === stable(spec.want), want: spec.want, got };
+    }
+    default:
+      throw new JourneyError('case', `unknown probeline case kind ${spec.kind}`);
   }
 }
 
@@ -991,6 +1071,9 @@ function evaluateJourneyCase(spec, steps) {
   }
   if (typeof spec.kind === 'string' && spec.kind.startsWith('copycat-')) {
     return caseResult(spec, judgeCopycat(spec, steps));
+  }
+  if (typeof spec.kind === 'string' && spec.kind.startsWith('probeline-')) {
+    return caseResult(spec, judgeProbeline(spec, steps));
   }
   if (typeof spec.kind === 'string' && spec.kind.startsWith('slicelaw-')) {
     return caseResult(spec, judgeSlicelaw(spec, steps));

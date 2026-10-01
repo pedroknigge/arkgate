@@ -16,6 +16,7 @@ import {
   loadInvariantCoverageInputs,
 } from './invariant-coverage-io.mjs';
 import { evaluateInvariantCoverage } from './invariant-coverage.mjs';
+import { attachProbeEvidence } from './invariant-probe-io.mjs';
 import { attachPolicyAdrNote } from './adr-path.mjs';
 import { collectGovernedFiles } from './scan-files.mjs';
 
@@ -392,7 +393,13 @@ export function analyzePolicyTransition({
       // as `--promote` (sensor-promote-io), so both surfaces judge alike.
       ...(coverageInputs.coverageRoots ? { coverageRoots: coverageInputs.coverageRoots } : {}),
     });
-    candidateInvariantCoverage = evaluated.coverage;
+    // ADR 0039: the same committed probe evidence --promote reads, so both
+    // surfaces refuse alike. Read-only; nothing here runs a test.
+    candidateInvariantCoverage = attachProbeEvidence(
+      root,
+      evaluated.coverage,
+      candidateArkRules.invariants
+    ).rows;
   }
 
   const acknowledgement = readPolicyAcknowledgement(root, acknowledgementPath);

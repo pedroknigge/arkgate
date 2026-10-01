@@ -29,6 +29,11 @@ Missing test globs → analysis `partial`, never covered. Uncovered → `INVARIA
 enforced→advisory or delete is weakening (hash-bound ack). Promoting an uncovered invariant
 is refused deterministically when the promotion gate is used.
 
+Refined by [ADR 0039](0039-invariant-mutation-probe.md): a committed, fresh mutation-probe
+row that says `survived` or `not-reached` is one more refusal. The probe runs only when
+the owner invokes `--probe-invariants`, outside the gate path, and its evidence can only
+subtract promotability.
+
 ### D4 — Freeze interop
 
 ArkRule violations reuse `baselineKey(ruleId, file, …)` with stable arkrule ids.

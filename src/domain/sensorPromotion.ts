@@ -43,12 +43,17 @@ type SensorPlane = 'arkrules' | 'arkrun' | 'arkorder' | 'unknown';
  * - `no-coverage-evidence` — an invariant whose coverage evidence does not
  *   support promotion. The text comes from `canPromoteInvariant`, so this
  *   surface and the promotion gate can never disagree.
+ * - `probe-survived` — the committed mutation probe (ADR 0039) shows, freshly,
+ *   that the covering tests still pass with the rule broken, or never call the
+ *   symbol. Same judge (`canPromoteInvariant`), named apart so the owner knows
+ *   the fix is a stronger test, not more evidence text.
  */
 type PromotionBlocker =
   | 'tier-2-advisory-only'
   | 'no-structure-teeth'
   | 'unknown-sensor'
-  | 'no-coverage-evidence';
+  | 'no-coverage-evidence'
+  | 'probe-survived';
 
 export type SensorDescription = {
   sensor: string;
@@ -342,7 +347,7 @@ export function buildSensorMap(input: {
       sourceFile,
       description: nullable(rule.description),
       promotable: verdict.ok,
-      blocker: verdict.ok ? null : 'no-coverage-evidence',
+      blocker: verdict.ok ? null : verdict.blocker ?? 'no-coverage-evidence',
       reason: `${locate(rule.id, sourceFile)}: ${verdict.reason}`,
       coverageEvaluated: rule.coverage != null,
       ...ambiguity(rule.id),

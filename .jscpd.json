@@ -55,6 +55,7 @@
     "**/bin/lib/improvement-compass-types.mjs",
     "**/bin/lib/improvement-compass.mjs",
     "**/bin/lib/invariant-coverage.mjs",
+    "**/bin/lib/invariant-probe.mjs",
     "**/bin/lib/literal-path-drift.mjs",
     "**/bin/lib/orphan-modules.mjs",
     "**/bin/lib/persistence-write-hint.mjs",

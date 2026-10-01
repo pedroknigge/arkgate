@@ -139,6 +139,8 @@ export {
   type MentionContext,
 } from './domain/invariantCoverage';
 
+export { type InvariantProbeSummary } from './domain/invariantProbe';
+
 export {
   buildRulesInventory,
   inventoryToExtractionCard,

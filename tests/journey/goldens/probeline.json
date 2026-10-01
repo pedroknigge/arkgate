@@ -1,0 +1,405 @@
+{
+  "cases": [
+    {
+      "expect": "pass",
+      "got": "killed",
+      "id": "killed",
+      "met": true,
+      "note": "The refund window guard is pinned by a day-30 and a day-31 test: negating the guard, dropping the throw and flipping the comparison are all caught.",
+      "owner": "ADR 0039",
+      "status": "pass",
+      "want": "killed"
+    },
+    {
+      "expect": "pass",
+      "got": "survived",
+      "id": "survived",
+      "met": true,
+      "note": "The order-total test checks the happy path only, so removing the negative-total throw goes unnoticed.",
+      "owner": "ADR 0039",
+      "status": "pass",
+      "want": "survived"
+    },
+    {
+      "expect": "pass",
+      "got": "not-reached",
+      "id": "not-reached",
+      "met": true,
+      "note": "The currency test loads the file (the load canary is caught) but never calls roundToCents (the reach canary is not).",
+      "owner": "ADR 0039",
+      "status": "pass",
+      "want": "not-reached"
+    },
+    {
+      "expect": "pass",
+      "got": "unprobeable",
+      "id": "unprobeable",
+      "met": true,
+      "note": "RefundPolicy is a TypeScript interface: a declaration with no behavior to change.",
+      "owner": "ADR 0039",
+      "status": "pass",
+      "want": "unprobeable"
+    },
+    {
+      "expect": "pass",
+      "got": {
+        "report": {},
+        "write": {
+          ".ark/invariant-probe.json": "added"
+        }
+      },
+      "id": "report-only-then-write",
+      "met": true,
+      "note": "The report changes no file in the project; --write adds only .ark/invariant-probe.json.",
+      "owner": "ADR 0039",
+      "status": "pass",
+      "want": {
+        "report": {},
+        "write": {
+          ".ark/invariant-probe.json": "added"
+        }
+      }
+    },
+    {
+      "expect": "pass",
+      "got": {
+        "INV-TOTAL-SURVIVES": {
+          "blocker": "probe-survived",
+          "promotable": false
+        },
+        "INV-UNREACHED": {
+          "blocker": "probe-survived",
+          "promotable": false
+        },
+        "INV-WINDOW-KILLED": {
+          "blocker": null,
+          "promotable": true
+        }
+      },
+      "id": "promote-reads-probe",
+      "met": true,
+      "note": "--promote refuses the survivor and the unreached invariant with blocker probe-survived, and allows the killed one.",
+      "owner": "ADR 0039",
+      "status": "pass",
+      "want": {
+        "INV-TOTAL-SURVIVES": {
+          "blocker": "probe-survived",
+          "promotable": false
+        },
+        "INV-UNREACHED": {
+          "blocker": "probe-survived",
+          "promotable": false
+        },
+        "INV-WINDOW-KILLED": {
+          "blocker": null,
+          "promotable": true
+        }
+      }
+    }
+  ],
+  "fixture": "probeline",
+  "schemaVersion": 1,
+  "steps": [
+    {
+      "command": "ark-check --probe-invariants --json",
+      "exitCode": 1,
+      "filesDiff": {},
+      "output": {
+        "probeInvariants": {
+          "notAScore": true,
+          "rows": [
+            {
+              "baseline": "green",
+              "invariantId": "INV-TOTAL-SURVIVES",
+              "line": "INV-TOTAL-SURVIVES: the tests still pass when the throw is removed (src/domain/order-total.mjs:5). The test names the rule but does not pin it. Next: add a case that fails when the rule is broken, then re-run with --write.",
+              "mutants": [
+                {
+                  "line": 4,
+                  "operator": "negate-guard",
+                  "original": "total < 0",
+                  "replacement": "!(total < 0)",
+                  "status": "killed"
+                },
+                {
+                  "line": 5,
+                  "operator": "drop-throw",
+                  "original": "throw new Error('order total cannot be negative');",
+                  "replacement": ";",
+                  "status": "survived"
+                },
+                {
+                  "line": 4,
+                  "operator": "flip-comparison",
+                  "original": "<",
+                  "replacement": ">=",
+                  "status": "killed"
+                }
+              ],
+              "reason": "mutant-survived",
+              "symbol": "orderTotal",
+              "symbolFile": "src/domain/order-total.mjs",
+              "tests": [
+                "test/order-total.test.mjs"
+              ],
+              "verdict": "survived",
+              "wiring": {
+                "load": "killed",
+                "reach": "killed"
+              }
+            },
+            {
+              "baseline": null,
+              "invariantId": "INV-TYPE-ONLY",
+              "line": "INV-TYPE-ONLY: RefundPolicy is a declaration with no behavior to change.",
+              "mutants": [],
+              "reason": "declaration-only",
+              "symbol": "RefundPolicy",
+              "symbolFile": "src/domain/refund-policy.ts",
+              "tests": [],
+              "verdict": "unprobeable",
+              "wiring": null
+            },
+            {
+              "baseline": "green",
+              "invariantId": "INV-UNREACHED",
+              "line": "INV-UNREACHED: the tests load src/domain/currency.mjs but never call roundToCents. Next: add a test that calls it, then re-run with --write.",
+              "mutants": [],
+              "reason": "reach-canary-survived",
+              "symbol": "roundToCents",
+              "symbolFile": "src/domain/currency.mjs",
+              "tests": [
+                "test/currency.test.mjs"
+              ],
+              "verdict": "not-reached",
+              "wiring": {
+                "load": "killed",
+                "reach": "survived"
+              }
+            },
+            {
+              "baseline": "green",
+              "invariantId": "INV-WINDOW-KILLED",
+              "line": "INV-WINDOW-KILLED: a covering test fails for every change made to assertRefundWindow (src/domain/refund-window.mjs).",
+              "mutants": [
+                {
+                  "line": 3,
+                  "operator": "negate-guard",
+                  "original": "daysSincePurchase > 30",
+                  "replacement": "!(daysSincePurchase > 30)",
+                  "status": "killed"
+                },
+                {
+                  "line": 4,
+                  "operator": "drop-throw",
+                  "original": "throw new Error('refund window closed');",
+                  "replacement": ";",
+                  "status": "killed"
+                },
+                {
+                  "line": 3,
+                  "operator": "flip-comparison",
+                  "original": ">",
+                  "replacement": "<=",
+                  "status": "killed"
+                }
+              ],
+              "reason": "all-killed",
+              "symbol": "assertRefundWindow",
+              "symbolFile": "src/domain/refund-window.mjs",
+              "tests": [
+                "test/refund-window.test.mjs"
+              ],
+              "verdict": "killed",
+              "wiring": {
+                "load": "killed",
+                "reach": "killed"
+              }
+            }
+          ],
+          "runner": "node",
+          "status": "complete",
+          "totals": {
+            "inconclusive": 0,
+            "killed": 1,
+            "notReached": 1,
+            "probed": 3,
+            "survived": 1,
+            "unprobeable": 1
+          },
+          "written": null
+        }
+      }
+    },
+    {
+      "command": "ark-check --probe-invariants --write --json",
+      "exitCode": 1,
+      "filesDiff": {
+        ".ark/invariant-probe.json": "added"
+      },
+      "output": {
+        "probeInvariants": {
+          "notAScore": true,
+          "rows": [
+            {
+              "baseline": "green",
+              "invariantId": "INV-TOTAL-SURVIVES",
+              "line": "INV-TOTAL-SURVIVES: the tests still pass when the throw is removed (src/domain/order-total.mjs:5). The test names the rule but does not pin it. Next: add a case that fails when the rule is broken, then re-run with --write.",
+              "mutants": [
+                {
+                  "line": 4,
+                  "operator": "negate-guard",
+                  "original": "total < 0",
+                  "replacement": "!(total < 0)",
+                  "status": "killed"
+                },
+                {
+                  "line": 5,
+                  "operator": "drop-throw",
+                  "original": "throw new Error('order total cannot be negative');",
+                  "replacement": ";",
+                  "status": "survived"
+                },
+                {
+                  "line": 4,
+                  "operator": "flip-comparison",
+                  "original": "<",
+                  "replacement": ">=",
+                  "status": "killed"
+                }
+              ],
+              "reason": "mutant-survived",
+              "symbol": "orderTotal",
+              "symbolFile": "src/domain/order-total.mjs",
+              "tests": [
+                "test/order-total.test.mjs"
+              ],
+              "verdict": "survived",
+              "wiring": {
+                "load": "killed",
+                "reach": "killed"
+              }
+            },
+            {
+              "baseline": null,
+              "invariantId": "INV-TYPE-ONLY",
+              "line": "INV-TYPE-ONLY: RefundPolicy is a declaration with no behavior to change.",
+              "mutants": [],
+              "reason": "declaration-only",
+              "symbol": "RefundPolicy",
+              "symbolFile": "src/domain/refund-policy.ts",
+              "tests": [],
+              "verdict": "unprobeable",
+              "wiring": null
+            },
+            {
+              "baseline": "green",
+              "invariantId": "INV-UNREACHED",
+              "line": "INV-UNREACHED: the tests load src/domain/currency.mjs but never call roundToCents. Next: add a test that calls it, then re-run with --write.",
+              "mutants": [],
+              "reason": "reach-canary-survived",
+              "symbol": "roundToCents",
+              "symbolFile": "src/domain/currency.mjs",
+              "tests": [
+                "test/currency.test.mjs"
+              ],
+              "verdict": "not-reached",
+              "wiring": {
+                "load": "killed",
+                "reach": "survived"
+              }
+            },
+            {
+              "baseline": "green",
+              "invariantId": "INV-WINDOW-KILLED",
+              "line": "INV-WINDOW-KILLED: a covering test fails for every change made to assertRefundWindow (src/domain/refund-window.mjs).",
+              "mutants": [
+                {
+                  "line": 3,
+                  "operator": "negate-guard",
+                  "original": "daysSincePurchase > 30",
+                  "replacement": "!(daysSincePurchase > 30)",
+                  "status": "killed"
+                },
+                {
+                  "line": 4,
+                  "operator": "drop-throw",
+                  "original": "throw new Error('refund window closed');",
+                  "replacement": ";",
+                  "status": "killed"
+                },
+                {
+                  "line": 3,
+                  "operator": "flip-comparison",
+                  "original": ">",
+                  "replacement": "<=",
+                  "status": "killed"
+                }
+              ],
+              "reason": "all-killed",
+              "symbol": "assertRefundWindow",
+              "symbolFile": "src/domain/refund-window.mjs",
+              "tests": [
+                "test/refund-window.test.mjs"
+              ],
+              "verdict": "killed",
+              "wiring": {
+                "load": "killed",
+                "reach": "killed"
+              }
+            }
+          ],
+          "runner": "node",
+          "status": "complete",
+          "totals": {
+            "inconclusive": 0,
+            "killed": 1,
+            "notReached": 1,
+            "probed": 3,
+            "survived": 1,
+            "unprobeable": 1
+          },
+          "written": ".ark/invariant-probe.json"
+        }
+      }
+    },
+    {
+      "command": "ark-check --promote --json --no-cache",
+      "exitCode": 0,
+      "filesDiff": {},
+      "output": {
+        "promote": {
+          "invariants": [
+            {
+              "blocker": "probe-survived",
+              "id": "INV-TOTAL-SURVIVES",
+              "mode": "advisory",
+              "promotable": false,
+              "reason": "Rule \"INV-TOTAL-SURVIVES\" (declared in arkrules/Domain.json): Invariant INV-TOTAL-SURVIVES: the mutation probe shows the covering tests do not pin it (the throw is removed at line 5); strengthen the test and re-run --probe-invariants --write before promoting."
+            },
+            {
+              "blocker": null,
+              "id": "INV-TYPE-ONLY",
+              "mode": "advisory",
+              "promotable": true,
+              "reason": "Rule \"INV-TYPE-ONLY\" (declared in arkrules/Domain.json): Invariant INV-TYPE-ONLY has coverage evidence."
+            },
+            {
+              "blocker": "probe-survived",
+              "id": "INV-UNREACHED",
+              "mode": "advisory",
+              "promotable": false,
+              "reason": "Rule \"INV-UNREACHED\" (declared in arkrules/Domain.json): Invariant INV-UNREACHED: the covering tests load the file but never call the declared symbol (mutation probe: not reached); add a test that calls it and re-run --probe-invariants --write before promoting."
+            },
+            {
+              "blocker": null,
+              "id": "INV-WINDOW-KILLED",
+              "mode": "advisory",
+              "promotable": true,
+              "reason": "Rule \"INV-WINDOW-KILLED\" (declared in arkrules/Domain.json): Invariant INV-WINDOW-KILLED has coverage evidence."
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

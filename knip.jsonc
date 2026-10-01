@@ -69,6 +69,7 @@
     "bin/lib/improvement-compass-types.mjs": ["exports", "types"],
     "bin/lib/improvement-compass.mjs": ["exports", "types"],
     "bin/lib/invariant-coverage.mjs": ["exports", "types"],
+    "bin/lib/invariant-probe.mjs": ["exports", "types"],
     "bin/lib/literal-path-drift.mjs": ["exports", "types"],
     "bin/lib/orphan-modules.mjs": ["exports", "types"],
     "bin/lib/persistence-write-hint.mjs": ["exports", "types"],

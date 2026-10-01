@@ -599,6 +599,65 @@ describe('AR09–AR11 invariant coverage + promotion', () => {
     expect(gate.reason).toMatch(/covered only by a test, outside the declared coverage roots/);
   });
 
+  describe('probe evidence can only subtract promotability (ADR 0039)', () => {
+    const covered = {
+      invariantId: 'INV-ORDER-001',
+      layer: 'DomainModel',
+      sourceFile: 'arkrules/DomainModel.json',
+      mode: 'advisory' as const,
+      covered: true,
+      evidence: ['test-title' as const],
+      partial: false,
+      description: 'Order total never negative',
+    };
+    const survivor = { operator: 'drop-throw' as const, line: 14, original: 'throw err;', replacement: ';' };
+
+    it('refuses a fresh survived probe with the probe blocker and the survivor line', () => {
+      const gate = canPromoteInvariant({
+        ...covered,
+        probe: { verdict: 'survived', reason: 'mutant-survived', fresh: true, survivors: [survivor] },
+      });
+      expect(gate).toEqual({
+        ok: false,
+        reason: expect.stringMatching(/INV-ORDER-001: the mutation probe shows the covering tests do not pin it .*line 14/),
+        blocker: 'probe-survived',
+      });
+    });
+
+    it('refuses a fresh not-reached probe with the probe blocker', () => {
+      const gate = canPromoteInvariant({
+        ...covered,
+        probe: { verdict: 'not-reached', reason: 'reach-canary-survived', fresh: true, survivors: [] },
+      });
+      expect(gate.ok).toBe(false);
+      expect(gate.blocker).toBe('probe-survived');
+      expect(gate.reason).toMatch(/never call the declared symbol \(mutation probe: not reached\)/);
+    });
+
+    it('ignores stale, killed, inconclusive and absent probe evidence', () => {
+      const expected = { ok: true, reason: 'Invariant INV-ORDER-001 has coverage evidence.' };
+      expect(canPromoteInvariant(covered)).toEqual(expected);
+      expect(
+        canPromoteInvariant({
+          ...covered,
+          probe: { verdict: 'survived', reason: 'mutant-survived', fresh: false, survivors: [survivor] },
+        })
+      ).toEqual(expected);
+      expect(
+        canPromoteInvariant({
+          ...covered,
+          probe: { verdict: 'killed', reason: 'all-killed', fresh: true, survivors: [] },
+        })
+      ).toEqual(expected);
+      expect(
+        canPromoteInvariant({
+          ...covered,
+          probe: { verdict: 'inconclusive', reason: 'baseline-red', fresh: true, survivors: [] },
+        })
+      ).toEqual(expected);
+    });
+  });
+
   it('refuses promotion of uncovered invariants (AR11)', () => {
     const uncovered = evaluateInvariantCoverage({
       arkRules: catalog(),

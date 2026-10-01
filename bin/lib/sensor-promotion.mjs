@@ -188,7 +188,7 @@ export function buildSensorMap(input) {
             sourceFile,
             description: nullable(rule.description),
             promotable: verdict.ok,
-            blocker: verdict.ok ? null : 'no-coverage-evidence',
+            blocker: verdict.ok ? null : verdict.blocker ?? 'no-coverage-evidence',
             reason: `${locate(rule.id, sourceFile)}: ${verdict.reason}`,
             coverageEvaluated: rule.coverage != null,
             ...ambiguity(rule.id),
