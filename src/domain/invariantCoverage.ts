@@ -14,6 +14,8 @@ import {
   objectLiteralMemberNames,
   scanClassMembers,
 } from './classSourceScan';
+import { probeRefusalReason, verdictRefusesPromotion } from './invariantProbe';
+import type { InvariantProbeSummary } from './invariantProbe';
 // Type-only import erased for CLI generation.
 
 /**
@@ -103,6 +105,13 @@ export type InvariantCoverageEvidence = {
    * so existing promote fixtures stay valid; the evaluator always sets it.
    */
   coverageRootsDeclared?: boolean;
+  /**
+   * Committed mutation-probe evidence for this invariant (ADR 0039), attached
+   * by Tooling when `.ark/invariant-probe.json` has a row. Additive: absent on
+   * every evaluation that has no artifact. Only a fresh `survived` /
+   * `not-reached` changes promotion; every other state changes nothing.
+   */
+  probe?: InvariantProbeSummary;
 };
 
 type InvariantUncoveredKind = 'never-had-tests' | 'tests-disappeared';
@@ -893,7 +902,7 @@ export function evaluateInvariantCoverage(
  */
 export function canPromoteInvariant(
   coverage: InvariantCoverageEvidence | undefined
-): { ok: boolean; reason: string } {
+): { ok: boolean; reason: string; blocker?: 'probe-survived' } {
   if (!coverage) {
     return {
       ok: false,
@@ -937,6 +946,15 @@ export function canPromoteInvariant(
     return {
       ok: false,
       reason: `Declare coverage.coverageRoots in ark.config.json before promoting ${coverage.invariantId} to enforced. Without that, ArkGate cannot tell whether a covering test is one the runner executes.`,
+    };
+  }
+  // ADR 0039 D2: probe evidence can only subtract. A fresh survived or
+  // not-reached row refuses; stale, killed, inconclusive or absent changes nothing.
+  if (coverage.probe?.fresh === true && verdictRefusesPromotion(coverage.probe.verdict)) {
+    return {
+      ok: false,
+      reason: probeRefusalReason(coverage.invariantId, coverage.probe),
+      blocker: 'probe-survived',
     };
   }
   return { ok: true, reason: `Invariant ${coverage.invariantId} has coverage evidence.` };
@@ -1096,4 +1114,22 @@ export function collectMissingCoverageRootsFindings(
       freezable: false,
     },
   ];
+}
+
+/**
+ * Test files whose describe/it/test/context title names `invariant.id` — the
+ * same title matcher coverage uses. Sorted, deduplicated. The probe (ADR 0039)
+ * runs these as covering tests; coverage itself never runs anything.
+ */
+export function testFilesNamingInvariant(
+  invariant: Pick<CoverageInvariant, 'id'>,
+  files: Pick<CoverageFiles, 'fileContents' | 'testFiles'>
+): string[] {
+  const out = new Set<string>();
+  for (const file of files.testFiles ?? []) {
+    const content = files.fileContents[file];
+    if (!content) continue;
+    if (matchTestTitle(content, invariant.id) !== undefined) out.add(normalizePath(file));
+  }
+  return [...out].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
 }

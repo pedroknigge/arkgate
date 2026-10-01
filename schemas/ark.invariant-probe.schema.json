@@ -1,0 +1,368 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://unpkg.com/arkgate@4/schemas/ark.invariant-probe.schema.json",
+  "title": "ArkGate invariant mutation probe",
+  "description": "Per-invariant evidence from arkgate-check --probe-invariants --write. Not a score. A fresh survived or not-reached row refuses promotion to enforced; every other state changes nothing.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "kind",
+    "notAScore",
+    "arkgateVersion",
+    "operatorSet",
+    "runner",
+    "probedOn",
+    "invariants",
+    "totals"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "schemaVersion": {
+      "const": "1.0"
+    },
+    "kind": {
+      "const": "arkgate-invariant-probe"
+    },
+    "notAScore": {
+      "const": true
+    },
+    "arkgateVersion": {
+      "type": "string",
+      "minLength": 1
+    },
+    "operatorSet": {
+      "type": "string",
+      "minLength": 1
+    },
+    "runner": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "version"
+          ],
+          "properties": {
+            "id": {
+              "enum": [
+                "vitest",
+                "jest",
+                "node"
+              ]
+            },
+            "version": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "minLength": 1
+            }
+          }
+        }
+      ]
+    },
+    "probedOn": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "invariants": {
+      "type": "array",
+      "maxItems": 500,
+      "items": {
+        "$ref": "#/$defs/row"
+      }
+    },
+    "totals": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "probed",
+        "killed",
+        "survived",
+        "notReached",
+        "inconclusive",
+        "unprobeable"
+      ],
+      "properties": {
+        "probed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "killed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "survived": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "notReached": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "inconclusive": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unprobeable": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  },
+  "$defs": {
+    "row": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "invariantId",
+        "invariantHash",
+        "layer",
+        "sourceFile",
+        "mode",
+        "symbol",
+        "symbolFile",
+        "symbolFileHash",
+        "tests",
+        "baseline",
+        "wiring",
+        "mutants",
+        "verdict",
+        "reason"
+      ],
+      "properties": {
+        "invariantId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "invariantHash": {
+          "type": "string",
+          "minLength": 1
+        },
+        "layer": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "sourceFile": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "mode": {
+          "enum": [
+            "advisory",
+            "enforced"
+          ]
+        },
+        "symbol": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "symbolFile": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "symbolFileHash": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "tests": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "path",
+              "contentHash"
+            ],
+            "properties": {
+              "path": {
+                "type": "string",
+                "minLength": 1
+              },
+              "contentHash": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "baseline": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "status",
+                "durationMs"
+              ],
+              "properties": {
+                "status": {
+                  "enum": [
+                    "green",
+                    "red",
+                    "timeout",
+                    "runtime-error"
+                  ]
+                },
+                "durationMs": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              }
+            }
+          ]
+        },
+        "wiring": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "load",
+                "reach"
+              ],
+              "properties": {
+                "load": {
+                  "enum": [
+                    "killed",
+                    "survived",
+                    "timeout",
+                    "runtime-error",
+                    "invalid",
+                    null
+                  ]
+                },
+                "reach": {
+                  "enum": [
+                    "killed",
+                    "survived",
+                    "timeout",
+                    "runtime-error",
+                    "invalid",
+                    null
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        "mutants": {
+          "type": "array",
+          "maxItems": 3,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "operator",
+              "line",
+              "column",
+              "original",
+              "replacement",
+              "status",
+              "durationMs"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "operator": {
+                "enum": [
+                  "negate-guard",
+                  "drop-throw",
+                  "flip-comparison",
+                  "boundary-shift",
+                  "const-shift"
+                ]
+              },
+              "line": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "column": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "original": {
+                "type": "string"
+              },
+              "replacement": {
+                "type": "string"
+              },
+              "status": {
+                "enum": [
+                  "killed",
+                  "survived",
+                  "timeout",
+                  "runtime-error",
+                  "invalid"
+                ]
+              },
+              "durationMs": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        },
+        "verdict": {
+          "enum": [
+            "killed",
+            "survived",
+            "not-reached",
+            "inconclusive",
+            "unprobeable"
+          ]
+        },
+        "reason": {
+          "enum": [
+            "all-killed",
+            "mutant-survived",
+            "reach-canary-survived",
+            "baseline-red",
+            "baseline-timeout",
+            "runner-error",
+            "file-not-loaded",
+            "mutant-runtime-error",
+            "no-symbol",
+            "declaration-only",
+            "symbol-not-found",
+            "no-covering-test",
+            "no-site"
+          ]
+        }
+      }
+    }
+  }
+}

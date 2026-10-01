@@ -75,6 +75,8 @@
     "./schema/ark.arkrules.schema.json": "./schemas/ark.arkrules.schema.json",
     "./schema/status-manifest": "./schemas/ark.status-manifest.schema.json",
     "./schema/ark.status-manifest.schema.json": "./schemas/ark.status-manifest.schema.json",
+    "./schema/invariant-probe": "./schemas/ark.invariant-probe.schema.json",
+    "./schema/ark.invariant-probe.schema.json": "./schemas/ark.invariant-probe.schema.json",
     "./package.json": "./package.json"
   },
   "typesVersions": {

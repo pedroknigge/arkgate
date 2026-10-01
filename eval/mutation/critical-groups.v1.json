@@ -173,28 +173,28 @@
     },
     {
       "id": "invariant-promote-honesty",
-      "note": "DF04: canPromoteInvariant refuses partial/uncovered/missing; never invents green promote. #307/#310 inserted classifyCoverage above it, and #322 inserted declaration-miss above it, so the pin moved with the function (844-885). Same decisions.",
+      "note": "DF04: canPromoteInvariant refuses partial/uncovered/missing; never invents green promote. #307/#310 inserted classifyCoverage above it, and #322 inserted declaration-miss above it, so the pin moved with the function (844-885). ADR 0039 added the optional probe field and one refusal at the end (903-961). Same decisions.",
       "targets": [
         {
           "file": "src/domain/invariantCoverage.ts",
-          "startLine": 894,
-          "endLine": 943
+          "startLine": 903,
+          "endLine": 961
         }
       ]
     },
     {
       "id": "invariant-coverage-message-honesty",
-      "note": "The coverage verdict is only as good as its sentence: formatCoverageDiscards and budgetDetail carry every discard reason and the knob that raises the cap. #307/#310 inserted classifyCoverage above both, and #322 inserted declaration-miss above budgetDetail, so the pins moved with formatCoverageDiscards (228-247) and budgetDetail (711-715). Same decisions, not the classifier.",
+      "note": "The coverage verdict is only as good as its sentence: formatCoverageDiscards and budgetDetail carry every discard reason and the knob that raises the cap. #307/#310 inserted classifyCoverage above both, and #322 inserted declaration-miss above budgetDetail, so the pins moved with formatCoverageDiscards (228-247) and budgetDetail (711-715); ADR 0039's optional probe field moved them again (244-263, 764-768). Same decisions, not the classifier.",
       "targets": [
         {
           "file": "src/domain/invariantCoverage.ts",
-          "startLine": 235,
-          "endLine": 254
+          "startLine": 244,
+          "endLine": 263
         },
         {
           "file": "src/domain/invariantCoverage.ts",
-          "startLine": 755,
-          "endLine": 759
+          "startLine": 764,
+          "endLine": 768
         }
       ]
     },

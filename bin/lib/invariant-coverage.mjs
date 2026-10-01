@@ -9,6 +9,7 @@
  */
 
 import { findClassDeclarations, findMemberContainers, objectLiteralMemberNames, scanClassMembers, } from './class-source-scan.mjs';
+import { probeRefusalReason, verdictRefusesPromotion } from './invariant-probe.mjs';
 /** Adopted + catalogued invariants, but no declared tests path (P2 §10). */
 export const INVARIANT_TESTS_PATH_RULE_ID = 'INVARIANT_TESTS_PATH_MISSING';
 export const INVARIANT_TESTS_PATH_MESSAGE = 'This project is adopted and has domain invariants, but ark.config.json does not name a real tests path. Add coverage.testGlobs or coverage.coverageRoots pointing at the folder where those tests live, then re-run. Without that path, coverage is an empty checkbox.';
@@ -672,6 +673,15 @@ export function canPromoteInvariant(coverage) {
             reason: `Declare coverage.coverageRoots in ark.config.json before promoting ${coverage.invariantId} to enforced. Without that, ArkGate cannot tell whether a covering test is one the runner executes.`,
         };
     }
+    // ADR 0039 D2: probe evidence can only subtract. A fresh survived or
+    // not-reached row refuses; stale, killed, inconclusive or absent changes nothing.
+    if (coverage.probe?.fresh === true && verdictRefusesPromotion(coverage.probe.verdict)) {
+        return {
+            ok: false,
+            reason: probeRefusalReason(coverage.invariantId, coverage.probe),
+            blocker: 'probe-survived',
+        };
+    }
     return { ok: true, reason: `Invariant ${coverage.invariantId} has coverage evidence.` };
 }
 function nonEmptyPathStrings(value) {
@@ -779,4 +789,20 @@ export function collectMissingCoverageRootsFindings(input) {
             freezable: false,
         },
     ];
+}
+/**
+ * Test files whose describe/it/test/context title names `invariant.id` — the
+ * same title matcher coverage uses. Sorted, deduplicated. The probe (ADR 0039)
+ * runs these as covering tests; coverage itself never runs anything.
+ */
+export function testFilesNamingInvariant(invariant, files) {
+    const out = new Set();
+    for (const file of files.testFiles ?? []) {
+        const content = files.fileContents[file];
+        if (!content)
+            continue;
+        if (matchTestTitle(content, invariant.id) !== undefined)
+            out.add(normalizePath(file));
+    }
+    return [...out].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
 }
