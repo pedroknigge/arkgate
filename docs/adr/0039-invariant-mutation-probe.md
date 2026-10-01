@@ -1,6 +1,6 @@
 # ADR 0039: Invariant mutation probe (owner-invoked, outside the gate path)
 
-- **Status:** Accepted (`IP01`)
+- **Status:** Accepted (`IP01`); implemented by `IP02`–`IP06`
 - **Date:** 2026-09-30
 - **Owner:** product (Pedro) + ArkGate maintainers
 - **Decision scope:** Phase IP / IP01 — an opt-in command that mutates the

@@ -6,6 +6,35 @@ in the immutable pre-2.0 archive linked below.
 ## Unreleased
 
 ### Added
+- `arkgate-check --probe-invariants[=<id>]` checks that the tests covering an
+  invariant actually pin it. A test title that names the rule proves the test
+  exists, not that it would fail if the rule broke. For each invariant with a
+  `coverage.symbol`, the probe copies the project to a temporary folder and
+  runs only the covering tests (titles that name the id, and tests that import
+  the symbol's file) with your own runner — vitest, jest or `node --test`:
+  unchanged, then with the file throwing on load, then with the symbol
+  throwing when called, then with at most three small changes inside it
+  (negate a guard, drop a `throw`, flip or shift a comparison, shift a
+  constant). Each invariant reads `killed`, `survived`, `not-reached`,
+  `inconclusive` or `unprobeable`, with the change that went unnoticed and the
+  line. Your files are never changed. Report by default; `--write` saves
+  `.ark/invariant-probe.json` (new schema export `arkgate/schema/invariant-probe`).
+  Exit 0 when nothing survived, 1 when something did, 2 when it could not run.
+  Not a score.
+- Promotion reads the committed probe result. When `.ark/invariant-probe.json`
+  has a fresh `survived` or `not-reached` row — the symbol file, its covering
+  tests and the invariant unchanged since the run — `--promote` and the policy
+  delta refuse to promote that invariant to `enforced` (blocker
+  `probe-survived`). A stale, `killed`, `inconclusive` or missing result
+  changes nothing, so every promotion without the file behaves as before.
+  Status and `--rules-inventory` show the probe state per invariant when the
+  file exists; new catalog id `INVARIANT_PROBE_SURVIVED` (advisory, never in
+  the check). The probe runs only when you start it: never from the write
+  hook, MCP, ESLint, the GitHub Action or `--strict-merge`, and it refuses to
+  combine with them. The runner gets a short environment allowlist (no
+  tokens); that is best effort, not a sandbox. No config key, no new skill;
+  `/ark-contract` and `/ark-coverage` explain the blocker and the next test to
+  write.
 - Status lists code copied across a wall. When a slice wall denies an import,
   the cheapest way around it is a copy, and a copy is not an import.
   `--doctor --all`, the HTML report and `--doctor --all --json` (under

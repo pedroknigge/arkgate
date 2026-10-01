@@ -1,0 +1,30 @@
+{
+  "schemaVersion": "1.0",
+  "layer": "Domain",
+  "invariants": [
+    {
+      "id": "INV-WINDOW-KILLED",
+      "description": "A refund is refused after the 30-day window.",
+      "coverage": { "symbol": "assertRefundWindow" },
+      "mode": "advisory"
+    },
+    {
+      "id": "INV-TOTAL-SURVIVES",
+      "description": "An order total is never negative.",
+      "coverage": { "symbol": "orderTotal" },
+      "mode": "advisory"
+    },
+    {
+      "id": "INV-UNREACHED",
+      "description": "Amounts are rounded to whole cents.",
+      "coverage": { "symbol": "roundToCents" },
+      "mode": "advisory"
+    },
+    {
+      "id": "INV-TYPE-ONLY",
+      "description": "A refund policy names its window and whether partial refunds are allowed.",
+      "coverage": { "test": false, "symbol": "RefundPolicy" },
+      "mode": "advisory"
+    }
+  ]
+}

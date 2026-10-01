@@ -621,6 +621,9 @@ block a promotion, and the surface names which one fired:
 - **`no-coverage-evidence`** — an invariant whose evidence does not support
   promotion. The text is `canPromoteInvariant`'s own, so this surface can never
   promise a promotion the gate then refuses.
+- **`probe-survived`** — the committed invariant probe shows the covering tests
+  still pass with the rule broken, or never call it. Same judge; named apart
+  because the fix is a stronger test. See [Probe an invariant](#probe-an-invariant).
 
 It needs no TypeScript and runs no analysis: the contract, the ArkRules
 documents it points at, and the coverage evidence walk (a filesystem walk plus a
@@ -674,6 +677,63 @@ one comes back pretty-printed, because the write is a JSON round-trip rather
 than a targeted text edit. Exit 0 for a preview or a successful write, 1 for an
 unknown rule id or a refused write, 2 for bad arguments or ArkRules references
 that will not load.
+
+### Probe an invariant
+
+A test title that names an invariant counts as coverage. That proves the test
+exists, not that it would fail if the rule broke. The probe checks that, on
+request:
+
+```bash
+npx arkgate-check --probe-invariants                 # every invariant with a coverage.symbol
+npx arkgate-check --probe-invariants=INV-REFUND-WINDOW
+npx arkgate-check --probe-invariants --write         # save .ark/invariant-probe.json
+npx arkgate-check --probe-invariants --runner vitest # only when the runner is unclear
+```
+
+```text
+INV-REFUND-WINDOW: the tests still pass when the guard is negated (src/domain/refunds/refundPolicy.ts:14).
+The test names the rule but does not pin it. Next: add a case that fails when the rule is broken, then re-run with --write.
+```
+
+For each invariant with a `coverage.symbol`, it copies the project to a
+temporary folder, then runs only the covering tests (titles that name the id,
+and tests that import the symbol's file), with your own runner (vitest, jest or
+`node --test`):
+
+1. unchanged — they must pass;
+2. with the file throwing on load — a test must fail, or the copy is not the one
+   the tests load (`inconclusive`);
+3. with the symbol throwing when called — a test must fail, or the tests never
+   call it (`not-reached`);
+4. with at most three small changes inside the symbol (negate a guard, drop a
+   `throw`, flip or shift a comparison, shift a constant) — each must make a test
+   fail, or the change went unnoticed (`survived`).
+
+Every row reads `killed`, `survived`, `not-reached`, `inconclusive` or
+`unprobeable` (no symbol, a type or interface, no covering test — a declaration
+is not a test). It is not a score.
+
+**Your files are never changed.** Every change happens in the copy, which is
+removed when the run ends, including on Ctrl-C. `--write` adds only
+`.ark/invariant-probe.json`. Exit 0 when nothing survived or went unreached,
+1 when something did, 2 when it could not run (`reasonCode` in the JSON).
+
+**What the result can do.** Only refuse. When the committed file has a fresh
+`survived` or `not-reached` row, `--promote` and the policy delta refuse to
+promote that invariant to `enforced` (blocker `probe-survived`). Fresh means
+the symbol file, every covering test and the invariant are unchanged since the
+run; anything else is stale and changes nothing, like `killed`, `inconclusive`
+or no file at all. Status and `--rules-inventory` show the state per invariant
+(`INVARIANT_PROBE_SURVIVED` when it refuses). CI sees the refusal only if you
+commit the file.
+
+**Trust.** Running the probe runs your tests, exactly like `npm test`; you start
+it, nothing else does. It never runs from the write hook, MCP, ESLint, the
+GitHub Action or `--strict-merge`, and refuses to combine with them. The runner
+gets a short list of environment variables (no tokens, proxies pointed at a
+dead port, `HOME` and the temp folder inside the copy). That is best effort,
+not a sandbox.
 
 ### Literal path drift after a rename (`--path-drift`)
 

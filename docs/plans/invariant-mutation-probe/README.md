@@ -5,7 +5,7 @@
 > [ROADMAP.md](../../../ROADMAP.md). Hub: [AGENTS.md](../../../AGENTS.md) ·
 > [Package surface](../../package-surface.md) · [ADR index](../../adr/README.md)
 
-**Status:** Plan lock (`IP01` done; `IP02`–`IP06` queued).<br>
+**Status:** Implemented on the tree (`IP01`–`IP06` done; not yet released).<br>
 **Slug:** `invariant-mutation-probe`<br>
 **Kind:** epic / opt-in slow command, evidence for ArkRules promotion<br>
 **Prefix:** `IP`<br>

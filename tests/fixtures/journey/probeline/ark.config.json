@@ -1,0 +1,21 @@
+{
+  "$schema": "https://unpkg.com/arkgate@4/schemas/ark.config.schema.json",
+  "schemaVersion": "1.3",
+  "name": "probeline",
+  "include": ["src"],
+  "layers": [
+    {
+      "name": "Domain",
+      "description": "Refund, order and currency rules. No I/O.",
+      "patterns": ["src/domain/**"]
+    }
+  ],
+  "rules": [],
+  "coverage": {
+    "testGlobs": ["test/**/*.test.mjs"],
+    "coverageRoots": ["test"]
+  },
+  "arkRules": {
+    "Domain": "arkrules/Domain.json"
+  }
+}
