@@ -15,18 +15,33 @@
 
 /** Versioned, closed operator set. Changing an operator changes this id. */
 export const INVARIANT_PROBE_OPERATOR_SET = 'ip-ops@1' as const;
-export const INVARIANT_PROBE_SCHEMA_VERSION = '1.0' as const;
-export const INVARIANT_PROBE_KIND = 'arkgate-invariant-probe' as const;
-/** Project-relative path of the persisted artifact (`--write`). */
+const INVARIANT_PROBE_SCHEMA_VERSION = '1.0' as const;
+const INVARIANT_PROBE_KIND = 'arkgate-invariant-probe' as const;
+/**
+ * Project-relative path of the persisted artifact (`--write`).
+ * @cliMirror bin/lib/invariant-probe-cli.mjs
+ */
 export const INVARIANT_PROBE_ARTIFACT_PATH = '.ark/invariant-probe.json' as const;
-export const INVARIANT_PROBE_MAX_MUTANTS = 3;
+const INVARIANT_PROBE_MAX_MUTANTS = 3;
+/**
+ * Targets per run; truncation is stated.
+ * @cliMirror bin/lib/invariant-probe-cli.mjs
+ */
 export const INVARIANT_PROBE_MAX_TARGETS = 25;
+/**
+ * Covering tests per target.
+ * @cliMirror bin/lib/invariant-probe-cli.mjs
+ */
 export const INVARIANT_PROBE_MAX_TESTS = 8;
 /** Reader bounds for the committed artifact. */
-export const INVARIANT_PROBE_MAX_ROWS = 500;
+const INVARIANT_PROBE_MAX_ROWS = 500;
+/**
+ * Largest artifact the reader opens.
+ * @cliMirror bin/lib/invariant-probe-io.mjs
+ */
 export const INVARIANT_PROBE_MAX_BYTES = 1024 * 1024;
-export const INVARIANT_PROBE_LOAD_MARKER = 'ARK_PROBE_LOAD';
-export const INVARIANT_PROBE_REACH_MARKER = 'ARK_PROBE_REACH';
+const INVARIANT_PROBE_LOAD_MARKER = 'ARK_PROBE_LOAD';
+const INVARIANT_PROBE_REACH_MARKER = 'ARK_PROBE_REACH';
 
 /** Priority order: guard-family operators first, constants last. */
 export const INVARIANT_PROBE_OPERATORS = [
@@ -36,7 +51,7 @@ export const INVARIANT_PROBE_OPERATORS = [
   'boundary-shift',
   'const-shift',
 ] as const;
-export type ProbeOperator = (typeof INVARIANT_PROBE_OPERATORS)[number];
+type ProbeOperator = (typeof INVARIANT_PROBE_OPERATORS)[number];
 
 export const INVARIANT_PROBE_VERDICTS = [
   'killed',
@@ -75,10 +90,10 @@ export const INVARIANT_PROBE_RUN_STATUSES = [
 export type ProbeRunStatus = (typeof INVARIANT_PROBE_RUN_STATUSES)[number];
 
 export const INVARIANT_PROBE_BASELINE_STATUSES = ['green', 'red', 'timeout', 'runtime-error'] as const;
-export type ProbeBaselineStatus = (typeof INVARIANT_PROBE_BASELINE_STATUSES)[number];
+type ProbeBaselineStatus = (typeof INVARIANT_PROBE_BASELINE_STATUSES)[number];
 
 /** Where Tooling found something to change, inside the declared symbol only. */
-export type ProbeSiteKind = 'guard' | 'throw' | 'comparison' | 'numeric' | 'boolean';
+type ProbeSiteKind = 'guard' | 'throw' | 'comparison' | 'numeric' | 'boolean';
 
 export type ProbeSite = {
   kind: ProbeSiteKind;
@@ -281,7 +296,7 @@ export function invariantProbeIdentity(invariant: {
   ]);
 }
 
-export type InvariantProbeMutantRecord = {
+type InvariantProbeMutantRecord = {
   id: string;
   operator: ProbeOperator;
   line: number;
@@ -309,7 +324,7 @@ export type InvariantProbeRow = {
   reason: ProbeReason;
 };
 
-export type InvariantProbeTotals = {
+type InvariantProbeTotals = {
   probed: number;
   killed: number;
   survived: number;
@@ -330,7 +345,7 @@ export type InvariantProbeArtifact = {
   totals: InvariantProbeTotals;
 };
 
-export function probeTotals(rows: readonly InvariantProbeRow[]): InvariantProbeTotals {
+function probeTotals(rows: readonly InvariantProbeRow[]): InvariantProbeTotals {
   const count = (verdict: ProbeVerdict) => rows.filter((row) => row.verdict === verdict).length;
   return {
     probed: rows.filter((row) => row.verdict !== 'unprobeable').length,
@@ -391,7 +406,7 @@ export function probeRowStaleness(
   if (operatorSet !== INVARIANT_PROBE_OPERATOR_SET) reasons.push('the operator set changed');
   if (current.invariantHash === null) reasons.push('the invariant is no longer declared');
   else if (current.invariantHash !== row.invariantHash) reasons.push('the invariant changed');
-  if (row.symbolFile !== null && current.symbolFileHash !== row.symbolFileHash) {
+  if (row.symbolFile !== null && row.symbolFileHash !== null && current.symbolFileHash !== row.symbolFileHash) {
     reasons.push(`${row.symbolFile} changed`);
   }
   for (const test of row.tests) {
@@ -498,7 +513,7 @@ export function probeRowLine(row: InvariantProbeRow): string {
 /** Promotion refusal sentence for a fresh survived / not-reached summary. */
 export function probeRefusalReason(invariantId: string, summary: InvariantProbeSummary): string {
   if (summary.verdict === 'not-reached') {
-    return `Invariant ${invariantId}: the covering tests never call the declared symbol (the mutation probe's reach check passed unnoticed); add a test that calls it and re-run --probe-invariants --write before promoting.`;
+    return `Invariant ${invariantId}: the covering tests load the file but never call the declared symbol (mutation probe: not reached); add a test that calls it and re-run --probe-invariants --write before promoting.`;
   }
   const survivor = summary.survivors[0];
   const detail = survivor ? ` (${changeText(survivor)} at line ${survivor.line})` : '';

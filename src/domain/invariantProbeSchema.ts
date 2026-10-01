@@ -6,7 +6,7 @@
  * keeps them equal.
  */
 
-export const ARK_INVARIANT_PROBE_SCHEMA_URL =
+const ARK_INVARIANT_PROBE_SCHEMA_URL =
   'https://unpkg.com/arkgate@4/schemas/ark.invariant-probe.schema.json' as const;
 
 const text = { type: 'string', minLength: 1 } as const;

@@ -24,7 +24,9 @@ export const LOCAL_STRICT_MERGE_MESSAGE =
   '--local cannot be combined with --strict-merge: CI stays the full fail-closed check. Use --local (or ARK_CHECK_LOCAL=1) only on the local / pre-push path.';
 
 export const LOCAL_TREE_MODE_MESSAGE =
-  '--local cannot be combined with report modes that need the whole tree (--doctor, --coverage, --plan, --report, --promote) or with --update-baseline. Use --local --base <ref> for the cheap local check.';
+  '--local cannot be combined with report modes that need the whole tree (--doctor, --coverage, --plan, --report, --promote, --probe-invariants) or with --update-baseline. Use --local --base <ref> for the cheap local check.';
+
+const PROBE_RUNNERS = ['vitest', 'jest', 'node'];
 
 export const UPDATE_BASELINE_SCOPE_MESSAGE =
   '--update-baseline cannot be combined with a changed-files scope (--changed, --local, or a --persona that implies --changed): the baseline is a whole-tree record, and a changed-files scan would overwrite it with only that subset and delete every other frozen key. Drop the scope flag (ARK_CHECK_LOCAL=1 is ignored for a baseline update) and re-run.';
@@ -66,6 +68,7 @@ export function applyLocalCheckMode(args, env = process.env) {
     args.plan && '--plan',
     args.report && '--report',
     args.promote && '--promote',
+    args.probeInvariants && '--probe-invariants',
     args.updateBaseline && '--update-baseline',
   ].filter(Boolean);
   if (args.strictMerge) {
@@ -201,6 +204,24 @@ export function parseArgs(argv, env = process.env) {
         args.promote = next && !next.startsWith('-') ? argv[++i] : true;
       }
     }
+    else if (arg === '--probe-invariants' || arg.startsWith('--probe-invariants=')) {
+      // Same shape as --promote: bare probes every declared invariant; a value
+      // narrows to one id (`=<id>` also carries an id that begins with '-').
+      const eq = arg.indexOf('=');
+      if (eq > 0) {
+        args.probeInvariants = arg.slice(eq + 1) || true;
+      } else {
+        const next = argv[i + 1];
+        args.probeInvariants = next && !next.startsWith('-') ? argv[++i] : true;
+      }
+    }
+    else if (arg === '--runner') {
+      const value = requireValue(arg, i++).trim().toLowerCase();
+      if (!PROBE_RUNNERS.includes(value)) {
+        throw new Error(`--runner must be one of ${PROBE_RUNNERS.join(', ')} (got ${JSON.stringify(value)}).`);
+      }
+      args.runner = value;
+    }
     else if (arg === '--apply') args.apply = true;
     else if (arg === '--recommend') args.recommend = true;
     else if (arg === '--write-plan') args.writePlan = true;
@@ -307,8 +328,49 @@ export function parseArgs(argv, env = process.env) {
       );
     }
   }
+  assertProbeInvariantsAlone(args);
   if (args.updateBaseline && (args.changed || args.local)) {
     throw new Error(UPDATE_BASELINE_SCOPE_MESSAGE);
   }
   return applyLocalCheckMode(args, env);
+}
+
+/**
+ * ADR 0039 D1: the probe runs the project's own tests in a temporary copy, so
+ * it is never part of a check, the merge gate, status, or a changed-files scope.
+ * Every pairing that would put it on one of those paths is refused, and a
+ * report mode that answers first would make it silently do nothing.
+ */
+function assertProbeInvariantsAlone(args) {
+  if (args.runner && !args.probeInvariants) {
+    throw new Error('--runner applies to --probe-invariants. Run `arkgate-check --probe-invariants --runner <id>`.');
+  }
+  if (!args.probeInvariants) return;
+  const gatePaths = [
+    args.local && '--local',
+    args.changed && '--changed',
+    args.strictMerge && '--strict-merge',
+    args.updateBaseline && '--update-baseline',
+    args.doctor && '--doctor',
+  ].filter(Boolean);
+  if (gatePaths.length > 0) {
+    throw new Error(
+      `--probe-invariants cannot be combined with ${gatePaths.join(', ')}: the probe runs your tests in a temporary copy and is never part of a check, the merge gate, or status. Run it on its own.`
+    );
+  }
+  const shadowing = [
+    args.promote && '--promote',
+    args.sensors && '--sensors',
+    args.pathDrift && '--path-drift',
+    args.coverage && '--coverage',
+    args.plan && '--plan',
+    args.report && '--report',
+    args.rulesInventory && '--rules-inventory',
+    args.recommend && '--recommend',
+  ].filter(Boolean);
+  if (shadowing.length > 0) {
+    throw new Error(
+      `--probe-invariants cannot be combined with ${shadowing.join(', ')}: one of them would answer first and the other would silently do nothing. Run them separately.`
+    );
+  }
 }

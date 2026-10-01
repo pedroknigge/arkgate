@@ -1139,6 +1139,14 @@ async function main() {
     return;
   }
 
+  if (args.probeInvariants) {
+    // ADR 0039: owner-invoked, outside the gate path. Loaded only here; parseArgs
+    // refuses every pairing with --strict-merge, --changed, --local or --doctor.
+    const { runProbeInvariants } = await import('./lib/invariant-probe-cli.mjs');
+    await runProbeInvariants(args, readConfig);
+    return;
+  }
+
   if (args.sensors) {
     const { runSensors } = await import('./lib/sensor-promote-cli.mjs');
     await withSensorsPartialModeHonesty(args, () => runSensors(args, readConfig));
