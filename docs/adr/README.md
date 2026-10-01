@@ -57,6 +57,7 @@ Optional extra rules *inside* a layer. Off unless you turn them on.
 | [0013](0013-arkrules-structural-sensors.md) | Closed sensor list. Direct facts block; inference advises. |
 | [0032](0032-writes-via-aggregate-sensor.md) | Application/Feature persistence **writes** belong behind an aggregate + adapter. Advisory default. |
 | [0014](0014-arkrules-invariant-catalog.md) | Invariants are data, not executable code. Advisory until promoted. |
+| [0039](0039-invariant-mutation-probe.md) | Owner-invoked mutation probe runs covering tests in a temp copy, outside the gate path (refines 0014 D3 / 0016). A fresh survived / not-reached artifact refuses promotion; nothing else changes. Not a score. |
 | [0015](0015-arkrules-migration-skills.md) | Deepen, don't mint migration names. Amended by [0036](0036-skill-catalog-product-capacity.md): first-class doors + one-release stubs. |
 | [0016](0016-arkrules-no-executable-core.md) | No user predicates in the gate. No LLM pass/fail. |
 

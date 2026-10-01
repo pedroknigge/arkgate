@@ -110,6 +110,14 @@ lift DF freezes on scores, new skill names, sensors, or LLM verdicts.
   time only, and lists copies whose members sit on two sides of a wall or in two layers.
   Never in facts, `factsHash`, the verdict, the write hook, MCP, ESLint, compact status,
   `--changed`, or `--strict-merge`. Fixed calibrated constants. No config key. No new skill.
+- Running user code from ArkGate ([ADR 0016](docs/adr/0016-arkrules-no-executable-core.md):
+  no arbitrary user code execution in the gate path). **Exception:** Phase **IP**
+  ([invariant mutation probe](docs/plans/invariant-mutation-probe/README.md),
+  [ADR 0039](docs/adr/0039-invariant-mutation-probe.md)) runs the project's own covering
+  tests in a temporary copy, only when the owner invokes `--probe-invariants`. Selective
+  per-invariant evidence — not a mutation score (the "100% mutation" freeze holds). The
+  artifact can only subtract promotability. Never in the write hook, MCP, ESLint,
+  `action.yml`, or `--strict-merge`. No config key. No new skill.
 
 ### Hard lines
 
@@ -640,6 +648,25 @@ Does not close `Z09` / `K01`.
 | 311 | `DU04` | `done` | M | DU03 | Crossing classification + destination hint; `doctor.crossWallDuplication` JSON + Details + HTML parity; `CROSS_WALL_DUPLICATE` / `CROSS_LAYER_DUPLICATE`; journey `copycat` |
 | 312 | `DU05` | `done` | S | DU04 | `doctorAll` memory scenario (500 MiB ceiling; 193 MB at n=2000); self-host zero-noise test; docs + deepen `/ark-place` `/ark-fix`; CHANGELOG |
 | 313 | `DU06` | `parked` | S | DU05 + field demand | Optional `.ark/duplication-acks.json` sidecar with `reviewBy` (contract-smell-acks precedent) |
+
+### Phase IP — Invariant mutation probe
+
+Plan: [docs/plans/invariant-mutation-probe/README.md](docs/plans/invariant-mutation-probe/README.md).
+[ADR 0039](docs/adr/0039-invariant-mutation-probe.md) refines ADR 0014 D3 / ADR 0016: owner-invoked
+execution **outside** the gate path; the artifact can only subtract promotability. Selective
+per-invariant evidence — **not** a mutation score (the "100% mutation" freeze holds). Never in
+the write hook, MCP, ESLint, `action.yml`, or `--strict-merge`. No config key. No new skill.
+New public schema export (`./schema/invariant-probe`): the release train is likely a minor
+(4.9.0); the maintainer confirms. Does not close `Z09` / `K01`.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 314 | `IP01` | `done` | S | CR02 + OM04 | ADR 0039: trust model, asymmetric evidence, hash-bound freshness, wiring canaries, closed operators, `--write` persistence; freeze exception. Plan lock only |
+| 315 | `IP02` | `todo` | M | IP01 | Domain `invariantProbe.ts` + `invariantProbeSchema.ts` → `schemas/ark.invariant-probe.schema.json` + `./schema/invariant-probe` export; `testFilesNamingInvariant` |
+| 316 | `IP03` | `todo` | L | IP02 | Tooling sites (AST) + temp workspace (link farm, owner marker, cleanup) + runner adapters vitest/jest/node:test (no shell, group-kill timeout, env allowlist) |
+| 317 | `IP04` | `todo` | M | IP03 | `arkgate-check --probe-invariants[=<id>] [--write] [--json] [--runner]`; check-args conflicts; baseline → load canary → reach canary → mutants; exit 0/1/2 |
+| 318 | `IP05` | `todo` | M | IP04 | `InvariantCoverageEvidence.probe` (additive); `canPromoteInvariant` refuses fresh survived/not-reached; wired in sensor-promote-io + policy-delta-io + doctor ArkRules lines + rules-inventory; `INVARIANT_PROBE_SURVIVED` |
+| 319 | `IP06` | `todo` | M | IP05 | Journey `probeline` (node:test, zero deps); docs (configuration coverage paragraph, agent-guide, package-surface, diagnostics); deepen `/ark-contract` `/ark-coverage`; CHANGELOG |
 
 ### Patch — pre-hook write gate first, MCP prepare fallback (issue #277)
 
