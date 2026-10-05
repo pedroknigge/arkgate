@@ -961,7 +961,7 @@ checker from the ref you pin, so an older ref runs an older checker, and that ch
 config keys (for example `schemaVersion` 1.3, `childSlices`, `sliceIdentity`) with exit 2:
 
 ```yaml
-- uses: pedroknigge/arkgate@v4.8.24 # same version as the arkgate devDependency
+- uses: pedroknigge/arkgate@v4.8.25 # same version as the arkgate devDependency
   with:
     root: .
     config: ark.config.json

@@ -73,7 +73,8 @@ These are **not** the day-to-day product path. They stay in the repo for evidenc
 | Field adoption kit (scaffolding, not closed) | [field/](field/) |
 | Runtime hardening (experimental) | [production-hardening.md](production-hardening.md) |
 
-Current release: [CHANGELOG](../CHANGELOG.md) (`arkgate@4.8.24`; confirm npm with `npm view arkgate@4.8.24 version`; does not close `K01`).
+Current release: [CHANGELOG](../CHANGELOG.md) (`arkgate@4.8.25`; confirm npm with `npm view arkgate@4.8.25 version`; does not close `K01`).
+Prior published: [CHANGELOG](../CHANGELOG.md) (`arkgate@4.8.24`).
 Prior published: [CHANGELOG](../CHANGELOG.md) (`arkgate@4.8.23`).
 Prior published: [CHANGELOG](../CHANGELOG.md) (`arkgate@4.8.22`).
 Prior published: [CHANGELOG](../CHANGELOG.md) (`arkgate@4.8.21`).
