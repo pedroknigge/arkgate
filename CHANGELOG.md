@@ -5,7 +5,14 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+## 4.8.25 — 2026-10-05
+
+**Patch** over **4.8.24**. Weekly accumulate (#342, #344, #345, #346, #347, #348, #349, #350). **Write. Check. Ship.** **No required config migration.** `childSlices.arkRulesFile` and pinned `sliceAliases` need 4.8.25. No `schemaVersion` bump. Does not close `K01` / `Z09`. This mother `ark.config.json` still does **not** turn `arkOrder` on.
+
+**Status: released** (tag `v4.8.25`). Run `npm view arkgate@4.8.25 version` to confirm (#314).
+
 ### Added
+- Per-slice ArkRules file `childSlices.arkRulesFile` and pinned `sliceAliases` (#342, #341).
 - `arkgate-check --probe-invariants[=<id>]` checks that the tests covering an
   invariant actually pin it. A test title that names the rule proves the test
   exists, not that it would fail if the rule broke. For each invariant with a
@@ -112,6 +119,8 @@ in the immutable pre-2.0 archive linked below.
   short phrase templates so the shape is visible. No new skill, schema, or flag.
 
 ### Changed
+- `brace-expansion` is overridden to 5.0.12 (Dependabot medium, quadratic expansion) (#350).
+- Eval fixtures pin Next.js 16.3.6 (#346).
 - The package no longer ships `bin/lib/ark-order-invariants.mjs`, `bin/lib/ark-order-error.mjs`, or `bin/lib/stable-hash.mjs`; no CLI loaded them. ArkOrder invariants still ship in `arkgate/order`. One new generated CLI module, `bin/lib/schema-validation.mjs`, holds the JSON-Schema walker shared by the config and ArkRules contracts.
 - Internal cleanup with no public export or behavior change: about 390 unused internal exports removed (knip) and hand-written copy/paste duplication cut from 1.01% to 0% (jscpd). Maintainers: `npm run check:knip` and `npm run check:duplication` run in the CI build job.
 - Compact `--doctor` names ArkRules only when the `arkRules` map is on
@@ -132,6 +141,7 @@ in the immutable pre-2.0 archive linked below.
   Required CI is still the shared merge line. No new skill, schema, or host.
 
 ### Fixed
+- `writes-via-aggregate` flags tagged-template SQL writes (`UPDATE`, `MERGE`, `TRUNCATE`, including `ONLY`, quoted names, and interpolated tables). Comments, `FOR UPDATE`, and `DO UPDATE SET` stay silent (#344, #343).
 - `--policy-base` and MCP policy-delta now judge an advisory → enforced
   invariant promotion with the declared `coverage.coverageRoots`, the same way
   `--promote` does. Before, a covered promotion with roots declared came out
