@@ -1,0 +1,38 @@
+{
+  "cases": [
+    {
+      "expect": "pass",
+      "got": {
+        "deadline": false,
+        "exitCode": 0,
+        "ok": true,
+        "ruleIds": [],
+        "silentPass": true
+      },
+      "id": "352-outside-config",
+      "met": false,
+      "note": "The contract lives in contract/ and forbids Date.now. --root is target/, whose domain file calls Date.now(). A pass means the gate checked the config folder and never read --root.",
+      "owner": "#352",
+      "status": "fail",
+      "want": {
+        "file": "src/lib/sample/domain/deadline.ts",
+        "silentPass": false
+      }
+    }
+  ],
+  "fixture": "rootbound",
+  "schemaVersion": 1,
+  "steps": [
+    {
+      "command": "ark-check --json --no-cache --strict-config --root target --config contract/ark.config.json",
+      "exitCode": 0,
+      "filesDiff": {},
+      "output": {
+        "completeness": "complete",
+        "diagnostics": [],
+        "ok": true,
+        "valid": true
+      }
+    }
+  ]
+}

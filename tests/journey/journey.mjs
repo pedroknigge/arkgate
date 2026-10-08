@@ -157,13 +157,31 @@ function assertSteps(steps) {
     if (!args.includes('--json')) {
       throw new JourneyError('step', `${commandText(step)} must pass --json`);
     }
+    let rootValue = false;
     for (const arg of args) {
-      if (arg === '--root' || arg === '--watch' || arg === '--open' || arg === '--resident') {
+      if (rootValue) {
+        rootValue = false;
+        if (arg.startsWith('-') || path.isAbsolute(arg) || arg.includes('..') || arg.length === 0) {
+          throw new JourneyError(
+            'step',
+            `${commandText(step)} --root must be a relative path inside the copy (${arg})`
+          );
+        }
+        continue;
+      }
+      if (arg === '--root') {
+        rootValue = true;
+        continue;
+      }
+      if (arg === '--watch' || arg === '--open' || arg === '--resident') {
         throw new JourneyError('step', `${commandText(step)} must stay inside the installed copy`);
       }
       if (path.isAbsolute(arg) || arg.includes('..')) {
         throw new JourneyError('step', `${commandText(step)} must not escape the copy (${arg})`);
       }
+    }
+    if (rootValue) {
+      throw new JourneyError('step', `${commandText(step)} --root needs a path inside the copy`);
     }
   }
 }
@@ -1062,7 +1080,32 @@ function judgeOrderdesk(spec, steps) {
   };
 }
 
+function judgeRootbound(spec, steps) {
+  const step = steps.find((entry) => entry.command.includes('--root')) ?? null;
+  const output = step?.output ?? {};
+  const diagnostics = Array.isArray(output.diagnostics) ? output.diagnostics : [];
+  const deadline = diagnostics.some(
+    (row) => row?.ruleId === 'FORBIDDEN_GLOBAL' && String(row.file ?? '').endsWith(spec.file)
+  );
+  const exitCode = typeof step?.exitCode === 'number' ? step.exitCode : null;
+  const silentPass = exitCode === 0 && output.ok === true && output.configRejected !== true;
+  const got = {
+    exitCode,
+    ok: output.ok === true,
+    silentPass,
+    deadline,
+    ruleIds: diagnostics.map((row) => row.ruleId).sort(),
+  };
+  // A silent pass checked some other tree. The claim holds when that pass is
+  // gone, or when Date.now under --root is the finding.
+  const met = deadline || !silentPass;
+  return { met, want: { file: spec.file, silentPass: false }, got };
+}
+
 function evaluateJourneyCase(spec, steps) {
+  if (typeof spec.kind === 'string' && spec.kind.startsWith('rootbound-')) {
+    return caseResult(spec, judgeRootbound(spec, steps));
+  }
   if (typeof spec.kind === 'string' && spec.kind.startsWith('orderdesk-')) {
     return caseResult(spec, judgeOrderdesk(spec, steps));
   }
