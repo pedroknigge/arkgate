@@ -559,10 +559,12 @@ When `include` matches **zero** TS/JS files, plan/doctor treat that as **not don
 The **verdict path refuses** in that state rather than passing: a plain or `--strict`
 `ark-check` over zero governed files exits 1 with `ANALYSIS_COVERS_NO_FILES`, because
 every rule is vacuously satisfied on an empty set. It fires when source exists under the
-analyzed root and the contract governs none of it, or when the analyzed root is not the
-root you asked for (a contract found outside `--root` makes ArkGate adopt the contract's
-directory). A genuinely greenfield repo — no governable source anywhere under the root
-you asked for — still passes, so `ark init` can land a contract before the code.
+analyzed root and the contract governs none of it. An explicit `--config` path is a file:
+layer patterns resolve against `--root`, including when that file sits outside `--root`.
+Basename walk-up can still adopt a parent `ark.config.json` when `--root` has none; that
+parent contains the directory you named. A genuinely greenfield repo — no governable
+source anywhere under the root you asked for — still passes, so `ark init` can land a
+contract before the code.
 
 "Source exists" is answered by a probe the contract cannot steer: it ignores `exclude`
 (otherwise `exclude: ["**"]` would buy a green), skips dot-directories, never follows a

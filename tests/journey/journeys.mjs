@@ -933,7 +933,7 @@ export const JOURNEY_CASES = Object.freeze({
       owner: '#352',
       expect: 'pass',
       kind: 'rootbound-outside-config',
-      note: 'The contract lives in contract/ and forbids Date.now. --root is target/, whose domain file calls Date.now(). A pass means the gate checked the config folder and never read --root.',
+      note: 'The contract in contract/ forbids Date.now. --root is target/, and deadline.ts calls it. The run reports that finding. Exit 0 with ok true would mean the config folder was checked instead.',
       file: 'src/lib/sample/domain/deadline.ts',
     }),
   ]),

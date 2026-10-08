@@ -160,6 +160,91 @@ describe('findNearestArkConfig / resolveEffectiveProjectRoot', () => {
     expect(payload.coverage?.governed?.totalFiles).toBe(2);
   });
 
+  it('keeps --root when an explicit --config file sits outside it (#352)', () => {
+    const parent = mk();
+    const contract = path.join(parent, 'contract');
+    const target = path.join(parent, 'target');
+    fs.mkdirSync(path.join(contract, 'src', 'lib', 'sample', 'domain'), { recursive: true });
+    fs.mkdirSync(path.join(target, 'src', 'lib', 'sample', 'domain'), { recursive: true });
+    const contractConfig = {
+      $schema: 'https://unpkg.com/arkgate@4/schemas/ark.config.schema.json',
+      schemaVersion: '1.3',
+      name: 'outside-contract',
+      include: ['src'],
+      layers: [
+        {
+          name: 'DomainModel',
+          patterns: ['src/**/domain/**'],
+          forbiddenGlobals: ['Date.now'],
+        },
+      ],
+      rules: [],
+    };
+    fs.writeFileSync(path.join(contract, 'ark.config.json'), `${JSON.stringify(contractConfig)}\n`);
+    fs.writeFileSync(
+      path.join(contract, 'tsconfig.json'),
+      '{ "compilerOptions": { "strict": true } }\n'
+    );
+    fs.writeFileSync(
+      path.join(target, 'tsconfig.json'),
+      '{ "compilerOptions": { "strict": true } }\n'
+    );
+    fs.writeFileSync(
+      path.join(contract, 'src', 'lib', 'sample', 'domain', 'clock.ts'),
+      'export const epoch = (): number => 0;\n'
+    );
+    fs.writeFileSync(
+      path.join(target, 'src', 'lib', 'sample', 'domain', 'deadline.ts'),
+      'export const deadline = (): number => Date.now() + 1000;\n'
+    );
+
+    const absoluteConfig = path.join(contract, 'ark.config.json');
+    const absolute = resolveEffectiveProjectRoot(target, { configName: absoluteConfig });
+    expect(absolute.configFound).toBe(true);
+    expect(absolute.walkedUp).toBe(false);
+    expect(absolute.root).toBe(target);
+    expect(absolute.configRoot).toBe(target);
+    expect(absolute.configPath).toBe(absoluteConfig);
+
+    const previous = process.cwd();
+    let relative: ReturnType<typeof resolveEffectiveProjectRoot>;
+    try {
+      process.chdir(parent);
+      relative = resolveEffectiveProjectRoot(target, { configName: 'contract/ark.config.json' });
+    } finally {
+      process.chdir(previous);
+    }
+    expect(relative!.configFound).toBe(true);
+    expect(relative!.walkedUp).toBe(false);
+    expect(relative!.root).toBe(target);
+    expect(relative!.configPath).toBe(absoluteConfig);
+
+    const arkCheck = path.resolve('bin/ark-check.mjs');
+    const run = spawnSync(
+      process.execPath,
+      [
+        arkCheck,
+        '--root',
+        'target',
+        '--config',
+        'contract/ark.config.json',
+        '--strict-config',
+        '--json',
+        '--no-cache',
+      ],
+      { encoding: 'utf8', cwd: parent, env: { ...process.env, NO_COLOR: '1' } }
+    );
+    expect(run.status, (run.stdout || '') + (run.stderr || '')).toBe(1);
+    const payload = JSON.parse(run.stdout) as {
+      ok?: boolean;
+      violations?: Array<{ ruleId?: string; file?: string; target?: string }>;
+    };
+    expect(payload.ok).toBe(false);
+    const hit = (payload.violations ?? []).find((row) => row.ruleId === 'FORBIDDEN_GLOBAL');
+    expect(hit?.file).toBe('src/lib/sample/domain/deadline.ts');
+    expect(hit?.target).toBe('Date.now');
+  });
+
   it('returns configFound false for true greenfield (no parent config)', () => {
     const root = mk();
     fs.writeFileSync(path.join(root, 'package.json'), '{"name":"gf"}\n');
