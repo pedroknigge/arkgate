@@ -1038,7 +1038,6 @@ function readManifest(root, manifestPath) {
  * Monorepo honesty: when cwd/--root has no ark.config.json, walk parents (bounded).
  * Stamps configRoot / configWalkedUp. Mutates args.root only for read paths, or
  * when --follow-config-root is set on writes (never rewrite parent monorepo by default).
- * An explicit --config path is a file and leaves args.root on the caller's tree.
  * Skip for pure meta commands that never load a project contract.
  */
 function applyConfigRootWalkUp(args) {
