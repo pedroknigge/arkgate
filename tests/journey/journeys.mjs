@@ -46,6 +46,10 @@
  * and a cross-layer copy are listed with their destinations; a same-slice copy
  * is counted, never listed; a generated copy is never fingerprinted; the
  * compact status JSON says `not-run`.
+ *
+ * #352 is `rootbound`: `--config` sits outside `--root`. The contract forbids
+ * `Date.now` and the file under `--root` calls it. A silent pass checked the
+ * config's folder instead.
  */
 const crossParentEdges = Object.freeze([
   Object.freeze({
@@ -213,6 +217,18 @@ export const JOURNEYS = Object.freeze({
     Object.freeze(['ark-check', '--probe-invariants', '--json']),
     Object.freeze(['ark-check', '--probe-invariants', '--write', '--json']),
     Object.freeze(['ark-check', '--promote', '--json', '--no-cache']),
+  ]),
+  rootbound: Object.freeze([
+    Object.freeze([
+      'ark-check',
+      '--json',
+      '--no-cache',
+      '--strict-config',
+      '--root',
+      'target',
+      '--config',
+      'contract/ark.config.json',
+    ]),
   ]),
 });
 
@@ -909,6 +925,16 @@ export const JOURNEY_CASES = Object.freeze({
         'INV-TOTAL-SURVIVES': Object.freeze({ promotable: false, blocker: 'probe-survived' }),
         'INV-UNREACHED': Object.freeze({ promotable: false, blocker: 'probe-survived' }),
       }),
+    }),
+  ]),
+  rootbound: Object.freeze([
+    Object.freeze({
+      id: '352-outside-config',
+      owner: '#352',
+      expect: 'pass',
+      kind: 'rootbound-outside-config',
+      note: 'The contract in contract/ forbids Date.now. --root is target/, and deadline.ts calls it. The run reports that finding. Exit 0 with ok true would mean the config folder was checked instead.',
+      file: 'src/lib/sample/domain/deadline.ts',
     }),
   ]),
 });

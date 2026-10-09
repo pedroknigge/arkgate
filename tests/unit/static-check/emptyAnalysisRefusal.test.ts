@@ -2,12 +2,9 @@
  * An ark-check whose analysis covers zero files must REFUSE, not pass.
  *
  * A green verdict over an empty file set certifies nothing: every rule is
- * vacuously satisfied. Field repro: pointing `--config` at a copy of the
- * contract outside the tree moves the effective root to the copy's directory,
- * every layer pattern matches nothing, and the run printed advisory warnings
- * plus a closing green and exited 0. Under `--strict` it exited 1 for an
- * unrelated reason ("Ark gates are not installed") that never mentioned the
- * empty analysis.
+ * vacuously satisfied. An explicit `--config` path is a file: the run checks
+ * `--root` (#352). A copy of the contract outside that tree still has to
+ * describe `--root`. When it matches nothing there, the refusal names `--root`.
  */
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -449,23 +446,68 @@ describe('ark-check refuses an empty analysis', () => {
     expect(res.status, out.slice(-600)).toBe(0);
   });
 
-  it('field repro: --config copied outside the tree refuses with the real reason', () => {
+  it('a config copy outside --root checks --root (#352)', () => {
     const outside = mk();
     const configCopy = path.join(outside, 'probe.config.json');
     fs.copyFileSync(path.join(repoRoot, 'ark.config.json'), configCopy);
+    const verdict = (stdout: string) => {
+      const payload = JSON.parse(stdout) as { ok?: boolean; valid?: boolean; violations?: unknown[] };
+      return {
+        ok: payload.ok === true,
+        valid: payload.valid === true,
+        violations: payload.violations?.length ?? 0,
+      };
+    };
 
-    const plain = run(['--root', repoRoot, '--config', configCopy], repoRoot);
-    const plainOut = `${plain.stdout || ''}${plain.stderr || ''}`;
-    expect(plain.status, plainOut.slice(-800)).toBe(1);
-    expect(plainOut).toContain(EMPTY_ANALYSIS_RULE_ID);
-    expect(plainOut).not.toMatch(/Ark check passed/);
+    const local = run(
+      ['--root', repoRoot, '--config', 'ark.config.json', '--json', '--no-cache'],
+      repoRoot
+    );
+    const copied = run(
+      ['--root', repoRoot, '--config', configCopy, '--json', '--no-cache'],
+      repoRoot
+    );
+    const copiedOut = `${copied.stdout || ''}${copied.stderr || ''}`;
+    expect(copied.status, copiedOut.slice(-800)).toBe(local.status);
+    expect(verdict(copied.stdout || '')).toEqual(verdict(local.stdout || ''));
+    expect(copiedOut).not.toContain(EMPTY_ANALYSIS_RULE_ID);
+    expect(copiedOut).not.toContain(outside);
+    expect(copiedOut).not.toMatch(/adopted the directory holding/);
 
-    const strict = run(['--root', repoRoot, '--config', configCopy, '--strict'], repoRoot);
+    const strict = run(
+      ['--root', repoRoot, '--config', configCopy, '--strict', '--json', '--no-cache'],
+      repoRoot
+    );
     const strictOut = `${strict.stdout || ''}${strict.stderr || ''}`;
-    expect(strict.status, strictOut.slice(-800)).toBe(1);
-    expect(strictOut).toContain(EMPTY_ANALYSIS_RULE_ID);
-    // The old wrong reason: gates missing in the directory holding the config copy.
+    expect(strict.status, strictOut.slice(-800)).toBe(2);
+    expect(strictOut).toMatch(/Policy config must be inside the Git repository/);
+    expect(strictOut).not.toContain(EMPTY_ANALYSIS_RULE_ID);
     expect(strictOut).not.toMatch(/Ark gates are not installed/);
+    expect(strictOut).not.toMatch(/Ark check passed/);
+  });
+
+  it('an outside config that matches nothing in --root refuses that root', () => {
+    const outside = mk();
+    const root = mk();
+    fs.mkdirSync(path.join(root, 'src'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src', 'a.ts'), 'export const a = 1;\n');
+    const configPath = path.join(outside, 'ark.config.json');
+    fs.writeFileSync(
+      configPath,
+      JSON.stringify({
+        schemaVersion: '1.0',
+        include: ['lib'],
+        layers: [{ name: 'DomainModel', patterns: ['lib/**'] }],
+        rules: [],
+      })
+    );
+    const res = run(['--root', root, '--config', configPath, '--json', '--no-cache'], root);
+    const out = `${res.stdout || ''}${res.stderr || ''}`;
+    expect(res.status, out.slice(-800)).toBe(1);
+    expect(out).toContain(EMPTY_ANALYSIS_RULE_ID);
+    expect(out).toContain(root);
+    expect(out).not.toMatch(/adopted the directory holding/);
+    expect(out).not.toMatch(/Ark check passed/);
   });
 
   it('exits 1 when include matches files that no layer classifies', () => {

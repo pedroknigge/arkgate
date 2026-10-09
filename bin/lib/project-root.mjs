@@ -4,6 +4,12 @@
  * Monorepo honesty (NEW-MONOREPO-CWD-WALKUP): when cwd (or --root) has no
  * ark.config.json, walk parent directories until one is found. Never invent a
  * silent 11-layer / empty ADAPT world while a parent monorepo contract exists.
+ * That ancestor contains the directory the caller named, so the requested tree
+ * stays inside the analysis.
+ *
+ * An explicit --config path (absolute, or any name with a separator) is a file.
+ * Layer patterns resolve against the caller's --root. The file's directory is
+ * never a fallback analysis root (#352).
  *
  * Security (S0 walk-up review):
  * - Split **config discovery root** from **write root**.
@@ -104,11 +110,6 @@ function configNameIsPath(configName) {
   );
 }
 
-function isInsideRoot(root, target) {
-  const rel = path.relative(root, target);
-  return rel === '' || (!rel.startsWith(`..${path.sep}`) && rel !== '..' && !path.isAbsolute(rel));
-}
-
 /**
  * Resolve a nested/absolute --config path without walking parents.
  * `--root examples/app --config examples/app/ark.config.json` must load the nested
@@ -145,7 +146,8 @@ function resolveConfigPathCandidate(startDir, configName) {
  * Walk parents from startDir looking for configName (default ark.config.json).
  * Bounds: filesystem root, max depth, git root, workspaces package root.
  * Config found at a bound root is accepted; walking above a bound is refused.
- * Nested relative --config (`examples/app/ark.config.json`) is a file path, never a walk-up name.
+ * An explicit --config path is a file. The returned root stays `startDir`.
+ * Basename walk-up (`ark.config.json`) may still adopt an ancestor.
  *
  * @param {string} startDir
  * @param {string} [configName='ark.config.json']
@@ -157,26 +159,12 @@ export function findNearestArkConfig(startDir, configName = 'ark.config.json', o
   const boundAtGit = opts.boundAtGitRoot !== false;
   const boundAtWorkspaces = opts.boundAtWorkspacesRoot !== false;
 
-  if (typeof configName === 'string' && path.isAbsolute(configName)) {
-    if (isFile(configName)) {
-      const root = path.dirname(configName);
-      const start = path.resolve(startDir || process.cwd());
-      return { root, configPath: path.resolve(configName), walkedUp: path.resolve(root) !== start };
-    }
-    return null;
-  }
-
   const name = configName || 'ark.config.json';
   if (configNameIsPath(name)) {
     const resolved = resolveConfigPathCandidate(startDir, name);
     if (!resolved) return null;
     const start = path.resolve(startDir || process.cwd());
-    const inside = isInsideRoot(start, resolved);
-    return {
-      root: inside ? start : path.dirname(resolved),
-      configPath: resolved,
-      walkedUp: !inside,
-    };
+    return { root: start, configPath: resolved, walkedUp: false };
   }
 
   let dir = path.resolve(startDir || process.cwd());
@@ -213,9 +201,10 @@ export function findNearestArkConfig(startDir, configName = 'ark.config.json', o
  * Resolve config discovery vs write roots for CLI invocation.
  *
  * - If config exists at startRoot → use startRoot for both.
- * - Else walk parents for config (bounded) → configRoot may differ from writeRoot.
+ * - An explicit --config path keeps `root` at startRoot. The file's directory is not a fallback.
+ * - Else walk parents for a basename config (bounded) → configRoot may differ from writeRoot.
  * - writeMode without followConfigRoot: keep writeRoot/start as `root` (do not rewrite parent).
- * - writeMode + followConfigRoot (or read mode): adopt walked config root as `root`.
+ * - writeMode + followConfigRoot (or read mode): adopt a basename walk-up root as `root`.
  *
  * @param {string} startRoot
  * @param {{

@@ -1,0 +1,47 @@
+{
+  "cases": [
+    {
+      "expect": "pass",
+      "got": {
+        "deadline": true,
+        "exitCode": 1,
+        "ok": false,
+        "ruleIds": [
+          "FORBIDDEN_GLOBAL"
+        ],
+        "silentPass": false
+      },
+      "id": "352-outside-config",
+      "met": true,
+      "note": "The contract in contract/ forbids Date.now. --root is target/, and deadline.ts calls it. The run reports that finding. Exit 0 with ok true would mean the config folder was checked instead.",
+      "owner": "#352",
+      "status": "pass",
+      "want": {
+        "file": "src/lib/sample/domain/deadline.ts",
+        "silentPass": false
+      }
+    }
+  ],
+  "fixture": "rootbound",
+  "schemaVersion": 1,
+  "steps": [
+    {
+      "command": "ark-check --json --no-cache --strict-config --root target --config contract/ark.config.json",
+      "exitCode": 1,
+      "filesDiff": {},
+      "output": {
+        "completeness": "complete",
+        "diagnostics": [
+          {
+            "file": "src/lib/sample/domain/deadline.ts",
+            "message": "DomainModel must not use the ambient global \"Date.now\".",
+            "ruleId": "FORBIDDEN_GLOBAL",
+            "severity": "error"
+          }
+        ],
+        "ok": false,
+        "valid": false
+      }
+    }
+  ]
+}
