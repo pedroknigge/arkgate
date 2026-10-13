@@ -5,8 +5,15 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+## 4.8.26 — 2026-10-13
+
+**Patch** over **4.8.25**. #353 and #354. **Write. Check. Ship.** **No required config migration.** No `schemaVersion` bump. Does not close `K01` / `Z09`. This mother `ark.config.json` still does **not** turn `arkOrder` on.
+
+**Status: released** (tag `v4.8.26`). Run `npm view arkgate@4.8.26 version` to confirm (#314).
+
 ### Fixed
-- `--strict` refuses a `--config` outside the Git repository on trunk.
+- `--root` is always the analyzed tree. `--config` is only a file: an explicit path never replaces `--root` with the config's folder (#353, #352).
+- `--strict` refuses a config outside the Git repository before base-ref discovery, including on the trunk (#354).
 
 ## 4.8.25 — 2026-10-05
 
