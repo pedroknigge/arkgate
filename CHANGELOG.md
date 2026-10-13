@@ -6,7 +6,7 @@ in the immutable pre-2.0 archive linked below.
 ## Unreleased
 
 ### Fixed
-- `--strict` refuses a `--config` file outside the Git repository on the trunk as well as on a feature branch. Base-ref discovery returns nothing on the default branch, so the repository-boundary check never ran and the run could exit 0. A non-strict check, and `--strict-config`, still analyze `--root`.
+- `--strict` refuses a `--config` outside the Git repository on trunk.
 
 ## 4.8.25 — 2026-10-05
 

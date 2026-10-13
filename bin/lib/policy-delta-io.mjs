@@ -355,10 +355,6 @@ export function analyzePolicyTransition({
   acknowledgementPath,
 }) {
   if (!strictMerge && !basePath && !baseRef && !acknowledgementPath) return undefined;
-  // On the trunk, discoverLocalBaseRef returns null (origin/<current> is this
-  // branch), so the boundary inside resolvePolicyBaseConfig never ran and
-  // --strict certified a config that git cannot show. Refuse before discovery.
-  // An explicit --policy-base file is not a git path and stays allowed.
   if (strictMerge && !basePath) {
     const top = repositoryRoot(root);
     if (top) configPathInRepository(root, configPath, top);
@@ -369,10 +365,7 @@ export function analyzePolicyTransition({
   }
   if (!base) return undefined;
 
-  // AR02/AR11: load Effective ArkRules so mode edits inside arkrules/*.json classify,
-  // and attach candidate coverage so covered advisory→enforced can auto-allow.
-  // Base ArkRules come from the SAME source as the base config (git ref or the
-  // base file's directory), never from the candidate working tree.
+  // Base ArkRules come from the base ref or base file, never the candidate tree.
   const baseArkRules = loadBaseArkRules(base);
   const candidateLoad = loadEffectiveArkRulesFromDisk(root, candidateConfig);
   if (candidateLoad.errors.length > 0) {
