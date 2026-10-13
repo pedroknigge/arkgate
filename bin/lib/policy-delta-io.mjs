@@ -355,6 +355,14 @@ export function analyzePolicyTransition({
   acknowledgementPath,
 }) {
   if (!strictMerge && !basePath && !baseRef && !acknowledgementPath) return undefined;
+  // On the trunk, discoverLocalBaseRef returns null (origin/<current> is this
+  // branch), so the boundary inside resolvePolicyBaseConfig never ran and
+  // --strict certified a config that git cannot show. Refuse before discovery.
+  // An explicit --policy-base file is not a git path and stays allowed.
+  if (strictMerge && !basePath) {
+    const top = repositoryRoot(root);
+    if (top) configPathInRepository(root, configPath, top);
+  }
   const base = resolvePolicyBaseConfig({ root, configPath, basePath, baseRef, adoptMissingBase });
   if (!base && (basePath || (baseRef && !adoptMissingBase) || acknowledgementPath)) {
     throw new Error('Policy delta was requested but no policy base could be resolved.');

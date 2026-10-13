@@ -474,6 +474,9 @@ describe('ark-check refuses an empty analysis', () => {
     expect(copiedOut).not.toContain(outside);
     expect(copiedOut).not.toMatch(/adopted the directory holding/);
 
+    // --strict reads a Git predecessor. On the trunk no base ref is discovered,
+    // and the config copy is still outside the repository, so the run refuses
+    // before it can certify that file.
     const strict = run(
       ['--root', repoRoot, '--config', configCopy, '--strict', '--json', '--no-cache'],
       repoRoot

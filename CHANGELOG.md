@@ -5,6 +5,9 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+### Fixed
+- `--strict` refuses a `--config` file outside the Git repository on the trunk as well as on a feature branch. Base-ref discovery returns nothing on the default branch, so the repository-boundary check never ran and the run could exit 0. A non-strict check, and `--strict-config`, still analyze `--root`.
+
 ## 4.8.25 — 2026-10-05
 
 **Patch** over **4.8.24**. Weekly accumulate (#342, #344, #345, #346, #347, #348, #349, #350). **Write. Check. Ship.** **No required config migration.** `childSlices.arkRulesFile` and pinned `sliceAliases` need 4.8.25. No `schemaVersion` bump. Does not close `K01` / `Z09`. This mother `ark.config.json` still does **not** turn `arkOrder` on.
