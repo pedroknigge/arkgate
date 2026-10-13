@@ -355,16 +355,17 @@ export function analyzePolicyTransition({
   acknowledgementPath,
 }) {
   if (!strictMerge && !basePath && !baseRef && !acknowledgementPath) return undefined;
+  if (strictMerge && !basePath) {
+    const top = repositoryRoot(root);
+    if (top) configPathInRepository(root, configPath, top);
+  }
   const base = resolvePolicyBaseConfig({ root, configPath, basePath, baseRef, adoptMissingBase });
   if (!base && (basePath || (baseRef && !adoptMissingBase) || acknowledgementPath)) {
     throw new Error('Policy delta was requested but no policy base could be resolved.');
   }
   if (!base) return undefined;
 
-  // AR02/AR11: load Effective ArkRules so mode edits inside arkrules/*.json classify,
-  // and attach candidate coverage so covered advisory→enforced can auto-allow.
-  // Base ArkRules come from the SAME source as the base config (git ref or the
-  // base file's directory), never from the candidate working tree.
+  // Base ArkRules come from the base ref or base file, never the candidate tree.
   const baseArkRules = loadBaseArkRules(base);
   const candidateLoad = loadEffectiveArkRulesFromDisk(root, candidateConfig);
   if (candidateLoad.errors.length > 0) {

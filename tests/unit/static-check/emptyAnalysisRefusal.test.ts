@@ -446,6 +446,75 @@ describe('ark-check refuses an empty analysis', () => {
     expect(res.status, out.slice(-600)).toBe(0);
   });
 
+  it('strict refuses an outside config on a main checkout', () => {
+    // The arkgate checkout's own branch cannot host this case: on a feature
+    // branch a base ref is discovered and the refusal already runs. A trunk
+    // with origin/main pointing at itself discovers nothing.
+    const root = mk('ark-trunk-strict-');
+    const outside = mk('ark-trunk-strict-out-');
+    fs.mkdirSync(path.join(root, 'src', 'domain'), { recursive: true });
+    fs.mkdirSync(path.join(root, '.github', 'workflows'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src', 'domain', 'order.ts'), 'export const order = 1;\n');
+    fs.writeFileSync(path.join(root, 'package.json'), '{"name":"trunk","private":true}\n');
+    const config = {
+      schemaVersion: '1.0',
+      include: ['src'],
+      layers: [{ name: 'DomainModel', patterns: ['src/domain/**'] }],
+      rules: [],
+    };
+    fs.writeFileSync(path.join(root, 'ark.config.json'), `${JSON.stringify(config)}\n`);
+    fs.writeFileSync(
+      path.join(root, 'AGENTS.md'),
+      '# ArkGate Enforcement\n\nark.config.json is authoritative.\nark-check --strict\n'
+    );
+    fs.writeFileSync(
+      path.join(root, '.github', 'workflows', 'ark.yml'),
+      'name: ark\non: [push]\njobs:\n  ark:\n    runs-on: ubuntu-latest\n    steps:\n      - run: npx arkgate-check --strict\n'
+    );
+    fs.writeFileSync(
+      path.join(root, '.mcp.json'),
+      '{"mcpServers":{"ark":{"command":"npx","args":["arkgate-mcp","--root",".","--config","ark.config.json"]}}}\n'
+    );
+    const git = (args: string[]) => {
+      const result = spawnSync('git', ['-C', root, ...args], {
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          GIT_AUTHOR_NAME: 'ArkGate Test',
+          GIT_AUTHOR_EMAIL: 'arkgate@example.test',
+          GIT_COMMITTER_NAME: 'ArkGate Test',
+          GIT_COMMITTER_EMAIL: 'arkgate@example.test',
+        },
+      });
+      if (result.status !== 0) throw new Error(result.stderr || result.stdout);
+    };
+    git(['init', '-b', 'main']);
+    git(['add', '-A']);
+    git(['commit', '-m', 'base']);
+    git(['update-ref', 'refs/remotes/origin/main', 'HEAD']);
+    git(['symbolic-ref', 'refs/remotes/origin/HEAD', 'refs/remotes/origin/main']);
+    const configCopy = path.join(outside, 'probe.config.json');
+    fs.copyFileSync(path.join(root, 'ark.config.json'), configCopy);
+
+    const local = run(
+      ['--root', root, '--config', 'ark.config.json', '--strict', '--json', '--no-cache'],
+      root
+    );
+    const localOut = `${local.stdout || ''}${local.stderr || ''}`;
+    expect(local.status, localOut.slice(-800)).toBe(0);
+
+    const copied = run(
+      ['--root', root, '--config', configCopy, '--strict', '--json', '--no-cache'],
+      root
+    );
+    const copiedOut = `${copied.stdout || ''}${copied.stderr || ''}`;
+    expect(copied.status, copiedOut.slice(-800)).toBe(2);
+    expect(copiedOut).toMatch(/Policy config must be inside the Git repository/);
+    expect(copiedOut).not.toContain(EMPTY_ANALYSIS_RULE_ID);
+    expect(copiedOut).not.toMatch(/Ark gates are not installed/);
+    expect(copiedOut).not.toMatch(/Ark check passed/);
+  });
+
   it('a config copy outside --root checks --root (#352)', () => {
     const outside = mk();
     const configCopy = path.join(outside, 'probe.config.json');
@@ -474,6 +543,9 @@ describe('ark-check refuses an empty analysis', () => {
     expect(copiedOut).not.toContain(outside);
     expect(copiedOut).not.toMatch(/adopted the directory holding/);
 
+    // --strict reads a Git predecessor. On the trunk no base ref is discovered,
+    // and the config copy is still outside the repository, so the run refuses
+    // before it can certify that file.
     const strict = run(
       ['--root', repoRoot, '--config', configCopy, '--strict', '--json', '--no-cache'],
       repoRoot

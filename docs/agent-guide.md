@@ -560,7 +560,8 @@ The **verdict path refuses** in that state rather than passing: a plain or `--st
 `ark-check` over zero governed files exits 1 with `ANALYSIS_COVERS_NO_FILES`, because
 every rule is vacuously satisfied on an empty set. It fires when source exists under the
 analyzed root and the contract governs none of it. An explicit `--config` path is a file
-and patterns resolve against `--root`. Basename walk-up can still adopt a parent
+and patterns resolve against `--root`. `--strict` exits 2 when that file is outside Git.
+Basename walk-up can still adopt a parent
 `ark.config.json` when `--root` has none. A genuinely greenfield repo — no governable
 source anywhere under the root you asked for — still passes, so `ark init` can land a
 contract before the code.
