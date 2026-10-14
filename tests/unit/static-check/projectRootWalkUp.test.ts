@@ -161,7 +161,7 @@ describe('findNearestArkConfig / resolveEffectiveProjectRoot', () => {
   });
 
   it('keeps --root when an explicit --config file sits outside it (#352)', () => {
-    const parent = mk();
+    const parent = fs.realpathSync(mk());
     const contract = path.join(parent, 'contract');
     const target = path.join(parent, 'target');
     fs.mkdirSync(path.join(contract, 'src', 'lib', 'sample', 'domain'), { recursive: true });

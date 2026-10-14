@@ -98,7 +98,7 @@ function freezeDayZeroOrigin(root) {
 /** Commands that read a non-default contract file via --config. */
 const CONFIG_FLAG_COMMANDS = new Set(['preflight', 'status', 'agents-md', 'agent-projection']);
 
-function parseArgs(argv) {
+export function parseArgs(argv) {
   const args = {
     command: undefined,
     root: process.cwd(),
@@ -119,6 +119,7 @@ function parseArgs(argv) {
     requireWriteHook: undefined,
     expectedRoot: undefined,
     expectedProjectId: undefined,
+    baseline: undefined,
     write: false,
     check: false,
     stdout: false,
@@ -144,6 +145,15 @@ function parseArgs(argv) {
     else if (arg === '--yes' || arg === '-y') args.yes = true;
     else if (arg === '--force') args.force = true;
     else if (arg === '--no-strict') args.strict = false;
+    else if (arg === '--baseline') {
+      const next = argv[i + 1];
+      if (next !== undefined && !next.startsWith('-')) {
+        args.baseline = next;
+        i += 1;
+      } else {
+        args.baseline = '.ark-baseline.json';
+      }
+    }
     else if (arg === '--install') {
       args.install = true;
       args.installExplicit = true;
@@ -369,11 +379,27 @@ async function init(args) {
       if (status !== 0) return status;
     }
 
+    if (args.baseline) {
+      const baselineAbs = path.isAbsolute(args.baseline)
+        ? args.baseline
+        : path.join(root, args.baseline);
+      if (!fs.existsSync(baselineAbs) || args.force) {
+        const baselineStatus = runArkCheck(
+          ['--root', root, '--config', 'ark.config.json', '--write-baseline', args.baseline],
+          { cwd: root }
+        );
+        if (baselineStatus !== 0) return baselineStatus;
+      }
+    }
+
     const runStrict =
       args.strict &&
       (nonInteractive || (await askYesNo(rl, 'Run strict architecture check now?', true)));
     if (runStrict) {
       const strictArgs = ['--root', root, '--config', 'ark.config.json', '--strict-merge'];
+      if (args.baseline) {
+        strictArgs.push('--baseline', args.baseline);
+      }
       if (args.requireWriteHook) {
         strictArgs.push('--require-write-hook', args.requireWriteHook);
       }

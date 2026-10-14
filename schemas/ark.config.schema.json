@@ -699,6 +699,16 @@
           },
           "uniqueItems": true
         },
+        "entrypoints": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "minItems": 1,
+          "description": "Optional public surface globs for this layer. When non-empty, cross-layer imports into this layer must target a file matching one of these globs; deep imports into internal layer files are denied."
+        },
         "intentPrefixes": {
           "type": "array",
           "items": {

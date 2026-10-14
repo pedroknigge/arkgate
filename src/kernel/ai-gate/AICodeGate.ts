@@ -117,7 +117,7 @@ export interface AICodeGateOptions<Context = AICodeGateContext> {
    * Layer configs (patterns) used to infer sliceFolders when a peerIsolation rule
    * omits an explicit list.
    */
-  architectureLayers?: Array<{ name: string; patterns?: string[] }>;
+  architectureLayers?: Array<{ name: string; patterns?: string[]; entrypoints?: string[] }>;
   /** Explicit file-level escape hatch for reviewed non-literal import()/require() calls. */
   allowNonLiteralDynamicImport?: (filePath?: string) => boolean;
 }

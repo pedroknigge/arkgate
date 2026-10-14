@@ -45,7 +45,7 @@ const shared: Options = {
   // inside the release artifact budget. keepNames: Nest/kernel reflection.
   minify: true,
   keepNames: true,
-  treeshake: false,
+  treeshake: true,
   cjsInterop: true,
   target: 'es2022',
   outDir: 'dist',

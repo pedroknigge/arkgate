@@ -22,7 +22,7 @@ export default defineConfig({
   // Minification must not break name-keyed reflection or Nest diagnostics:
   // class/function .name stays stable across ESM/CJS.
   keepNames: true,
-  treeshake: false,
+  treeshake: true,
   cjsInterop: true,
   target: 'es2022',
   outDir: path.join(root, 'packages/runtime/dist'),

@@ -211,6 +211,34 @@ function compareLayers(
       addedMessage: 'Additional paths are excluded from this layer.',
       removedMessage: 'Fewer paths are excluded from this layer.',
     });
+    const prevEntrypoints = sortedUnique(previous.entrypoints);
+    const nextEntrypoints = sortedUnique(candidate.entrypoints);
+    if (prevEntrypoints.length === 0 && nextEntrypoints.length > 0) {
+      addFinding(findings, {
+        kind: 'enabled',
+        path: `${path}.entrypoints`,
+        classification: 'strengthening',
+        message: 'Cross-layer imports into this layer are now restricted to declared entrypoints.',
+        before: prevEntrypoints,
+        after: nextEntrypoints,
+      });
+    } else if (prevEntrypoints.length > 0 && nextEntrypoints.length === 0) {
+      addFinding(findings, {
+        kind: 'disabled',
+        path: `${path}.entrypoints`,
+        classification: 'weakening',
+        message: 'Entrypoint restriction was removed from this layer; deep cross-layer imports are allowed again.',
+        before: prevEntrypoints,
+        after: nextEntrypoints,
+      });
+    } else if (prevEntrypoints.length > 0 && nextEntrypoints.length > 0) {
+      compareStringSets(findings, `${path}.entrypoints`, prevEntrypoints, nextEntrypoints, {
+        added: 'weakening',
+        removed: 'strengthening',
+        addedMessage: 'Additional entrypoints widen the cross-layer import surface of this layer.',
+        removedMessage: 'Fewer entrypoints narrow the cross-layer import surface of this layer.',
+      });
+    }
     // ADR 0009 D6: classify ambient/capability protection on the LOWERED semantic
     // space, never key-by-key — migrating forbiddenGlobals to an equivalent (or
     // stronger) capability wall is neutral. Unlowerable custom globals keep the

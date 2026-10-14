@@ -8,7 +8,7 @@
  * Pure CLI helper (bin/lib/arkrules-sensors.mjs). Zero Node I/O.
  */
 
-import { findClassDeclarations, scanClassMembers } from './class-source-scan.mjs';
+import { findClassDeclarations, maskStringsAndComments, scanClassMembers } from './class-source-scan.mjs';
 import { sourceHasPersistenceWrite, sourceHasTaggedSqlWrite, sourceImportsPersistenceDriverText, } from './persistence-write-hint.mjs';
 /** Keep in lockstep with arkRulesTypes.ARK_RULE_TIER2_SENSOR_IDS (self-contained for CLI gen). */
 const ARK_RULE_TIER2_SENSOR_IDS = ['no-anemic-model'];
@@ -29,6 +29,7 @@ export const DOMAIN_INVARIANT_WORDS = [
 export const DOMAIN_INVARIANT_WORD_RE = new RegExp(`\\b(${DOMAIN_INVARIANT_WORDS.join('|')})\\b`);
 const EVENTS_ARRAY_PROP = '(?:_?pendingEvents|domainEvents|uncommittedEvents|recordedEvents)';
 export const DOMAIN_EVENTS_PUSH_RE = new RegExp(`\\bthis\\.${EVENTS_ARRAY_PROP}\\.push\\s*\\(`);
+const STRUCTURAL_GUARD_CLAUSE_RE = /\bif\s*\([^)]*\)\s*(?:\{[^}]*\bthrow\b|\bthrow\b)/;
 const EVENTS_ARRAY_RESET_RE = new RegExp(`^this\\.${EVENTS_ARRAY_PROP}\\s*=\\s*\\[\\s*\\]`);
 const ANY_THIS_EMPTY_ARRAY_RE = /^this\.[A-Za-z_][A-Za-z0-9_]*\s*=\s*\[\s*\]/;
 const THIS_FIELD_ASSIGNMENT_RE = /\bthis\.[A-Za-z_][A-Za-z0-9_]*\s*=(?!=)/g;
@@ -36,7 +37,10 @@ export function expectedDomainInvariantWordsPhrase() {
     return `${DOMAIN_INVARIANT_WORDS.join(', ')}, or events-array .push(`;
 }
 function referencesGuardOrPublish(source) {
-    return DOMAIN_INVARIANT_WORD_RE.test(source) || DOMAIN_EVENTS_PUSH_RE.test(source);
+    const code = maskStringsAndComments(source);
+    return (DOMAIN_INVARIANT_WORD_RE.test(code) ||
+        DOMAIN_EVENTS_PUSH_RE.test(code) ||
+        STRUCTURAL_GUARD_CLAUSE_RE.test(code));
 }
 export function isIdiomaticEventsReset(source, assignIndex, methodName) {
     const slice = source.slice(assignIndex);
@@ -50,10 +54,11 @@ export function isIdiomaticEventsReset(source, assignIndex, methodName) {
     return /\bpullEvents\b/.test(source.slice(windowStart, assignIndex + 200));
 }
 function methodAssignsThis(methodName, methodBody) {
+    const code = maskStringsAndComments(methodBody);
     const re = new RegExp(THIS_FIELD_ASSIGNMENT_RE.source, 'g');
     let match;
-    while ((match = re.exec(methodBody)) !== null) {
-        if (isIdiomaticEventsReset(methodBody, match.index, methodName))
+    while ((match = re.exec(code)) !== null) {
+        if (isIdiomaticEventsReset(code, match.index, methodName))
             continue;
         return true;
     }

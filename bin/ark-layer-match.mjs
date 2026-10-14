@@ -1858,6 +1858,29 @@ export function findDeniedEdgeDecision(rules, from, to, options) {
             continue;
         return { rule };
     }
+    if (from !== to &&
+        typeof options?.toPath === 'string' &&
+        options.toPath.length > 0 &&
+        Array.isArray(options?.layers)) {
+        const targetLayer = options.layers.find((layer) => layer.name === to);
+        const entrypoints = Array.isArray(targetLayer?.entrypoints)
+            ? targetLayer.entrypoints.filter((entry) => typeof entry === 'string' && entry.length > 0)
+            : [];
+        if (entrypoints.length > 0) {
+            const normTo = String(options.toPath).split(/[/\\]/).join('/');
+            const matchesEntrypoint = entrypoints.some((pattern) => globToRegExp(pattern).test(normTo));
+            if (!matchesEntrypoint) {
+                return {
+                    rule: {
+                        from,
+                        to,
+                        allowed: false,
+                        message: `${from} may only import ${to} via its declared entrypoints (${entrypoints.join(', ')}); deep import "${normTo}" bypasses the public surface.`,
+                    },
+                };
+            }
+        }
+    }
     return undefined;
 }
 /**

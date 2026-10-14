@@ -180,6 +180,7 @@ export type EnrichedViolation<T extends ArkViolationLike = ArkViolationLike> = T
   effort: FixClassEffort;
   enthusiastHint: string;
   nextAction: string;
+  blueprint?: string;
 };
 
 const ARKRUN_UNDECLARED_RULE_IDS = new Set([
@@ -710,5 +711,98 @@ export function enrichViolationWithFixClass<T extends ArkViolationLike>(
         'Read the violation message and the layer rules in ark.config.json, then adjust imports or move code to the correct layer.';
   }
   enriched.nextAction = deterministicNextAction(violation);
+  const blueprint = remediationBlueprint(violation);
+  if (blueprint) enriched.blueprint = blueprint;
   return enriched;
 }
+
+function pascalCaseStem(raw: string): string {
+  const cleaned = raw
+    .replace(/\\/g, '/')
+    .split('/')
+    .pop()
+    ?.replace(/\.[cm]?[jt]sx?$/i, '')
+    .replace(/[^a-zA-Z0-9]+/g, ' ')
+    .trim();
+  if (!cleaned) return 'Capability';
+  return cleaned
+    .split(/\s+/)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join('');
+}
+
+/**
+ * Deterministic TypeScript blueprint skeleton for judgment-class rejections
+ * (Port interfaces for FORBIDDEN_GLOBAL / CAPABILITY_VIOLATION / LAYER_IMPORT_VIOLATION,
+ * two-step valve for ARKORDER_XI_FIELD_WRITE / ARKORDER_GENERIC_UPDATE / ARKORDER_UNVALVED_RELEASE,
+ * and kernel resolution for ARKRUN_DIRECT_NEW).
+ */
+export function remediationBlueprint(violation: ArkViolationLike | null | undefined): string | undefined {
+  if (!violation || typeof violation.ruleId !== 'string') return undefined;
+  const target = typeof violation.target === 'string' ? violation.target.trim() : '';
+  const capability = typeof violation.capability === 'string' ? violation.capability.trim() : '';
+
+  if (violation.ruleId === 'FORBIDDEN_GLOBAL' || violation.ruleId === 'CAPABILITY_VIOLATION') {
+    if (capability === 'clock' || /^Date\b/.test(target)) {
+      return 'export interface ClockPort {\n  now(): number;\n}';
+    }
+    if (capability === 'randomness' || /^(Math\.random|crypto\.randomUUID)\b/.test(target)) {
+      return 'export interface RandomPort {\n  nextId(): string;\n}';
+    }
+    if (capability === 'network' || /^(fetch|http|https|undici)\b/i.test(target)) {
+      return 'export interface HttpPort {\n  request<T = unknown>(url: string, init?: unknown): Promise<T>;\n}';
+    }
+    if (capability === 'filesystem' || /^(node:)?fs\b/i.test(target)) {
+      return 'export interface StoragePort {\n  readText(path: string): Promise<string>;\n}';
+    }
+    if (capability === 'environment' || /^process\.env\b/.test(target)) {
+      return 'export interface ConfigPort {\n  get(key: string): string | undefined;\n}';
+    }
+    const portName = `${pascalCaseStem(capability || target)}Port`;
+    return `export interface ${portName} {\n  execute(...args: unknown[]): unknown;\n}`;
+  }
+
+  if (violation.ruleId === 'LAYER_IMPORT_VIOLATION') {
+    if (
+      violation.typeOnly ||
+      violation.targetTypeOnlyExports ||
+      violation.namedBindingsTypeOnly ||
+      violation.peerIsolation
+    ) {
+      return undefined;
+    }
+    const msg = typeof violation.message === 'string' ? violation.message : '';
+    const entrypointMatch = msg.match(/declared entrypoints \(([^)]+)\)/);
+    if (entrypointMatch?.[1]) {
+      const firstEntrypoint = entrypointMatch[1].split(',')[0]?.trim() ?? 'index.ts';
+      return `// Import from declared public entrypoint (${firstEntrypoint}) instead of deep module "${target || 'internal'}":\nimport { /* public API */ } from '${firstEntrypoint.replace(/\.[cm]?[jt]sx?$/, '')}';`;
+    }
+    const kind = classifyLayerImportKind(target, {
+      fromLayer: typeof violation.fromLayer === 'string' ? violation.fromLayer : undefined,
+      toLayer: typeof violation.toLayer === 'string' ? violation.toLayer : undefined,
+    });
+    if (kind === 'use-case' || violation.portProofEligible) {
+      const stem = pascalCaseStem(target || String(violation.toLayer ?? 'Outbound'));
+      const portName = stem.endsWith('Port') ? stem : `${stem}Port`;
+      return `export interface ${portName} {\n  // Declared in ${violation.fromLayer ?? 'caller layer'}, implemented in ${violation.toLayer ?? 'adapter layer'}\n}`;
+    }
+    return undefined;
+  }
+
+  if (
+    violation.ruleId === 'ARKORDER_XI_FIELD_WRITE' ||
+    violation.ruleId === 'ARKORDER_GENERIC_UPDATE' ||
+    violation.ruleId === 'ARKORDER_UNVALVED_RELEASE'
+  ) {
+    const key = target ? target.split('.').pop() || target : 'xiKey';
+    return `const proposal = plane.proposeRelease({ key: '${key}', nextValue, reason });\nif (proposal.ok) {\n  plane.apply(proposal);\n}`;
+  }
+
+  if (violation.ruleId === 'ARKRUN_DIRECT_NEW') {
+    const typeName = target || 'ManagedComponent';
+    return `const instance = kernel.resolve(${typeName});`;
+  }
+
+  return undefined;
+}
+

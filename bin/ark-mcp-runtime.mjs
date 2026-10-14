@@ -100,6 +100,7 @@ import {
 } from './lib/mcp-hook-payload.mjs';
 import {
   canonicalizeCandidateChanges,
+  createResolverIngestCache,
   resolvedCompilerInputPaths,
   resolvedInputIdentities,
 } from './lib/resolved-candidate-facts.mjs';
@@ -415,8 +416,16 @@ function snippetContext({
   classification,
   arkRulesSnapshot,
   surface,
+  resolveImportTarget,
 }) {
-  const base = { layer, filePath, ...(surface ? { surface } : {}) };
+  const base = {
+    root,
+    layer,
+    filePath,
+    cyclePolicy: config?.cyclePolicy ?? 'strict',
+    ...(typeof resolveImportTarget === 'function' ? { resolveImportTarget } : {}),
+    ...(surface ? { surface } : {}),
+  };
   const arkRulesOn = (arkRulesSnapshot?.arkRules?.structure?.length ?? 0) > 0;
   const contractErrors = arkRulesSnapshot?.errors ?? [];
   if (!config?.arkRun && !config?.arkOrder && !arkRulesOn && contractErrors.length === 0) {
@@ -597,9 +606,13 @@ function runHookPayload(payload, gate, config, args, ts, attemptContext, output 
       return;
     }
     const patchChangeSet = classifyChangeSet(patchWrites.map((change) => String(change.path)));
+    const effectiveContractSession =
+      typeof attemptContext?.contractSession === 'boolean'
+        ? attemptContext.contractSession
+        : contractSessionFrom({});
     const patchLawGate = evaluateTeamGate({
       changeSet: patchChangeSet,
-      contractSession: contractSessionFrom({}),
+      contractSession: effectiveContractSession,
     });
     if (patchLawGate.deny && patchChangeSet.mixed) {
       const message = patchLawGate.message;
@@ -737,6 +750,8 @@ function runHookPayload(payload, gate, config, args, ts, attemptContext, output 
         ts,
         tsconfig: args.tsconfig,
         manifest: args.projectManifest,
+        ingestCache: args.residentIngestCache,
+        contractSession: effectiveContractSession,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -920,6 +935,7 @@ function runHookPayload(payload, gate, config, args, ts, attemptContext, output 
     relFile: normalizedRel,
     arkRulesSnapshot: args.arkRulesSnapshot,
     surface: 'hook',
+    resolveImportTarget: args.resolveImportTarget,
   });
   const validateOnce = (src) =>
     validateSnippetAnalysis({ gate, ts, source: src, context });
@@ -1224,7 +1240,10 @@ function captureResidentHook(payload, gate, config, args, ts, request) {
       failOnNewSmells: request.failOnNewSmells === true,
     },
     ts,
-    { grokHookEvent: request.grokHookEvent === true },
+    {
+      grokHookEvent: request.grokHookEvent === true,
+      contractSession: request.contractSession === true,
+    },
     {
       stdout: (value) => {
         stdout += value;
@@ -1632,6 +1651,10 @@ export async function runArkMcp({ hookInput, hookRoot } = {}) {
     .filter((layer) => layer.name && layer.mayImportInfrastructure === true)
     .map((layer) => layer.name);
 
+  const importTargetResolver = createImportTargetResolver(ts, args.root, config);
+  args.resolveImportTarget = importTargetResolver;
+  args.residentIngestCache = createResolverIngestCache(config);
+
   const gate = ark.createAICodeGate({
     architectureProfile: profile,
     intents,
@@ -1641,10 +1664,11 @@ export async function runArkMcp({ hookInput, hookRoot } = {}) {
     capabilityWalls,
     infrastructureLayers,
     // Contract-first: one resolve step yields layer + relPath for rules + peerIsolation.
-    resolveImportTarget: createImportTargetResolver(ts, args.root, config),
+    resolveImportTarget: importTargetResolver,
     architectureLayers: configLayers.map((layer) => ({
       name: layer.name,
       patterns: layer.patterns,
+      ...(Array.isArray(layer.entrypoints) ? { entrypoints: layer.entrypoints } : {}),
     })),
     allowNonLiteralDynamicImport: (filePath) => {
       if (!filePath || !Array.isArray(config.dynamicImportAllowlist)) return false;
@@ -2624,6 +2648,7 @@ export async function runArkMcp({ hookInput, hookRoot } = {}) {
       layer,
       arkRulesSnapshot: effectiveArkRulesSnapshot,
       surface: 'mcp',
+      resolveImportTarget: args.resolveImportTarget,
     });
     const validateOnce = (src) => validateSnippetAnalysis({ gate, ts, source: src, context });
     // W1: attempt mechanical-safe single-file autoPatch (import type), re-validate or discard.
@@ -2874,6 +2899,16 @@ export async function runArkMcp({ hookInput, hookRoot } = {}) {
       rules.some((rule) => !rule.allowed && rule.from === layerName && rule.to === to)
     );
     const mayImport = otherNames.filter((name) => !mustNotImport.includes(name));
+    const targetEntrypoints = Object.fromEntries(
+      configLayers
+        .filter(
+          (layer) =>
+            mayImport.includes(layer.name) &&
+            Array.isArray(layer.entrypoints) &&
+            layer.entrypoints.length > 0
+        )
+        .map((layer) => [layer.name, layer.entrypoints])
+    );
     const sliceCatalog = [
       ...(args.arkRulesSnapshot?.arkRules?.structure ?? []),
       ...(args.arkRulesSnapshot?.arkRules?.invariants ?? []),
@@ -2886,6 +2921,10 @@ export async function runArkMcp({ hookInput, hookRoot } = {}) {
       ...placementDescriptionFields(layerMeta),
       forbiddenGlobals: layerMeta?.forbiddenGlobals ?? [],
       ...(layerMeta?.mayImportInfrastructure ? { mayImportInfrastructure: true } : {}),
+      ...(Array.isArray(layerMeta?.entrypoints) && layerMeta.entrypoints.length > 0
+        ? { entrypoints: layerMeta.entrypoints }
+        : {}),
+      ...(Object.keys(targetEntrypoints).length > 0 ? { targetEntrypoints } : {}),
       ...(sliceRules.length > 0 ? { sliceRules } : {}),
       mayImport,
       mustNotImport,
@@ -2946,6 +2985,7 @@ export async function runArkMcp({ hookInput, hookRoot } = {}) {
       layer,
       arkRulesSnapshot: effectiveArkRulesSnapshot,
       surface: 'mcp',
+      resolveImportTarget: args.resolveImportTarget,
     });
     const validateOnce = (src) => validateSnippetAnalysis({ gate, ts, source: src, context });
     const result = composePrepareWrite({
@@ -2998,6 +3038,7 @@ export async function runArkMcp({ hookInput, hookRoot } = {}) {
         ts,
         tsconfig: args.tsconfig,
         manifest: projectManifest,
+        ingestCache: args.residentIngestCache,
       });
       return validityToolResult(result);
     } catch (error) {

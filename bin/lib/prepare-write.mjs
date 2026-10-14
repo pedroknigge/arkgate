@@ -45,6 +45,7 @@ export function buildJudgmentBrief(violations) {
       fromLayer: v.fromLayer,
       toLayer: v.toLayer,
       target: v.target,
+      capability: v.capability,
       message: v.message,
     };
     const verdict = classifyRemediation(shaped);
@@ -55,6 +56,7 @@ export function buildJudgmentBrief(violations) {
       decision: enriched.enthusiastHint,
       remediationClass: verdict.class,
       ...(verdict.remediationKind ? { remediationKind: verdict.remediationKind } : {}),
+      ...(enriched.blueprint ? { blueprint: enriched.blueprint } : {}),
     };
   }
   // All mechanical-safe or unclassifiable — still offer first enriched hint
@@ -68,6 +70,7 @@ export function buildJudgmentBrief(violations) {
     decision: enriched.enthusiastHint,
     remediationClass: verdict.class,
     ...(verdict.remediationKind ? { remediationKind: verdict.remediationKind } : {}),
+    ...(enriched.blueprint ? { blueprint: enriched.blueprint } : {}),
   };
 }
 
@@ -117,6 +120,10 @@ export function composePrepareWrite(opts) {
     mustNotImport: placement?.mustNotImport,
     forbiddenGlobals: placement?.forbiddenGlobals ?? [],
     ...(placement?.mayImportInfrastructure ? { mayImportInfrastructure: true } : {}),
+    ...(Array.isArray(placement?.entrypoints) && placement.entrypoints.length > 0
+      ? { entrypoints: placement.entrypoints }
+      : {}),
+    ...(placement?.targetEntrypoints ? { targetEntrypoints: placement.targetEntrypoints } : {}),
     ...(placement?.suggestedLayers ? { suggestedLayers: placement.suggestedLayers } : {}),
     ...(placement?.message ? { placementMessage: placement.message } : {}),
     ...(placement?.note ? { placementNote: placement.note } : {}),

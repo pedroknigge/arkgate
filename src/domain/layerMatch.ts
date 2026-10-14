@@ -12,6 +12,12 @@ export type LayerConfig = {
   patterns?: string[];
   exclude?: string[];
   forbiddenGlobals?: string[];
+  /**
+   * Optional public surface globs for this layer. When non-empty, cross-layer
+   * imports into this layer must target a file matching one of these globs;
+   * deep imports into internal layer files are denied.
+   */
+  entrypoints?: string[];
 };
 
 /**
@@ -2396,6 +2402,33 @@ export function findDeniedEdgeDecision(
     // Classic deny — same-layer always allowed without peerIsolation
     if (from === to) continue;
     return { rule };
+  }
+  if (
+    from !== to &&
+    typeof options?.toPath === 'string' &&
+    options.toPath.length > 0 &&
+    Array.isArray(options?.layers)
+  ) {
+    const targetLayer = options.layers.find((layer) => layer.name === to);
+    const entrypoints = Array.isArray(targetLayer?.entrypoints)
+      ? targetLayer.entrypoints.filter(
+          (entry): entry is string => typeof entry === 'string' && entry.length > 0
+        )
+      : [];
+    if (entrypoints.length > 0) {
+      const normTo = String(options.toPath).split(/[/\\]/).join('/');
+      const matchesEntrypoint = entrypoints.some((pattern) => globToRegExp(pattern).test(normTo));
+      if (!matchesEntrypoint) {
+        return {
+          rule: {
+            from,
+            to,
+            allowed: false,
+            message: `${from} may only import ${to} via its declared entrypoints (${entrypoints.join(', ')}); deep import "${normTo}" bypasses the public surface.`,
+          },
+        };
+      }
+    }
   }
   return undefined;
 }

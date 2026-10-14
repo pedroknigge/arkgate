@@ -22,6 +22,12 @@ export type ArkConfigLayer = {
   name: string;
   patterns: string[];
   exclude?: string[];
+  /**
+   * Optional public surface globs for this layer. When non-empty, cross-layer
+   * imports into this layer must target a file matching one of these globs;
+   * deep imports into internal layer files are denied.
+   */
+  entrypoints?: string[];
   intentPrefixes?: string[];
   /**
    * App-context caption for this layer.

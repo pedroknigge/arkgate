@@ -263,6 +263,17 @@ That sentence is product copy. Not “Rich domain model, business rules, and dom
 ]
 ```
 
+- **`layers[].entrypoints`** (optional) — public entrypoints for the layer (for
+  example `["src/infrastructure/index.ts"]`). When present and non-empty, external
+  layers that are permitted to import this layer may only import files matching
+  `entrypoints`; importing an internal file outside `entrypoints` is rejected as
+  `LAYER_IMPORT_VIOLATION` across `ark-check`, `arkgate/eslint`, `AICodeGate`, and
+  `ark-mcp`. Same-layer imports remain allowed. Enabling or narrowing `entrypoints`
+  is a `strengthening` policy delta; removing or widening `entrypoints` is a
+  `weakening` policy delta. Invalid or zero-match globs emit
+  `CONFIG_INVALID_LAYER_PATTERN` / `CONFIG_LAYER_PATTERN_NO_MATCHES`. `ark_place`
+  and `ark_prepare_write` project `entrypoints` and `targetEntrypoints` so agents
+  know which public surface to import before writing.
 - `intentPrefixes`, `forbiddenGlobals`, `mayImportInfrastructure`, `optional`
   — `intentPrefixes` is how the ArkRun kernel maps an intent name to a layer at runtime.
   A layer with a canonical 11-layer name (`DomainModel`, `ApplicationOrchestration`,
