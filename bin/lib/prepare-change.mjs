@@ -180,6 +180,8 @@ export function prepareChangeFromRoot({
   tsconfig,
   manifest,
   overlayChanges,
+  ingestCache,
+  contractSession,
 }) {
   const normalizedChanges = normalizeChangeSet(changes);
   const normalizedOverlayChanges =
@@ -187,7 +189,9 @@ export function prepareChangeFromRoot({
   const lawGate = evaluateTeamGate({
     changeSet: classifyChangeSet(normalizedChanges.map((change) => change.path)),
     contractSession:
-      process.env.ARK_CONTRACT_SESSION === '1' || process.env.ARK_CONTRACT_SESSION === 'true',
+      contractSession === true ||
+      process.env.ARK_CONTRACT_SESSION === '1' ||
+      process.env.ARK_CONTRACT_SESSION === 'true',
   });
   if (lawGate.deny && lawGate.reasonId === 'mixed-law-and-product') {
     throw new Error(lawGate.message);
@@ -216,24 +220,24 @@ export function prepareChangeFromRoot({
     changes: normalizedChanges,
   });
   for (const change of canonicalChanges) assertGovernedSource(effectiveConfig, change.path);
-  // Files the overlay does not touch are parsed once for both trees.
-  const ingestCache = createResolverIngestCache(contract.config);
+  // Files the overlay does not touch are parsed once for both trees (and reused across warm calls).
+  const sharedIngestCache = ingestCache ?? createResolverIngestCache(contract.config);
   const baseFacts = resolveCandidateFacts({
     root,
     config: contract.config,
     ts,
-    ingestCache,
+    ingestCache: sharedIngestCache,
     ...(tsconfig ? { tsconfig } : {}),
   });
   const candidateFacts = resolveCandidateFacts({
     root,
     config: contract.config,
     ts,
-    ingestCache,
+    ingestCache: sharedIngestCache,
     changes: normalizedOverlayChanges,
     ...(tsconfig ? { tsconfig } : {}),
   });
-  ingestCache.records.clear();
+  if (!ingestCache) sharedIngestCache.records.clear();
   const { baseAnalysisInputs, candidateAnalysisInputs } = arkRulesAnalysisInputs({
     root,
     config: effectiveConfig,

@@ -49,6 +49,10 @@ right house. Skills never enforce — CLI / hooks / CI do.
   to the layer name and globs. Omit when absent — do not invent a person or `/ark-owners`.
   When `requireLayerOwners` is on and the house has no owners, send that gap to
   `/ark-adopt` before writing.
+- When `ark_place` / `ark_prepare_write` returns `entrypoints` or `targetEntrypoints`,
+  import allowed layers through their listed public entrypoints (barrels/facades) rather
+  than deep internal paths. When `ark_prepare_write` returns `judgmentBrief.blueprint`,
+  use that TypeScript Port/valve/entrypoint skeleton to satisfy the boundary before writing.
 - When `arkRun` is on: scaffold through the kernel (no `new` of managed types; declare
   `uses` / `reactsTo` / `raises` / `sends`; factory only in `arkRun.kernelRoots`,
   `compositionRoots` alias). Extra off → do not introduce the kernel. Enable it

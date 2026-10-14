@@ -5,6 +5,23 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+## 4.8.27 — 2026-10-14
+
+**Patch** over **4.8.26**. First-principles enforcement, public layer entrypoints, and remediation blueprints (P0–P5). **Write. Check. Ship.** **No required config migration.** No `schemaVersion` bump. Does not close `K01` / `Z09`. This mother `ark.config.json` still does **not** turn `arkOrder` on.
+
+**Status: released** (tag `v4.8.27`). Run `npm view arkgate@4.8.27 version` to confirm (#314).
+
+### Added
+- `layers[].entrypoints` public surface contract enforced across `ark-check`, `arkgate/eslint`, `AICodeGate`, and `ark-mcp` at the `findDeniedEdgeDecision` waist, with policy-delta classification and config warnings.
+- `ark_place` and `ark_prepare_write` project `entrypoints` and `targetEntrypoints` so agents know which public barrel/entrypoint to import before writing.
+- Deterministic TypeScript remediation `blueprint` (`judgmentBrief.blueprint`) on rejections for `LAYER_IMPORT_VIOLATION` (including `entrypoints`), `FORBIDDEN_GLOBAL`, `CAPABILITY_VIOLATION`, `ARKORDER_*`, and `ARKRUN_*`.
+- `ark init --baseline [path]` freezes existing violations into `.ark-baseline.json` via `--write-baseline` and wires `--baseline` into `--strict-merge` during brownfield onboarding.
+- Immediate 2-hop value cycle detection (`A -> B -> A`) in single-file `Write`/`Edit` hooks and `ark_prepare_write` when `cyclePolicy` is `"strict"`, plus warm resident `ApplyPatch` / `apply_patch` evaluation (`1500ms` window) and incremental `ResolverIngestCache`.
+
+### Fixed
+- `arkRuleSensors` masks comments and strings before evaluating `aggregate-guards-invariants` and `immutable-value-object` method bodies, and recognizes structural `if (...) throw` guard clauses.
+- Enabled `treeshake: true` in `tsup.config.ts` and `packages/runtime/tsup.config.ts`, shrinking compiled runtime bundles.
+
 ## 4.8.26 — 2026-10-13
 
 **Patch** over **4.8.25**. #353 and #354. **Write. Check. Ship.** **No required config migration.** No `schemaVersion` bump. Does not close `K01` / `Z09`. This mother `ark.config.json` still does **not** turn `arkOrder` on.

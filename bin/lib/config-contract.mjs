@@ -180,6 +180,11 @@ export const ARK_CONFIG_SCHEMA = {
                 name: { type: 'string', minLength: 1 },
                 patterns: { ...stringArraySchema, minItems: 1 },
                 exclude: stringArraySchema,
+                entrypoints: {
+                    ...stringArraySchema,
+                    minItems: 1,
+                    description: 'Optional public surface globs for this layer. When non-empty, cross-layer imports into this layer must target a file matching one of these globs; deep imports into internal layer files are denied.',
+                },
                 intentPrefixes: stringArraySchema,
                 description: { type: 'string', minLength: 1 },
                 trustBoundary: { type: 'string', enum: [...LAYER_TRUST_BOUNDARIES] },

@@ -69,15 +69,15 @@ const config = {
     // validateSliceContract call replaces the three slice validators.
     // The shared schema walker (schemaValidation.ts, jscpd dedupe) and knip's unused-export
     // cleanup moved the same decisions to 449-535; JSON.parse is 535.
-    'src/domain/configContract.ts:449-452',
-    'src/domain/configContract.ts:454-455',
-    'src/domain/configContract.ts:475-476',
+    'src/domain/configContract.ts:455-458',
+    'src/domain/configContract.ts:460-461',
     'src/domain/configContract.ts:481-482',
-    'src/domain/configContract.ts:491-493',
-    'src/domain/configContract.ts:503-503',
-    'src/domain/configContract.ts:510-510',
-    'src/domain/configContract.ts:519-524',
-    'src/domain/configContract.ts:535-535',
+    'src/domain/configContract.ts:487-488',
+    'src/domain/configContract.ts:497-499',
+    'src/domain/configContract.ts:509-509',
+    'src/domain/configContract.ts:516-516',
+    'src/domain/configContract.ts:525-530',
+    'src/domain/configContract.ts:541-541',
     // DF04 — selective pure truth islands (fail-closed / ack / promote honesty).
     // peerIsolationDecision is the killable fail-closed core; findDeniedEdgeDecision wires it.
     // #297 inserted the shared-imports-slice hop. Slice-id JSDoc and #308
@@ -88,8 +88,8 @@ const config = {
     // #326 PR5 inserted the SliceAlias type above it. Same peerIsolationDecision body.
     // #335/#336 mode, stop, and ratchet types above it moved it to 895-922; the
     // stars-identity JSDoc correction moved it to 897-924; the memory pass
-    // sliceFolders parse cache moved it to 923-950.
-    'src/domain/layerMatch.ts:959-986',
+    // sliceFolders parse cache moved it to 923-950; 4.8.27 entrypoints moved it to 965-992.
+    'src/domain/layerMatch.ts:965-992',
     // AP02 (#264) shifted the helper; sharedImportsSlice and #308 sliceIdentity
     // compares shifted it again. Same policyDeltaAcknowledgementMatches body.
     // #326 compareChildSlices shifted the same function by 93 lines.
@@ -98,8 +98,8 @@ const config = {
     // #326 PR5 compareSliceAliases shifted it to 1250-1279.
     // #335 stopAt and #336 ratchet compares shifted it to 1298-1327.
     // #341 arkRules path compare shifted it to 1345-1374; the stringListDelta
-    // helper (jscpd dedupe) shifted it to 1354-1383.
-    'src/domain/policyDelta.ts:1354-1383',
+    // helper (jscpd dedupe) shifted it to 1354-1383; 4.8.27 entrypoints shifted it to 1382-1411.
+    'src/domain/policyDelta.ts:1382-1411',
     // #291 declaration witness shifted formatCoverageDiscards / budgetDetail /
     // canPromoteInvariant. #307/#310 classifyCoverage shifted them again.
     // #322 declaration-miss shifted them once more.

@@ -4,22 +4,17 @@
   "groups": [
     {
       "id": "config-loading",
-      "note": "4.8.4 pins (467–473 version parse, 493–551 walk/load/parse) drifted onto validateLayerOwners and JSDoc after LO01 owners + trustBoundary. Retargeted to the same migrateArkConfig / load / JSON.parse decisions. #297 added sharedImportsSlice and shifted these pins by one. #308 sliceIdentity schema shifted them by seven. #326 childSlices schema shifted the same decisions by 17 lines. #326 PR2 deny-cross-parent schema description shifted them by five. #326 PR3 siblings object schema plus validateChildSliceSiblings shifted the same decisions by 89 lines. #326 PR4 childSlices.allowedCrossSlice schema plus validateChildSliceAllowedCrossSlice shifted the same decisions by 94 lines (755–758, 760–761, 781–782, 787–788, 797–799, 810, 817, 826–831). #326 PR5 sliceAliases schema plus validateChildSliceAliases shifted the same decisions to 1023–1026, 1028–1029, 1049–1050, 1055–1056, 1065–1067, 1078, 1085, 1094–1100. The load pin includes the new call. JSON.parse moved to 1111 because that call sits above it. Skip the equivalent typeof guard (one line after the unversioned branch). The slice-wall split moved the childSlices / sharedImportsSlice schema and validators to configContractSlices.ts, so the same decisions sit at 557–560, 562–563, 583–584, 589–590, 599–601, 612, 619, 628–632 (one validateSliceContract call replaces three), and JSON.parse at 643. #341 validateArkRulesRefs shifted the same decisions by 40 lines (597–600, 602–603, 623–624, 629–630, 639–641, 651, 658, 667–672, JSON.parse at 683). The load pin includes that call. The shared JSON-Schema walker moved to schemaValidation.ts (jscpd dedupe of configContract / arkRulesContract), which shifted the same decisions up by 136 lines (461–464, 466–467, 487–488, 493–494, 503–505, 515, 522, 531–536, JSON.parse at 547).",
+      "note": "4.8.4 pins (467–473 version parse, 493–551 walk/load/parse) drifted onto validateLayerOwners and JSDoc after LO01 owners + trustBoundary. Retargeted to the same migrateArkConfig / load / JSON.parse decisions. #297 added sharedImportsSlice and shifted these pins by one. #308 sliceIdentity schema shifted them by seven. #326 childSlices schema shifted the same decisions by 17 lines. #326 PR2 deny-cross-parent schema description shifted them by five. #326 PR3 siblings object schema plus validateChildSliceSiblings shifted the same decisions by 89 lines. #326 PR4 childSlices.allowedCrossSlice schema plus validateChildSliceAllowedCrossSlice shifted the same decisions by 94 lines (755–758, 760–761, 781–782, 787–788, 797–799, 810, 817, 826–831). #326 PR5 sliceAliases schema plus validateChildSliceAliases shifted the same decisions to 1023–1026, 1028–1029, 1049–1050, 1055–1056, 1065–1067, 1078, 1085, 1094–1100. The load pin includes the new call. JSON.parse moved to 1111 because that call sits above it. Skip the equivalent typeof guard (one line after the unversioned branch). The slice-wall split moved the childSlices / sharedImportsSlice schema and validators to configContractSlices.ts, so the same decisions sit at 557–560, 562–563, 583–584, 589–590, 599–601, 612, 619, 628–632 (one validateSliceContract call replaces three), and JSON.parse at 643. #341 validateArkRulesRefs shifted the same decisions by 40 lines (597–600, 602–603, 623–624, 629–630, 639–641, 651, 658, 667–672, JSON.parse at 683). The load pin includes that call. The shared JSON-Schema walker moved to schemaValidation.ts (jscpd dedupe of configContract / arkRulesContract), which shifted the same decisions up by 136 lines (461–464, 466–467, 487–488, 493–494, 503–505, 515, 522, 531–536, JSON.parse at 547). 4.8.27 layers[].entrypoints schema shifted the same decisions by 6 lines (455–458, 460–461, 481–482, 487–488, 497–499, 509, 516, 525–530, JSON.parse at 541).",
       "targets": [
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 449,
-          "endLine": 452
+          "startLine": 455,
+          "endLine": 458
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 454,
-          "endLine": 455
-        },
-        {
-          "file": "src/domain/configContract.ts",
-          "startLine": 475,
-          "endLine": 476
+          "startLine": 460,
+          "endLine": 461
         },
         {
           "file": "src/domain/configContract.ts",
@@ -28,28 +23,33 @@
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 491,
-          "endLine": 493
+          "startLine": 487,
+          "endLine": 488
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 503,
-          "endLine": 503
+          "startLine": 497,
+          "endLine": 499
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 510,
-          "endLine": 510
+          "startLine": 509,
+          "endLine": 509
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 519,
-          "endLine": 524
+          "startLine": 516,
+          "endLine": 516
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 535,
-          "endLine": 535
+          "startLine": 525,
+          "endLine": 530
+        },
+        {
+          "file": "src/domain/configContract.ts",
+          "startLine": 541,
+          "endLine": 541
         }
       ]
     },
@@ -151,23 +151,23 @@
     },
     {
       "id": "peer-isolation-fail-closed",
-      "note": "DF04: peerIsolationDecision pure fail-closed core (missing paths/slices/folders, declared shared roots, declared cross-slice edges, shared-imports-slice). peerIsolationMustDeny is its boolean face. #297 shifted the function. Slice-id JSDoc and #308 sliceIdentity helpers shifted it again; retargeted to the same body. #326 inserted SliceVerdict types above the same function. #326 PR2 widened sharedImportsSlice and SliceReasonId above the same function (818–845). #326 PR3 inserted the siblings object type above the same function (829–856). #326 PR4 inserted the child allowedCrossSlice field above the same function (834–861). #326 PR5 inserted the SliceAlias type above the same function (844–871). The pin does not cover the child wall, the alias resolver, or the laundering post-pass. The #335 sharedImportsSlice mode/stop helpers and the #336 ratchet field were inserted above the same function (895–922). The stars-identity JSDoc correction above it shifted it to 897–924. The memory pass cached parsed sliceFolders entries above the same function (923–950). The 4.8.23 stars-id compatibility (legacyStarsSliceIdForPath binding) shifted it to 950-977. #341 resolveSliceRulePlan was inserted above the same function (959-986).",
+      "note": "DF04: peerIsolationDecision pure fail-closed core (missing paths/slices/folders, declared shared roots, declared cross-slice edges, shared-imports-slice). peerIsolationMustDeny is its boolean face. #297 shifted the function. Slice-id JSDoc and #308 sliceIdentity helpers shifted it again; retargeted to the same body. #326 inserted SliceVerdict types above the same function. #326 PR2 widened sharedImportsSlice and SliceReasonId above the same function (818–845). #326 PR3 inserted the siblings object type above the same function (829–856). #326 PR4 inserted the child allowedCrossSlice field above the same function (834–861). #326 PR5 inserted the SliceAlias type above the same function (844–871). The pin does not cover the child wall, the alias resolver, or the laundering post-pass. The #335 sharedImportsSlice mode/stop helpers and the #336 ratchet field were inserted above the same function (895–922). The stars-identity JSDoc correction above it shifted it to 897–924. The memory pass cached parsed sliceFolders entries above the same function (923–950). The 4.8.23 stars-id compatibility (legacyStarsSliceIdForPath binding) shifted it to 950-977. #341 resolveSliceRulePlan was inserted above the same function (959-986). 4.8.27 layers[].entrypoints type shifted it to 965-992.",
       "targets": [
         {
           "file": "src/domain/layerMatch.ts",
-          "startLine": 959,
-          "endLine": 986
+          "startLine": 965,
+          "endLine": 992
         }
       ]
     },
     {
       "id": "policy-delta-ack-match",
-      "note": "DF04: policyDeltaAcknowledgementMatches hash + finding-id set equality. AP02 (#264) inserted adrPath JSDoc above the helper. #297 inserted the sharedImportsSlice compare. #308 inserted the sliceIdentity compare, so the helper moved again. #326 compareChildSlices shifted the same function by 93 lines (1077–1106). #326 PR3 sibling enforce-list compare shifted the same function to 1129–1158. #326 PR4 child allowance widening compare shifted the same function to 1207–1236. #326 PR5 compareSliceAliases shifted the same function to 1250–1279. Retargeted to the same body. #335 stopAt and #336 ratchet compares shifted the same function to 1298–1327. #341 arkRules path compare shifted the same function to 1345–1374. The stringListDelta helper (jscpd dedupe of two list compares) shifted the same function to 1354–1383.",
+      "note": "DF04: policyDeltaAcknowledgementMatches hash + finding-id set equality. AP02 (#264) inserted adrPath JSDoc above the helper. #297 inserted the sharedImportsSlice compare. #308 inserted the sliceIdentity compare, so the helper moved again. #326 compareChildSlices shifted the same function by 93 lines (1077–1106). #326 PR3 sibling enforce-list compare shifted the same function to 1129–1158. #326 PR4 child allowance widening compare shifted the same function to 1207–1236. #326 PR5 compareSliceAliases shifted the same function to 1250–1279. Retargeted to the same body. #335 stopAt and #336 ratchet compares shifted the same function to 1298–1327. #341 arkRules path compare shifted the same function to 1345–1374. The stringListDelta helper (jscpd dedupe of two list compares) shifted the same function to 1354–1383. 4.8.27 layers[].entrypoints compare shifted the same function to 1382–1411.",
       "targets": [
         {
           "file": "src/domain/policyDelta.ts",
-          "startLine": 1354,
-          "endLine": 1383
+          "startLine": 1382,
+          "endLine": 1411
         }
       ]
     },

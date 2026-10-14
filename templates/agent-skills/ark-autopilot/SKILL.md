@@ -258,7 +258,7 @@ Status lights from doctor — not settings you choose. Rank residual honestly:
    **STOP — do not continue this skill as complete.** **STOP — concentrated edge:** rewrite `ark.config.json` **in this turn** with source evidence (do not freeze a wrong config or grind N freezes).
 6. **Worktree preferred** — discardable git worktree when possible.
 7. **Mechanical-safe (A only)** — kinds from `/ark-loop` table; one step, validate, rollback.
-8. **Judgment (A)** — implement with full “así te lo re-soluciono”; validate; rollback on fail.
+8. **Judgment (A)** — implement with full “así te lo re-soluciono” (use the deterministic `blueprint` / `judgmentBrief.blueprint` TypeScript skeleton when present for `FORBIDDEN_GLOBAL`, `CAPABILITY_VIOLATION`, `LAYER_IMPORT_VIOLATION`, `ARKORDER_*`, or `ARKRUN_DIRECT_NEW`); validate; rollback on fail.
 9. **Pattern bets (B)** — apply **one** extraction-card pilot this turn; leave the rest queued. Never weaken the gate to clear B.
 10. **Manifiesto** — loose business rules → Domain placement + `intentPrefixes` / intents; write config here if the path is still dishonest.
 11. **Final report** — re-`--report`; evolution vs origin; A applied vs open; B proposed/deferred; gates on.

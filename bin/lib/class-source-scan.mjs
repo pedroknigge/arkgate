@@ -366,7 +366,7 @@ export function findClassDeclarations(content, options = {}) {
     return out;
 }
 /** Same length as `content`; string and comment characters become spaces (newlines kept). */
-function maskStringsAndComments(content) {
+export function maskStringsAndComments(content) {
     let out = '';
     let i = 0;
     while (i < content.length) {

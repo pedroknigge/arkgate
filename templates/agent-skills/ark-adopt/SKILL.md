@@ -35,6 +35,12 @@ has honest houses. Skills never enforce — CLI / hooks / CI do.
   (GitHub handle or email). Compact starter may omit. Do not invent people.
   Absence is silent unless the user asked for required owners — then write
   `requireLayerOwners: true` after the live houses have names. No `/ark-owners`.
+- When a layer exposes a deliberate public barrel or facade (e.g. `src/domain/index.ts`),
+  optional `layers[].entrypoints` restricts cross-layer imports into that layer to matching
+  globs. Intra-layer imports stay unrestricted. Absence is silent. No `/ark-entrypoints`.
+- On brownfield trees with genuine pre-existing debt, `ark init --baseline` (or
+  `arkgate-check --write-baseline`) freezes `.ark-baseline.json` so `--strict-merge`
+  blocks only new regressions.
 - When the user wants required gates (`--require-gates` / `--strict-merge` /
   required GitHub check) and there is no `docs/adr/` (or `docs/decisions/`),
   leave a short decision note there — only if they loosen a rule or add a real

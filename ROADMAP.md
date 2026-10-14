@@ -624,7 +624,22 @@ Does not close `Z09` / `K01`.
 
 | Order | ID | Status | Size | Depends on | Outcome |
 |---:|---|---|---:|---|---|
-| 321 | `RL826` | `doing` | S | RL825 | Prepare **4.8.26** (#353, #354). After merge: annotated tag `v4.8.26` + GitHub Release (no npm claim until `npm view arkgate@4.8.26 version` confirms, #314) + `gh workflow run publish-npm.yml -f tag=v4.8.26 -f dry_run=false`. Does not close `Z09` / `K01` |
+| 321 | `RL826` | `done` | S | RL825 | Prepare **4.8.26** (#353, #354). Tag `v4.8.26` and GitHub Release exist. Published on npm `latest`. Does not close `Z09` / `K01` |
+
+### Release 4.8.27 — first-principles enforcement, entrypoints, and remediation blueprints
+
+Patch after 4.8.26 published — `layers[].entrypoints` public surface contract,
+`entrypoints` / `targetEntrypoints` on `ark_place` / `ark_prepare_write`,
+`ark init --baseline`, deterministic TypeScript `blueprint` (`judgmentBrief.blueprint`),
+AST comment/string masking + structural `if (...) throw` guards in `arkRuleSensors`,
+immediate 2-hop cycle detection in single-file write gates, warm resident
+`ApplyPatch` / `apply_patch` evaluation + incremental `ResolverIngestCache`, and
+`treeshake: true` bundle optimization. No `docs/releases/4.8.27.md`.
+Does not close `Z09` / `K01`.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 322 | `RL827` | `doing` | S | RL826 | Prepare **4.8.27** (P0–P5 first-principles improvements). After merge: annotated tag `v4.8.27` + GitHub Release (no npm claim until `npm view arkgate@4.8.27 version` confirms, #314) + `npm publish`. Does not close `Z09` / `K01` |
 
 ### Patch — policy-delta promotion sees coverageRoots
 
@@ -896,7 +911,7 @@ Plan: [docs/plans/alive-in-six-months/README.md](docs/plans/alive-in-six-months/
 | 183 | `AL05` | `parked` | S | required-status possible + 3 partners | Field enrollment. Does **not** close Z09 |
 | 184 | `AL06` | `done` | S | AL04 | Compact first-screen vs Details independently invocable; first-screen honesty stays |
 
-Engineering doing: `RL826`. `AP02` **done**. Patch 4.8.26 **prepared**. Patch 4.8.25 **published**. Patch 4.8.24 **published**. Patch 4.8.23 **published**. Patch 4.8.22 **published**. Patch 4.8.21 **published**. Patch 4.8.20 **published**. Patch 4.8.19 **published**. Patch 4.8.18 **published**. Patch 4.8.17 **published**. `DF243`/`DF246`/`DF247` **done** (4.8.15 slice 2 — dogfood honesty). `LC01` **done**. `SC01` **done**. `RL816` **done** (4.8.16 on npm `latest`). `RL815` **done** (4.8.15 published). `RL814` **done** (4.8.14 published). `RL813` **done** (4.8.13 published). `RL812` **done** (tag `v4.8.12` cut; publish failed coverage; skip on npm). Patch 4.8.12 **tagged, not published**. `AO17` **done**. `RL811` **done** (4.8.11 published). `RL810` **done** (4.8.10 published). `RL89` **done** (4.8.9 published). `AH01`/`CS01`/`CI01`/`UP01`/`PX01`/`INT01` **done**. field-adopter ArkOrder `AO10`–`AO16` **done**. `RL88` **done** (4.8.8 published). Phase **LD** `LD01`–`LD06` **done** (4.8.7 published). `ST02`, `ST01`, and `AO09` **done**. Phase **LV** `LV01`–`LV09` **done** (4.8.6 published). `AGY01` **done** (4.8.5 published). `OR01`–`OR07` **done**. `WH01` **done** (ADR 0026). `PK01` **done**.
+Engineering doing: `RL827`. `AP02` **done**. Patch 4.8.27 **prepared**. Patch 4.8.26 **published**. Patch 4.8.25 **published**. Patch 4.8.24 **published**. Patch 4.8.23 **published**. Patch 4.8.22 **published**. Patch 4.8.21 **published**. Patch 4.8.20 **published**. Patch 4.8.19 **published**. Patch 4.8.18 **published**. Patch 4.8.17 **published**. `DF243`/`DF246`/`DF247` **done** (4.8.15 slice 2 — dogfood honesty). `LC01` **done**. `SC01` **done**. `RL816` **done** (4.8.16 on npm `latest`). `RL815` **done** (4.8.15 published). `RL814` **done** (4.8.14 published). `RL813` **done** (4.8.13 published). `RL812` **done** (tag `v4.8.12` cut; publish failed coverage; skip on npm). Patch 4.8.12 **tagged, not published**. `AO17` **done**. `RL811` **done** (4.8.11 published). `RL810` **done** (4.8.10 published). `RL89` **done** (4.8.9 published). `AH01`/`CS01`/`CI01`/`UP01`/`PX01`/`INT01` **done**. field-adopter ArkOrder `AO10`–`AO16` **done**. `RL88` **done** (4.8.8 published). Phase **LD** `LD01`–`LD06` **done** (4.8.7 published). `ST02`, `ST01`, and `AO09` **done**. Phase **LV** `LV01`–`LV09` **done** (4.8.6 published). `AGY01` **done** (4.8.5 published). `OR01`–`OR07` **done**. `WH01` **done** (ADR 0026). `PK01` **done**.
 `K01` **parked** (4.7.6 primitives only).
 Phase DX (`DX01`–`DX03`) **done** and present in published `arkgate@4.8.0+` (4.7.6 predates them).
 Phase HS (`HS01`–`HS05`) **done**. Remaining first-contact copy **4.7.3** published. Write. Check. Ship. patch **4.7.5** published. **4.8.11** is on npm `latest`. 4.8.13 is published. 4.8.14 is published. 4.8.15 is published. 4.8.16 is published. 4.8.17 is published. 4.8.18 is published. 4.8.19 is published. 4.8.20 is published. 4.8.21 is published. 4.8.22 is published. 4.8.23 is prepared. Tag `v4.8.12` stands; skip that version on npm.

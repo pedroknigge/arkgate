@@ -1,6 +1,9 @@
 /** Fail-closed completeness evidence for one proposed source snippet. */
+import fs from 'node:fs';
+import path from 'node:path';
 import { layerForRelativePath } from '../ark-layer-match.mjs';
 import { ANALYSIS_COMPLETENESS } from './analysis-completeness.mjs';
+import { extractSemanticDependencies } from './analysis-engine.mjs';
 import { evaluateArkRunEditorSensorsFromSource } from './ark-run-sensors.mjs';
 import { evaluateArkOrderEditorSensors } from './ark-order-sensors.mjs';
 import {
@@ -209,6 +212,79 @@ function extraPlaneSnippetViolations(source, context = {}) {
   ];
 }
 
+/**
+ * Immediate 2-hop value cycle check (A -> B -> A) for single-file write hooks and prepare_write.
+ * Inspects only the direct resolved targets of `parsed` (typically 1–5 files) so it stays sub-millisecond.
+ */
+function detectImmediateCycleViolations(ts, parsed, context = {}, existingViolations = []) {
+  if (
+    !ts ||
+    !parsed ||
+    typeof context.root !== 'string' ||
+    typeof context.resolveImportTarget !== 'function' ||
+    typeof context.relFile !== 'string' ||
+    !context.relFile
+  ) {
+    return [];
+  }
+  if (String(context.cyclePolicy ?? 'strict').toLowerCase() !== 'strict') return [];
+  let deps;
+  try {
+    deps = extractSemanticDependencies(ts, parsed);
+  } catch {
+    return [];
+  }
+  const blockedTargets = new Set(
+    existingViolations
+      .filter((v) => (v.ruleId || v.code) === 'LAYER_IMPORT_VIOLATION')
+      .flatMap((v) => [v.target, v.source].filter(Boolean))
+  );
+  const seenTargets = new Set();
+  const out = [];
+  for (const dep of deps ?? []) {
+    if (dep.typeOnly || typeof dep.specifier !== 'string' || !dep.specifier) continue;
+    if (blockedTargets.has(dep.specifier)) continue;
+    const hit = context.resolveImportTarget(dep.specifier, context.filePath);
+    const targetRel = hit?.relPath;
+    if (!targetRel || targetRel === context.relFile || seenTargets.has(targetRel)) continue;
+    if (blockedTargets.has(targetRel)) continue;
+    seenTargets.add(targetRel);
+    const targetAbs = path.join(context.root, targetRel);
+    let targetText;
+    try {
+      targetText = fs.readFileSync(targetAbs, 'utf8');
+    } catch {
+      continue;
+    }
+    try {
+      const targetParsed = ts.createSourceFile(targetAbs, targetText, ts.ScriptTarget.Latest, true);
+      const targetDeps = extractSemanticDependencies(ts, targetParsed);
+      const importsBack = (targetDeps ?? []).some((tDep) => {
+        if (tDep.typeOnly || typeof tDep.specifier !== 'string' || !tDep.specifier) return false;
+        return context.resolveImportTarget(tDep.specifier, targetAbs)?.relPath === context.relFile;
+      });
+      if (!importsBack) continue;
+      const members = [context.relFile, targetRel].sort();
+      out.push({
+        ruleId: 'CIRCULAR_DEPENDENCY',
+        code: 'CIRCULAR_DEPENDENCY',
+        file: context.relFile,
+        line: dep.line ?? 1,
+        target: members.join(' → '),
+        message: `Circular dependency among 2 files: ${members[0]} → ${members[1]} → ${members[0]}.`,
+        nextAction:
+          getDiagnosticCatalogEntry('CIRCULAR_DEPENDENCY')?.fix ??
+          'Break the cycle: extract the shared code into a module both sides import, invert one edge behind a port/interface, or merge the files if they are really one unit.',
+        failsStrict: true,
+        severity: 'error',
+      });
+    } catch {
+      /* ignore unreadable/unparseable target */
+    }
+  }
+  return out;
+}
+
 export function validateSnippetAnalysis({ gate, ts, source, context = {} }) {
   const observed = gate.validate(source, context);
   const arkRunViolations = arkRunSnippetViolations(source, context);
@@ -297,11 +373,16 @@ export function validateSnippetAnalysis({ gate, ts, source, context = {} }) {
         ],
       };
     }
+    const cycleViolations = detectImmediateCycleViolations(ts, parsed, context, base.violations);
+    const mergedViolations =
+      cycleViolations.length > 0 ? [...base.violations, ...cycleViolations] : base.violations;
+    const lexicalValid = base.valid && cycleViolations.length === 0;
     return {
       ...base,
+      violations: mergedViolations,
       mode: 'lexical-compatibility',
       valid: false,
-      lexicalValid: base.valid,
+      lexicalValid,
       completeness: ANALYSIS_COMPLETENESS.partial,
       completenessReasons: [lexicalEvidenceIncompleteMessage(file, context)],
     };

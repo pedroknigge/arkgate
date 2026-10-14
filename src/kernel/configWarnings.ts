@@ -148,6 +148,36 @@ export function collectAnalysisConfigWarnings(
         );
       }
     }
+
+    const reservedEmpty =
+      layer.optional === true || layer.reserved === true || layer.allowEmpty === true;
+    for (const entrypoint of Array.isArray(layer.entrypoints) ? layer.entrypoints : []) {
+      if (typeof entrypoint !== 'string' || entrypoint.length === 0) continue;
+      let expression: RegExp;
+      try {
+        expression = globToRegExp(entrypoint);
+      } catch (error) {
+        warnings.push(
+          configWarning(
+            'CONFIG_INVALID_LAYER_PATTERN',
+            `Layer "${layer.name}" has an invalid entrypoint "${entrypoint}": ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+            { layer: layer.name, pattern: entrypoint, entrypoint: true }
+          )
+        );
+        continue;
+      }
+      if (!files.some((file) => expression.test(file)) && !reservedEmpty) {
+        warnings.push(
+          configWarning(
+            'CONFIG_LAYER_PATTERN_NO_MATCHES',
+            `Layer "${layer.name}" entrypoint "${entrypoint}" matched no included files (possible typo).`,
+            { layer: layer.name, pattern: entrypoint, failsStrict: false, reserved: false, entrypoint: true }
+          )
+        );
+      }
+    }
   }
 
   for (const name of duplicateLayers) {

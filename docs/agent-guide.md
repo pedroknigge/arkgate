@@ -315,6 +315,7 @@ MCP `ark_recommend` and the `/ark-adopt` skill (leftover name `/ark-architect` i
 npx ark start --yes                           # preferred read-only preview: shape → contract → host → CI
 npx ark start --yes --apply                   # apply exactly the previewed compact setup
 npx ark init --archetype crud-product --yes   # non-interactive: shape → preset → origin → gates
+npx ark init --baseline --yes                 # brownfield: freeze existing debt into .ark-baseline.json + wire --baseline in CI
 npx ark init                                    # TTY wizard: pick application shape (1–8), not a framework
 npx ark-check --doctor                          # includes "New here?" when coverage is low or config is fresh
 npx ark-check --report beginner.html --beginner # simplified HTML for enthusiasts
@@ -1557,8 +1558,8 @@ The server exposes these thirteen tools. Every tool accepts the additive
 | `ark_check` | `{ strict?, baseline? }`: run the full project architecture check. `verdict` separates `identity`, `completeness`, `graph`, `coverage`, `gates`, and `overallOk`; no individual green fact substitutes for the combined verdict. |
 | `ark_policy_delta` | `{ baseConfig, candidateConfig?, baseArkRuleFiles?, candidateArkRuleFiles?, acknowledgement? }`: classify a complete contract transition, ArkRules included; never edits the contract. `baseArkRuleFiles` (`{ "<path from baseConfig.arkRules>": <file JSON> }`) is required when `baseConfig` maps `arkRules`. Include each `childSlices.arkRulesFile` path in that map when the wall discovers one. Weakening / new layer / new allow edge needs `adrPath` on the acknowledgement. |
 | `ark_coverage` | No args: report per-layer counts, every unclassified file, unmatched layers, and missing rule edges. |
-| `ark_place` | `{ filePath, description? }`: resolve the governed home for `filePath` (fail-closed without it; never invents a path) and return its import/global constraints. |
-| `ark_prepare_write` | `{ source, filePath, description?, layer? }`: compose placement and snippet validation, with hashes and a mechanical-safe patch when available. `filePath` is required (fail-closed). Partial like `validate_code`: read `lexicalValid`. |
+| `ark_place` | `{ filePath, description? }`: resolve the governed home for `filePath` (fail-closed without it; never invents a path) and return its import/global constraints, plus `entrypoints` and `targetEntrypoints` when layers declare public entrypoints. |
+| `ark_prepare_write` | `{ source, filePath, description?, layer? }`: compose placement (`entrypoints`, `targetEntrypoints`) and snippet validation (including immediate 2-hop cycle checks under `cyclePolicy: "strict"`), with hashes, a mechanical-safe patch when available, and `judgmentBrief.blueprint` (ready-to-paste TypeScript port/entrypoint/valve/kernel code on rejection). `filePath` is required (fail-closed). Partial like `validate_code`: read `lexicalValid`. |
 | `ark_prepare_change` | `{ changes, changeMap? }`: preflight one complete create/update/delete batch in memory against the same Effective Contract as `ark-check` (ArkRules included: same `policyHash`, structure/invariant findings; a missing referenced ArkRules file fails closed); ArkRules-plane findings the base tree already has are returned as `preExisting: true` warnings and do not block, so baselined brownfield debt does not reject an unrelated batch; never writes files. |
 | `ark_recommend` | No args: return the deterministic application-shape plan used by `ark-check --recommend --json`. |
 | `ark_suggest_include` | No args: propose TypeScript/JavaScript include roots from workspaces and nested packages. |

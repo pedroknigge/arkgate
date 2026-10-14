@@ -6,7 +6,7 @@
  */
 
 import type { EffectiveArkRules, EffectiveStructureRule, ArkRuleSensorId } from './arkRulesTypes';
-import { findClassDeclarations, scanClassMembers } from './classSourceScan';
+import { findClassDeclarations, maskStringsAndComments, scanClassMembers } from './classSourceScan';
 import {
   sourceHasPersistenceWrite,
   sourceHasTaggedSqlWrite,
@@ -41,6 +41,9 @@ export const DOMAIN_EVENTS_PUSH_RE = new RegExp(
   `\\bthis\\.${EVENTS_ARRAY_PROP}\\.push\\s*\\(`
 );
 
+const STRUCTURAL_GUARD_CLAUSE_RE =
+  /\bif\s*\([^)]*\)\s*(?:\{[^}]*\bthrow\b|\bthrow\b)/;
+
 const EVENTS_ARRAY_RESET_RE = new RegExp(
   `^this\\.${EVENTS_ARRAY_PROP}\\s*=\\s*\\[\\s*\\]`
 );
@@ -54,7 +57,12 @@ export function expectedDomainInvariantWordsPhrase(): string {
 }
 
 function referencesGuardOrPublish(source: string): boolean {
-  return DOMAIN_INVARIANT_WORD_RE.test(source) || DOMAIN_EVENTS_PUSH_RE.test(source);
+  const code = maskStringsAndComments(source);
+  return (
+    DOMAIN_INVARIANT_WORD_RE.test(code) ||
+    DOMAIN_EVENTS_PUSH_RE.test(code) ||
+    STRUCTURAL_GUARD_CLAUSE_RE.test(code)
+  );
 }
 
 export function isIdiomaticEventsReset(
@@ -71,10 +79,11 @@ export function isIdiomaticEventsReset(
 }
 
 function methodAssignsThis(methodName: string, methodBody: string): boolean {
+  const code = maskStringsAndComments(methodBody);
   const re = new RegExp(THIS_FIELD_ASSIGNMENT_RE.source, 'g');
   let match: RegExpExecArray | null;
-  while ((match = re.exec(methodBody)) !== null) {
-    if (isIdiomaticEventsReset(methodBody, match.index, methodName)) continue;
+  while ((match = re.exec(code)) !== null) {
+    if (isIdiomaticEventsReset(code, match.index, methodName)) continue;
     return true;
   }
   return false;

@@ -1171,7 +1171,11 @@ const SOURCE_READ_FAILURE = Symbol('ark.sourceReadFailure');
  * used while `config` is the identical object.
  */
 export function createResolverIngestCache(config) {
-  return { config, records: new Map() };
+  return {
+    config,
+    evidenceHash: config ? resolvedFactsEvidenceRequirementsHash(config) : undefined,
+    records: new Map(),
+  };
 }
 
 /** Overlay text when present; otherwise read the on-disk source now (not held afterwards). */
@@ -1506,7 +1510,20 @@ export function resolveCandidateFacts({
     arkOrderBudgetLeaks,
   };
   const accumulatorNames = Object.keys(accumulators);
-  const reusable = ingestCache?.config === config ? ingestCache.records : undefined;
+  const currentEvidenceHash = resolvedFactsEvidenceRequirementsHash(config);
+  if (
+    ingestCache &&
+    ingestCache.config !== config &&
+    ingestCache.evidenceHash !== currentEvidenceHash
+  ) {
+    ingestCache.records.clear();
+  }
+  if (ingestCache) {
+    ingestCache.config = config;
+    ingestCache.evidenceHash = currentEvidenceHash;
+    if (ingestCache.records.size > 5000) ingestCache.records.clear();
+  }
+  const reusable = ingestCache?.records;
   const ingest = (candidate, fullExtract) => {
     if (!reusable || !fullExtract || typeof candidate.content === 'string') {
       ingestFresh(candidate, fullExtract);

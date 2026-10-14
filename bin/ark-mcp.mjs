@@ -44,8 +44,7 @@ function launcherArgs(argv) {
 }
 
 function residentEligiblePayload(payload) {
-  const toolName = payload?.tool_name ?? payload?.toolName;
-  return !['ApplyPatch', 'apply_patch'].includes(toolName);
+  return Boolean(payload && typeof payload === 'object');
 }
 
 async function tryResidentHook(args, hookInput) {
@@ -58,6 +57,8 @@ async function tryResidentHook(args, hookInput) {
     return { status: 0, stdout: '', stderr: '' };
   }
   if (!residentEligiblePayload(payload)) return null;
+  const toolName = payload?.tool_name ?? payload?.toolName;
+  const isPatch = toolName === 'ApplyPatch' || toolName === 'apply_patch';
   const endpoint = residentHookEndpoint({
     root: args.root,
     config: args.config,
@@ -70,7 +71,9 @@ async function tryResidentHook(args, hookInput) {
     socket: endpoint.socket,
     timeoutMs: Number.isFinite(configuredTimeout) && configuredTimeout > 0
       ? configuredTimeout
-      : 75,
+      : isPatch
+        ? 1500
+        : 75,
     request: {
       protocolVersion: RESIDENT_HOOK_PROTOCOL_VERSION,
       kind: 'hook',
@@ -81,6 +84,9 @@ async function tryResidentHook(args, hookInput) {
       hookRepair: args.hookRepair,
       failOnNewSmells: args.failOnNewSmells,
       grokHookEvent: Boolean(process.env.GROK_HOOK_EVENT),
+      contractSession: /^(?:1|true|yes|on)$/i.test(
+        String(process.env.ARK_CONTRACT_SESSION ?? '').trim()
+      ),
       payload,
     },
   });
