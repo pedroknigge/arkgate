@@ -80,24 +80,34 @@
       "phaseBroke": "doctor",
       "findingKind": "UX",
       "arkgateVersion": "4.8.26"
+    },
+    {
+      "iso": "2026-10-16T21:24:49.000Z",
+      "ok": true,
+      "durationSec": 179,
+      "phaseBroke": "coverage",
+      "findingKind": "contain",
+      "arkgateVersion": "4.8.27"
     }
   ],
   "aggregates": {
     "okRate": 1.0,
-    "durationP50Sec": 226,
-    "runs": 8,
+    "durationP50Sec": 223,
+    "runs": 9,
     "phaseBrokeDistribution": {
       "null": 3,
       "start-apply": 1,
       "check": 1,
       "recommend": 1,
       "install": 1,
-      "doctor": 1
+      "doctor": 1,
+      "coverage": 1
     },
     "findingKindDistribution": {
       "UX": 7,
-      "install": 1
+      "install": 1,
+      "contain": 1
     },
-    "updatedAt": "2026-10-13T21:16:39.000Z"
+    "updatedAt": "2026-10-16T21:24:49.000Z"
   }
 }
