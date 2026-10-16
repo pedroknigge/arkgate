@@ -1,0 +1,107 @@
+{
+  "cases": [
+    {
+      "expect": "pass",
+      "got": [
+        {
+          "command": "arkgate status --json",
+          "exitCode": 0,
+          "firstStep": "No ark.config.json found — run ark start (preview) then ark start --apply."
+        },
+        {
+          "command": "arkgate-check --json --no-cache",
+          "exitCode": 1,
+          "firstStep": "Point --root at the tree the contract describes (this run analyzed <project>), or fix the include / exclude / layer patterns in <project>/ark.config.json so they match real files. `npx arkgate-check --root . --plan` and `--coverage` report the empty scope without refusing, and `--adopt-contract --write` proposes an include that matches this tree."
+        },
+        {
+          "command": "arkgate-check --doctor --json --no-cache",
+          "exitCode": 0,
+          "firstStep": "Make arkgate-check --strict-merge a required GitHub status, or write .ark/adoption-stance.json with stance: \"advisory-only\""
+        },
+        {
+          "command": "arkgate-check --strict-merge --json --no-cache",
+          "exitCode": 1,
+          "firstStep": "Point --root at the tree the contract describes (this run analyzed <project>), or fix the include / exclude / layer patterns in <project>/ark.config.json so they match real files. `npx arkgate-check --root . --plan` and `--coverage` report the empty scope without refusing, and `--adopt-contract --write` proposes an include that matches this tree."
+        }
+      ],
+      "id": "358-one-first-step",
+      "met": false,
+      "note": "A workspace package whose source sits outside a root src/ folder, no ark.config.json. Same first step as the one-package tree. Plain check does not pass.",
+      "owner": "#358",
+      "status": "fail",
+      "want": {
+        "firstStep": "No ark.config.json found — run arkgate start (preview) then arkgate start --apply."
+      }
+    },
+    {
+      "expect": "pass",
+      "got": {
+        "exitCode": 1,
+        "firstStep": "Point --root at the tree the contract describes (this run analyzed <project>), or fix the include / exclude / layer patterns in <project>/ark.config.json so they match real files. `npx arkgate-check --root . --plan` and `--coverage` report the empty scope without refusing, and `--adopt-contract --write` proposes an include that matches this tree.",
+        "ok": false,
+        "printsPass": false
+      },
+      "id": "358-check-not-pass",
+      "met": false,
+      "note": "Plain arkgate-check with no contract exits non-zero and does not print a pass. The next step is arkgate start.",
+      "owner": "#358",
+      "status": "fail",
+      "want": {
+        "exitCode": "nonzero",
+        "firstStepIncludes": "arkgate start",
+        "ok": false,
+        "printsPass": false
+      }
+    }
+  ],
+  "fixture": "freshmono",
+  "schemaVersion": 1,
+  "steps": [
+    {
+      "command": "arkgate status --json",
+      "exitCode": 0,
+      "filesDiff": {},
+      "output": {
+        "error": null,
+        "firstStep": "No ark.config.json found — run ark start (preview) then ark start --apply.",
+        "ok": false,
+        "printsPass": false
+      }
+    },
+    {
+      "command": "arkgate-check --json --no-cache",
+      "exitCode": 1,
+      "filesDiff": {},
+      "output": {
+        "error": "ANALYSIS_COVERS_NO_FILES",
+        "firstStep": "Point --root at the tree the contract describes (this run analyzed <project>), or fix the include / exclude / layer patterns in <project>/ark.config.json so they match real files. `npx arkgate-check --root . --plan` and `--coverage` report the empty scope without refusing, and `--adopt-contract --write` proposes an include that matches this tree.",
+        "ok": false,
+        "printsPass": false
+      }
+    },
+    {
+      "command": "arkgate-check --doctor --json --no-cache",
+      "exitCode": 0,
+      "filesDiff": {
+        ".ark/ci-merge-boundary.json": "added"
+      },
+      "output": {
+        "error": null,
+        "firstStep": "Make arkgate-check --strict-merge a required GitHub status, or write .ark/adoption-stance.json with stance: \"advisory-only\"",
+        "ok": true,
+        "printsPass": true
+      }
+    },
+    {
+      "command": "arkgate-check --strict-merge --json --no-cache",
+      "exitCode": 1,
+      "filesDiff": {},
+      "output": {
+        "error": "ANALYSIS_COVERS_NO_FILES",
+        "firstStep": "Point --root at the tree the contract describes (this run analyzed <project>), or fix the include / exclude / layer patterns in <project>/ark.config.json so they match real files. `npx arkgate-check --root . --plan` and `--coverage` report the empty scope without refusing, and `--adopt-contract --write` proposes an include that matches this tree.",
+        "ok": false,
+        "printsPass": false
+      }
+    }
+  ]
+}

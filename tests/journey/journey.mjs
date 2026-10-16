@@ -11,7 +11,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { resolveCandidate } from '../../scripts/ts-compat-matrix.mjs';
-import { JOURNEY_CASES, JOURNEYS } from './journeys.mjs';
+import { CONFIG_FREE_FIXTURES, JOURNEY_CASES, JOURNEYS } from './journeys.mjs';
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(SCRIPT_DIR, '../..');
@@ -137,8 +137,15 @@ function assertFixtureName(fixture) {
   }
   const dir = path.join(REPO_ROOT, FIXTURE_ROOT, fixture);
   const writesConfig = JOURNEYS[fixture].some((step) => step[0] === 'ark' || step[0] === 'arkgate');
-  if (!writesConfig && !fs.existsSync(path.join(dir, 'ark.config.json'))) {
+  if (
+    !CONFIG_FREE_FIXTURES.has(fixture) &&
+    !writesConfig &&
+    !fs.existsSync(path.join(dir, 'ark.config.json'))
+  ) {
     throw new JourneyError('fixture', `missing ark.config.json in ${FIXTURE_ROOT}/${fixture}`);
+  }
+  if (CONFIG_FREE_FIXTURES.has(fixture) && fs.existsSync(path.join(dir, 'ark.config.json'))) {
+    throw new JourneyError('fixture', `${FIXTURE_ROOT}/${fixture} must not contain ark.config.json`);
   }
 }
 
@@ -153,7 +160,10 @@ function assertSteps(steps) {
     }
     const [bin, ...args] = step;
     if (!BINS.has(bin)) {
-      throw new JourneyError('step', `step bin must be ark-check or arkgate-check, got ${bin}`);
+      throw new JourneyError('step', `step bin must be ark-check, arkgate-check, ark, or arkgate, got ${bin}`);
+    }
+    if ((bin === 'ark' || bin === 'arkgate') && args[0] !== 'status') {
+      throw new JourneyError('step', `${commandText(step)} may only run status`);
     }
     if (!args.includes('--json')) {
       throw new JourneyError('step', `${commandText(step)} must pass --json`);
@@ -422,6 +432,7 @@ function configRejectionView(stderr) {
 
 function projectFixture(fixture, step, parsed) {
   if (fixture === 'rootnext') return projectRootnext(step, parsed);
+  if (CONFIG_FREE_FIXTURES.has(fixture)) return absentConfigView(step, parsed);
   const views = FIXTURE_VIEWS[fixture] ?? { check: checkView, doctor: doctorView };
   const project = step.includes('--doctor') ? views.doctor : views.check;
   if (fixture === 'atlasgrid') return project(parsed, step);
@@ -476,6 +487,32 @@ function rootnextDoctorView(parsed) {
     classifiedFiles: typeof governed.classifiedFiles === 'number' ? governed.classifiedFiles : null,
     totalFiles: typeof governed.totalFiles === 'number' ? governed.totalFiles : null,
     emptyLayers,
+  };
+}
+
+function absentConfigView(step, parsed) {
+  const command = commandText(step);
+  let firstStep = null;
+  if (command.startsWith('arkgate status') || command.startsWith('ark status')) {
+    const summary = parsed?.nextAction?.summary;
+    firstStep = typeof summary === 'string' ? summary : null;
+  } else if (command.includes('--doctor')) {
+    const primary = parsed?.doctor?.primaryNextAction;
+    firstStep = typeof primary === 'string' ? primary : null;
+  } else if (typeof parsed?.nextAction === 'string') {
+    firstStep = parsed.nextAction;
+  } else if (typeof parsed?.message === 'string') {
+    firstStep = parsed.message;
+  } else if (typeof parsed?.error === 'string') {
+    firstStep = parsed.error;
+  }
+  const printsPass =
+    parsed?.ok === true || (typeof firstStep === 'string' && /passed/i.test(firstStep));
+  return {
+    error: typeof parsed?.error === 'string' ? parsed.error : null,
+    firstStep,
+    ok: parsed?.ok === true,
+    printsPass,
   };
 }
 
@@ -1133,6 +1170,45 @@ function judgeOrderdesk(spec, steps) {
   };
 }
 
+function judgeAbsentConfig(spec, steps) {
+  if (spec.kind === 'absent-config-first-step') return judgeAbsentConfigFirstStep(spec, steps);
+  if (spec.kind === 'absent-config-check-not-pass') return judgeAbsentConfigCheck(spec, steps);
+  throw new JourneyError('case', `unknown journey case kind ${spec.kind}`);
+}
+
+function judgeAbsentConfigFirstStep(spec, steps) {
+  const got = steps.map((step) => ({
+    command: step.command,
+    exitCode: step.exitCode,
+    firstStep: step.output?.firstStep ?? null,
+  }));
+  const met = got.length > 0 && got.every((row) => row.firstStep === spec.want.firstStep);
+  return { met, want: spec.want, got };
+}
+
+function judgeAbsentConfigCheck(spec, steps) {
+  const check =
+    steps.find(
+      (step) =>
+        step.command.startsWith('arkgate-check ') &&
+        !step.command.includes('--doctor') &&
+        !step.command.includes('--strict-merge')
+    ) ?? null;
+  const got = {
+    exitCode: check?.exitCode ?? null,
+    firstStep: check?.output?.firstStep ?? null,
+    ok: check?.output?.ok === true,
+    printsPass: check?.output?.printsPass === true,
+  };
+  const met =
+    got.exitCode !== 0 &&
+    got.ok === false &&
+    got.printsPass === false &&
+    typeof got.firstStep === 'string' &&
+    got.firstStep.includes(spec.want.firstStepIncludes);
+  return { met, want: spec.want, got };
+}
+
 function judgeRootbound(spec, steps) {
   const step = steps.find((entry) => entry.command.includes('--root')) ?? null;
   const output = step?.output ?? {};
@@ -1210,6 +1286,9 @@ function judgeRootnext(spec, steps) {
 function evaluateJourneyCase(spec, steps) {
   if (typeof spec.kind === 'string' && spec.kind.startsWith('rootnext-')) {
     return caseResult(spec, judgeRootnext(spec, steps));
+  }
+  if (typeof spec.kind === 'string' && spec.kind.startsWith('absent-config-')) {
+    return caseResult(spec, judgeAbsentConfig(spec, steps));
   }
   if (typeof spec.kind === 'string' && spec.kind.startsWith('rootbound-')) {
     return caseResult(spec, judgeRootbound(spec, steps));

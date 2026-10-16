@@ -1,0 +1,107 @@
+{
+  "cases": [
+    {
+      "expect": "pass",
+      "got": [
+        {
+          "command": "arkgate status --json",
+          "exitCode": 0,
+          "firstStep": "No ark.config.json found — run ark start (preview) then ark start --apply."
+        },
+        {
+          "command": "arkgate-check --json --no-cache",
+          "exitCode": 0,
+          "firstStep": null
+        },
+        {
+          "command": "arkgate-check --doctor --json --no-cache",
+          "exitCode": 0,
+          "firstStep": "Make arkgate-check --strict-merge a required GitHub status, or write .ark/adoption-stance.json with stance: \"advisory-only\""
+        },
+        {
+          "command": "arkgate-check --strict-merge --json --no-cache",
+          "exitCode": 1,
+          "firstStep": "missing-gates"
+        }
+      ],
+      "id": "358-one-first-step",
+      "met": false,
+      "note": "One package, one source file, no ark.config.json. Every surface leads with arkgate start, and plain check does not pass.",
+      "owner": "#358",
+      "status": "fail",
+      "want": {
+        "firstStep": "No ark.config.json found — run arkgate start (preview) then arkgate start --apply."
+      }
+    },
+    {
+      "expect": "pass",
+      "got": {
+        "exitCode": 0,
+        "firstStep": null,
+        "ok": true,
+        "printsPass": true
+      },
+      "id": "358-check-not-pass",
+      "met": false,
+      "note": "Plain arkgate-check with no contract exits non-zero and does not print a pass. The next step is arkgate start.",
+      "owner": "#358",
+      "status": "fail",
+      "want": {
+        "exitCode": "nonzero",
+        "firstStepIncludes": "arkgate start",
+        "ok": false,
+        "printsPass": false
+      }
+    }
+  ],
+  "fixture": "freshmini",
+  "schemaVersion": 1,
+  "steps": [
+    {
+      "command": "arkgate status --json",
+      "exitCode": 0,
+      "filesDiff": {},
+      "output": {
+        "error": null,
+        "firstStep": "No ark.config.json found — run ark start (preview) then ark start --apply.",
+        "ok": false,
+        "printsPass": false
+      }
+    },
+    {
+      "command": "arkgate-check --json --no-cache",
+      "exitCode": 0,
+      "filesDiff": {},
+      "output": {
+        "error": null,
+        "firstStep": null,
+        "ok": true,
+        "printsPass": true
+      }
+    },
+    {
+      "command": "arkgate-check --doctor --json --no-cache",
+      "exitCode": 0,
+      "filesDiff": {
+        ".ark/ci-merge-boundary.json": "added"
+      },
+      "output": {
+        "error": null,
+        "firstStep": "Make arkgate-check --strict-merge a required GitHub status, or write .ark/adoption-stance.json with stance: \"advisory-only\"",
+        "ok": true,
+        "printsPass": true
+      }
+    },
+    {
+      "command": "arkgate-check --strict-merge --json --no-cache",
+      "exitCode": 1,
+      "filesDiff": {},
+      "output": {
+        "error": "missing-gates",
+        "firstStep": "missing-gates",
+        "ok": false,
+        "printsPass": false
+      }
+    }
+  ]
+}
