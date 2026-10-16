@@ -1,0 +1,121 @@
+{
+  "cases": [
+    {
+      "expect": "pass",
+      "got": {
+        "checkExit": 1,
+        "doctorPercent": 100,
+        "doctorTotal": 10,
+        "emptyLayers": [
+          "DomainModel"
+        ],
+        "falseHundred": false,
+        "include": [
+          "src",
+          "app",
+          "middleware.ts",
+          "components",
+          "lib/db",
+          "lib/auth.ts",
+          "lib/db.ts"
+        ],
+        "missing": [],
+        "recommendPercent": 100,
+        "silentPass": false,
+        "startPercent": 100,
+        "violation": true
+      },
+      "id": "361-root-include",
+      "met": true,
+      "note": "start, --recommend, and --doctor must not report governed 100% while components/ and lib/ (named by the written layer patterns) sit outside include. ark-check must not exit 0 on the PersistenceAdapters → PresentationAdapters import in lib/db.ts.",
+      "owner": "#361",
+      "status": "pass",
+      "want": {
+        "falseHundred": false,
+        "file": "lib/db.ts",
+        "roots": [
+          "components",
+          "lib"
+        ],
+        "silentPass": false
+      }
+    }
+  ],
+  "fixture": "rootnext",
+  "schemaVersion": 1,
+  "steps": [
+    {
+      "command": "ark start --apply --json --yes --no-install --tools claude",
+      "exitCode": 0,
+      "filesDiff": {
+        ".ark/ci-merge-boundary.json": "added",
+        ".claude/settings.json": "added",
+        ".github/workflows/ark-check.yml": "added",
+        ".mcp.json": "added",
+        "AGENTS.md": "added",
+        "ark.config.json": "added",
+        "arkrules/ApplicationOrchestration.json": "added",
+        "arkrules/DomainModel.json": "added",
+        "arkrules/PersistenceAdapters.json": "added",
+        "arkrules/PresentationAdapters.json": "added",
+        "package.json": "modified"
+      },
+      "output": {
+        "include": [
+          "src",
+          "app",
+          "middleware.ts",
+          "components",
+          "lib/db",
+          "lib/auth.ts",
+          "lib/db.ts"
+        ],
+        "projectedClassified": 10,
+        "projectedPercent": 100,
+        "projectedTotal": 10,
+        "startError": null
+      }
+    },
+    {
+      "command": "ark-check --recommend --json",
+      "exitCode": 0,
+      "filesDiff": {},
+      "output": {
+        "classifiedFiles": 10,
+        "percent": 100,
+        "totalFiles": 10
+      }
+    },
+    {
+      "command": "ark-check --doctor --json --no-cache",
+      "exitCode": 0,
+      "filesDiff": {},
+      "output": {
+        "classifiedFiles": 10,
+        "emptyLayers": [
+          "DomainModel"
+        ],
+        "percent": 100,
+        "totalFiles": 10
+      }
+    },
+    {
+      "command": "ark-check --json --no-cache",
+      "exitCode": 1,
+      "filesDiff": {},
+      "output": {
+        "completeness": "complete",
+        "diagnostics": [
+          {
+            "file": "lib/db.ts",
+            "message": "PersistenceAdapters must not import PresentationAdapters.",
+            "ruleId": "LAYER_IMPORT_VIOLATION",
+            "severity": "error"
+          }
+        ],
+        "ok": false,
+        "valid": false
+      }
+    }
+  ]
+}

@@ -183,6 +183,30 @@ function applyFrameworkLayerCaptions(config, signals) {
  * library-native copy on library-only / library-package monorepos. Generic preset
  * captions stay when neither applies.
  */
+
+export function patternIncludeEntry(pattern) {
+  let norm = String(pattern ?? '').replace(/\\/g, '/').replace(/^\.\//, '');
+  if (!norm || norm[0] === '/') return null;
+  const cut = norm.search(/[*?\[]/);
+  if (cut >= 0) norm = norm.slice(0, cut);
+  return norm.split('/').filter((part) => part && part !== '.').join('/') || null;
+}
+
+export function governedInclude(config, root) {
+  const include = [...(config?.include ?? [])];
+  if (!root) return include;
+  for (const pattern of (config?.layers ?? []).flatMap((layer) => layer?.patterns ?? [])) {
+    const entry = patternIncludeEntry(pattern);
+    if (!entry || !fs.existsSync(path.join(root, entry))) continue;
+    if (include.some((existing) => {
+      const norm = String(existing).replace(/\\/g, '/').replace(/^\.\//, '').replace(/\/$/, '');
+      return norm === '.' || norm === entry || entry.startsWith(`${norm}/`);
+    })) continue;
+    include.push(entry);
+  }
+  return include;
+}
+
 export function applyFrameworkLayoutOverlays(config, root) {
   if (!config || !root) return config;
   let signals;
@@ -501,6 +525,7 @@ export function applyFrameworkLayoutOverlays(config, root) {
       : 'library';
   }
 
+  next.include = governedInclude(next, root);
   applyFrameworkLayerCaptions(next, signals);
   return withArkConfigMetadata(next);
 }

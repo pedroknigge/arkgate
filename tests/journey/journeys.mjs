@@ -50,6 +50,11 @@
  * #352 is `rootbound`: `--config` sits outside `--root`. The contract forbids
  * `Date.now` and the file under `--root` calls it. A silent pass checked the
  * config's folder instead.
+ *
+ * #361 is `rootnext`: a root-level Next App Router tree (`app/`, `components/`,
+ * `lib/`, no `src/`). `start` writes `include`. A governed 100% while those
+ * pattern roots sit outside `include`, or exit 0 on the Persistence →
+ * Presentation import in `lib/db.ts`, is the hole.
  */
 const crossParentEdges = Object.freeze([
   Object.freeze({
@@ -229,6 +234,12 @@ export const JOURNEYS = Object.freeze({
       '--config',
       'contract/ark.config.json',
     ]),
+  ]),
+  rootnext: Object.freeze([
+    Object.freeze(['ark', 'start', '--apply', '--json', '--yes', '--no-install', '--tools', 'claude']),
+    Object.freeze(['ark-check', '--recommend', '--json']),
+    Object.freeze(['ark-check', '--doctor', '--json', '--no-cache']),
+    Object.freeze(['ark-check', '--json', '--no-cache']),
   ]),
 });
 
@@ -935,6 +946,17 @@ export const JOURNEY_CASES = Object.freeze({
       kind: 'rootbound-outside-config',
       note: 'The contract in contract/ forbids Date.now. --root is target/, and deadline.ts calls it. The run reports that finding. Exit 0 with ok true would mean the config folder was checked instead.',
       file: 'src/lib/sample/domain/deadline.ts',
+    }),
+  ]),
+  rootnext: Object.freeze([
+    Object.freeze({
+      id: '361-root-include',
+      owner: '#361',
+      expect: 'pass',
+      kind: 'rootnext-include',
+      note: 'start, --recommend, and --doctor must not report governed 100% while components/ and lib/ (named by the written layer patterns) sit outside include. ark-check must not exit 0 on the PersistenceAdapters → PresentationAdapters import in lib/db.ts.',
+      roots: Object.freeze(['components', 'lib']),
+      file: 'lib/db.ts',
     }),
   ]),
 });
