@@ -114,6 +114,7 @@ import {
   analysisIncompleteStatement,
   emptyAnalysisRefusal, classifiedCountFromFiles,
 } from './lib/analysis-completeness.mjs';
+import { ABSENT_CONFIG_FIRST_STEP } from './lib/first-step.mjs';
 import { reportUnavailableAnalysis } from './lib/unavailable-analysis.mjs';
 import { validateHardWriteRequest } from './lib/enforcement-profiles.mjs';
 import {
@@ -1171,6 +1172,18 @@ async function main() {
   // refusing there would remove the only surface that explains the refusal.
   const root = args.root;
   const verdictPath = !args.plan && !args.coverage && !args.doctor;
+  const configName = typeof args.config === 'string' ? args.config : '';
+  const explicitConfigPath = path.isAbsolute(configName) || /[\\/]/.test(configName);
+  if (verdictPath && args.configFound !== true && !explicitConfigPath) {
+    const message = ABSENT_CONFIG_FIRST_STEP;
+    if (args.json) {
+      console.log(JSON.stringify({ ok: false, error: 'NO_ARK_CONFIG', message, nextAction: message }, null, 2));
+    } else {
+      console.error(`${color.red('✖')} ${message}`);
+    }
+    process.exitCode = 1;
+    return;
+  }
   let configCache = null;
   const loadConfig = () => (configCache ??= readConfig(root, args.config));
   let governedCache = null;

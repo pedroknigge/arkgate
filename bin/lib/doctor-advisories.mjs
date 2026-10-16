@@ -46,6 +46,7 @@ import {
   summarizeArkOrderSection,
 } from './ark-order-doctor.mjs';
 import { composeMergePlanesHonesty } from './extra-merge-teeth.mjs';
+import { treeHasArkOrderCandidate } from '../ark-shared.mjs';
 import { collectPrototypeShortcutsResidual } from './prototype-shortcuts.mjs';
 import {
   crossParentViaSharedHubs,
@@ -54,7 +55,7 @@ import {
   sliceIdentityCollisions,
 } from '../ark-layer-match.mjs';
 
-export function attachExtraDoctorSections(rulesUnderContract, config, classification, findings) {
+export function attachExtraDoctorSections(rulesUnderContract, config, classification, findings, extras = {}) {
   const arkRulesMerge = {
     active: rulesUnderContract?.active === true,
     structureEnforced: rulesUnderContract?.mergePlanes?.structureSensors?.enforced,
@@ -83,6 +84,9 @@ export function attachExtraDoctorSections(rulesUnderContract, config, classifica
       mode: arkRun.mode,
       residualCount: arkRun.residual?.count,
     },
+    candidate:
+      extras.candidate === true ||
+      (typeof extras.root === 'string' && treeHasArkOrderCandidate(extras.root)),
   });
   const mergePlanes = composeMergePlanesHonesty({
     classification,
@@ -194,7 +198,7 @@ export function printCompactExtraDoctorLines(advisories, io) {
     if (residual > 0) io.line(mark, ARKRUN_FIRST_CONTACT_NEXT);
   }
   const arkOrder = advisories?.arkOrder;
-  if (arkOrder && arkOrder.notAScore === true) {
+  if (arkOrder && arkOrder.notAScore === true && (arkOrder.active === true || arkOrder.candidate === true)) {
     console.log('');
     if (arkOrder.active === true) {
       const residual = Number(arkOrder.residual?.count) || 0;
@@ -300,7 +304,8 @@ export function computeDoctorAdvisories(root, config, cov, rules, files, ts, par
     rulesUnderContract,
     config,
     classification,
-    activeViolations
+    activeViolations,
+    { root }
   );
   const prototypeShortcuts = collectPrototypeShortcutsResidual({
     root,

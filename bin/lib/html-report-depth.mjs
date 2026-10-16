@@ -148,7 +148,7 @@ export function buildReportDepthPayload(
     rulesUnderContract,
     config,
     classification,
-    activeViolations
+    activeViolations, { root }
   );
   // Single residual expression (parity with doctor): nextPilot || extractionCard.
   const residualPilot =

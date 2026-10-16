@@ -5,6 +5,7 @@ import {
   DEFAULT_ARK_CONFIG_RULES,
   withArkConfigMetadata,
 } from './lib/config-contract.mjs';
+import { resolveFirstStep, textHasArkOrderCandidate } from './lib/first-step.mjs';
 import { collectForbiddenCapabilityUses } from './lib/analysis-engine.mjs';
 import {
   DEFAULT_INTENT_PREFIXES as DOMAIN_DEFAULT_INTENT_PREFIXES,
@@ -2049,7 +2050,7 @@ export function shouldShowNewHereNudge(root, configPath, governedPercent, config
   return false;
 }
 
-export function formatArchitectureRecommendationHuman(recommendation) {
+export function formatArchitectureRecommendationHuman(recommendation, options = {}) {
   const lines = [];
   lines.push('Ark architecture recommendation (application shape, not vendor stack)');
   lines.push('');
@@ -2117,6 +2118,15 @@ export function formatArchitectureRecommendationHuman(recommendation) {
     }
   }
   lines.push('');
+  if (options.planJustWritten === true) {
+    const lead = resolveFirstStep({
+      configPresent: true,
+      planJustWritten: true,
+      justRan: recommendation.adoptCommand,
+    });
+    lines.push(`Next: ${lead}`);
+    return lines.join('\n');
+  }
   if (recommendation.mature) {
     // Established codebase: `ark init` would scaffold a thin/mis-scoped starter. Route to the
     // adoption flow, which aligns the contract to the repo's real structure with judgment.
@@ -2306,4 +2316,72 @@ export function cloneArchetypeForLayer(archetype, layerName) {
     structure: withPrefix(archetype.structure),
     invariants: withPrefix(archetype.invariants),
   };
+}
+
+const ARK_ORDER_SKIP_DIRS = new Set(['node_modules', '.git', 'dist', 'coverage', '.ark', 'build', 'out']);
+const ARK_ORDER_SOURCE_EXTS = new Set([
+  '.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.mts', '.cts',
+  '.py', '.go', '.rb', '.java', '.kt', '.cs', '.php', '.rs', '.vue', '.svelte',
+]);
+const ARK_ORDER_WALK_CAP = 400;
+const ARK_ORDER_READ_CAP = 80;
+const ARK_ORDER_BYTE_CAP = 64 * 1024;
+
+function arkOrderPathHasCandidate(file) {
+  return textHasArkOrderCandidate(String(file).split(path.sep).join(' '));
+}
+
+/**
+ * Bounded look for billing, pricing, or subscription. Silence is the safe miss.
+ * @param {string} root
+ * @returns {boolean}
+ */
+export function treeHasArkOrderCandidate(root) {
+  if (typeof root !== 'string' || root.length === 0) return false;
+  /** @type {string[]} */
+  const hinted = [];
+  /** @type {string[]} */
+  const rest = [];
+  /** @type {string[]} */
+  const stack = [root];
+  let walked = 0;
+  while (stack.length > 0 && walked < ARK_ORDER_WALK_CAP) {
+    const dir = stack.pop();
+    let entries;
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+    for (const entry of entries) {
+      if (entry.name.startsWith('.')) continue;
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (ARK_ORDER_SKIP_DIRS.has(entry.name)) continue;
+        if (arkOrderPathHasCandidate(entry.name)) return true;
+        stack.push(full);
+        continue;
+      }
+      if (!entry.isFile()) continue;
+      if (!ARK_ORDER_SOURCE_EXTS.has(path.extname(entry.name).toLowerCase())) continue;
+      walked += 1;
+      if (arkOrderPathHasCandidate(full)) return true;
+      if (textHasArkOrderCandidate(entry.name)) hinted.push(full);
+      else rest.push(full);
+      if (walked >= ARK_ORDER_WALK_CAP) break;
+    }
+  }
+  let read = 0;
+  for (const file of [...hinted, ...rest]) {
+    if (read >= ARK_ORDER_READ_CAP) break;
+    read += 1;
+    try {
+      const stat = fs.statSync(file);
+      if (!stat.isFile() || stat.size > ARK_ORDER_BYTE_CAP) continue;
+      if (textHasArkOrderCandidate(fs.readFileSync(file, 'utf8'))) return true;
+    } catch {
+      /* unreadable source is a miss */
+    }
+  }
+  return false;
 }

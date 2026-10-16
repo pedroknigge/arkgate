@@ -60,7 +60,7 @@
  * plain check, and --strict-merge must each lead with the same first step,
  * and a plain check must not print a pass.
  */
-export const ABSENT_CONFIG_FIRST_STEP =
+const ABSENT_CONFIG_FIRST_STEP =
   'No ark.config.json found — run arkgate start (preview) then arkgate start --apply.';
 
 /** Fixtures that are a fresh tree: the journey refuses an ark.config.json here. */

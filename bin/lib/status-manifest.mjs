@@ -10,6 +10,7 @@
 
 import { projectStatusArkRun } from './ark-run-doctor.mjs';
 import { projectStatusArkOrder } from './ark-order-doctor.mjs';
+import { ABSENT_CONFIG_FIRST_STEP } from './first-step.mjs';
 /** Status slice schema of one extra plane (ArkRun / ArkOrder). */
 function extraPlaneStatusSchema(plane) {
     return {
@@ -220,7 +221,7 @@ export function resolveStatusNextAction(facts, binding, activation, lastCheck, r
     if (!facts.resolvedConfigPath) {
         return {
             id: 'run-ark-start',
-            summary: 'No ark.config.json found — run ark start (preview) then ark start --apply.',
+            summary: ABSENT_CONFIG_FIRST_STEP,
         };
     }
     const configErrors = normalizedConfigErrors(facts.configErrors);

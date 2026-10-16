@@ -8,6 +8,16 @@ export function formatArkOrderHtml(section, esc) {
   const escape = typeof esc === 'function' ? esc : (v) => String(v);
   const note = section.note ? `<p class="muted">${escape(section.note)}</p>` : '';
   if (section.active !== true) {
+    if (section.candidate !== true) {
+      const silent = section.note
+        ? escape(section.note)
+        : 'Absence of arkOrder is silent — Layers verdicts unchanged. Not a score.';
+      return `
+  <section class="section card" data-advisory="arkOrder">
+    <h2>ArkOrder <span class="muted">(opt-in extra — not a score)</span></h2>
+    <p class="muted">${silent}</p>
+  </section>`;
+    }
     return `
   <section class="section card" data-advisory="arkOrder">
     <h2>ArkOrder <span class="muted">(opt-in extra — not a score)</span></h2>

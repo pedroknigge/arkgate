@@ -44,6 +44,7 @@ export default defineConfig({
         'bin/lib/ark-order-facts.mjs',
         'bin/lib/ark-order-sensors.mjs',
         'bin/lib/ark-order-types.mjs',
+        'bin/lib/first-step.mjs',
         'bin/ark-check.mjs',
         'bin/ark-mcp.mjs',
         'bin/ark-mcp-runtime.mjs',

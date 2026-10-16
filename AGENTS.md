@@ -162,6 +162,7 @@ or `dist/` except `ark-mcp` loading the built library. Shared CLI logic lives in
 | `src/domain/configExtras.ts` | `bin/lib/config-extras.mjs` | (same `cli-pure` scripts); arkRun / arkOrder extra defaults |
 | `src/domain/projectIdentity.ts` | `bin/lib/project-identity.mjs` + `schemas/ark.project-identity.schema.json` | (same `cli-pure` scripts) |
 | `src/domain/statusManifest.ts` | `bin/lib/status-manifest.mjs` + `schemas/ark.status-manifest.schema.json` | (same `cli-pure` scripts) |
+| `src/domain/firstStep.ts` | `bin/lib/first-step.mjs` | (same `cli-pure` scripts); one next line for a missing contract |
 | `src/domain/improvementCompassTypes.ts` | `bin/lib/improvement-compass-types.mjs` | (same `cli-pure` scripts); DF03 split child |
 | `src/domain/improvementCompassMap.ts` | `bin/lib/improvement-compass-map.mjs` | (same `cli-pure` scripts); DF03 split child |
 | `src/domain/improvementCompass.ts` | `bin/lib/improvement-compass.mjs` | (same `cli-pure` scripts); facade re-exports types + mappers |

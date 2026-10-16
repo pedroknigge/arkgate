@@ -36,6 +36,8 @@ export type ArkOrderDoctorSection = {
   schemaVersion: typeof ARK_ORDER_DOCTOR_SCHEMA_VERSION;
   notAScore: true;
   active: boolean;
+  /** Set only when inactive source names a billing, pricing, or subscription candidate. */
+  candidate?: boolean;
   mode: ArkOrderDoctorMode | null;
   planeRoots: number;
   managedLayers: number;
@@ -125,6 +127,7 @@ export function summarizeArkOrderSection(
       mode?: 'advisory' | 'enforced' | null;
       residualCount?: number;
     } | null;
+    candidate?: boolean;
   } = {}
 ): ArkOrderDoctorSection {
   const extra = extraFromConfig(input.arkOrder);
@@ -166,6 +169,7 @@ export function summarizeArkOrderSection(
     schemaVersion: ARK_ORDER_DOCTOR_SCHEMA_VERSION,
     notAScore: true,
     active: extra.present,
+    ...(input.candidate === true ? { candidate: true as const } : {}),
     mode: extra.mode,
     planeRoots: extra.roots,
     managedLayers: extra.layers,
@@ -186,6 +190,7 @@ export function projectStatusArkOrder(input: ExtraPlaneStatusInput = {}): ArkOrd
 export function formatArkOrderDoctorLines(section: ArkOrderDoctorSection): string[] {
   if (!section || section.notAScore !== true) return [];
   if (section.active !== true) {
+    if (section.candidate !== true) return [];
     return [
       ARKORDER_ONE_BREATH,
       'Off — Layers stay the same (not a score).',

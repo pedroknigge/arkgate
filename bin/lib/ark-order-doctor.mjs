@@ -87,6 +87,7 @@ export function summarizeArkOrderSection(input = {}) {
         schemaVersion: ARK_ORDER_DOCTOR_SCHEMA_VERSION,
         notAScore: true,
         active: extra.present,
+        ...(input.candidate === true ? { candidate: true } : {}),
         mode: extra.mode,
         planeRoots: extra.roots,
         managedLayers: extra.layers,
@@ -106,6 +107,8 @@ export function formatArkOrderDoctorLines(section) {
     if (!section || section.notAScore !== true)
         return [];
     if (section.active !== true) {
+        if (section.candidate !== true)
+            return [];
         return [
             ARKORDER_ONE_BREATH,
             'Off — Layers stay the same (not a score).',

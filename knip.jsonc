@@ -65,6 +65,7 @@
     "bin/lib/deepening-coach.mjs": ["exports", "types"],
     "bin/lib/diagnostic-catalog.mjs": ["exports", "types"],
     "bin/lib/extra-merge-teeth.mjs": ["exports", "types"],
+    "bin/lib/first-step.mjs": ["exports", "types"],
     "bin/lib/improvement-compass-map.mjs": ["exports", "types"],
     "bin/lib/improvement-compass-types.mjs": ["exports", "types"],
     "bin/lib/improvement-compass.mjs": ["exports", "types"],

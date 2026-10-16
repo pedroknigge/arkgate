@@ -50,6 +50,7 @@
     "**/bin/lib/diagnostic-catalog.mjs",
     "**/bin/lib/enforcement-state.mjs",
     "**/bin/lib/extra-merge-teeth.mjs",
+    "**/bin/lib/first-step.mjs",
     "**/bin/lib/hook-templates.mjs",
     "**/bin/lib/improvement-compass-map.mjs",
     "**/bin/lib/improvement-compass-types.mjs",

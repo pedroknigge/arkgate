@@ -6,29 +6,29 @@
         {
           "command": "arkgate status --json",
           "exitCode": 0,
-          "firstStep": "No ark.config.json found — run ark start (preview) then ark start --apply."
+          "firstStep": "No ark.config.json found — run arkgate start (preview) then arkgate start --apply."
         },
         {
           "command": "arkgate-check --json --no-cache",
-          "exitCode": 0,
-          "firstStep": null
+          "exitCode": 1,
+          "firstStep": "No ark.config.json found — run arkgate start (preview) then arkgate start --apply."
         },
         {
           "command": "arkgate-check --doctor --json --no-cache",
           "exitCode": 0,
-          "firstStep": "Make arkgate-check --strict-merge a required GitHub status, or write .ark/adoption-stance.json with stance: \"advisory-only\""
+          "firstStep": "No ark.config.json found — run arkgate start (preview) then arkgate start --apply."
         },
         {
           "command": "arkgate-check --strict-merge --json --no-cache",
           "exitCode": 1,
-          "firstStep": "missing-gates"
+          "firstStep": "No ark.config.json found — run arkgate start (preview) then arkgate start --apply."
         }
       ],
       "id": "358-one-first-step",
-      "met": false,
+      "met": true,
       "note": "One package, one source file, no ark.config.json. Every surface leads with arkgate start, and plain check does not pass.",
       "owner": "#358",
-      "status": "fail",
+      "status": "pass",
       "want": {
         "firstStep": "No ark.config.json found — run arkgate start (preview) then arkgate start --apply."
       }
@@ -36,16 +36,16 @@
     {
       "expect": "pass",
       "got": {
-        "exitCode": 0,
-        "firstStep": null,
-        "ok": true,
-        "printsPass": true
+        "exitCode": 1,
+        "firstStep": "No ark.config.json found — run arkgate start (preview) then arkgate start --apply.",
+        "ok": false,
+        "printsPass": false
       },
       "id": "358-check-not-pass",
-      "met": false,
+      "met": true,
       "note": "Plain arkgate-check with no contract exits non-zero and does not print a pass. The next step is arkgate start.",
       "owner": "#358",
-      "status": "fail",
+      "status": "pass",
       "want": {
         "exitCode": "nonzero",
         "firstStepIncludes": "arkgate start",
@@ -63,20 +63,20 @@
       "filesDiff": {},
       "output": {
         "error": null,
-        "firstStep": "No ark.config.json found — run ark start (preview) then ark start --apply.",
+        "firstStep": "No ark.config.json found — run arkgate start (preview) then arkgate start --apply.",
         "ok": false,
         "printsPass": false
       }
     },
     {
       "command": "arkgate-check --json --no-cache",
-      "exitCode": 0,
+      "exitCode": 1,
       "filesDiff": {},
       "output": {
-        "error": null,
-        "firstStep": null,
-        "ok": true,
-        "printsPass": true
+        "error": "NO_ARK_CONFIG",
+        "firstStep": "No ark.config.json found — run arkgate start (preview) then arkgate start --apply.",
+        "ok": false,
+        "printsPass": false
       }
     },
     {
@@ -87,7 +87,7 @@
       },
       "output": {
         "error": null,
-        "firstStep": "Make arkgate-check --strict-merge a required GitHub status, or write .ark/adoption-stance.json with stance: \"advisory-only\"",
+        "firstStep": "No ark.config.json found — run arkgate start (preview) then arkgate start --apply.",
         "ok": true,
         "printsPass": true
       }
@@ -97,8 +97,8 @@
       "exitCode": 1,
       "filesDiff": {},
       "output": {
-        "error": "missing-gates",
-        "firstStep": "missing-gates",
+        "error": "NO_ARK_CONFIG",
+        "firstStep": "No ark.config.json found — run arkgate start (preview) then arkgate start --apply.",
         "ok": false,
         "printsPass": false
       }
