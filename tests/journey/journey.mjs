@@ -17,7 +17,7 @@ const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(SCRIPT_DIR, '../..');
 const FIXTURE_ROOT = 'tests/fixtures/journey';
 const GOLDEN_DIR = path.join(REPO_ROOT, 'tests/journey/goldens');
-const BINS = new Set(['ark-check', 'arkgate-check']);
+const BINS = new Set(['ark-check', 'arkgate-check', 'ark', 'arkgate']);
 const STEP_TIMEOUT_MS = 120_000;
 const INSTALL_TIMEOUT_MS = 180_000;
 const MAX_BUFFER = 16 * 1024 * 1024;
@@ -136,7 +136,8 @@ function assertFixtureName(fixture) {
     throw new JourneyError('fixture', `unknown journey fixture: ${fixture}`);
   }
   const dir = path.join(REPO_ROOT, FIXTURE_ROOT, fixture);
-  if (!fs.existsSync(path.join(dir, 'ark.config.json'))) {
+  const writesConfig = JOURNEYS[fixture].some((step) => step[0] === 'ark' || step[0] === 'arkgate');
+  if (!writesConfig && !fs.existsSync(path.join(dir, 'ark.config.json'))) {
     throw new JourneyError('fixture', `missing ark.config.json in ${FIXTURE_ROOT}/${fixture}`);
   }
 }
@@ -420,10 +421,62 @@ function configRejectionView(stderr) {
 }
 
 function projectFixture(fixture, step, parsed) {
+  if (fixture === 'rootnext') return projectRootnext(step, parsed);
   const views = FIXTURE_VIEWS[fixture] ?? { check: checkView, doctor: doctorView };
   const project = step.includes('--doctor') ? views.doctor : views.check;
   if (fixture === 'atlasgrid') return project(parsed, step);
   return project(parsed);
+}
+
+function projectRootnext(step, parsed) {
+  if (step.includes('start')) return rootnextStartView(parsed);
+  if (step.includes('--recommend')) return rootnextRecommendView(parsed);
+  if (step.includes('--doctor')) return rootnextDoctorView(parsed);
+  return checkView(parsed);
+}
+
+function rootnextStartView(parsed) {
+  const changes = Array.isArray(parsed?.changes) ? parsed.changes : [];
+  const configChange = changes.find((change) => change?.path === 'ark.config.json') ?? null;
+  let include = null;
+  if (configChange?.afterBase64) {
+    const config = JSON.parse(Buffer.from(configChange.afterBase64, 'base64').toString('utf8'));
+    include = Array.isArray(config.include) ? config.include.map(String) : [];
+  }
+  const coverage = parsed?.projectedCoverage ?? {};
+  return {
+    include,
+    projectedPercent: typeof coverage.percent === 'number' ? coverage.percent : null,
+    projectedClassified: typeof coverage.classifiedFiles === 'number' ? coverage.classifiedFiles : null,
+    projectedTotal: typeof coverage.totalFiles === 'number' ? coverage.totalFiles : null,
+    startError: typeof parsed?.error === 'string' ? parsed.error : null,
+  };
+}
+
+function rootnextRecommendView(parsed) {
+  const signals = parsed?.signals ?? {};
+  return {
+    percent: typeof signals.projectedGovernedCoverage === 'number' ? signals.projectedGovernedCoverage : null,
+    classifiedFiles:
+      typeof signals.projectedGovernedClassifiedFiles === 'number'
+        ? signals.projectedGovernedClassifiedFiles
+        : null,
+    totalFiles:
+      typeof signals.projectedGovernedTotalFiles === 'number' ? signals.projectedGovernedTotalFiles : null,
+  };
+}
+
+function rootnextDoctorView(parsed) {
+  const governed = parsed?.doctor?.governed ?? {};
+  const emptyLayers = Array.isArray(parsed?.doctor?.emptyLayers)
+    ? parsed.doctor.emptyLayers.map(String)
+    : [];
+  return {
+    percent: typeof governed.percent === 'number' ? governed.percent : null,
+    classifiedFiles: typeof governed.classifiedFiles === 'number' ? governed.classifiedFiles : null,
+    totalFiles: typeof governed.totalFiles === 'number' ? governed.totalFiles : null,
+    emptyLayers,
+  };
 }
 
 function orderdeskCheckView(parsed) {
@@ -1102,7 +1155,62 @@ function judgeRootbound(spec, steps) {
   return { met, want: { file: spec.file, silentPass: false }, got };
 }
 
+function includeCovers(include, rootName) {
+  return (include ?? []).some((entry) => {
+    const norm = String(entry).replace(/\\/g, '/').replace(/^\.\//, '').replace(/\/$/, '');
+    return norm === '.' || norm === rootName || rootName.startsWith(`${norm}/`) || norm.startsWith(`${rootName}/`);
+  });
+}
+
+function judgeRootnext(spec, steps) {
+  const start = steps.find((entry) => entry.command.includes('start')) ?? null;
+  const recommend = steps.find((entry) => entry.command.includes('--recommend')) ?? null;
+  const doctor = steps.find((entry) => entry.command.includes('--doctor')) ?? null;
+  const check =
+    steps.find(
+      (entry) =>
+        !entry.command.includes('start') &&
+        !entry.command.includes('--recommend') &&
+        !entry.command.includes('--doctor')
+    ) ?? null;
+  const include = Array.isArray(start?.output?.include) ? start.output.include : [];
+  const missing = (spec.roots ?? []).filter((rootName) => !includeCovers(include, rootName));
+  const percents = [
+    start?.output?.projectedPercent,
+    recommend?.output?.percent,
+    doctor?.output?.percent,
+  ];
+  const diagnostics = Array.isArray(check?.output?.diagnostics) ? check.output.diagnostics : [];
+  const violation = diagnostics.some(
+    (row) => row?.ruleId === 'LAYER_IMPORT_VIOLATION' && String(row.file ?? '') === spec.file
+  );
+  const checkExit = typeof check?.exitCode === 'number' ? check.exitCode : null;
+  const falseHundred = missing.length > 0 && percents.some((percent) => percent === 100);
+  const silentPass = checkExit === 0;
+  const got = {
+    include,
+    missing,
+    startPercent: percents[0] ?? null,
+    recommendPercent: percents[1] ?? null,
+    doctorPercent: percents[2] ?? null,
+    doctorTotal: doctor?.output?.totalFiles ?? null,
+    emptyLayers: doctor?.output?.emptyLayers ?? [],
+    checkExit,
+    violation,
+    falseHundred,
+    silentPass,
+  };
+  return {
+    met: !falseHundred && !silentPass,
+    want: { roots: [...(spec.roots ?? [])], file: spec.file, falseHundred: false, silentPass: false },
+    got,
+  };
+}
+
 function evaluateJourneyCase(spec, steps) {
+  if (typeof spec.kind === 'string' && spec.kind.startsWith('rootnext-')) {
+    return caseResult(spec, judgeRootnext(spec, steps));
+  }
   if (typeof spec.kind === 'string' && spec.kind.startsWith('rootbound-')) {
     return caseResult(spec, judgeRootbound(spec, steps));
   }
