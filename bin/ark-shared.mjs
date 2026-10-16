@@ -183,6 +183,54 @@ function applyFrameworkLayerCaptions(config, signals) {
  * library-native copy on library-only / library-package monorepos. Generic preset
  * captions stay when neither applies.
  */
+
+/**
+ * Static prefix of a layer pattern, up to the first glob segment.
+ * `components/**` → `components`. `lib/db.ts` → `lib/db.ts`. A leading glob names no root.
+ * @param {string} pattern
+ * @returns {string | null}
+ */
+export function patternIncludeEntry(pattern) {
+  const norm = String(pattern ?? '')
+    .replace(/\\/g, '/')
+    .replace(/^\.\//, '');
+  if (!norm || norm.startsWith('/')) return null;
+  const concrete = [];
+  for (const part of norm.split('/')) {
+    if (!part || part === '.') continue;
+    if (part.includes('*') || part.includes('?') || part.includes('[')) break;
+    concrete.push(part);
+  }
+  return concrete.length > 0 ? concrete.join('/') : null;
+}
+
+function includeAlreadyCovers(include, entry) {
+  return include.some((existing) => {
+    const norm = String(existing).replace(/\\/g, '/').replace(/^\.\//, '').replace(/\/$/, '');
+    return norm === '.' || norm === entry || entry.startsWith(`${norm}/`);
+  });
+}
+
+/**
+ * Scan list start writes. The checker walks the stored `include` and does not
+ * expand it again: a hand-narrowed list stays a boundary. This adds every concrete
+ * pattern path that exists on disk and is not already under one of those entries.
+ * @param {object} config
+ * @param {string} [root]
+ * @returns {string[]}
+ */
+export function governedInclude(config, root) {
+  const include = [...(config?.include ?? [])];
+  const patterns = (config?.layers ?? []).flatMap((layer) => layer?.patterns ?? []);
+  for (const pattern of patterns) {
+    const entry = patternIncludeEntry(pattern);
+    if (!entry || !root || includeAlreadyCovers(include, entry)) continue;
+    if (!fs.existsSync(path.join(root, entry))) continue;
+    include.push(entry);
+  }
+  return include;
+}
+
 export function applyFrameworkLayoutOverlays(config, root) {
   if (!config || !root) return config;
   let signals;
@@ -501,6 +549,8 @@ export function applyFrameworkLayoutOverlays(config, root) {
       : 'library';
   }
 
+  // One list: the scan roots are the concrete paths the layer patterns name.
+  next.include = governedInclude(next, root);
   applyFrameworkLayerCaptions(next, signals);
   return withArkConfigMetadata(next);
 }

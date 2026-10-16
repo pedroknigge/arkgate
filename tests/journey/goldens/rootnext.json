@@ -3,33 +3,33 @@
     {
       "expect": "pass",
       "got": {
-        "checkExit": 0,
+        "checkExit": 1,
         "doctorPercent": 100,
-        "doctorTotal": 4,
+        "doctorTotal": 10,
         "emptyLayers": [
-          "DomainModel",
-          "PersistenceAdapters"
+          "DomainModel"
         ],
-        "falseHundred": true,
+        "falseHundred": false,
         "include": [
           "src",
           "app",
-          "middleware.ts"
-        ],
-        "missing": [
+          "middleware.ts",
           "components",
-          "lib"
+          "lib/db",
+          "lib/auth.ts",
+          "lib/db.ts"
         ],
+        "missing": [],
         "recommendPercent": 100,
-        "silentPass": true,
+        "silentPass": false,
         "startPercent": 100,
-        "violation": false
+        "violation": true
       },
       "id": "361-root-include",
-      "met": false,
+      "met": true,
       "note": "start, --recommend, and --doctor must not report governed 100% while components/ and lib/ (named by the written layer patterns) sit outside include. ark-check must not exit 0 on the PersistenceAdapters → PresentationAdapters import in lib/db.ts.",
       "owner": "#361",
-      "status": "fail",
+      "status": "pass",
       "want": {
         "falseHundred": false,
         "file": "lib/db.ts",
@@ -64,11 +64,15 @@
         "include": [
           "src",
           "app",
-          "middleware.ts"
+          "middleware.ts",
+          "components",
+          "lib/db",
+          "lib/auth.ts",
+          "lib/db.ts"
         ],
-        "projectedClassified": 4,
+        "projectedClassified": 10,
         "projectedPercent": 100,
-        "projectedTotal": 4,
+        "projectedTotal": 10,
         "startError": null
       }
     },
@@ -77,9 +81,9 @@
       "exitCode": 0,
       "filesDiff": {},
       "output": {
-        "classifiedFiles": 4,
+        "classifiedFiles": 10,
         "percent": 100,
-        "totalFiles": 4
+        "totalFiles": 10
       }
     },
     {
@@ -87,24 +91,30 @@
       "exitCode": 0,
       "filesDiff": {},
       "output": {
-        "classifiedFiles": 4,
+        "classifiedFiles": 10,
         "emptyLayers": [
-          "DomainModel",
-          "PersistenceAdapters"
+          "DomainModel"
         ],
         "percent": 100,
-        "totalFiles": 4
+        "totalFiles": 10
       }
     },
     {
       "command": "ark-check --json --no-cache",
-      "exitCode": 0,
+      "exitCode": 1,
       "filesDiff": {},
       "output": {
         "completeness": "complete",
-        "diagnostics": [],
-        "ok": true,
-        "valid": true
+        "diagnostics": [
+          {
+            "file": "lib/db.ts",
+            "message": "PersistenceAdapters must not import PresentationAdapters.",
+            "ruleId": "LAYER_IMPORT_VIOLATION",
+            "severity": "error"
+          }
+        ],
+        "ok": false,
+        "valid": false
       }
     }
   ]
