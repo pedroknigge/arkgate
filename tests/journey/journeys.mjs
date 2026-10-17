@@ -55,7 +55,16 @@
  * `lib/`, no `src/`). `start` writes `include`. A governed 100% while those
  * pattern roots sit outside `include`, or exit 0 on the Persistence →
  * Presentation import in `lib/db.ts`, is the hole.
+ *
+ * #358 is `freshmini` and `freshmono`: no ark.config.json. Status, doctor,
+ * plain check, and --strict-merge must each lead with the same first step,
+ * and a plain check must not print a pass.
  */
+const ABSENT_CONFIG_FIRST_STEP =
+  'No ark.config.json found — run arkgate start (preview) then arkgate start --apply.';
+
+/** Fixtures that are a fresh tree: the journey refuses an ark.config.json here. */
+export const CONFIG_FREE_FIXTURES = new Set(['freshmini', 'freshmono']);
 const crossParentEdges = Object.freeze([
   Object.freeze({
     from: 'management',
@@ -240,6 +249,18 @@ export const JOURNEYS = Object.freeze({
     Object.freeze(['ark-check', '--recommend', '--json']),
     Object.freeze(['ark-check', '--doctor', '--json', '--no-cache']),
     Object.freeze(['ark-check', '--json', '--no-cache']),
+  ]),
+  freshmini: Object.freeze([
+    Object.freeze(['arkgate', 'status', '--json']),
+    Object.freeze(['arkgate-check', '--json', '--no-cache']),
+    Object.freeze(['arkgate-check', '--doctor', '--json', '--no-cache']),
+    Object.freeze(['arkgate-check', '--strict-merge', '--json', '--no-cache']),
+  ]),
+  freshmono: Object.freeze([
+    Object.freeze(['arkgate', 'status', '--json']),
+    Object.freeze(['arkgate-check', '--json', '--no-cache']),
+    Object.freeze(['arkgate-check', '--doctor', '--json', '--no-cache']),
+    Object.freeze(['arkgate-check', '--strict-merge', '--json', '--no-cache']),
   ]),
 });
 
@@ -959,4 +980,36 @@ export const JOURNEY_CASES = Object.freeze({
       file: 'lib/db.ts',
     }),
   ]),
+  freshmini: absentConfigCases(
+    'One package, one source file, no ark.config.json. Every surface leads with arkgate start, and plain check does not pass.'
+  ),
+  freshmono: absentConfigCases(
+    'A workspace package whose source sits outside a root src/ folder, no ark.config.json. Same first step as the one-package tree. Plain check does not pass.'
+  ),
 });
+
+function absentConfigCases(note) {
+  return Object.freeze([
+    Object.freeze({
+      id: '358-one-first-step',
+      owner: '#358',
+      expect: 'pass',
+      kind: 'absent-config-first-step',
+      note,
+      want: Object.freeze({ firstStep: ABSENT_CONFIG_FIRST_STEP }),
+    }),
+    Object.freeze({
+      id: '358-check-not-pass',
+      owner: '#358',
+      expect: 'pass',
+      kind: 'absent-config-check-not-pass',
+      note: 'Plain arkgate-check with no contract exits non-zero and does not print a pass. The next step is arkgate start.',
+      want: Object.freeze({
+        exitCode: 'nonzero',
+        firstStepIncludes: 'arkgate start',
+        ok: false,
+        printsPass: false,
+      }),
+    }),
+  ]);
+}

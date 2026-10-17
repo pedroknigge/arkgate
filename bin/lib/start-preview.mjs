@@ -6,10 +6,13 @@ import path from 'node:path';
 import {
   arkCommand,
   buildArchitectureRecommendation,
+  evaluateStartShapeConfidenceGate,
   START_APPLY_REFUSE_FOOTER,
+  treeHasArkOrderCandidate,
 } from '../ark-shared.mjs';
 import { withProjectedGovernedCoverage } from './projected-governed-coverage.mjs';
 import { ARKORDER_FIRST_CONTACT_NEXT, ARKORDER_ONE_BREATH } from './ark-order-doctor.mjs';
+import { resolveFirstStep } from './first-step.mjs';
 import { compactAgentInstructions, instructionRule, mcpJson } from './ci-and-commands.mjs';
 import {
   antigravityHooks,
@@ -231,6 +234,24 @@ function commands(root, args, helpers) {
   return result;
 }
 
+function startPreviewApplyWillRefuse(preview) {
+  if (preview?.setupBudget?.ok === false) return false;
+  const analysis = preview?.analysis;
+  const totalFiles = preview?.projectedCoverage?.totalFiles;
+  const configOnDisk =
+    typeof preview?.root === 'string' &&
+    preview.root.length > 0 &&
+    fs.existsSync(path.join(preview.root, 'ark.config.json'));
+  const gate = evaluateStartShapeConfidenceGate({
+    confidence: analysis?.confidence,
+    projectedCoveragePercent: preview?.projectedCoverage?.percent,
+    totalFiles: typeof totalFiles === 'number' ? totalFiles : undefined,
+    explicitShape: analysis?.explicitShape === true || preview?.shapeLocked === true || configOnDisk,
+    force: preview?.force === true,
+  });
+  return gate.ok === false;
+}
+
 /**
  * @param {object} preview
  * @param {{ applying?: boolean }} [options] when applying=true, do not claim “no files were changed”
@@ -248,10 +269,15 @@ export function renderStartPreview(preview, options = {}) {
     console.log('Ark start preview — no files were changed.');
   }
   if (!applying) {
-    if (budgetOk) {
-      console.log('Apply this plan with: arkgate start --apply');
-    } else {
+    if (!budgetOk) {
       console.log(formatStartSetupBudgetRefuse(preview.setupBudget, { applying: false }));
+    } else {
+      const lead = resolveFirstStep({
+        configPresent: true,
+        applyWillRefuse: startPreviewApplyWillRefuse(preview),
+        justRan: 'arkgate start --apply',
+      });
+      console.log(lead ?? 'Apply this plan with: arkgate start --apply');
     }
   }
   if (preview.analysis) {
@@ -266,8 +292,10 @@ export function renderStartPreview(preview, options = {}) {
     console.log('Setup: install package + host gates (see --json).');
     console.log('Preview does not write. Apply installs CI.');
     console.log('Optional extras stay off. This start is layers only — they stop bad imports.');
-    console.log(ARKORDER_ONE_BREATH);
-    console.log(ARKORDER_FIRST_CONTACT_NEXT);
+    if (preview.arkOrderCandidate === true) {
+      console.log(ARKORDER_ONE_BREATH);
+      console.log(ARKORDER_FIRST_CONTACT_NEXT);
+    }
     console.log(START_APPLY_REFUSE_FOOTER);
   }
   if (preview.runtimeActivation) {
@@ -544,6 +572,11 @@ export async function planStart(args, helpers) {
           : []),
       ],
       unresolvedDecisions: percent !== null && percent < 90 ? [`Projected governed coverage is ${percent}%; review unclassified files before treating the contract as complete.`] : [],
+      force: args.force === true,
+      shapeLocked:
+        Boolean(args.archetype || args.preset || args.force) ||
+        fs.existsSync(path.join(root, 'ark.config.json')),
+      arkOrderCandidate: treeHasArkOrderCandidate(root),
       ...(runtimeActivation ? { runtimeActivation } : {}),
     };
   } finally {

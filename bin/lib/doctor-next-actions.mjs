@@ -7,6 +7,7 @@ import { skillGapsForActiveHost } from './agent-gates.mjs';
 import { agentHomeConcernIsActive, agentHomeRefreshCommand } from './agent-homes.mjs';
 import { mergePostGreenTopActions } from './post-green-path.mjs';
 import { ADOPTED_NOT, NOT_ADOPTED_NEXT_ACTION } from './adoption-stance.mjs';
+import { ABSENT_CONFIG_FIRST_STEP } from './first-step.mjs';
 import { REQUIRED_GATE_WORKFLOW } from './gate-files.mjs';
 
 /** Package pin may exist; local resolve still failed. Lead with install, not CI. */
@@ -45,7 +46,9 @@ export function preferredDoctorPrimaryNextAction({
   packageVersionTruth,
   postGreenPath,
   dualTruthNext,
+  configMissing,
 } = {}) {
+  if (configMissing === true) return ABSENT_CONFIG_FIRST_STEP;
   return (
     packageUnresolvedNextAction({ packageInstalled, selfHost, packageVersionTruth }) ||
     packagePinAbsentPrimaryAction({ selfHost, packageVersionTruth }) ||
@@ -305,6 +308,9 @@ export function collectDoctorNextActions(ctx) {
   const unique = mergePostGreenTopActions(actions, ctx.postGreenPath);
   if (ctx.designFitness.designWeak && unique.length === 0 && ctx.postGreenPath) {
     unique.push(ctx.postGreenPath.action);
+  }
+  if (ctx.configMissing === true) {
+    return [ABSENT_CONFIG_FIRST_STEP, ...unique.filter((a) => a !== ABSENT_CONFIG_FIRST_STEP)];
   }
   if (resolvePkg) {
     return [resolvePkg, ...unique.filter((a) => a !== resolvePkg)];

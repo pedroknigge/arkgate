@@ -1,5 +1,9 @@
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ARKORDER_FIRST_CONTACT_NEXT, ARKORDER_ONE_BREATH } from '../../../bin/lib/ark-order-doctor.mjs';
+import { APPLY_WILL_REFUSE_FIRST_STEP } from '../../../bin/lib/first-step.mjs';
 import { START_APPLY_REFUSE_FOOTER } from '../../../bin/ark-shared.mjs';
 import { renderStartPreview } from '../../../bin/lib/start-preview.mjs';
 
@@ -59,10 +63,8 @@ describe('renderStartPreview direct output coverage', () => {
     expect(output).toContain('Setup: install package + host gates (see --json).');
     expect(output).toContain('Preview does not write. Apply installs CI.');
     expect(output).toContain('Optional extras stay off. This start is layers only — they stop bad imports.');
-    expect(output).toContain(ARKORDER_ONE_BREATH);
-    expect(output).toContain(ARKORDER_FIRST_CONTACT_NEXT);
-    expect(output).toContain('examples/arkorder-billing');
-    expect(output).toContain('/ark-order');
+    expect(output).not.toContain(ARKORDER_ONE_BREATH);
+    expect(output).not.toContain(ARKORDER_FIRST_CONTACT_NEXT);
     expect(output).not.toContain('Commands in the approved setup plan:');
     expect(output).not.toContain('Host guarantees:');
     expect(output).toContain('Write gate: host pre-hook first; MCP prepare is fallback if that hook is missing or fail-open.');
@@ -108,5 +110,69 @@ describe('renderStartPreview direct output coverage', () => {
     expect(output).not.toContain('Commands in the approved setup plan:');
     expect(output).not.toContain('Apply this plan with: arkgate start --apply');
     expect(output).not.toContain('Apply this plan with: ark start --apply');
+  });
+
+  it('leads with the unlock path when apply will refuse, and pitches ArkOrder only for a candidate', () => {
+    const refused = captureRender({
+      root: '/portable/project',
+      analysis: { label: 'uncertain', confidence: 0.2 },
+      projectedCoverage: { percent: 20, classifiedFiles: 1, totalFiles: 5 },
+      setupBudget: { files: 1, bytes: 100, maxFiles: 8, maxBytes: 32 * 1024, ok: true },
+      changes: [],
+      commands: [],
+      hostGuarantees: [],
+      unresolvedDecisions: [],
+    });
+    expect(refused).toContain(APPLY_WILL_REFUSE_FIRST_STEP);
+    expect(refused).not.toContain('Apply this plan with: arkgate start --apply');
+    expect(refused).not.toContain(ARKORDER_ONE_BREATH);
+
+    const ready = captureRender({
+      root: '/portable/project',
+      analysis: { label: 'layered', confidence: 0.91 },
+      projectedCoverage: { percent: 90, classifiedFiles: 9, totalFiles: 10 },
+      setupBudget: { files: 1, bytes: 100, maxFiles: 8, maxBytes: 32 * 1024, ok: true },
+      changes: [],
+      commands: [],
+      hostGuarantees: [],
+      unresolvedDecisions: [],
+      arkOrderCandidate: true,
+    });
+    expect(ready).toContain('Apply this plan with: arkgate start --apply');
+    expect(ready).not.toContain(APPLY_WILL_REFUSE_FIRST_STEP);
+    expect(ready).toContain(ARKORDER_ONE_BREATH);
+    expect(ready).toContain(ARKORDER_FIRST_CONTACT_NEXT);
+  });
+
+  it('keeps the apply line when the shape is locked or a contract is already on disk', () => {
+    const locked = captureRender({
+      root: '/portable/project',
+      analysis: { label: 'uncertain', confidence: 0.2, explicitShape: true },
+      projectedCoverage: { percent: 20, classifiedFiles: 1, totalFiles: 5 },
+      setupBudget: { files: 1, bytes: 100, maxFiles: 8, maxBytes: 32 * 1024, ok: true },
+      changes: [],
+      commands: [],
+      hostGuarantees: [],
+      unresolvedDecisions: [],
+      shapeLocked: true,
+      force: true,
+    });
+    expect(locked).toContain('Apply this plan with: arkgate start --apply');
+    expect(locked).not.toContain(APPLY_WILL_REFUSE_FIRST_STEP);
+
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-start-preview-'));
+    fs.writeFileSync(path.join(root, 'ark.config.json'), '{}\n');
+    const onDisk = captureRender({
+      root,
+      analysis: { label: 'uncertain', confidence: 0.2 },
+      projectedCoverage: { percent: 20, classifiedFiles: 1, totalFiles: 5 },
+      setupBudget: { files: 1, bytes: 100, maxFiles: 8, maxBytes: 32 * 1024, ok: true },
+      changes: [],
+      commands: [],
+      hostGuarantees: [],
+      unresolvedDecisions: [],
+    });
+    fs.rmSync(root, { recursive: true, force: true });
+    expect(onDisk).toContain('Apply this plan with: arkgate start --apply');
   });
 });

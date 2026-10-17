@@ -865,6 +865,7 @@ describe('ark-check --require-gates', () => {
 
   it('fails when required gate files are missing', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-require-missing-'));
+    writeGovernedFixture(root);
 
     let status = 0;
     let stdout = '';

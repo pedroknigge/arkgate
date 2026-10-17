@@ -1,0 +1,107 @@
+{
+  "cases": [
+    {
+      "expect": "pass",
+      "got": [
+        {
+          "command": "arkgate status --json",
+          "exitCode": 0,
+          "firstStep": "No ark.config.json found — run arkgate start (preview) then arkgate start --apply."
+        },
+        {
+          "command": "arkgate-check --json --no-cache",
+          "exitCode": 1,
+          "firstStep": "No ark.config.json found — run arkgate start (preview) then arkgate start --apply."
+        },
+        {
+          "command": "arkgate-check --doctor --json --no-cache",
+          "exitCode": 0,
+          "firstStep": "No ark.config.json found — run arkgate start (preview) then arkgate start --apply."
+        },
+        {
+          "command": "arkgate-check --strict-merge --json --no-cache",
+          "exitCode": 1,
+          "firstStep": "No ark.config.json found — run arkgate start (preview) then arkgate start --apply."
+        }
+      ],
+      "id": "358-one-first-step",
+      "met": true,
+      "note": "A workspace package whose source sits outside a root src/ folder, no ark.config.json. Same first step as the one-package tree. Plain check does not pass.",
+      "owner": "#358",
+      "status": "pass",
+      "want": {
+        "firstStep": "No ark.config.json found — run arkgate start (preview) then arkgate start --apply."
+      }
+    },
+    {
+      "expect": "pass",
+      "got": {
+        "exitCode": 1,
+        "firstStep": "No ark.config.json found — run arkgate start (preview) then arkgate start --apply.",
+        "ok": false,
+        "printsPass": false
+      },
+      "id": "358-check-not-pass",
+      "met": true,
+      "note": "Plain arkgate-check with no contract exits non-zero and does not print a pass. The next step is arkgate start.",
+      "owner": "#358",
+      "status": "pass",
+      "want": {
+        "exitCode": "nonzero",
+        "firstStepIncludes": "arkgate start",
+        "ok": false,
+        "printsPass": false
+      }
+    }
+  ],
+  "fixture": "freshmono",
+  "schemaVersion": 1,
+  "steps": [
+    {
+      "command": "arkgate status --json",
+      "exitCode": 0,
+      "filesDiff": {},
+      "output": {
+        "error": null,
+        "firstStep": "No ark.config.json found — run arkgate start (preview) then arkgate start --apply.",
+        "ok": false,
+        "printsPass": false
+      }
+    },
+    {
+      "command": "arkgate-check --json --no-cache",
+      "exitCode": 1,
+      "filesDiff": {},
+      "output": {
+        "error": "NO_ARK_CONFIG",
+        "firstStep": "No ark.config.json found — run arkgate start (preview) then arkgate start --apply.",
+        "ok": false,
+        "printsPass": false
+      }
+    },
+    {
+      "command": "arkgate-check --doctor --json --no-cache",
+      "exitCode": 0,
+      "filesDiff": {
+        ".ark/ci-merge-boundary.json": "added"
+      },
+      "output": {
+        "error": null,
+        "firstStep": "No ark.config.json found — run arkgate start (preview) then arkgate start --apply.",
+        "ok": true,
+        "printsPass": true
+      }
+    },
+    {
+      "command": "arkgate-check --strict-merge --json --no-cache",
+      "exitCode": 1,
+      "filesDiff": {},
+      "output": {
+        "error": "NO_ARK_CONFIG",
+        "firstStep": "No ark.config.json found — run arkgate start (preview) then arkgate start --apply.",
+        "ok": false,
+        "printsPass": false
+      }
+    }
+  ]
+}

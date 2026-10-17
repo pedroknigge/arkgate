@@ -18,6 +18,7 @@
  *                                 → schemas/ark.project-identity.schema.json
  *   src/domain/statusManifest.ts  → bin/lib/status-manifest.mjs
  *                                 → schemas/ark.status-manifest.schema.json
+ *   src/domain/firstStep.ts       → bin/lib/first-step.mjs
  *   src/domain/improvementCompassTypes.ts → bin/lib/improvement-compass-types.mjs
  *   src/domain/improvementCompassMap.ts   → bin/lib/improvement-compass-map.mjs
  *   src/domain/improvementCompass.ts      → bin/lib/improvement-compass.mjs
@@ -208,6 +209,11 @@ const MODULES = [
     schemaDerived: 'schemas/ark.project-identity.schema.json',
     schemaExport: 'ARK_PROJECT_IDENTITY_SCHEMA',
     label: 'versioned MCP project identity + binding contract',
+  },
+  {
+    canonical: 'src/domain/firstStep.ts',
+    derived: 'bin/lib/first-step.mjs',
+    label: 'one next line when no contract exists, apply will refuse, or a plan was just written',
   },
   {
     canonical: 'src/domain/statusManifest.ts',

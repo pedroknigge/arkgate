@@ -162,7 +162,8 @@ describe('ArkOrder doctor section', () => {
   });
 
   it('human lines cover off, empty residual, unnamed keys, and residual cap', () => {
-    expect(formatArkOrderDoctorLines(summarizeArkOrderSection({}))).toEqual([
+    expect(formatArkOrderDoctorLines(summarizeArkOrderSection({}))).toEqual([]);
+    expect(formatArkOrderDoctorLines(summarizeArkOrderSection({ candidate: true }))).toEqual([
       ARKORDER_ONE_BREATH,
       'Off — Layers stay the same (not a score).',
       ARKORDER_FIRST_CONTACT_NEXT,
@@ -194,6 +195,11 @@ describe('ArkOrder doctor section', () => {
     const printed: string[] = [];
     const io = { line: (_mark: string, text: string) => printed.push(text), warn: '!' };
     printCompactExtraDoctorLines({ arkOrder: { active: false, notAScore: true } }, io);
+    expect(printed).toEqual([]);
+    printCompactExtraDoctorLines(
+      { arkOrder: { active: false, notAScore: true, candidate: true } },
+      io
+    );
     expect(printed).toEqual([ARKORDER_ONE_BREATH, ARKORDER_FIRST_CONTACT_NEXT]);
 
     printed.length = 0;
@@ -241,7 +247,7 @@ describe('ArkOrder doctor section', () => {
       io
     );
     expect(printed.join('\n')).not.toMatch(/optional policies inside one folder/);
-    expect(printed.join('\n')).toMatch(/Layers stop a bad import/);
+    expect(printed.join('\n')).not.toMatch(/Layers stop a bad import/);
   });
 
   it('filters residual ids, ignores junk keys, and floors status residual', () => {
@@ -325,7 +331,12 @@ describe('ArkOrder doctor section', () => {
     expect(formatArkOrderHtml(null, undefined)).toBe('');
     expect(formatArkOrderHtml({ notAScore: false } as never, undefined)).toBe('');
 
-    const off = formatArkOrderHtml(summarizeArkOrderSection({}), undefined);
+    const silent = formatArkOrderHtml(summarizeArkOrderSection({}), undefined);
+    expect(silent).toContain('data-advisory="arkOrder"');
+    expect(silent).toMatch(/silent/i);
+    expect(silent).not.toMatch(/Layers stop a bad import/);
+    expect(silent).not.toContain('examples/arkorder-billing');
+    const off = formatArkOrderHtml(summarizeArkOrderSection({ candidate: true }), undefined);
     expect(off).toContain('data-advisory="arkOrder"');
     expect(off).toMatch(/Off until you turn it on/);
 

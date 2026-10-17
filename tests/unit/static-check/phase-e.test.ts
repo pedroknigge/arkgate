@@ -7,6 +7,7 @@ import {
   ADOPTION_PLAN_FILENAME,
   buildAdoptionPlanDocument,
   buildArchitectureRecommendation,
+  formatArchitectureRecommendationHuman,
   listPolicyPackIds,
   loadPolicyPackMeta,
 } from '../../../bin/ark-shared.mjs';
@@ -66,6 +67,14 @@ describe('Phase E — ark-adoption-plan.json', () => {
       JSON.stringify({ name: 'greenfield', dependencies: { next: '14.0.0', react: '18.0.0' } })
     );
 
+    const preview = formatArchitectureRecommendationHuman(buildArchitectureRecommendation(root), {
+      planJustWritten: true,
+    });
+    expect(preview).toMatch(/Next: \/ark-adopt$/);
+    expect(preview).not.toMatch(/Next:.*--write-plan/);
+    const human = runArkCheck(root, ['--recommend', '--write-plan']);
+    expect(human).toMatch(/Next: \/ark-adopt/);
+    expect(human).not.toMatch(/Next:.*--write-plan/);
     runArkCheck(root, ['--recommend', '--write-plan', '--json']);
     const planPath = path.join(root, ADOPTION_PLAN_FILENAME);
     expect(fs.existsSync(planPath)).toBe(true);

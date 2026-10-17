@@ -138,7 +138,11 @@ describe('ArkOrder doctor / deny label', () => {
   });
 
   it('HTML report emits data-advisory="arkOrder" and no score UI', () => {
-    const inactive = formatArkOrderHtml(summarizeArkOrderSection({}), (v: string) => v);
+    const silent = formatArkOrderHtml(summarizeArkOrderSection({}), (v: string) => v);
+    expect(silent).toContain('data-advisory="arkOrder"');
+    expect(silent).toMatch(/silent/i);
+    expect(silent).not.toContain('examples/arkorder-billing');
+    const inactive = formatArkOrderHtml(summarizeArkOrderSection({ candidate: true }), (v: string) => v);
     expect(inactive).toContain('data-advisory="arkOrder"');
     expect(inactive).toMatch(/silent/i);
     expect(inactive).toMatch(/Layers stop a bad import/);

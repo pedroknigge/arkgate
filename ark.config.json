@@ -25,6 +25,7 @@
         "bin/lib/schema-validation.mjs",
         "bin/lib/project-identity.mjs",
         "bin/lib/status-manifest.mjs",
+        "bin/lib/first-step.mjs",
         "bin/lib/agent-projection.mjs",
         "bin/lib/agent-projection-types.mjs",
         "bin/lib/agent-projection-formatters.mjs",

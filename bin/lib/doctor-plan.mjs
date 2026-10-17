@@ -680,7 +680,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
         : rulesUnderContract?.active === true || arkRun?.active === true || doctorAdvisories.arkOrder?.active === true
           ? { active: true, extraMergeTeeth: arkRun?.extraMergeTeeth === true || doctorAdvisories.arkOrder?.extraMergeTeeth === true }
           : null,
-      primaryNextAction: preferredDoctorPrimaryNextAction({ adopted, packageInstalled, selfHost, packageVersionTruth, postGreenPath, dualTruthNext }),
+      primaryNextAction: preferredDoctorPrimaryNextAction({ adopted, packageInstalled, selfHost, packageVersionTruth, postGreenPath, dualTruthNext, configMissing }),
       operatingMode,
       packageInstalled,
       selfHost,
@@ -919,7 +919,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     adoption,
     safety: options.safety,
     safetyHasEntries,
-    showNewHere,
+    showNewHere, configMissing,
     designFitness,
     operatingMode,
     adopted,

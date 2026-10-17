@@ -36,7 +36,9 @@ export function runRecommend(args) {
         )
       );
     } else {
-      console.log(formatArchitectureRecommendationHuman(recommendation));
+      console.log(
+        formatArchitectureRecommendationHuman(recommendation, { planJustWritten: Boolean(planWritten) })
+      );
       if (planWritten) {
         console.log('');
         console.log(`Wrote ${path.relative(args.root, planWritten) || ADOPTION_PLAN_FILENAME}`);
