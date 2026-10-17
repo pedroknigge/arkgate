@@ -162,8 +162,8 @@ function assertSteps(steps) {
     if (!BINS.has(bin)) {
       throw new JourneyError('step', `step bin must be ark-check, arkgate-check, ark, or arkgate, got ${bin}`);
     }
-    if ((bin === 'ark' || bin === 'arkgate') && args[0] !== 'status') {
-      throw new JourneyError('step', `${commandText(step)} may only run status`);
+    if ((bin === 'ark' || bin === 'arkgate') && args[0] !== 'status' && args[0] !== 'start') {
+      throw new JourneyError('step', `${commandText(step)} may only run status or start`);
     }
     if (!args.includes('--json')) {
       throw new JourneyError('step', `${commandText(step)} must pass --json`);
