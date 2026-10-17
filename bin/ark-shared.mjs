@@ -2319,30 +2319,18 @@ export function cloneArchetypeForLayer(archetype, layerName) {
 }
 
 const ARK_ORDER_SKIP_DIRS = new Set(['node_modules', '.git', 'dist', 'coverage', '.ark', 'build', 'out']);
-const ARK_ORDER_SOURCE_EXTS = new Set([
-  '.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.mts', '.cts',
-  '.py', '.go', '.rb', '.java', '.kt', '.cs', '.php', '.rs', '.vue', '.svelte',
-]);
+const ARK_ORDER_SOURCE = /\.(?:tsx?|jsx?|mjs|cjs|mts|cts|py|go|rb|java|kt|cs|php|rs|vue|svelte)$/i;
 const ARK_ORDER_WALK_CAP = 400;
 const ARK_ORDER_READ_CAP = 80;
 const ARK_ORDER_BYTE_CAP = 64 * 1024;
 
-function arkOrderPathHasCandidate(file) {
-  return textHasArkOrderCandidate(String(file).split(path.sep).join(' '));
-}
-
-/**
- * Bounded look for billing, pricing, or subscription. Silence is the safe miss.
- * @param {string} root
- * @returns {boolean}
- */
+/** Bounded look for billing, pricing, or subscription. Silence is the safe miss. */
 export function treeHasArkOrderCandidate(root) {
   if (typeof root !== 'string' || root.length === 0) return false;
   /** @type {string[]} */
   const hinted = [];
   /** @type {string[]} */
   const rest = [];
-  /** @type {string[]} */
   const stack = [root];
   let walked = 0;
   while (stack.length > 0 && walked < ARK_ORDER_WALK_CAP) {
@@ -2354,25 +2342,23 @@ export function treeHasArkOrderCandidate(root) {
       continue;
     }
     for (const entry of entries) {
-      if (entry.name.startsWith('.')) continue;
+      if (entry.name.startsWith('.') || (entry.isDirectory() && ARK_ORDER_SKIP_DIRS.has(entry.name))) continue;
       const full = path.join(dir, entry.name);
       if (entry.isDirectory()) {
-        if (ARK_ORDER_SKIP_DIRS.has(entry.name)) continue;
-        if (arkOrderPathHasCandidate(entry.name)) return true;
+        if (textHasArkOrderCandidate(entry.name)) return true;
         stack.push(full);
         continue;
       }
-      if (!entry.isFile()) continue;
-      if (!ARK_ORDER_SOURCE_EXTS.has(path.extname(entry.name).toLowerCase())) continue;
+      if (!entry.isFile() || !ARK_ORDER_SOURCE.test(entry.name)) continue;
       walked += 1;
-      if (arkOrderPathHasCandidate(full)) return true;
-      if (textHasArkOrderCandidate(entry.name)) hinted.push(full);
-      else rest.push(full);
+      const spaced = full.split(path.sep).join(' ');
+      if (textHasArkOrderCandidate(spaced)) return true;
+      (textHasArkOrderCandidate(entry.name) ? hinted : rest).push(full);
       if (walked >= ARK_ORDER_WALK_CAP) break;
     }
   }
   let read = 0;
-  for (const file of [...hinted, ...rest]) {
+  for (const file of hinted.concat(rest)) {
     if (read >= ARK_ORDER_READ_CAP) break;
     read += 1;
     try {
