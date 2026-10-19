@@ -25,11 +25,11 @@ Design the boundary before you implement. Put a small interface in front of the 
 
 ## Try it
 
-One command. Preview only — no files change. Current release is **4.8.27**
+One command. Preview only — no files change. Current release is **4.8.28**
 (check npm `latest` with `npm view arkgate version`):
 
 ```bash
-npx arkgate@4.8.27 start
+npx arkgate@4.8.28 start
 ```
 
 ## What a red result looks like
