@@ -5,6 +5,16 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+## 4.8.28 — 2026-10-19
+
+**Patch** over **4.8.27**. Weekly ship (#363, #364, #362). **Write. Check. Ship.** **No required config migration.** No `schemaVersion` bump. Does not close `K01` / `Z09`. This mother `ark.config.json` still does **not** turn `arkOrder` on.
+
+**Status: released** (tag `v4.8.28`). Run `npm view arkgate@4.8.28 version` to confirm (#314).
+
+### Fixed
+- On a Next app with no `src/`, `start` includes root `components/` and `lib/`, so governed coverage is not a false 100% (#363, #361).
+- With no `ark.config.json`, every command names the same first step, `arkgate start`. `check` and `--strict-merge` exit 1 with `NO_ARK_CONFIG` (#364, #358).
+
 ## 4.8.27 — 2026-10-14
 
 **Patch** over **4.8.26**. First-principles enforcement, public layer entrypoints, and remediation blueprints (P0–P5). **Write. Check. Ship.** **No required config migration.** No `schemaVersion` bump. Does not close `K01` / `Z09`. This mother `ark.config.json` still does **not** turn `arkOrder` on.
