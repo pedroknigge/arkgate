@@ -1,43 +1,40 @@
 {
   "cases": [
     {
-      "expect": "fail",
+      "expect": "pass",
       "got": {
-        "application": [],
-        "archetype": "multi-app-workspace",
-        "badgeDomainImport": false,
-        "checkExit": 1,
-        "clean": {
-          "apps/expo/app/index.tsx": [
-            "LAYER_IMPORT_VIOLATION"
-          ],
-          "apps/start/src/routes/index.tsx": [
-            "LAYER_IMPORT_VIOLATION"
-          ],
-          "apps/web/components/header.tsx": [
-            "LAYER_IMPORT_VIOLATION"
-          ]
-        },
-        "domainPackages": [
+        "application": [
           "packages/api/src/**",
-          "packages/auth/src/**",
-          "packages/billing/src/**",
-          "packages/billing/src/domain/**",
-          "packages/db/src/**",
-          "packages/ui/src/**",
           "packages/validators/src/**"
         ],
-        "invoiceViolation": false,
-        "pageDomainImports": 5,
-        "persistence": [],
-        "presentation": [],
-        "routerForbiddenGlobal": true
+        "archetype": "multi-app-workspace",
+        "badgeDomainImport": true,
+        "checkExit": 1,
+        "clean": {
+          "apps/expo/app/index.tsx": [],
+          "apps/start/src/routes/index.tsx": [],
+          "apps/web/components/header.tsx": []
+        },
+        "domainPackages": [
+          "packages/billing/src/**",
+          "packages/billing/src/domain/**"
+        ],
+        "invoiceViolation": true,
+        "pageDomainImports": 0,
+        "persistence": [
+          "packages/auth/src/**",
+          "packages/db/src/**"
+        ],
+        "presentation": [
+          "packages/ui/src/**"
+        ],
+        "routerForbiddenGlobal": false
       },
       "id": "366-shared-packages",
-      "met": false,
+      "met": true,
       "note": "Shared ui/db/auth/api/validators are not DomainModel. A Button import is clean. Billing domain importing the database package fails. The UI badge importing that domain fails. Date.now in the API router is not a domain global. The check does not exit 0.",
       "owner": "#366",
-      "status": "expected-fail",
+      "status": "pass",
       "want": {
         "application": [
           "packages/api/",
@@ -96,18 +93,21 @@
       "output": {
         "archetype": "multi-app-workspace",
         "layers": {
-          "ApplicationOrchestration": [],
-          "DomainModel": [
+          "ApplicationOrchestration": [
             "packages/api/src/**",
-            "packages/auth/src/**",
-            "packages/billing/src/**",
-            "packages/billing/src/domain/**",
-            "packages/db/src/**",
-            "packages/ui/src/**",
             "packages/validators/src/**"
           ],
-          "PersistenceAdapters": [],
-          "PresentationAdapters": []
+          "DomainModel": [
+            "packages/billing/src/**",
+            "packages/billing/src/domain/**"
+          ],
+          "PersistenceAdapters": [
+            "packages/auth/src/**",
+            "packages/db/src/**"
+          ],
+          "PresentationAdapters": [
+            "packages/ui/src/**"
+          ]
         },
         "startError": null
       }
@@ -120,61 +120,31 @@
         "completeness": "complete",
         "diagnostics": [
           {
+            "file": "apps/web/app/page.tsx",
+            "message": "PresentationAdapters must not import PersistenceAdapters.",
+            "ruleId": "LAYER_IMPORT_VIOLATION",
+            "severity": "error"
+          },
+          {
+            "file": "apps/web/app/page.tsx",
+            "message": "PresentationAdapters must not import PersistenceAdapters.",
+            "ruleId": "LAYER_IMPORT_VIOLATION",
+            "severity": "error"
+          },
+          {
             "file": "packages/api/src/router.ts",
-            "message": "DomainModel must not use the ambient global \"Date.now\".",
-            "ruleId": "FORBIDDEN_GLOBAL",
-            "severity": "error"
-          },
-          {
-            "file": "packages/api/src/router.ts",
-            "message": "DomainModel must not use the ambient global \"Math.random\".",
-            "ruleId": "FORBIDDEN_GLOBAL",
-            "severity": "error"
-          },
-          {
-            "file": "apps/expo/app/index.tsx",
-            "message": "PresentationAdapters must not import DomainModel.",
+            "message": "ApplicationOrchestration must not import PersistenceAdapters.",
             "ruleId": "LAYER_IMPORT_VIOLATION",
             "severity": "error"
           },
           {
-            "file": "apps/start/src/routes/index.tsx",
-            "message": "PresentationAdapters must not import DomainModel.",
+            "file": "packages/billing/src/domain/invoice.ts",
+            "message": "DomainModel must not import PersistenceAdapters.",
             "ruleId": "LAYER_IMPORT_VIOLATION",
             "severity": "error"
           },
           {
-            "file": "apps/web/app/page.tsx",
-            "message": "PresentationAdapters must not import DomainModel.",
-            "ruleId": "LAYER_IMPORT_VIOLATION",
-            "severity": "error"
-          },
-          {
-            "file": "apps/web/app/page.tsx",
-            "message": "PresentationAdapters must not import DomainModel.",
-            "ruleId": "LAYER_IMPORT_VIOLATION",
-            "severity": "error"
-          },
-          {
-            "file": "apps/web/app/page.tsx",
-            "message": "PresentationAdapters must not import DomainModel.",
-            "ruleId": "LAYER_IMPORT_VIOLATION",
-            "severity": "error"
-          },
-          {
-            "file": "apps/web/app/page.tsx",
-            "message": "PresentationAdapters must not import DomainModel.",
-            "ruleId": "LAYER_IMPORT_VIOLATION",
-            "severity": "error"
-          },
-          {
-            "file": "apps/web/app/page.tsx",
-            "message": "PresentationAdapters must not import DomainModel.",
-            "ruleId": "LAYER_IMPORT_VIOLATION",
-            "severity": "error"
-          },
-          {
-            "file": "apps/web/components/header.tsx",
+            "file": "packages/ui/src/badge.tsx",
             "message": "PresentationAdapters must not import DomainModel.",
             "ruleId": "LAYER_IMPORT_VIOLATION",
             "severity": "error"

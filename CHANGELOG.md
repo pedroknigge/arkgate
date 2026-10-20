@@ -5,6 +5,9 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+### Fixed
+- In a pnpm/turbo workspace, `start` classifies each shared package instead of putting `packages/<name>/src/**` on DomainModel. UI lands on Presentation, database and auth clients on Persistence, and an API router on Application. A pure package such as `packages/schema` stays Domain. A Button import is not a domain violation, and a domain file that imports the database still fails (#366).
+
 ## 4.8.28 — 2026-10-19
 
 **Patch** over **4.8.27**. Weekly ship (#363, #364, #362). **Write. Check. Ship.** **No required config migration.** No `schemaVersion` bump. Does not close `K01` / `Z09`. This mother `ark.config.json` still does **not** turn `arkOrder` on.

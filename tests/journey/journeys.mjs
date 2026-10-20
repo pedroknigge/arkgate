@@ -64,8 +64,7 @@
  * `auth`, `api`, and `validators` must not land on DomainModel. A Button import
  * is clean. Billing domain importing the database package stays a violation,
  * and the UI badge importing that domain stays a violation. `Date.now` in the
- * API router is not a domain global. `expect: 'fail'` is the claim on today's
- * wholesale library→Domain dump; flip it to `pass` when the claim holds.
+ * API router is not a domain global.
  */
 const ABSENT_CONFIG_FIRST_STEP =
   'No ark.config.json found — run arkgate start (preview) then arkgate start --apply.';
@@ -1001,7 +1000,7 @@ export const JOURNEY_CASES = Object.freeze({
     Object.freeze({
       id: '366-shared-packages',
       owner: '#366',
-      expect: 'fail',
+      expect: 'pass',
       kind: 'workpack-shared-packages',
       note: 'Shared ui/db/auth/api/validators are not DomainModel. A Button import is clean. Billing domain importing the database package fails. The UI badge importing that domain fails. Date.now in the API router is not a domain global. The check does not exit 0.',
       want: Object.freeze({

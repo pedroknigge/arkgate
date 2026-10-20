@@ -13,6 +13,7 @@ import {
   DEFAULT_INTENT_PREFIXES,
   monorepoRoleSourceGlobs,
   resolveIncludeRoots,
+  sharedLibraryLayer,
 } from '../ark-shared.mjs';
 import { withArkConfigMetadata } from './config-contract.mjs';
 
@@ -650,11 +651,13 @@ export const ARCHITECTURE_PRESETS = {
     }
     // Turborepo: apps/ + packages/; Nx enterprise: apps/ + libs/ (+ packages/).
     if (include.length === 0) include = ['packages', 'apps', 'libs'];
-    // Library Domain bags stay under packages/ or libs/ — never api/** or client/**.
-    const librarySourcePatterns = monorepoRoleSourceGlobs(units, ['library'], {
-      root,
-      domainScoped: true,
-    });
+    // Per-package library layer (#366). Globs stay under packages/ or libs/.
+    const libraryGlobs = (layer) =>
+      monorepoRoleSourceGlobs(
+        units.filter((unit) => sharedLibraryLayer(unit) === layer),
+        ['library'],
+        { root, domainScoped: true }
+      );
     const applicationSourcePatterns = monorepoRoleSourceGlobs(units, ['application', 'cli'], {
       root,
       uiMode: 'not-ui',
@@ -676,7 +679,7 @@ export const ARCHITECTURE_PRESETS = {
             patterns: [
               ...DOMAIN_PATH_PATTERNS,
               '**/cinematic/types.ts',
-              ...librarySourcePatterns,
+              ...libraryGlobs('DomainModel'),
             ],
             forbiddenGlobals: DEFAULT_DOMAIN_FORBIDDEN_GLOBALS,
             optional: true,
@@ -693,6 +696,7 @@ export const ARCHITECTURE_PRESETS = {
               ...NEXT_API_APPLICATION_PATTERNS,
               ...APPLICATION_LIB_ORCHESTRATION_PATTERNS,
               ...applicationSourcePatterns,
+              ...libraryGlobs('ApplicationOrchestration'),
             ],
             optional: true,
           },
@@ -709,6 +713,7 @@ export const ARCHITECTURE_PRESETS = {
               '**/routes/**',
               '**/hooks/**',
               ...uiApplicationSourcePatterns,
+              ...libraryGlobs('PresentationAdapters'),
               // No bare **/lib/** — NEW-ADOPT-LIB-AS-PRESENTATION / NEW-APP-VACUUM-LIB.
             ],
             optional: true,
@@ -719,6 +724,7 @@ export const ARCHITECTURE_PRESETS = {
             patterns: [
               '**/adapters/**',
               ...PERSISTENCE_PATH_PATTERNS,
+              ...libraryGlobs('PersistenceAdapters'),
             ],
             optional: true,
           },
