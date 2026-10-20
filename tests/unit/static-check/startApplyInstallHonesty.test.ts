@@ -133,6 +133,68 @@ describe('formatStartPackageInstallFailure', () => {
     expect(classifyStartInstallFailure('yarn: simulated install fail').kind).toBe('generic');
     expect(explainPnpmMaturityBlock('yarn: simulated install fail')).toBeNull();
   });
+
+  it('leads with the first error line and names an order-lint caused by the pin (#367)', () => {
+    const dump = [
+      'Progress: resolved 1, reused 0, downloaded 0, added 0',
+      'devDependencies should be ordered alphabetically',
+      'noise 1',
+      'noise 2',
+      'noise 3',
+      'noise 4',
+      'noise 5',
+      ' ELIFECYCLE  Command failed with exit code 1.',
+      '1 issue found',
+    ].join('\n');
+    const text = formatStartPackageInstallFailure({
+      exitStatus: 1,
+      installCommand: 'pnpm add -D arkgate@^4.8.28 -w',
+      hostOutput: dump,
+    });
+    expect(text.indexOf('devDependencies should be ordered alphabetically')).toBeLessThan(
+      text.indexOf('1 issue found')
+    );
+    expect(text).toContain(
+      "arkgate edited package.json before install, and that edit failed this repo's dependency order check."
+    );
+    expect(text).toMatch(/Package install failed \(exit 1\)/);
+    expect(text).not.toMatch(/minimumReleaseAge/);
+  });
+});
+
+describe('pinArkgateDevDependency keeps existing key order (#367)', () => {
+  it('inserts arkgate in order when devDependencies are already sorted', () => {
+    const root = tempRoot('ark-pin-sorted-');
+    write(
+      root,
+      'package.json',
+      '{\n  "devDependencies": {\n    "@types/node": "22.10.0",\n    "eslint": "9.16.0",\n    "typescript": "5.9.3",\n    "vitest": "3.2.4"\n  }\n}\n'
+    );
+    expect(pinArkgateDevDependency(root).changed).toBe(true);
+    const text = fs.readFileSync(path.join(root, 'package.json'), 'utf8');
+    expect(Object.keys(JSON.parse(text).devDependencies)).toEqual([
+      '@types/node',
+      'arkgate',
+      'eslint',
+      'typescript',
+      'vitest',
+    ]);
+    expect(text.indexOf('"@types/node"')).toBeLessThan(text.indexOf('"arkgate"'));
+    expect(text.indexOf('"arkgate"')).toBeLessThan(text.indexOf('"eslint"'));
+  });
+
+  it('appends arkgate when devDependencies are not sorted', () => {
+    const root = tempRoot('ark-pin-unsorted-');
+    write(
+      root,
+      'package.json',
+      '{\n  "devDependencies": {\n    "vitest": "3.2.4",\n    "eslint": "9.16.0"\n  }\n}\n'
+    );
+    pinArkgateDevDependency(root);
+    const text = fs.readFileSync(path.join(root, 'package.json'), 'utf8');
+    expect(text.indexOf('"vitest"')).toBeLessThan(text.indexOf('"eslint"'));
+    expect(text.indexOf('"eslint"')).toBeLessThan(text.indexOf('"arkgate"'));
+  });
 });
 
 describe('pinArkgateDevDependency bumps an older caret to this CLI', () => {
@@ -369,5 +431,33 @@ describe('doctor #1 after unresolved package (#268)', () => {
       )[0]
     ).toBe(NOT_ADOPTED_NEXT_ACTION);
     expect(preferredDoctorPrimaryNextAction({ adopted: ADOPTED_NOT })).toBe(NOT_ADOPTED_NEXT_ACTION);
+  });
+
+  it('does not recommend strict-merge while analysis is incomplete (#367)', () => {
+    const root = tempRoot('ark-doctor-partial-');
+    write(root, 'pnpm-lock.yaml', "lockfileVersion: '9.0'\n");
+    const reasons = [
+      {
+        code: 'TSCONFIG_PARSE_FAILURE',
+        message:
+          'apps/web/tsconfig.json extends @repo/tsconfig/base.json and that package is not installed.',
+      },
+    ];
+    const actions = collectDoctorNextActions(
+      nextActionsCtx({ analysisComplete: false, completenessReasons: reasons, root })
+    );
+    expect(actions[0]).toBe(
+      "1 tsconfig file extends a package that isn't installed; run `pnpm install` first"
+    );
+    expect(actions.join('\n')).not.toMatch(/strict-merge/i);
+    expect(
+      preferredDoctorPrimaryNextAction({
+        adopted: ADOPTED_NOT,
+        analysisComplete: false,
+        completenessReasons: reasons,
+        root,
+        packageInstalled: true,
+      })
+    ).toBe(actions[0]);
   });
 });

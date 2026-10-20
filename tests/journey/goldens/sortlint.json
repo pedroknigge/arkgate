@@ -5,18 +5,18 @@
       "got": {
         "devDependencyKeys": [
           "@types/node",
+          "arkgate",
           "eslint",
           "typescript",
-          "vitest",
-          "arkgate"
+          "vitest"
         ],
         "startError": null
       },
       "id": "367-sorted-pin",
-      "met": false,
+      "met": true,
       "note": "start --apply inserts arkgate into devDependencies without disturbing alphabetical order. The postinstall lint checks that same order.",
       "owner": "#367",
-      "status": "fail",
+      "status": "pass",
       "want": {
         "includes": "arkgate",
         "sorted": true
@@ -30,16 +30,16 @@
           {
             "code": "TSCONFIG_PARSE_FAILURE",
             "file": "apps/web/tsconfig.json",
-            "message": "apps/web/tsconfig.json has 1 TypeScript config diagnostic(s)."
+            "message": "apps/web/tsconfig.json extends @repo/tsconfig/base.json and that package is not installed."
           }
         ],
         "ok": false
       },
       "id": "367-partial-cause",
-      "met": false,
+      "met": true,
       "note": "apps/web/tsconfig.json extends @repo/tsconfig, which is not installed. Check JSON names TSCONFIG_PARSE_FAILURE and that the package is not installed. A partial verdict is not ok.",
       "owner": "#367",
-      "status": "fail",
+      "status": "pass",
       "want": {
         "code": "TSCONFIG_PARSE_FAILURE",
         "completeness": "partial",
@@ -51,13 +51,13 @@
       "expect": "pass",
       "got": {
         "completeness": "partial",
-        "primaryNextAction": "Make arkgate-check --strict-merge a required GitHub status, or write .ark/adoption-stance.json with stance: \"advisory-only\""
+        "primaryNextAction": "1 tsconfig file extends a package that isn't installed; run `pnpm install` first"
       },
       "id": "367-doctor-skips-strict-merge",
-      "met": false,
+      "met": true,
       "note": "While analysis is partial, doctor's next action does not tell the reader to make --strict-merge a required status.",
       "owner": "#367",
-      "status": "fail",
+      "status": "pass",
       "want": {
         "completeness": "partial",
         "recommendsStrictMerge": false
@@ -81,10 +81,10 @@
       "output": {
         "devDependencyKeys": [
           "@types/node",
+          "arkgate",
           "eslint",
           "typescript",
-          "vitest",
-          "arkgate"
+          "vitest"
         ],
         "startError": null
       }
@@ -99,7 +99,7 @@
           {
             "code": "TSCONFIG_PARSE_FAILURE",
             "file": "apps/web/tsconfig.json",
-            "message": "apps/web/tsconfig.json has 1 TypeScript config diagnostic(s)."
+            "message": "apps/web/tsconfig.json extends @repo/tsconfig/base.json and that package is not installed."
           }
         ],
         "ok": false
@@ -111,7 +111,7 @@
       "filesDiff": {},
       "output": {
         "completeness": "partial",
-        "primaryNextAction": "Make arkgate-check --strict-merge a required GitHub status, or write .ark/adoption-stance.json with stance: \"advisory-only\""
+        "primaryNextAction": "1 tsconfig file extends a package that isn't installed; run `pnpm install` first"
       }
     }
   ]

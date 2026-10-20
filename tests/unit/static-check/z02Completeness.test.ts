@@ -7,7 +7,9 @@ import ts from 'typescript';
 import {
   analysisIncompleteStatement,
   completenessFromParseHealth,
+  incompleteAnalysisNextAction,
   normalizeAnalysisCompleteness,
+  partialAnalysisCause,
 } from '../../../bin/lib/analysis-completeness.mjs';
 import { validateSnippetAnalysis } from '../../../bin/lib/snippet-analysis.mjs';
 import { writeSemanticGateArtifacts } from '../../helpers/semanticGateArtifacts';
@@ -71,6 +73,67 @@ describe('Z02 analysis completeness', () => {
     expect(completenessFromParseHealth({ available: true, affectedFiles: 0 })).toBe('complete');
     expect(analysisIncompleteStatement('partial')).toContain('Analysis incomplete');
     expect(analysisIncompleteStatement('unavailable')).toContain('Analysis unavailable');
+    const reasons = [
+      {
+        code: 'TSCONFIG_PARSE_FAILURE',
+        message: 'apps/web/tsconfig.json extends @repo/tsconfig/base.json and that package is not installed.',
+      },
+      {
+        code: 'TSCONFIG_PARSE_FAILURE',
+        message: 'packages/db/tsconfig.json extends @repo/tsconfig/base.json and that package is not installed.',
+      },
+    ];
+    expect(partialAnalysisCause(reasons, { packageManager: 'pnpm' })).toBe(
+      "2 tsconfig files extend packages that aren't installed; run `pnpm install` first"
+    );
+    expect(analysisIncompleteStatement('partial', [reasons[0]], undefined)).toBe(
+      "Analysis incomplete: 1 tsconfig file extends a package that isn't installed; run `npm install` first."
+    );
+    expect(incompleteAnalysisNextAction(undefined, undefined)).toBe(
+      'Analysis is incomplete — install dependencies and re-run arkgate-check before a merge check'
+    );
+    expect(incompleteAnalysisNextAction(undefined, undefined)).not.toMatch(/strict-merge/i);
+  });
+
+  it('names an uninstalled tsconfig extend on check and doctor (#367)', () => {
+    const root = temporaryRoot('ark-z02-extends-');
+    fs.mkdirSync(path.join(root, 'apps/web/src'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'pnpm-lock.yaml'), "lockfileVersion: '9.0'\n");
+    fs.writeFileSync(
+      path.join(root, 'package.json'),
+      `${JSON.stringify({ name: 'extends-missing', private: true })}\n`
+    );
+    fs.writeFileSync(
+      path.join(root, 'ark.config.json'),
+      `${JSON.stringify(
+        {
+          schemaVersion: '1.0',
+          include: ['apps/web/src'],
+          layers: [{ name: 'ApplicationOrchestration', patterns: ['apps/web/src/**'] }],
+          rules: [],
+        },
+        null,
+        2
+      )}\n`
+    );
+    fs.writeFileSync(
+      path.join(root, 'apps/web/tsconfig.json'),
+      `${JSON.stringify({ extends: '@repo/tsconfig/base.json', compilerOptions: { noEmit: true }, include: ['src'] })}\n`
+    );
+    fs.writeFileSync(path.join(root, 'apps/web/src/page.ts'), 'export const page = 1;\n');
+
+    const check = runCheck(CHECK, root, [], false);
+    expect(check.stderr).toContain(
+      "Analysis incomplete: 1 tsconfig file extends a package that isn't installed; run `pnpm install` first."
+    );
+
+    const doctor = runCheck(CHECK, root, ['--doctor']);
+    const parsed = JSON.parse(doctor.stdout);
+    expect(parsed.doctor.completeness).toBe('partial');
+    expect(parsed.doctor.primaryNextAction).toBe(
+      "1 tsconfig file extends a package that isn't installed; run `pnpm install` first"
+    );
+    expect(parsed.doctor.primaryNextAction).not.toMatch(/strict-merge/i);
   });
 
   it('fails closed when snippet parsing is partial or unavailable', () => {

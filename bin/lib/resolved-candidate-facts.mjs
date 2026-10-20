@@ -630,6 +630,28 @@ function portableCompilerValue(root, value, externalAnchor) {
   return portable;
 }
 
+function packageExtendsNotInstalledMessage(ts, label, config, optionErrors) {
+  const value = config?.extends;
+  const list = Array.isArray(value) ? value : typeof value === 'string' ? [value] : [];
+  const packages = list.filter(
+    (item) =>
+      typeof item === 'string' && item.length > 0 && !item.startsWith('.') && !path.isAbsolute(item)
+  );
+  if (packages.length === 0) return null;
+  const missing = optionErrors.filter(
+    (diagnostic) => diagnostic?.code === 6053 || diagnostic?.code === 5083
+  );
+  if (missing.length === 0) return null;
+  const named = packages.filter((spec) =>
+    missing.some((diagnostic) =>
+      ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n').includes(spec)
+    )
+  );
+  const shown = named.length > 0 ? named : packages;
+  const verb = shown.length === 1 ? 'that package is not installed' : 'those packages are not installed';
+  return `${label} extends ${shown.join(', ')} and ${verb}.`;
+}
+
 function compilerContext(ts, root, tsconfig, candidateFiles, observeInput) {
   const explicitPath = tsconfig
     ? path.isAbsolute(tsconfig)
@@ -715,7 +737,9 @@ function compilerContext(ts, root, tsconfig, candidateFiles, observeInput) {
       reasons.push({
         code: 'TSCONFIG_PARSE_FAILURE',
         ...(reasonFile ? { file: reasonFile } : {}),
-        message: `${label} has ${optionErrors.length} TypeScript config diagnostic(s).`,
+        message:
+          packageExtendsNotInstalledMessage(ts, label, read.config, optionErrors) ??
+          `${label} has ${optionErrors.length} TypeScript config diagnostic(s).`,
       });
     }
     optionsByPath.set(configPath, parsed.options ?? {});

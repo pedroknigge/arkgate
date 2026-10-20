@@ -1,4 +1,5 @@
 /** Shared fail-closed completeness semantics for CLI/MCP Tooling surfaces. */
+import { detectPackageManager } from './package-manager.mjs';
 
 export const ANALYSIS_COMPLETENESS = Object.freeze({
   complete: 'complete',
@@ -21,10 +22,54 @@ export function completenessFromParseHealth(parseHealth) {
     : ANALYSIS_COMPLETENESS.complete;
 }
 
-export function analysisIncompleteStatement(completeness) {
-  return completeness === ANALYSIS_COMPLETENESS.partial
-    ? 'Analysis incomplete: governed parse diagnostics prevent a complete architecture verdict.'
-    : 'Analysis unavailable: no API-compatible TypeScript host could produce architecture evidence.';
+function packageManagerOption(root) {
+  const packageManager =
+    typeof root === 'string' && root.length > 0 ? detectPackageManager(root) : 'npm';
+  return { packageManager };
+}
+
+/**
+ * Plain cause for a partial verdict, or null when the reasons do not name one.
+ * A tsconfig that extends a package which is not installed is the field case:
+ * the code is TSCONFIG_PARSE_FAILURE and the message says the package is not installed.
+ */
+export function partialAnalysisCause(reasons, options = {}) {
+  const list = Array.isArray(reasons) ? reasons.filter((reason) => reason && typeof reason === 'object') : [];
+  const extendsMissing = list.filter(
+    (reason) =>
+      reason.code === 'TSCONFIG_PARSE_FAILURE' && /not installed/i.test(String(reason.message ?? ''))
+  );
+  if (extendsMissing.length > 0) {
+    const count = extendsMissing.length;
+    const packageManager = options.packageManager || 'npm';
+    const fact =
+      count === 1
+        ? "1 tsconfig file extends a package that isn't installed"
+        : `${count} tsconfig files extend packages that aren't installed`;
+    return `${fact}; run \`${packageManager} install\` first`;
+  }
+  if (list.length === 0) return null;
+  const first = list[0];
+  const code = typeof first.code === 'string' && first.code.length > 0 ? first.code : 'parse';
+  const message = typeof first.message === 'string' ? first.message : '';
+  return message ? `${code}: ${message}` : code;
+}
+
+/** Next action while analysis cannot support a merge verdict. */
+export function incompleteAnalysisNextAction(reasons, root) {
+  return (
+    partialAnalysisCause(reasons, packageManagerOption(root)) ??
+    'Analysis is incomplete — install dependencies and re-run arkgate-check before a merge check'
+  );
+}
+
+export function analysisIncompleteStatement(completeness, reasons, root) {
+  if (completeness !== ANALYSIS_COMPLETENESS.partial) {
+    return 'Analysis unavailable: no API-compatible TypeScript host could produce architecture evidence.';
+  }
+  const cause = partialAnalysisCause(reasons, packageManagerOption(root));
+  if (cause) return `Analysis incomplete: ${cause}.`;
+  return 'Analysis incomplete: governed parse diagnostics prevent a complete architecture verdict.';
 }
 
 /** Public diagnostic id for a verdict asked to certify an empty file set. */
