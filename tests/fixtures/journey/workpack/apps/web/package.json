@@ -1,0 +1,12 @@
+{
+  "name": "@repo/web",
+  "private": true,
+  "version": "0.0.0",
+  "dependencies": {
+    "@repo/api": "*",
+    "@repo/auth": "*",
+    "@repo/data": "*",
+    "@repo/ui": "*",
+    "@repo/validators": "*"
+  }
+}

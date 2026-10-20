@@ -1,0 +1,188 @@
+{
+  "cases": [
+    {
+      "expect": "fail",
+      "got": {
+        "application": [],
+        "archetype": "multi-app-workspace",
+        "badgeDomainImport": false,
+        "checkExit": 1,
+        "clean": {
+          "apps/expo/app/index.tsx": [
+            "LAYER_IMPORT_VIOLATION"
+          ],
+          "apps/start/src/routes/index.tsx": [
+            "LAYER_IMPORT_VIOLATION"
+          ],
+          "apps/web/components/header.tsx": [
+            "LAYER_IMPORT_VIOLATION"
+          ]
+        },
+        "domainPackages": [
+          "packages/api/src/**",
+          "packages/auth/src/**",
+          "packages/billing/src/**",
+          "packages/billing/src/domain/**",
+          "packages/db/src/**",
+          "packages/ui/src/**",
+          "packages/validators/src/**"
+        ],
+        "invoiceViolation": false,
+        "pageDomainImports": 5,
+        "persistence": [],
+        "presentation": [],
+        "routerForbiddenGlobal": true
+      },
+      "id": "366-shared-packages",
+      "met": false,
+      "note": "Shared ui/db/auth/api/validators are not DomainModel. A Button import is clean. Billing domain importing the database package fails. The UI badge importing that domain fails. Date.now in the API router is not a domain global. The check does not exit 0.",
+      "owner": "#366",
+      "status": "expected-fail",
+      "want": {
+        "application": [
+          "packages/api/",
+          "packages/validators/"
+        ],
+        "archetype": "multi-app-workspace",
+        "badgeDomainImport": true,
+        "checkExit": "nonzero",
+        "cleanFiles": [
+          "apps/expo/app/index.tsx",
+          "apps/start/src/routes/index.tsx",
+          "apps/web/components/header.tsx"
+        ],
+        "domainKeeps": [
+          "packages/billing/"
+        ],
+        "domainOmits": [
+          "packages/api/",
+          "packages/auth/",
+          "packages/db/",
+          "packages/ui/",
+          "packages/validators/"
+        ],
+        "invoiceViolation": true,
+        "pageDomainImports": 0,
+        "persistence": [
+          "packages/auth/",
+          "packages/db/"
+        ],
+        "presentation": [
+          "packages/ui/"
+        ],
+        "routerForbiddenGlobal": false
+      }
+    }
+  ],
+  "fixture": "workpack",
+  "schemaVersion": 1,
+  "steps": [
+    {
+      "command": "ark start --apply --json --yes --no-install --tools claude",
+      "exitCode": 0,
+      "filesDiff": {
+        ".ark/ci-merge-boundary.json": "added",
+        ".claude/settings.json": "added",
+        ".github/workflows/ark-check.yml": "added",
+        ".mcp.json": "added",
+        "AGENTS.md": "added",
+        "ark.config.json": "added",
+        "arkrules/ApplicationOrchestration.json": "added",
+        "arkrules/DomainModel.json": "added",
+        "arkrules/PersistenceAdapters.json": "added",
+        "arkrules/PresentationAdapters.json": "added",
+        "package.json": "modified"
+      },
+      "output": {
+        "archetype": "multi-app-workspace",
+        "layers": {
+          "ApplicationOrchestration": [],
+          "DomainModel": [
+            "packages/api/src/**",
+            "packages/auth/src/**",
+            "packages/billing/src/**",
+            "packages/billing/src/domain/**",
+            "packages/db/src/**",
+            "packages/ui/src/**",
+            "packages/validators/src/**"
+          ],
+          "PersistenceAdapters": [],
+          "PresentationAdapters": []
+        },
+        "startError": null
+      }
+    },
+    {
+      "command": "ark-check --json --no-cache --strict-config",
+      "exitCode": 1,
+      "filesDiff": {},
+      "output": {
+        "completeness": "complete",
+        "diagnostics": [
+          {
+            "file": "packages/api/src/router.ts",
+            "message": "DomainModel must not use the ambient global \"Date.now\".",
+            "ruleId": "FORBIDDEN_GLOBAL",
+            "severity": "error"
+          },
+          {
+            "file": "packages/api/src/router.ts",
+            "message": "DomainModel must not use the ambient global \"Math.random\".",
+            "ruleId": "FORBIDDEN_GLOBAL",
+            "severity": "error"
+          },
+          {
+            "file": "apps/expo/app/index.tsx",
+            "message": "PresentationAdapters must not import DomainModel.",
+            "ruleId": "LAYER_IMPORT_VIOLATION",
+            "severity": "error"
+          },
+          {
+            "file": "apps/start/src/routes/index.tsx",
+            "message": "PresentationAdapters must not import DomainModel.",
+            "ruleId": "LAYER_IMPORT_VIOLATION",
+            "severity": "error"
+          },
+          {
+            "file": "apps/web/app/page.tsx",
+            "message": "PresentationAdapters must not import DomainModel.",
+            "ruleId": "LAYER_IMPORT_VIOLATION",
+            "severity": "error"
+          },
+          {
+            "file": "apps/web/app/page.tsx",
+            "message": "PresentationAdapters must not import DomainModel.",
+            "ruleId": "LAYER_IMPORT_VIOLATION",
+            "severity": "error"
+          },
+          {
+            "file": "apps/web/app/page.tsx",
+            "message": "PresentationAdapters must not import DomainModel.",
+            "ruleId": "LAYER_IMPORT_VIOLATION",
+            "severity": "error"
+          },
+          {
+            "file": "apps/web/app/page.tsx",
+            "message": "PresentationAdapters must not import DomainModel.",
+            "ruleId": "LAYER_IMPORT_VIOLATION",
+            "severity": "error"
+          },
+          {
+            "file": "apps/web/app/page.tsx",
+            "message": "PresentationAdapters must not import DomainModel.",
+            "ruleId": "LAYER_IMPORT_VIOLATION",
+            "severity": "error"
+          },
+          {
+            "file": "apps/web/components/header.tsx",
+            "message": "PresentationAdapters must not import DomainModel.",
+            "ruleId": "LAYER_IMPORT_VIOLATION",
+            "severity": "error"
+          }
+        ],
+        "ok": false,
+        "valid": false
+      }
+    }
+  ]
+}

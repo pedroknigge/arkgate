@@ -59,12 +59,19 @@
  * #358 is `freshmini` and `freshmono`: no ark.config.json. Status, doctor,
  * plain check, and --strict-merge must each lead with the same first step,
  * and a plain check must not print a pass.
+ *
+ * #366 is `workpack`: a pnpm + turbo workspace. Shared `packages/ui`, `db`,
+ * `auth`, `api`, and `validators` must not land on DomainModel. A Button import
+ * is clean. Billing domain importing the database package stays a violation,
+ * and the UI badge importing that domain stays a violation. `Date.now` in the
+ * API router is not a domain global. `expect: 'fail'` is the claim on today's
+ * wholesale library→Domain dump; flip it to `pass` when the claim holds.
  */
 const ABSENT_CONFIG_FIRST_STEP =
   'No ark.config.json found — run arkgate start (preview) then arkgate start --apply.';
 
 /** Fixtures that are a fresh tree: the journey refuses an ark.config.json here. */
-export const CONFIG_FREE_FIXTURES = new Set(['freshmini', 'freshmono']);
+export const CONFIG_FREE_FIXTURES = new Set(['freshmini', 'freshmono', 'workpack']);
 const crossParentEdges = Object.freeze([
   Object.freeze({
     from: 'management',
@@ -261,6 +268,10 @@ export const JOURNEYS = Object.freeze({
     Object.freeze(['arkgate-check', '--json', '--no-cache']),
     Object.freeze(['arkgate-check', '--doctor', '--json', '--no-cache']),
     Object.freeze(['arkgate-check', '--strict-merge', '--json', '--no-cache']),
+  ]),
+  workpack: Object.freeze([
+    Object.freeze(['ark', 'start', '--apply', '--json', '--yes', '--no-install', '--tools', 'claude']),
+    Object.freeze(['ark-check', '--json', '--no-cache', '--strict-config']),
   ]),
 });
 
@@ -986,6 +997,39 @@ export const JOURNEY_CASES = Object.freeze({
   freshmono: absentConfigCases(
     'A workspace package whose source sits outside a root src/ folder, no ark.config.json. Same first step as the one-package tree. Plain check does not pass.'
   ),
+  workpack: Object.freeze([
+    Object.freeze({
+      id: '366-shared-packages',
+      owner: '#366',
+      expect: 'fail',
+      kind: 'workpack-shared-packages',
+      note: 'Shared ui/db/auth/api/validators are not DomainModel. A Button import is clean. Billing domain importing the database package fails. The UI badge importing that domain fails. Date.now in the API router is not a domain global. The check does not exit 0.',
+      want: Object.freeze({
+        archetype: 'multi-app-workspace',
+        cleanFiles: Object.freeze([
+          'apps/expo/app/index.tsx',
+          'apps/start/src/routes/index.tsx',
+          'apps/web/components/header.tsx',
+        ]),
+        pageDomainImports: 0,
+        invoiceViolation: true,
+        badgeDomainImport: true,
+        routerForbiddenGlobal: false,
+        checkExit: 'nonzero',
+        domainOmits: Object.freeze([
+          'packages/api/',
+          'packages/auth/',
+          'packages/db/',
+          'packages/ui/',
+          'packages/validators/',
+        ]),
+        persistence: Object.freeze(['packages/auth/', 'packages/db/']),
+        presentation: Object.freeze(['packages/ui/']),
+        application: Object.freeze(['packages/api/', 'packages/validators/']),
+        domainKeeps: Object.freeze(['packages/billing/']),
+      }),
+    }),
+  ]),
 });
 
 function absentConfigCases(note) {
