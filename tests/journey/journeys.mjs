@@ -65,12 +65,26 @@
  * is clean. Billing domain importing the database package stays a violation,
  * and the UI badge importing that domain stays a violation. `Date.now` in the
  * API router is not a domain global.
+ *
+ * #367 is `sortlint`: a pnpm workspace whose root devDependencies are already
+ * alphabetical, with a postinstall lint that refuses any other order, and a
+ * tsconfig that extends a workspace package. The harness installs the packed
+ * tarball without rewriting package.json, so `start --apply` is the edit that
+ * inserts arkgate. Check must name the partial-analysis cause. Doctor must
+ * not recommend strict-merge while that analysis is incomplete.
  */
 const ABSENT_CONFIG_FIRST_STEP =
   'No ark.config.json found — run arkgate start (preview) then arkgate start --apply.';
 
 /** Fixtures that are a fresh tree: the journey refuses an ark.config.json here. */
 export const CONFIG_FREE_FIXTURES = new Set(['freshmini', 'freshmono', 'workpack']);
+
+/**
+ * Fixtures whose package.json is the subject of the journey. The packed tarball
+ * is installed without rewriting the manifest, so a later `start` pin is the
+ * product edit, not the harness.
+ */
+export const MANIFEST_PRESERVING_FIXTURES = new Set(['sortlint']);
 const crossParentEdges = Object.freeze([
   Object.freeze({
     from: 'management',
@@ -271,6 +285,11 @@ export const JOURNEYS = Object.freeze({
   workpack: Object.freeze([
     Object.freeze(['ark', 'start', '--apply', '--json', '--yes', '--no-install', '--tools', 'claude']),
     Object.freeze(['ark-check', '--json', '--no-cache', '--strict-config']),
+  ]),
+  sortlint: Object.freeze([
+    Object.freeze(['ark', 'start', '--apply', '--json', '--yes', '--skip-package-manager', '--tools', 'claude']),
+    Object.freeze(['ark-check', '--json', '--no-cache']),
+    Object.freeze(['ark-check', '--doctor', '--json', '--no-cache']),
   ]),
 });
 
@@ -1027,6 +1046,29 @@ export const JOURNEY_CASES = Object.freeze({
         application: Object.freeze(['packages/api/', 'packages/validators/']),
         domainKeeps: Object.freeze(['packages/billing/']),
       }),
+    }),
+  ]),
+  sortlint: Object.freeze([
+    Object.freeze({
+      id: '367-sorted-pin',
+      owner: '#367',
+      expect: 'pass',
+      kind: 'sortlint-pin',
+      note: 'start --apply inserts arkgate into devDependencies without disturbing alphabetical order. The postinstall lint checks that same order.',
+    }),
+    Object.freeze({
+      id: '367-partial-cause',
+      owner: '#367',
+      expect: 'pass',
+      kind: 'sortlint-cause',
+      note: 'apps/web/tsconfig.json extends @repo/tsconfig, which is not installed. Check JSON names TSCONFIG_PARSE_FAILURE and that the package is not installed. A partial verdict is not ok.',
+    }),
+    Object.freeze({
+      id: '367-doctor-skips-strict-merge',
+      owner: '#367',
+      expect: 'pass',
+      kind: 'sortlint-doctor',
+      note: 'While analysis is partial, doctor\'s next action does not tell the reader to make --strict-merge a required status.',
     }),
   ]),
 });

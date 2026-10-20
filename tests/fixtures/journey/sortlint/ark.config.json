@@ -1,0 +1,12 @@
+{
+  "$schema": "https://unpkg.com/arkgate@4/schemas/ark.config.schema.json",
+  "schemaVersion": "1.0",
+  "include": ["apps/web/src"],
+  "layers": [
+    {
+      "name": "ApplicationOrchestration",
+      "patterns": ["apps/web/src/**"]
+    }
+  ],
+  "rules": []
+}
