@@ -21,7 +21,7 @@ function arkPackageVersion() {
   }
 }
 
-function matchingBrace(text, openIndex) {
+function matchingDelimiter(text, openIndex, openChar, closeChar) {
   let depth = 0;
   let quoted = false;
   let escaped = false;
@@ -34,8 +34,8 @@ function matchingBrace(text, openIndex) {
       continue;
     }
     if (char === '"') quoted = true;
-    else if (char === '{') depth += 1;
-    else if (char === '}' && --depth === 0) return index;
+    else if (char === openChar) depth += 1;
+    else if (char === closeChar && --depth === 0) return index;
   }
   return -1;
 }
@@ -68,31 +68,15 @@ function endOfJsonValue(source, start, limit) {
     return limit;
   }
   if (char === '{' || char === '[') {
-    const close = char === '{' ? matchingBrace(source, start) : matchingBracket(source, start);
+    const close =
+      char === '{'
+        ? matchingDelimiter(source, start, '{', '}')
+        : matchingDelimiter(source, start, '[', ']');
     return close === -1 ? limit : close + 1;
   }
   let index = start;
   while (index < limit && !/[\s,}\]]/.test(source[index])) index += 1;
   return index === start ? Math.min(start + 1, limit) : index;
-}
-
-function matchingBracket(text, openIndex) {
-  let depth = 0;
-  let quoted = false;
-  let escaped = false;
-  for (let index = openIndex; index < text.length; index += 1) {
-    const char = text[index];
-    if (quoted) {
-      if (escaped) escaped = false;
-      else if (char === '\\') escaped = true;
-      else if (char === '"') quoted = false;
-      continue;
-    }
-    if (char === '"') quoted = true;
-    else if (char === '[') depth += 1;
-    else if (char === ']' && --depth === 0) return index;
-  }
-  return -1;
 }
 
 /** Top-level keys of the object that opens at `open` and closes at `close`. */
@@ -194,7 +178,7 @@ export function addPackageJsonPropertyPreservingFormat(
 
   if (sectionMatch) {
     const open = source.indexOf('{', sectionMatch.index);
-    const close = matchingBrace(source, open);
+    const close = matchingDelimiter(source, open, '{', '}');
     if (close === -1) throw new Error(`Unbalanced ${unbalancedLabel} object`);
     const props = objectProperties(source, open, close);
     const keys = props.map((prop) => prop.key);
