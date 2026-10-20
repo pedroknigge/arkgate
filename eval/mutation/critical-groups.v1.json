@@ -96,23 +96,23 @@
     },
     {
       "id": "empty-analysis-refusal",
-      "note": "A verdict over zero governed files is a false green, and the refusal is one condition plus one sentence. Unpinned, a mutant could flip the greenfield exemption or the moved-root branch and ark-check would silently pass an empty analysis again. 4.8.4 pinned 74-114 (the whole function); classifiedFileCount growth left the exemption at 115 unpinned — retargeted to the function body.",
+      "note": "A verdict over zero governed files is a false green, and the refusal is one condition plus one sentence. Unpinned, a mutant could flip the greenfield exemption or the moved-root branch and ark-check would silently pass an empty analysis again. 4.8.4 pinned 74-114 (the whole function); classifiedFileCount growth left the exemption at 115 unpinned — retargeted to the function body. #367 partial-cause helpers shifted the same function body to 126-186.",
       "targets": [
         {
           "file": "bin/lib/analysis-completeness.mjs",
-          "startLine": 81,
-          "endLine": 141
+          "startLine": 126,
+          "endLine": 186
         }
       ]
     },
     {
       "id": "resolved-candidate-facts",
-      "note": "resolvedCompilerInputPaths body after its TypeScript-API guard (realpath + candidate collection) through resolveRelativeFallback and resolveDependency (unresolved / resolved-project / resolved-external). The readConfigFile guard line stays outside the pin. The arkorder/arkrun receiver-trace merges shifted the same code to 739-789. The memory pass (lazy source reads, path reuse, resolution memo) shifted it to 786-839. The ArkRun effective-intent-prefix import shifted it to 787-840.",
+      "note": "resolvedCompilerInputPaths body after its TypeScript-API guard (realpath + candidate collection) through resolveRelativeFallback and resolveDependency (unresolved / resolved-project / resolved-external). The readConfigFile guard line stays outside the pin. The arkorder/arkrun receiver-trace merges shifted the same code to 739-789. The memory pass (lazy source reads, path reuse, resolution memo) shifted it to 786-839. The ArkRun effective-intent-prefix import shifted it to 787-840. #367 package-extends message shifted the same body to 811-864.",
       "targets": [
         {
           "file": "bin/lib/resolved-candidate-facts.mjs",
-          "startLine": 787,
-          "endLine": 840
+          "startLine": 811,
+          "endLine": 864
         }
       ]
     },
