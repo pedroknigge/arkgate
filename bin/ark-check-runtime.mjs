@@ -1522,7 +1522,7 @@ async function main() {
       configRoot: args.configRoot ?? root,
       configWalkedUp: args.configWalkedUp === true,
       safety, designDelta,
-      ts, parseHealth, completeness,
+      ts, parseHealth, completeness, completenessReasons,
       all: args.all === true, changed: args.changed === true, requireGates: args.requireGates === true,
       warnings, architectureFacts: importGraph ? { importGraph } : undefined,
     });
@@ -1955,7 +1955,7 @@ async function main() {
     }
     if (designCheck.failureText()) console.error(designCheck.failureText());
     if (!analysisComplete) {
-      console.error(color.yellow(analysisIncompleteStatement(completeness)));
+      console.error(color.yellow(analysisIncompleteStatement(completeness, completenessReasons, root)));
     } else if (blockingViolations.length === 0 && (policyDelta?.valid ?? true)) {
       const placementDebt = activeViolations.filter((v) => v.failsStrict === false);
       const advisoryOnly = warnings.length > 0 && strictWarnings.length === 0;

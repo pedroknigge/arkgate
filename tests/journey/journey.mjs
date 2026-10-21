@@ -11,7 +11,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { resolveCandidate } from '../../scripts/ts-compat-matrix.mjs';
-import { CONFIG_FREE_FIXTURES, JOURNEY_CASES, JOURNEYS } from './journeys.mjs';
+import { CONFIG_FREE_FIXTURES, JOURNEY_CASES, JOURNEYS, MANIFEST_PRESERVING_FIXTURES } from './journeys.mjs';
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(SCRIPT_DIR, '../..');
@@ -58,7 +58,7 @@ export async function journey(fixture, steps, options = {}) {
     const candidate = resolveJourneyCandidate(options.candidate ?? {}, runRoot);
     copyFixtureFromIndex(fixture, project);
     commitFixture(project);
-    const version = installCandidate(project, candidate.copied);
+    const version = installCandidate(project, candidate.copied, fixture);
     const binFor = installedBins(project, version);
     let before = snapshotTree(project);
     const observedSteps = [];
@@ -260,17 +260,28 @@ function commitFixture(project) {
   );
 }
 
-function installCandidate(project, tarball) {
+function installCandidate(project, tarball, fixture) {
   const pkgPath = path.join(project, 'package.json');
-  const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
-  pkg.devDependencies = {
-    ...(pkg.devDependencies ?? {}),
-    arkgate: pathToFileURL(tarball).href,
-  };
-  fs.writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`);
+  const preserveManifest = MANIFEST_PRESERVING_FIXTURES.has(fixture);
+  const manifestBefore = preserveManifest ? fs.readFileSync(pkgPath) : null;
+  if (!preserveManifest) {
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+    pkg.devDependencies = {
+      ...(pkg.devDependencies ?? {}),
+      arkgate: pathToFileURL(tarball).href,
+    };
+    fs.writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`);
+  }
   const installed = spawnSync(
     'npm',
-    ['install', '--ignore-scripts', '--no-audit', '--no-fund', '--no-package-lock'],
+    [
+      'install',
+      ...(preserveManifest ? ['--no-save', tarball] : []),
+      '--ignore-scripts',
+      '--no-audit',
+      '--no-fund',
+      '--no-package-lock',
+    ],
     {
       cwd: project,
       encoding: 'utf8',
@@ -278,6 +289,7 @@ function installCandidate(project, tarball) {
       maxBuffer: MAX_BUFFER,
     }
   );
+  if (preserveManifest && manifestBefore) fs.writeFileSync(pkgPath, manifestBefore);
   if (installed.status !== 0) {
     throw new JourneyError('install', `npm install failed\n${installed.stderr || installed.stdout}`);
   }
@@ -431,6 +443,7 @@ function configRejectionView(stderr) {
 }
 
 function projectFixture(fixture, step, parsed) {
+  if (fixture === 'sortlint') return projectSortlint(step, parsed);
   if (fixture === 'rootnext') return projectRootnext(step, parsed);
   if (fixture === 'workpack') return projectWorkpack(step, parsed);
   if (CONFIG_FREE_FIXTURES.has(fixture)) return absentConfigView(step, parsed);
@@ -438,6 +451,52 @@ function projectFixture(fixture, step, parsed) {
   const project = step.includes('--doctor') ? views.doctor : views.check;
   if (fixture === 'atlasgrid') return project(parsed, step);
   return project(parsed);
+}
+
+function projectSortlint(step, parsed) {
+  if (step.includes('start')) return sortlintStartView(parsed);
+  if (step.includes('--doctor')) return sortlintDoctorView(parsed);
+  return sortlintCheckView(parsed);
+}
+
+function sortlintStartView(parsed) {
+  const changes = Array.isArray(parsed?.changes) ? parsed.changes : [];
+  const pkgChange = changes.find((change) => change?.path === 'package.json') ?? null;
+  let devDependencyKeys = null;
+  if (pkgChange?.afterBase64) {
+    const pkg = JSON.parse(Buffer.from(pkgChange.afterBase64, 'base64').toString('utf8'));
+    const dev = pkg?.devDependencies;
+    devDependencyKeys =
+      dev && typeof dev === 'object' && !Array.isArray(dev) ? Object.keys(dev) : [];
+  }
+  return {
+    devDependencyKeys,
+    startError: typeof parsed?.error === 'string' ? parsed.error : null,
+  };
+}
+
+function sortlintCheckView(parsed) {
+  const reasons = Array.isArray(parsed?.completenessReasons) ? parsed.completenessReasons : [];
+  const completenessReasons = reasons.map((reason) => ({
+    code: reason?.code == null ? null : String(reason.code),
+    file: reason?.file == null ? null : String(reason.file),
+    message: reason?.message == null ? null : String(reason.message),
+  }));
+  completenessReasons.sort(compareRows(['code', 'file', 'message']));
+  return {
+    ok: parsed?.ok === true,
+    completeness: parsed?.completeness == null ? null : String(parsed.completeness),
+    completenessReasons,
+  };
+}
+
+function sortlintDoctorView(parsed) {
+  const doctor = parsed?.doctor ?? {};
+  const next = doctor.primaryNextAction;
+  return {
+    completeness: doctor.completeness == null ? null : String(doctor.completeness),
+    primaryNextAction: typeof next === 'string' ? next : null,
+  };
 }
 
 function projectRootnext(step, parsed) {
@@ -1360,9 +1419,67 @@ function judgeWorkpack(spec, steps) {
   return { met, want: spec.want, got };
 }
 
+function keysAreSorted(keys) {
+  for (let index = 1; index < keys.length; index += 1) {
+    if (keys[index - 1] > keys[index]) return false;
+  }
+  return true;
+}
+
+function judgeSortlint(spec, steps) {
+  if (spec.kind === 'sortlint-pin') {
+    const start = steps.find((entry) => entry.command.includes('start')) ?? null;
+    const keys = Array.isArray(start?.output?.devDependencyKeys) ? start.output.devDependencyKeys : null;
+    const met = Array.isArray(keys) && keys.includes('arkgate') && keysAreSorted(keys);
+    return {
+      met,
+      want: { includes: 'arkgate', sorted: true },
+      got: { devDependencyKeys: keys, startError: start?.output?.startError ?? null },
+    };
+  }
+  if (spec.kind === 'sortlint-cause') {
+    const check =
+      steps.find((entry) => entry.command.startsWith('ark-check ') && !entry.command.includes('--doctor')) ??
+      null;
+    const reasons = Array.isArray(check?.output?.completenessReasons) ? check.output.completenessReasons : [];
+    const namesInstall = reasons.some(
+      (reason) =>
+        reason?.code === 'TSCONFIG_PARSE_FAILURE' && /not installed/i.test(String(reason?.message ?? ''))
+    );
+    const met = check?.output?.completeness === 'partial' && check?.output?.ok === false && namesInstall;
+    return {
+      met,
+      want: { completeness: 'partial', ok: false, code: 'TSCONFIG_PARSE_FAILURE', namesInstall: true },
+      got: {
+        completeness: check?.output?.completeness ?? null,
+        ok: check?.output?.ok === true,
+        completenessReasons: reasons,
+      },
+    };
+  }
+  if (spec.kind === 'sortlint-doctor') {
+    const doctor = steps.find((entry) => entry.command.includes('--doctor')) ?? null;
+    const next = doctor?.output?.primaryNextAction ?? null;
+    const met =
+      doctor?.output?.completeness === 'partial' &&
+      typeof next === 'string' &&
+      next.length > 0 &&
+      !/strict-merge/i.test(next);
+    return {
+      met,
+      want: { completeness: 'partial', recommendsStrictMerge: false },
+      got: { completeness: doctor?.output?.completeness ?? null, primaryNextAction: next },
+    };
+  }
+  throw new JourneyError('case', `unknown journey case kind ${spec.kind}`);
+}
+
 function evaluateJourneyCase(spec, steps) {
   if (typeof spec.kind === 'string' && spec.kind.startsWith('workpack-')) {
     return caseResult(spec, judgeWorkpack(spec, steps));
+  }
+  if (typeof spec.kind === 'string' && spec.kind.startsWith('sortlint-')) {
+    return caseResult(spec, judgeSortlint(spec, steps));
   }
   if (typeof spec.kind === 'string' && spec.kind.startsWith('rootnext-')) {
     return caseResult(spec, judgeRootnext(spec, steps));

@@ -15,18 +15,45 @@ const AGE_EXCLUDE_LINE =
   'To add it locally later: put arkgate on minimumReleaseAgeExclude in pnpm config or pnpm-workspace.yaml (a CLI flag is not enough), or wait until the release is old enough.';
 const BIN_NOTE =
   '`arkgate-check` is a command in the arkgate package — not its own npm package.';
+const LIFECYCLE_NOISE =
+  /^(?:progress:|npm (?:warn|notice)\b)|ELIFECYCLE|command failed with exit code|lifecycle script [`'"].*failed/i;
+const DEPENDENCY_ORDER_LINT =
+  /should be ordered alphabetically|dependenc(?:y|ies) (?:are|should be) (?:sorted|ordered)/i;
+const OWN_EDIT_ORDER_NOTE =
+  "arkgate edited package.json before install, and that edit failed this repo's dependency order check.";
+
+/**
+ * @param {unknown} hostOutput
+ * @returns {string[]}
+ */
+function hostOutputLines(hostOutput) {
+  if (!hostOutput || !String(hostOutput).trim()) return [];
+  return String(hostOutput)
+    .split('\n')
+    .map((line) => line.trimEnd())
+    .filter((line) => line.trim());
+}
 
 /**
  * @param {unknown} hostOutput
  * @returns {string[]}
  */
 function hostOutputTail(hostOutput) {
-  if (!hostOutput || !String(hostOutput).trim()) return [];
-  return String(hostOutput)
-    .split('\n')
-    .map((line) => line.trimEnd())
-    .filter((line) => line.trim())
-    .slice(-6);
+  return hostOutputLines(hostOutput).slice(-6);
+}
+
+/** First host line that is the failure itself, ahead of lifecycle wrappers. */
+function firstHostErrorLine(hostOutput) {
+  const lines = hostOutputLines(hostOutput);
+  const order = lines.find((line) => DEPENDENCY_ORDER_LINT.test(line));
+  if (order) return order;
+  return lines.find((line) => !LIFECYCLE_NOISE.test(line.trim())) ?? lines[0] ?? null;
+}
+
+function dependencyOrderOwnEditNote(hostOutput) {
+  return hostOutputLines(hostOutput).some((line) => DEPENDENCY_ORDER_LINT.test(line))
+    ? OWN_EDIT_ORDER_NOTE
+    : null;
 }
 
 /**
@@ -122,11 +149,22 @@ export function startInstallRecovery(input) {
     };
   }
   const doctor = arkPackageRecoveryCommand('arkgate-check', '--doctor');
+  const seen = new Set();
+  const preface = [];
+  for (const line of [
+    firstHostErrorLine(input?.hostOutput),
+    dependencyOrderOwnEditNote(input?.hostOutput),
+    ...classified.hostTail,
+  ]) {
+    if (!line || seen.has(line)) continue;
+    seen.add(line);
+    preface.push(line);
+  }
   return {
     kind: 'generic',
     primaryCommand: installCommand,
     replayInstallCommand: installCommand,
-    lines: [...classified.hostTail, honesty, `  ${installCommand}`, `  ${doctor}`, BIN_NOTE],
+    lines: [...preface, honesty, `  ${installCommand}`, `  ${doctor}`, BIN_NOTE],
   };
 }
 

@@ -795,4 +795,39 @@ describe('Z04 shipped resolved candidate facts resolver', () => {
     expect(observed.some(([, kind]) => kind === 'source')).toBe(false);
     expect(resolvedCompilerInputPaths({ root, config, ts: {} })).toEqual([]);
   });
+
+  it('says a package extend is not installed, and a missing relative extend is not that', async () => {
+    const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'ark-z04-extends-')));
+    roots.push(root);
+    fs.mkdirSync(path.join(root, 'apps/web/src'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'apps/web/src/page.ts'), 'export const page = 1;\n');
+    fs.writeFileSync(
+      path.join(root, 'apps/web/tsconfig.json'),
+      `${JSON.stringify({ extends: '@repo/tsconfig/base.json', include: ['src'] })}\n`
+    );
+    const loaded = await loadTypeScript(root);
+    expect(loaded.ts).toBeTruthy();
+    const config = {
+      include: ['apps/web/src'],
+      layers: [{ name: 'ApplicationOrchestration', patterns: ['apps/web/src/**'] }],
+      rules: [],
+    };
+    const facts = resolveCandidateFacts({ root, config, ts: loaded.ts });
+    expect(facts.completenessReasons).toEqual([
+      expect.objectContaining({
+        code: 'TSCONFIG_PARSE_FAILURE',
+        file: 'apps/web/tsconfig.json',
+        message:
+          'apps/web/tsconfig.json extends @repo/tsconfig/base.json and that package is not installed.',
+      }),
+    ]);
+
+    fs.writeFileSync(
+      path.join(root, 'apps/web/tsconfig.json'),
+      `${JSON.stringify({ extends: './missing-base.json', include: ['src'] })}\n`
+    );
+    const relative = resolveCandidateFacts({ root, config, ts: loaded.ts });
+    expect(JSON.stringify(relative.completenessReasons)).not.toMatch(/not installed/i);
+    expect(relative.completenessReasons?.[0]?.code).toBe('TSCONFIG_PARSE_FAILURE');
+  });
 });

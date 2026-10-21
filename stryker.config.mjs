@@ -36,10 +36,12 @@ const config = {
     'bin/lib/analysis-completeness.mjs:9-27',
     // 4.8.4 pinned 74-114 (the whole function). classifiedFileCount + JSDoc
     // growth moved the greenfield exemption and refuse return past 114.
-    'bin/lib/analysis-completeness.mjs:81-141',
+    // #367 partial-cause helpers shifted emptyAnalysisRefusal to 126-186.
+    'bin/lib/analysis-completeness.mjs:126-186',
     // Receiver-trace merges shifted the same resolver body to 739-789; the memory
     // pass (lazy source reads, path reuse, resolution memo) shifted it to 786-839.
-    'bin/lib/resolved-candidate-facts.mjs:787-840',
+    // #367 package-extends message shifted it to 811-864.
+    'bin/lib/resolved-candidate-facts.mjs:811-864',
     // managed-upgrade force-preserve covered by fieldGapS4 unit tests; not in critical
     // mutation groups for 4.1.0 (NoCoverage noise on toml-section branch residual).
     'bin/lib/resident-hook.mjs:115-162',

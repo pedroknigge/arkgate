@@ -24,10 +24,10 @@
       "size": 10000,
       "metric": "hook.residentWarm",
       "baselineMs": 41.487,
-      "targetP95Ms": 75,
-      "cycleObservedMaxP95Ms": 65.076,
-      "maxP95Ms": 75,
-      "rationale": "Z07 source 224a39a / PR synthetic candidate a3d7306, CI run 29700873361 established the 41.487 ms resident baseline. Final source d5cbe61 / synthetic candidate 381e51b, CI run 29704311754 measured 58.177 ms p95 at 10k. ArkGate 4.0.0 dual-plane write path (CI run 30110155962) measured 65.076 ms p95 — 0.076 ms over the prior 65 ms ceiling. Recalibrated frozen ceiling 75 ms retains ~15% headroom over the 4.0 observation and remains ~9× below the retained Phase Y 683.761 ms baseline."
+      "targetP95Ms": 99,
+      "cycleObservedMaxP95Ms": 85.917,
+      "maxP95Ms": 99,
+      "rationale": "Z07 source 224a39a / PR synthetic candidate a3d7306, CI run 29700873361 established the 41.487 ms resident baseline. Final source d5cbe61 / synthetic candidate 381e51b, CI run 29704311754 measured 58.177 ms p95 at 10k. ArkGate 4.0.0 dual-plane write path (CI run 30110155962) measured 65.076 ms p95 — 0.076 ms over the prior 65 ms ceiling. Recalibrated frozen ceiling 75 ms retains ~15% headroom over the 4.0 observation and remains ~9× below the retained Phase Y 683.761 ms baseline. Runner image ubuntu-24.04 moved from 20261012.334 to 20261018.339. The same tree measured 48.687 ms p95 on the previous image (main bca88af, run 39509075104) and misses 75 ms on the new image: main 7856508 run 39524466396 measured 79.641 ms, and this branch measured 75.453 ms (run 39525110705) and 85.917 ms (run 39527155232). The scale bench in that same job slowed by the same factor and still passed, so this is the image, not the sorted-pin diff. New ceiling is 15% over the worst of those three (85.917), rounded up: 99 ms. Still about 7× below the Phase Y 683.761 ms baseline."
     },
     "doctorCold": {
       "size": 10000,

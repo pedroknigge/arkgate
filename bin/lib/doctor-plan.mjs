@@ -349,7 +349,7 @@ export function buildRemediationPlan(
     statement =
       'No active import-rule violations — imports check out, but design smells remain (leftover design work). Shape work is plan B only; not healthy finished.';
   }
-  if (completeness !== ANALYSIS_COMPLETENESS.complete) statement = analysisIncompleteStatement(completeness);
+  if (completeness !== ANALYSIS_COMPLETENESS.complete) statement = analysisIncompleteStatement(completeness, options.completenessReasons, root);
 
   // NEW-TYPEONLY-VOLUME: group type-only steps for plan messaging (value first).
   const typeOnlySteps = steps.filter((s) => s.typeOnly || s.namedBindingsTypeOnly);
@@ -680,7 +680,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
         : rulesUnderContract?.active === true || arkRun?.active === true || doctorAdvisories.arkOrder?.active === true
           ? { active: true, extraMergeTeeth: arkRun?.extraMergeTeeth === true || doctorAdvisories.arkOrder?.extraMergeTeeth === true }
           : null,
-      primaryNextAction: preferredDoctorPrimaryNextAction({ adopted, packageInstalled, selfHost, packageVersionTruth, postGreenPath, dualTruthNext, configMissing }),
+      primaryNextAction: preferredDoctorPrimaryNextAction({ adopted, packageInstalled, selfHost, packageVersionTruth, postGreenPath, dualTruthNext, configMissing, analysisComplete, completenessReasons: options.completenessReasons, root }),
       operatingMode,
       packageInstalled,
       selfHost,
@@ -900,6 +900,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   const uniqueActions = collectDoctorNextActions({
     root,
     analysisComplete,
+    completenessReasons: options.completenessReasons,
     designSmells,
     postGreenPath,
     coverageHonesty,
@@ -933,6 +934,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     root,
     analysisComplete,
     completeness,
+    completenessReasons: options.completenessReasons,
     doctorAdvisories,
     layerOwners,
     adrPresence,

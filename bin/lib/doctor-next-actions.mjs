@@ -9,6 +9,7 @@ import { mergePostGreenTopActions } from './post-green-path.mjs';
 import { ADOPTED_NOT, NOT_ADOPTED_NEXT_ACTION } from './adoption-stance.mjs';
 import { ABSENT_CONFIG_FIRST_STEP } from './first-step.mjs';
 import { REQUIRED_GATE_WORKFLOW } from './gate-files.mjs';
+import { incompleteAnalysisNextAction } from './analysis-completeness.mjs';
 
 /** Package pin may exist; local resolve still failed. Lead with install, not CI. */
 export const PACKAGE_UNRESOLVED_NEXT_ACTION =
@@ -47,8 +48,12 @@ export function preferredDoctorPrimaryNextAction({
   postGreenPath,
   dualTruthNext,
   configMissing,
+  analysisComplete,
+  completenessReasons,
+  root,
 } = {}) {
   if (configMissing === true) return ABSENT_CONFIG_FIRST_STEP;
+  if (analysisComplete === false) return incompleteAnalysisNextAction(completenessReasons, root);
   return (
     packageUnresolvedNextAction({ packageInstalled, selfHost, packageVersionTruth }) ||
     packagePinAbsentPrimaryAction({ selfHost, packageVersionTruth }) ||
@@ -225,7 +230,6 @@ export function collectDoctorNextActions(ctx) {
   if (ctx.invariantCoverageRoots?.missing && ctx.invariantCoverageRoots.nextAction) {
     actions.push(ctx.invariantCoverageRoots.nextAction);
   }
-  if (!ctx.analysisComplete) actions.push('restore complete analysis, then rerun ark-check --doctor');
   if (ctx.designSmells.length > 0 && ctx.postGreenPath) actions.push(ctx.postGreenPath.action);
   if (ctx.coverageHonesty.greenIsNotEnforcement && ctx.coverageHonesty.worseThanNoGate) {
     actions.push('raise governed coverage above a minority slice before treating green as enforcement');
@@ -311,6 +315,11 @@ export function collectDoctorNextActions(ctx) {
   }
   if (ctx.configMissing === true) {
     return [ABSENT_CONFIG_FIRST_STEP, ...unique.filter((a) => a !== ABSENT_CONFIG_FIRST_STEP)];
+  }
+  if (ctx.analysisComplete === false) {
+    const cause = incompleteAnalysisNextAction(ctx.completenessReasons, ctx.root);
+    const strictMerge = (action) => /strict-merge/i.test(String(action ?? ''));
+    return [cause, ...unique.filter((action) => action !== cause && !strictMerge(action))];
   }
   if (resolvePkg) {
     return [resolvePkg, ...unique.filter((a) => a !== resolvePkg)];

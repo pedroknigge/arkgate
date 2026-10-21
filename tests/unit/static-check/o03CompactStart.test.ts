@@ -201,8 +201,9 @@ describe('O03 compact start', () => {
       expect(preview.changes.map((change) => change.path)).toContain('package.json');
       const packageText = fs.readFileSync(path.join(root, 'package.json'), 'utf8');
       expect(packageText).toContain('    "name": "o03-fixture"');
-      expect(packageText).toContain('        "vitest": "^3.2.6",');
       expect(packageText).toContain('        "arkgate":');
+      expect(packageText).toContain('        "vitest": "^3.2.6"\n');
+      expect(packageText.indexOf('"arkgate"')).toBeLessThan(packageText.indexOf('"vitest"'));
       expect(JSON.parse(packageText).devDependencies.arkgate).toMatch(/^\^/);
     } finally {
       fs.rmSync(root, { recursive: true, force: true });

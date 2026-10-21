@@ -21,7 +21,7 @@ function arkPackageVersion() {
   }
 }
 
-function matchingBrace(text, openIndex) {
+function matchingDelimiter(text, openIndex, openChar, closeChar) {
   let depth = 0;
   let quoted = false;
   let escaped = false;
@@ -34,10 +34,115 @@ function matchingBrace(text, openIndex) {
       continue;
     }
     if (char === '"') quoted = true;
-    else if (char === '{') depth += 1;
-    else if (char === '}' && --depth === 0) return index;
+    else if (char === openChar) depth += 1;
+    else if (char === closeChar && --depth === 0) return index;
   }
   return -1;
+}
+
+function compareJsonKeys(left, right) {
+  if (left < right) return -1;
+  if (left > right) return 1;
+  return 0;
+}
+
+function jsonKeysAreSorted(keys) {
+  for (let index = 1; index < keys.length; index += 1) {
+    if (compareJsonKeys(keys[index - 1], keys[index]) > 0) return false;
+  }
+  return true;
+}
+
+/** Exclusive end index of one JSON value. Nested objects and arrays are skipped. */
+function endOfJsonValue(source, start, limit) {
+  if (start >= limit) return limit;
+  const char = source[start];
+  if (char === '"') {
+    let escaped = false;
+    for (let index = start + 1; index < limit; index += 1) {
+      const current = source[index];
+      if (escaped) escaped = false;
+      else if (current === '\\') escaped = true;
+      else if (current === '"') return index + 1;
+    }
+    return limit;
+  }
+  if (char === '{' || char === '[') {
+    const close =
+      char === '{'
+        ? matchingDelimiter(source, start, '{', '}')
+        : matchingDelimiter(source, start, '[', ']');
+    return close === -1 ? limit : close + 1;
+  }
+  let index = start;
+  while (index < limit && !/[\s,}\]]/.test(source[index])) index += 1;
+  return index === start ? Math.min(start + 1, limit) : index;
+}
+
+/** Top-level keys of the object that opens at `open` and closes at `close`. */
+function objectProperties(source, open, close) {
+  const props = [];
+  let index = open + 1;
+  let depth = 0;
+  let quoted = false;
+  let escaped = false;
+  while (index < close) {
+    const char = source[index];
+    if (quoted) {
+      if (escaped) escaped = false;
+      else if (char === '\\') escaped = true;
+      else if (char === '"') quoted = false;
+      index += 1;
+      continue;
+    }
+    if (char === '"') {
+      if (depth === 0) {
+        const keyStart = index;
+        index += 1;
+        let key = '';
+        while (index < close) {
+          const current = source[index];
+          if (current === '\\') {
+            key += source[index + 1] ?? '';
+            index += 2;
+            continue;
+          }
+          if (current === '"') break;
+          key += current;
+          index += 1;
+        }
+        index += 1;
+        while (index < close && /\s/.test(source[index])) index += 1;
+        if (source[index] === ':') index += 1;
+        while (index < close && /\s/.test(source[index])) index += 1;
+        const valueEnd = endOfJsonValue(source, index, close);
+        props.push({ key, start: keyStart, end: valueEnd });
+        index = valueEnd;
+        continue;
+      }
+      quoted = true;
+      index += 1;
+      continue;
+    }
+    if (char === '{' || char === '[') depth += 1;
+    else if (char === '}' || char === ']') depth -= 1;
+    index += 1;
+  }
+  return props;
+}
+
+/**
+ * Insert a property before `prop`, keeping the following keys in place.
+ * The new line carries the comma because another property follows it.
+ */
+function insertJsonPropertyBefore(source, prop, key, encoded, eol, multiline) {
+  if (!multiline) {
+    return `${source.slice(0, prop.start)}${key}:${encoded},${source.slice(prop.start)}`;
+  }
+  const lineBreak = source.lastIndexOf('\n', prop.start);
+  const lineStart = lineBreak === -1 ? 0 : lineBreak + 1;
+  const indent = source.slice(lineStart, prop.start);
+  return `${source.slice(0, lineStart)}${indent}${key}: ${encoded},${eol}${source.slice(lineStart)}`;
 }
 
 /**
@@ -45,6 +150,9 @@ function matchingBrace(text, openIndex) {
  * the end of the root object when absent) while preserving indentation, line
  * endings, and single-line vs multi-line layout. Never replaces an existing key;
  * callers check for it first.
+ *
+ * When the section's keys are already in ascending order, the new key is inserted
+ * in that order. Otherwise it is appended and the existing keys stay put.
  *
  * @param {string} source package.json text
  * @param {string} section top-level key, e.g. `scripts` or `devDependencies`
@@ -70,8 +178,14 @@ export function addPackageJsonPropertyPreservingFormat(
 
   if (sectionMatch) {
     const open = source.indexOf('{', sectionMatch.index);
-    const close = matchingBrace(source, open);
+    const close = matchingDelimiter(source, open, '{', '}');
     if (close === -1) throw new Error(`Unbalanced ${unbalancedLabel} object`);
+    const props = objectProperties(source, open, close);
+    const keys = props.map((prop) => prop.key);
+    if (props.length > 0 && !keys.includes(name) && jsonKeysAreSorted(keys)) {
+      const before = props.find((prop) => compareJsonKeys(name, prop.key) < 0);
+      if (before) return insertJsonPropertyBefore(source, before, key, encoded, eol, multiline);
+    }
     const body = source.slice(open + 1, close);
     if (!multiline) {
       const addition = body.trim() ? `,${key}:${encoded}` : `${key}:${encoded}`;
