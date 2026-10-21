@@ -9,6 +9,7 @@ in the immutable pre-2.0 archive linked below.
 - In a pnpm/turbo workspace, `start` classifies each shared package instead of putting `packages/<name>/src/**` on DomainModel. UI lands on Presentation, database and auth clients on Persistence, and an API router on Application. A pure package such as `packages/schema` stays Domain. A Button import is not a domain violation, and a domain file that imports the database still fails (#366).
 - `start --apply` inserts `arkgate` among `devDependencies` when that object is already sorted, so a dependency-order lint stays green. A failed install leads with the first error line, and says when arkgate's own edit failed that check (#367).
 - A partial `check` names the cause, including a tsconfig that extends a package that isn't installed. `doctor` does not recommend `--strict-merge` while analysis is incomplete (#367).
+- `hookResidentWarm` CI ceiling is 99ms. Ubuntu 24.04 image `20261018.339` measured 75.453–85.917ms, and `main` misses the old 75ms ceiling on that image too. The previous image measured 48.687ms (#367).
 
 ## 4.8.28 — 2026-10-19
 
