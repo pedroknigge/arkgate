@@ -1,0 +1,12 @@
+{
+  "name": "@repo/billing",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/domain/invoice.ts"
+  },
+  "dependencies": {
+    "@repo/data": "*"
+  }
+}

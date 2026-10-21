@@ -432,6 +432,7 @@ function configRejectionView(stderr) {
 
 function projectFixture(fixture, step, parsed) {
   if (fixture === 'rootnext') return projectRootnext(step, parsed);
+  if (fixture === 'workpack') return projectWorkpack(step, parsed);
   if (CONFIG_FREE_FIXTURES.has(fixture)) return absentConfigView(step, parsed);
   const views = FIXTURE_VIEWS[fixture] ?? { check: checkView, doctor: doctorView };
   const project = step.includes('--doctor') ? views.doctor : views.check;
@@ -487,6 +488,32 @@ function rootnextDoctorView(parsed) {
     classifiedFiles: typeof governed.classifiedFiles === 'number' ? governed.classifiedFiles : null,
     totalFiles: typeof governed.totalFiles === 'number' ? governed.totalFiles : null,
     emptyLayers,
+  };
+}
+
+function projectWorkpack(step, parsed) {
+  if (step.includes('start')) return workpackStartView(parsed);
+  return checkView(parsed);
+}
+
+function workpackStartView(parsed) {
+  const changes = Array.isArray(parsed?.changes) ? parsed.changes : [];
+  const configChange = changes.find((change) => change?.path === 'ark.config.json') ?? null;
+  /** @type {Record<string, string[]>} */
+  const layers = {};
+  if (configChange?.afterBase64) {
+    const config = JSON.parse(Buffer.from(configChange.afterBase64, 'base64').toString('utf8'));
+    for (const layer of config.layers ?? []) {
+      layers[String(layer.name)] = (layer.patterns ?? [])
+        .map(String)
+        .filter((pattern) => pattern.includes('packages/'))
+        .sort();
+    }
+  }
+  return {
+    archetype: typeof parsed?.analysis?.archetype === 'string' ? parsed.analysis.archetype : null,
+    layers,
+    startError: typeof parsed?.error === 'string' ? parsed.error : null,
   };
 }
 
@@ -1283,7 +1310,60 @@ function judgeRootnext(spec, steps) {
   };
 }
 
+function packageGlobHas(patterns, needle) {
+  return (patterns ?? []).some((pattern) => String(pattern).includes(needle));
+}
+
+function judgeWorkpack(spec, steps) {
+  const start = steps.find((entry) => entry.command.includes('start')) ?? null;
+  const check = steps.find((entry) => !entry.command.includes('start')) ?? null;
+  const layers = start?.output?.layers ?? {};
+  const domain = layers.DomainModel ?? [];
+  const diagnostics = Array.isArray(check?.output?.diagnostics) ? check.output.diagnostics : [];
+  const rowsFor = (file) => diagnostics.filter((row) => row?.file === file);
+  const domainRows = (file) =>
+    rowsFor(file).filter(
+      (row) => row.ruleId === 'LAYER_IMPORT_VIOLATION' && String(row.message ?? '').includes('DomainModel')
+    );
+  const clean = {};
+  for (const file of spec.want.cleanFiles) clean[file] = rowsFor(file).map((row) => row.ruleId);
+  const got = {
+    archetype: start?.output?.archetype ?? null,
+    application: layers.ApplicationOrchestration ?? [],
+    badgeDomainImport: domainRows('packages/ui/src/badge.tsx').length > 0,
+    checkExit: check?.exitCode ?? null,
+    clean,
+    domainPackages: domain,
+    invoiceViolation: rowsFor('packages/billing/src/domain/invoice.ts').some(
+      (row) => row.ruleId === 'LAYER_IMPORT_VIOLATION'
+    ),
+    pageDomainImports: domainRows('apps/web/app/page.tsx').length,
+    persistence: layers.PersistenceAdapters ?? [],
+    presentation: layers.PresentationAdapters ?? [],
+    routerForbiddenGlobal: rowsFor('packages/api/src/router.ts').some((row) => row.ruleId === 'FORBIDDEN_GLOBAL'),
+  };
+  const cleanOk = spec.want.cleanFiles.every((file) => got.clean[file].length === 0);
+  const omitted = spec.want.domainOmits.every((needle) => !packageGlobHas(domain, needle));
+  const met =
+    got.archetype === spec.want.archetype &&
+    cleanOk &&
+    got.pageDomainImports === spec.want.pageDomainImports &&
+    got.invoiceViolation === spec.want.invoiceViolation &&
+    got.badgeDomainImport === spec.want.badgeDomainImport &&
+    got.routerForbiddenGlobal === spec.want.routerForbiddenGlobal &&
+    got.checkExit !== 0 &&
+    omitted &&
+    spec.want.persistence.every((needle) => packageGlobHas(got.persistence, needle)) &&
+    spec.want.presentation.every((needle) => packageGlobHas(got.presentation, needle)) &&
+    spec.want.application.every((needle) => packageGlobHas(got.application, needle)) &&
+    spec.want.domainKeeps.every((needle) => packageGlobHas(domain, needle));
+  return { met, want: spec.want, got };
+}
+
 function evaluateJourneyCase(spec, steps) {
+  if (typeof spec.kind === 'string' && spec.kind.startsWith('workpack-')) {
+    return caseResult(spec, judgeWorkpack(spec, steps));
+  }
   if (typeof spec.kind === 'string' && spec.kind.startsWith('rootnext-')) {
     return caseResult(spec, judgeRootnext(spec, steps));
   }

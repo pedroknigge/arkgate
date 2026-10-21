@@ -10,6 +10,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { ARCHITECTURE_PRESETS } from '../../../bin/lib/presets.mjs';
+import { sharedLibraryLayer } from '../../../bin/ark-shared.mjs';
 import {
   collectDoctorNextActions,
   dualMatchNeedsGlobRepair,
@@ -248,5 +249,65 @@ describe('doctor overlapping-glob priority (#269)', () => {
     expect(actions[0]).toMatch(/\/ark-adopt/);
     expect(actions).toContain(NOT_ADOPTED_NEXT_ACTION);
     expect(actions[0]).not.toBe(NOT_ADOPTED_NEXT_ACTION);
+  });
+});
+
+describe('shared workspace package layers (#366)', () => {
+  it('classifies shared libraries by leaf, then by dependencies', () => {
+    const layer = (root: string, deps: Record<string, string> = {}) =>
+      sharedLibraryLayer({ role: 'library', root, productionDeps: deps });
+    expect(layer('packages/ui')).toBe('PresentationAdapters');
+    expect(layer('packages/db')).toBe('PersistenceAdapters');
+    expect(layer('packages/auth')).toBe('PersistenceAdapters');
+    expect(layer('packages/api', { react: '19.0.0' })).toBe('ApplicationOrchestration');
+    expect(layer('packages/validators')).toBe('ApplicationOrchestration');
+    expect(layer('packages/schema')).toBe('DomainModel');
+    expect(layer('packages/kit', { react: '19.0.0' })).toBe('PresentationAdapters');
+    expect(layer('packages/data', { prisma: '6.0.0' })).toBe('PersistenceAdapters');
+    expect(layer('packages/client', { prisma: '6.0.0' })).toBe('PersistenceAdapters');
+    expect(layer('packages/gateway', { hono: '4.0.0' })).toBe('ApplicationOrchestration');
+    expect(sharedLibraryLayer({ role: 'application', root: 'apps/web', productionDeps: { react: '19.0.0' } })).toBe(
+      null
+    );
+  });
+
+  it('puts ui, db, auth, and api on their layers and keeps schema and billing on Domain', () => {
+    const root = tmpRoot('ark-366-layers-');
+    write(root, 'package.json', JSON.stringify({ name: 'workpack', private: true, workspaces: ['packages/*'] }));
+    write(root, 'pnpm-workspace.yaml', 'packages:\n  - "packages/*"\n');
+    const lib = (name: string, pkgName: string) => {
+      write(root, `packages/${name}/package.json`, JSON.stringify({ name: pkgName, exports: './src/index.ts' }));
+      write(root, `packages/${name}/src/index.ts`, 'export const value = true;\n');
+    };
+    lib('ui', '@repo/ui');
+    lib('db', '@repo/data');
+    lib('auth', '@repo/auth');
+    lib('api', '@repo/api');
+    lib('validators', '@repo/validators');
+    lib('billing', '@repo/billing');
+    lib('schema', '@repo/schema');
+    const config = ARCHITECTURE_PRESETS.monorepo([], root) as {
+      layers: Array<{ name: string; patterns?: string[] }>;
+    };
+    const patterns = (name: string) => config.layers.find((layer) => layer.name === name)?.patterns ?? [];
+    expect(patterns('DomainModel')).not.toEqual(
+      expect.arrayContaining([
+        'packages/ui/src/**',
+        'packages/db/src/**',
+        'packages/auth/src/**',
+        'packages/api/src/**',
+        'packages/validators/src/**',
+      ])
+    );
+    expect(patterns('DomainModel')).toEqual(
+      expect.arrayContaining(['packages/billing/src/**', 'packages/schema/src/**'])
+    );
+    expect(patterns('PresentationAdapters')).toContain('packages/ui/src/**');
+    expect(patterns('PersistenceAdapters')).toEqual(
+      expect.arrayContaining(['packages/db/src/**', 'packages/auth/src/**'])
+    );
+    expect(patterns('ApplicationOrchestration')).toEqual(
+      expect.arrayContaining(['packages/api/src/**', 'packages/validators/src/**'])
+    );
   });
 });

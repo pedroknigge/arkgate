@@ -1099,6 +1099,29 @@ export function isUiPackageUnit(unit) {
   return Object.keys(deps).some((name) => UI_PACKAGE_DEP_NAMES.test(String(name).split('/')[0]));
 }
 
+/** Shared library layer (#366). Leaf, then deps. Unknown libraries stay DomainModel. */
+const SHARED_LIBRARY_LEAF = {
+  db: 'PersistenceAdapters', database: 'PersistenceAdapters', auth: 'PersistenceAdapters',
+  persistence: 'PersistenceAdapters', prisma: 'PersistenceAdapters', drizzle: 'PersistenceAdapters',
+  supabase: 'PersistenceAdapters', api: 'ApplicationOrchestration', router: 'ApplicationOrchestration',
+  trpc: 'ApplicationOrchestration', validators: 'ApplicationOrchestration', validation: 'ApplicationOrchestration',
+  ui: 'PresentationAdapters', components: 'PresentationAdapters', 'design-system': 'PresentationAdapters',
+};
+const SHARED_PERSISTENCE_DEP = new Set(['prisma', 'drizzle-orm', '@prisma/client', 'typeorm', 'pg', '@supabase/supabase-js']);
+const SHARED_APPLICATION_DEP = new Set(['hono', 'express', 'fastify', '@trpc/server']);
+
+export function sharedLibraryLayer(unit) {
+  if (!unit || unit.role !== 'library') return null;
+  const leaf = String(unit.root ?? '').toLowerCase().split('/').filter((token) => token && token !== '.').pop() ?? '';
+  const byLeaf = SHARED_LIBRARY_LEAF[leaf];
+  if (byLeaf === 'PersistenceAdapters' || byLeaf === 'ApplicationOrchestration') return byLeaf;
+  const hit = (names) => Object.keys(unit.productionDeps ?? {}).some((name) => names.has(name));
+  if (hit(SHARED_PERSISTENCE_DEP)) return 'PersistenceAdapters';
+  if (byLeaf === 'PresentationAdapters' || isUiPackageUnit(unit)) return 'PresentationAdapters';
+  if (hit(SHARED_APPLICATION_DEP)) return 'ApplicationOrchestration';
+  return 'DomainModel';
+}
+
 /** Source root of an application unit that should land on Presentation, not Application. */
 export function isUiApplicationSource(unit, sourceRoot) {
   if (!unit) return sourcePathLooksLikeUi(sourceRoot);
