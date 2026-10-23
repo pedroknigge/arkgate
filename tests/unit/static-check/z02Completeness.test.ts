@@ -11,6 +11,7 @@ import {
   normalizeAnalysisCompleteness,
   partialAnalysisCause,
 } from '../../../bin/lib/analysis-completeness.mjs';
+import { preferredDoctorPrimaryNextAction } from '../../../bin/lib/doctor-next-actions.mjs';
 import { validateSnippetAnalysis } from '../../../bin/lib/snippet-analysis.mjs';
 import { writeSemanticGateArtifacts } from '../../helpers/semanticGateArtifacts';
 
@@ -93,6 +94,48 @@ describe('Z02 analysis completeness', () => {
       'Analysis is incomplete — install dependencies and re-run arkgate-check before a merge check'
     );
     expect(incompleteAnalysisNextAction(undefined, undefined)).not.toMatch(/strict-merge/i);
+  });
+
+  it('names the root lockfile in the check and doctor sentences, and npm when that root is empty', () => {
+    const reason = {
+      code: 'TSCONFIG_PARSE_FAILURE',
+      message: 'apps/web/tsconfig.json extends @repo/tsconfig/base.json and that package is not installed.',
+    };
+    const pnpmRoot = temporaryRoot('ark-z02-pm-');
+    fs.writeFileSync(path.join(pnpmRoot, 'pnpm-lock.yaml'), "lockfileVersion: '9.0'\n");
+    const pnpmSentence = "1 tsconfig file extends a package that isn't installed; run `pnpm install` first";
+    const npmSentence = "1 tsconfig file extends a package that isn't installed; run `npm install` first";
+
+    expect(analysisIncompleteStatement('partial', [reason], pnpmRoot)).toBe(`Analysis incomplete: ${pnpmSentence}.`);
+    expect(incompleteAnalysisNextAction([reason], pnpmRoot)).toBe(pnpmSentence);
+    expect(
+      preferredDoctorPrimaryNextAction({
+        analysisComplete: false,
+        completenessReasons: [reason],
+        root: pnpmRoot,
+      })
+    ).toBe(pnpmSentence);
+
+    // An empty root is not the working directory. Mutation workers cannot chdir,
+    // so the working directory's package.json is what an empty root would read.
+    const originalRead = fs.readFileSync;
+    fs.readFileSync = ((...args: Parameters<typeof originalRead>) => {
+      if (args[0] === 'package.json') return JSON.stringify({ packageManager: 'pnpm@9.0.0' });
+      return originalRead(...args);
+    }) as typeof fs.readFileSync;
+    try {
+      expect(analysisIncompleteStatement('partial', [reason], '')).toBe(`Analysis incomplete: ${npmSentence}.`);
+      expect(incompleteAnalysisNextAction([reason], '')).toBe(npmSentence);
+      expect(
+        preferredDoctorPrimaryNextAction({
+          analysisComplete: false,
+          completenessReasons: [reason],
+          root: '',
+        })
+      ).toBe(npmSentence);
+    } finally {
+      fs.readFileSync = originalRead;
+    }
   });
 
   it('names an uninstalled tsconfig extend on check and doctor (#367)', () => {
