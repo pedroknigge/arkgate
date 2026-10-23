@@ -5,11 +5,17 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+## 4.8.29 — 2026-10-23
+
+**Patch** over **4.8.28**. Weekly ship (#369, #370, #371). **Write. Check. Ship.** **No required config migration.** No `schemaVersion` bump. Does not close `K01` / `Z09`. This mother `ark.config.json` still does **not** turn `arkOrder` on.
+
+**Status: released** (tag `v4.8.29`). Run `npm view arkgate@4.8.29 version` to confirm (#314).
+
 ### Fixed
-- In a pnpm/turbo workspace, `start` classifies each shared package instead of putting `packages/<name>/src/**` on DomainModel. UI lands on Presentation, database and auth clients on Persistence, and an API router on Application. A pure package such as `packages/schema` stays Domain. A Button import is not a domain violation, and a domain file that imports the database still fails (#366).
-- `start --apply` inserts `arkgate` among `devDependencies` when that object is already sorted, so a dependency-order lint stays green. A failed install leads with the first error line, and says when arkgate's own edit failed that check (#367).
-- A partial `check` names the cause, including a tsconfig that extends a package that isn't installed. `doctor` does not recommend `--strict-merge` while analysis is incomplete (#367).
-- `hookResidentWarm` CI ceiling is 99ms. Ubuntu 24.04 image `20261018.339` measured 75.453–85.917ms, and `main` misses the old 75ms ceiling on that image too. The previous image measured 48.687ms (#367).
+- In a pnpm/turbo workspace, `start` classifies each shared package instead of putting `packages/<name>/src/**` on DomainModel. UI lands on Presentation, database and auth clients on Persistence, and an API router on Application. A pure package such as `packages/schema` stays Domain. A Button import is not a domain violation, and a domain file that imports the database still fails (#369, #366).
+- `start --apply` inserts `arkgate` among `devDependencies` when that object is already sorted, so a dependency-order lint stays green. A failed install leads with the first error line, and says when arkgate's own edit failed that check (#370, #367).
+- A partial `check` names the cause, including a tsconfig that extends a package that isn't installed. `doctor` does not recommend `--strict-merge` while analysis is incomplete (#370, #367).
+- `hookResidentWarm` CI ceiling is 99 ms. Ubuntu 24.04 image `20261018.339` measured 75.453–85.917 ms, and `main` misses the old 75 ms ceiling on that image too. The previous image measured 48.687 ms (#370, #367).
 
 ## 4.8.28 — 2026-10-19
 
