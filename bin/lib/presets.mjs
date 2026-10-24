@@ -481,6 +481,58 @@ function presetWithOverlays(baseConfig, root) {
   return withArkConfigMetadata(withDefaultArkRules(config));
 }
 
+// Interior domain folders stay Domain inside a role root (DL-DOMAIN-SPECIFICITY).
+// These two globs cover DOMAIN_PATH_PATTERNS under the same matcher.
+const ROLE_ROOT_DOMAIN_EXCLUDES = Object.freeze(['**/domain/**', '**/entities/**']);
+
+// Next API shells already outrank pages and app folder globs by specificity (#288).
+// Excluding them from Presentation records that win so the file is not also
+// Presentation. Application still matches them, including inside a UI package
+// root, so presentation role globs are not excluded from Application.
+const PRESENTATION_API_EXCLUDES = Object.freeze([
+  '**/app/api/**',
+  '**/app/**/api/**',
+  '**/pages/api/**',
+  '**/pages/**/api/**',
+]);
+
+function uniqueGlobs(patterns) {
+  return [...new Set((patterns ?? []).filter((pattern) => typeof pattern === 'string' && pattern.length > 0))];
+}
+
+// A monorepo role root is one layer. Generic folder globs on the other layers
+// must not also match that tree, or a same-package import is reported as a
+// cross-layer violation (#373). Domain is not sealed against foreign roots.
+// Application is not sealed against presentation roots (Next API, #288).
+function sealMonorepoRoleRoots(layers, ownedByLayer) {
+  const owned = {};
+  for (const [name, patterns] of Object.entries(ownedByLayer)) {
+    owned[name] = uniqueGlobs(patterns);
+  }
+  const all = uniqueGlobs(Object.values(owned).flat());
+  for (const layer of layers) {
+    const mine = new Set(owned[layer.name] ?? []);
+    const exclude = [...(layer.exclude ?? [])];
+    const add = (pattern) => {
+      if (!exclude.includes(pattern)) exclude.push(pattern);
+    };
+    if (layer.name !== 'DomainModel') {
+      for (const glob of all) {
+        if (layer.name === 'ApplicationOrchestration' && (owned.PresentationAdapters ?? []).includes(glob)) {
+          continue;
+        }
+        if (!mine.has(glob)) add(glob);
+      }
+      for (const pattern of ROLE_ROOT_DOMAIN_EXCLUDES) add(pattern);
+    }
+    if (layer.name === 'PresentationAdapters') {
+      for (const pattern of PRESENTATION_API_EXCLUDES) add(pattern);
+    }
+    if (exclude.length > 0) layer.exclude = exclude;
+  }
+  return layers;
+}
+
 export const ARCHITECTURE_PRESETS = {
   // Second arg `root` is optional — when provided (init/start on a real repo), framework
   // filename conventions (Nest/Next/express) are overlaid so starters get real governed%.
@@ -658,6 +710,10 @@ export const ARCHITECTURE_PRESETS = {
         ['library'],
         { root, domainScoped: true }
       );
+    const domainLibraryGlobs = libraryGlobs('DomainModel');
+    const applicationLibraryGlobs = libraryGlobs('ApplicationOrchestration');
+    const presentationLibraryGlobs = libraryGlobs('PresentationAdapters');
+    const persistenceLibraryGlobs = libraryGlobs('PersistenceAdapters');
     const applicationSourcePatterns = monorepoRoleSourceGlobs(units, ['application', 'cli'], {
       root,
       uiMode: 'not-ui',
@@ -666,7 +722,7 @@ export const ARCHITECTURE_PRESETS = {
       root,
       uiMode: 'ui',
     });
-    return presetWithOverlays(
+    const sealed = presetWithOverlays(
       {
         include,
         layers: [
@@ -679,7 +735,7 @@ export const ARCHITECTURE_PRESETS = {
             patterns: [
               ...DOMAIN_PATH_PATTERNS,
               '**/cinematic/types.ts',
-              ...libraryGlobs('DomainModel'),
+              ...domainLibraryGlobs,
             ],
             forbiddenGlobals: DEFAULT_DOMAIN_FORBIDDEN_GLOBALS,
             optional: true,
@@ -696,7 +752,7 @@ export const ARCHITECTURE_PRESETS = {
               ...NEXT_API_APPLICATION_PATTERNS,
               ...APPLICATION_LIB_ORCHESTRATION_PATTERNS,
               ...applicationSourcePatterns,
-              ...libraryGlobs('ApplicationOrchestration'),
+              ...applicationLibraryGlobs,
             ],
             optional: true,
           },
@@ -713,7 +769,7 @@ export const ARCHITECTURE_PRESETS = {
               '**/routes/**',
               '**/hooks/**',
               ...uiApplicationSourcePatterns,
-              ...libraryGlobs('PresentationAdapters'),
+              ...presentationLibraryGlobs,
               // No bare **/lib/** — NEW-ADOPT-LIB-AS-PRESENTATION / NEW-APP-VACUUM-LIB.
             ],
             optional: true,
@@ -724,7 +780,7 @@ export const ARCHITECTURE_PRESETS = {
             patterns: [
               '**/adapters/**',
               ...PERSISTENCE_PATH_PATTERNS,
-              ...libraryGlobs('PersistenceAdapters'),
+              ...persistenceLibraryGlobs,
             ],
             optional: true,
           },
@@ -738,6 +794,13 @@ export const ARCHITECTURE_PRESETS = {
       },
       root
     );
+    sealMonorepoRoleRoots(sealed.layers, {
+      DomainModel: domainLibraryGlobs,
+      ApplicationOrchestration: [...applicationSourcePatterns, ...applicationLibraryGlobs],
+      PresentationAdapters: [...uiApplicationSourcePatterns, ...presentationLibraryGlobs],
+      PersistenceAdapters: persistenceLibraryGlobs,
+    });
+    return sealed;
   },
 
   /**
