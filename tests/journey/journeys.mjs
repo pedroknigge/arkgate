@@ -72,12 +72,17 @@
  * tarball without rewriting package.json, so `start --apply` is the edit that
  * inserts arkgate. Check must name the partial-analysis cause. Doctor must
  * not recommend strict-merge while that analysis is incomplete.
+ *
+ * #373 is `globpack`: a pnpm workspace with a private application package,
+ * a schema library, and a docs site (`og-image/`, `pages/api/`). After
+ * `start --apply`, `check:architecture` exits 0 and doctor does not ask to
+ * fix overlapping layer globs. The coverage dual-membership count is 0.
  */
 const ABSENT_CONFIG_FIRST_STEP =
   'No ark.config.json found — run arkgate start (preview) then arkgate start --apply.';
 
 /** Fixtures that are a fresh tree: the journey refuses an ark.config.json here. */
-export const CONFIG_FREE_FIXTURES = new Set(['freshmini', 'freshmono', 'workpack']);
+export const CONFIG_FREE_FIXTURES = new Set(['freshmini', 'freshmono', 'workpack', 'globpack']);
 
 /**
  * Fixtures whose package.json is the subject of the journey. The packed tarball
@@ -285,6 +290,12 @@ export const JOURNEYS = Object.freeze({
   workpack: Object.freeze([
     Object.freeze(['ark', 'start', '--apply', '--json', '--yes', '--no-install', '--tools', 'claude']),
     Object.freeze(['ark-check', '--json', '--no-cache', '--strict-config']),
+  ]),
+  globpack: Object.freeze([
+    Object.freeze(['ark', 'start', '--apply', '--json', '--yes', '--no-install', '--tools', 'claude']),
+    Object.freeze(['npm', 'run', 'check:architecture']),
+    Object.freeze(['ark-check', '--doctor', '--no-cache']),
+    Object.freeze(['ark-check', '--coverage', '--json', '--no-cache']),
   ]),
   sortlint: Object.freeze([
     Object.freeze(['ark', 'start', '--apply', '--json', '--yes', '--skip-package-manager', '--tools', 'claude']),
@@ -1015,6 +1026,21 @@ export const JOURNEY_CASES = Object.freeze({
   freshmono: absentConfigCases(
     'A workspace package whose source sits outside a root src/ folder, no ark.config.json. Same first step as the one-package tree. Plain check does not pass.'
   ),
+  globpack: Object.freeze([
+    Object.freeze({
+      id: '373-fresh-apply',
+      owner: '#373',
+      expect: 'pass',
+      kind: 'globpack-fresh-apply',
+      note: 'start --apply on a pnpm workspace must leave check:architecture exiting 0. Doctor must not ask to fix overlapping layer globs. Coverage dual-membership is the count behind that sentence and must be 0. The script runs the installed ark-check, not a registry pin.',
+      want: Object.freeze({
+        checkExit: 0,
+        dualCount: 0,
+        mentionsOverlap: false,
+        scriptLocal: true,
+      }),
+    }),
+  ]),
   workpack: Object.freeze([
     Object.freeze({
       id: '366-shared-packages',

@@ -1,0 +1,273 @@
+{
+  "cases": [
+    {
+      "expect": "pass",
+      "got": {
+        "checkExit": 1,
+        "checkPassed": false,
+        "dualCount": 24,
+        "mentionsOverlap": true,
+        "primaryNextAction": "Fix overlapping layer globs — 24 files match more than one layer (e.g. apps/site/og-image/adapters/store.ts matches PersistenceAdapters + PresentationAdapters). Narrow overlapping roots like packages/schema/src/**. Then /ark-adopt",
+        "scriptLocal": true,
+        "violationCount": 22
+      },
+      "id": "373-fresh-apply",
+      "met": false,
+      "note": "start --apply on a pnpm workspace must leave check:architecture exiting 0. Doctor must not ask to fix overlapping layer globs. Coverage dual-membership is the count behind that sentence and must be 0. The script runs the installed ark-check, not a registry pin.",
+      "owner": "#373",
+      "status": "fail",
+      "want": {
+        "checkExit": 0,
+        "dualCount": 0,
+        "mentionsOverlap": false,
+        "scriptLocal": true
+      }
+    }
+  ],
+  "fixture": "globpack",
+  "schemaVersion": 1,
+  "steps": [
+    {
+      "command": "ark start --apply --json --yes --no-install --tools claude",
+      "exitCode": 0,
+      "filesDiff": {
+        ".ark/ci-merge-boundary.json": "added",
+        ".claude/settings.json": "added",
+        ".github/workflows/ark-check.yml": "added",
+        ".mcp.json": "added",
+        "AGENTS.md": "added",
+        "ark.config.json": "added",
+        "arkrules/ApplicationOrchestration.json": "added",
+        "arkrules/DomainModel.json": "added",
+        "arkrules/PersistenceAdapters.json": "added",
+        "arkrules/PresentationAdapters.json": "added",
+        "package.json": "modified"
+      },
+      "output": {
+        "checkScript": "pnpm --config.verify-deps-before-run=false exec ark-check --root . --config ark.config.json --strict-config",
+        "startError": null
+      }
+    },
+    {
+      "command": "npm run check:architecture",
+      "exitCode": 1,
+      "filesDiff": {},
+      "output": {
+        "headline": "✖ 22 violation(s).",
+        "passed": false,
+        "violationCount": 22
+      }
+    },
+    {
+      "command": "ark-check --doctor --no-cache",
+      "exitCode": 0,
+      "filesDiff": {},
+      "output": {
+        "mentionsOverlap": true,
+        "primaryNextAction": "Fix overlapping layer globs — 24 files match more than one layer (e.g. apps/site/og-image/adapters/store.ts matches PersistenceAdapters + PresentationAdapters). Narrow overlapping roots like packages/schema/src/**. Then /ark-adopt"
+      }
+    },
+    {
+      "command": "ark-check --coverage --json --no-cache",
+      "exitCode": 0,
+      "filesDiff": {},
+      "output": {
+        "dualCount": 24,
+        "dualSamples": [
+          {
+            "file": "apps/site/og-image/adapters/store.ts",
+            "layers": [
+              "PersistenceAdapters",
+              "PresentationAdapters"
+            ],
+            "winner": "PersistenceAdapters"
+          },
+          {
+            "file": "apps/site/pages/api/health.ts",
+            "layers": [
+              "ApplicationOrchestration",
+              "PresentationAdapters"
+            ],
+            "winner": "ApplicationOrchestration"
+          },
+          {
+            "file": "packages/planner/src/adapters/store/getPlanner01.ts",
+            "layers": [
+              "ApplicationOrchestration",
+              "PersistenceAdapters"
+            ],
+            "winner": "PersistenceAdapters"
+          },
+          {
+            "file": "packages/planner/src/adapters/store/getPlanner02.ts",
+            "layers": [
+              "ApplicationOrchestration",
+              "PersistenceAdapters"
+            ],
+            "winner": "PersistenceAdapters"
+          },
+          {
+            "file": "packages/planner/src/adapters/store/getPlanner03.ts",
+            "layers": [
+              "ApplicationOrchestration",
+              "PersistenceAdapters"
+            ],
+            "winner": "PersistenceAdapters"
+          },
+          {
+            "file": "packages/planner/src/adapters/store/getPlanner04.ts",
+            "layers": [
+              "ApplicationOrchestration",
+              "PersistenceAdapters"
+            ],
+            "winner": "PersistenceAdapters"
+          },
+          {
+            "file": "packages/planner/src/adapters/store/getPlanner05.ts",
+            "layers": [
+              "ApplicationOrchestration",
+              "PersistenceAdapters"
+            ],
+            "winner": "PersistenceAdapters"
+          },
+          {
+            "file": "packages/planner/src/adapters/store/getPlanner06.ts",
+            "layers": [
+              "ApplicationOrchestration",
+              "PersistenceAdapters"
+            ],
+            "winner": "PersistenceAdapters"
+          },
+          {
+            "file": "packages/planner/src/adapters/store/getPlanner07.ts",
+            "layers": [
+              "ApplicationOrchestration",
+              "PersistenceAdapters"
+            ],
+            "winner": "PersistenceAdapters"
+          },
+          {
+            "file": "packages/planner/src/adapters/store/getPlanner08.ts",
+            "layers": [
+              "ApplicationOrchestration",
+              "PersistenceAdapters"
+            ],
+            "winner": "PersistenceAdapters"
+          },
+          {
+            "file": "packages/planner/src/adapters/store/getPlanner09.ts",
+            "layers": [
+              "ApplicationOrchestration",
+              "PersistenceAdapters"
+            ],
+            "winner": "PersistenceAdapters"
+          },
+          {
+            "file": "packages/planner/src/adapters/store/getPlanner10.ts",
+            "layers": [
+              "ApplicationOrchestration",
+              "PersistenceAdapters"
+            ],
+            "winner": "PersistenceAdapters"
+          },
+          {
+            "file": "packages/planner/src/adapters/store/getPlanner11.ts",
+            "layers": [
+              "ApplicationOrchestration",
+              "PersistenceAdapters"
+            ],
+            "winner": "PersistenceAdapters"
+          },
+          {
+            "file": "packages/planner/src/adapters/store/getPlanner12.ts",
+            "layers": [
+              "ApplicationOrchestration",
+              "PersistenceAdapters"
+            ],
+            "winner": "PersistenceAdapters"
+          },
+          {
+            "file": "packages/planner/src/adapters/store/getPlanner13.ts",
+            "layers": [
+              "ApplicationOrchestration",
+              "PersistenceAdapters"
+            ],
+            "winner": "PersistenceAdapters"
+          },
+          {
+            "file": "packages/planner/src/adapters/store/getPlanner14.ts",
+            "layers": [
+              "ApplicationOrchestration",
+              "PersistenceAdapters"
+            ],
+            "winner": "PersistenceAdapters"
+          },
+          {
+            "file": "packages/planner/src/adapters/store/getPlanner15.ts",
+            "layers": [
+              "ApplicationOrchestration",
+              "PersistenceAdapters"
+            ],
+            "winner": "PersistenceAdapters"
+          },
+          {
+            "file": "packages/planner/src/adapters/store/getPlanner16.ts",
+            "layers": [
+              "ApplicationOrchestration",
+              "PersistenceAdapters"
+            ],
+            "winner": "PersistenceAdapters"
+          },
+          {
+            "file": "packages/planner/src/adapters/store/getPlanner17.ts",
+            "layers": [
+              "ApplicationOrchestration",
+              "PersistenceAdapters"
+            ],
+            "winner": "PersistenceAdapters"
+          },
+          {
+            "file": "packages/planner/src/adapters/store/getPlanner18.ts",
+            "layers": [
+              "ApplicationOrchestration",
+              "PersistenceAdapters"
+            ],
+            "winner": "PersistenceAdapters"
+          },
+          {
+            "file": "packages/planner/src/adapters/store/getPlanner19.ts",
+            "layers": [
+              "ApplicationOrchestration",
+              "PersistenceAdapters"
+            ],
+            "winner": "PersistenceAdapters"
+          },
+          {
+            "file": "packages/planner/src/adapters/store/getPlanner20.ts",
+            "layers": [
+              "ApplicationOrchestration",
+              "PersistenceAdapters"
+            ],
+            "winner": "PersistenceAdapters"
+          },
+          {
+            "file": "packages/planner/src/pages/home.ts",
+            "layers": [
+              "ApplicationOrchestration",
+              "PresentationAdapters"
+            ],
+            "winner": "PresentationAdapters"
+          },
+          {
+            "file": "packages/schema/src/adapters/parse/readSchema.ts",
+            "layers": [
+              "DomainModel",
+              "PersistenceAdapters"
+            ],
+            "winner": "PersistenceAdapters"
+          }
+        ]
+      }
+    }
+  ]
+}
