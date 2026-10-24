@@ -3,19 +3,19 @@
   "schemaVersion": 1,
   "note": "Anonymous live-dogfood aggregates only. No third-party repo names, URLs, paths, or code.",
   "counters": {
-    "runs": 10,
+    "runs": 11,
     "ok": 9,
-    "fail": 1,
+    "fail": 2,
     "byFindingKind": {
       "UX": 7,
       "install": 1,
-      "contain": 1,
+      "contain": 2,
       "guide": 1
     },
     "byPhaseBroke": {
       "null": 3,
       "start-apply": 2,
-      "check": 1,
+      "check": 2,
       "recommend": 1,
       "install": 1,
       "doctor": 1,
@@ -99,16 +99,24 @@
       "phaseBroke": "start-apply",
       "findingKind": "guide",
       "arkgateVersion": "4.8.28"
+    },
+    {
+      "iso": "2026-10-23T21:25:00.000Z",
+      "ok": false,
+      "durationSec": 190,
+      "phaseBroke": "check",
+      "findingKind": "contain",
+      "arkgateVersion": "4.8.29"
     }
   ],
   "aggregates": {
-    "okRate": 0.9,
-    "durationP50Sec": 226.0,
-    "runs": 10,
+    "okRate": 0.8182,
+    "durationP50Sec": 223.0,
+    "runs": 11,
     "phaseBrokeDistribution": {
       "null": 3,
       "start-apply": 2,
-      "check": 1,
+      "check": 2,
       "recommend": 1,
       "install": 1,
       "doctor": 1,
@@ -117,9 +125,9 @@
     "findingKindDistribution": {
       "UX": 7,
       "install": 1,
-      "contain": 1,
+      "contain": 2,
       "guide": 1
     },
-    "updatedAt": "2026-10-20T21:25:00.000Z"
+    "updatedAt": "2026-10-23T21:25:00.000Z"
   }
 }
