@@ -1157,6 +1157,45 @@ export function monorepoRoleSourceGlobs(units, roles, { root, domainScoped = fal
     .filter((pattern) => pattern && (!domainScoped || /^(packages|libs)\//.test(pattern)));
 }
 
+// Role roots are one layer (#373). Domain is not sealed (interior domain stays Domain).
+// Application is not sealed against presentation roots (Next API stays Application, #288).
+const ROLE_ROOT_DOMAIN_EXCLUDES = ['**/domain/**', '**/entities/**'];
+const PRESENTATION_API_EXCLUDES = [
+  '**/app/api/**',
+  '**/app/**/api/**',
+  '**/pages/api/**',
+  '**/pages/**/api/**',
+];
+
+function uniqueRoleGlobs(patterns) {
+  return [...new Set((patterns ?? []).filter((pattern) => typeof pattern === 'string' && pattern.length > 0))];
+}
+
+export function sealMonorepoRoleRoots(layers, ownedByLayer) {
+  const owned = {};
+  for (const [name, patterns] of Object.entries(ownedByLayer)) owned[name] = uniqueRoleGlobs(patterns);
+  const all = uniqueRoleGlobs(Object.values(owned).flat());
+  for (const layer of layers) {
+    const mine = new Set(owned[layer.name] ?? []);
+    const exclude = [...(layer.exclude ?? [])];
+    const add = (pattern) => {
+      if (!exclude.includes(pattern)) exclude.push(pattern);
+    };
+    if (layer.name !== 'DomainModel') {
+      for (const glob of all) {
+        if (layer.name === 'ApplicationOrchestration' && (owned.PresentationAdapters ?? []).includes(glob)) continue;
+        if (!mine.has(glob)) add(glob);
+      }
+      for (const pattern of ROLE_ROOT_DOMAIN_EXCLUDES) add(pattern);
+    }
+    if (layer.name === 'PresentationAdapters') {
+      for (const pattern of PRESENTATION_API_EXCLUDES) add(pattern);
+    }
+    if (exclude.length > 0) layer.exclude = exclude;
+  }
+  return layers;
+}
+
 function entrypointDirs(pkg) {
   const values = [];
   const add = (value) => {

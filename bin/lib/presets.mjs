@@ -13,6 +13,7 @@ import {
   DEFAULT_INTENT_PREFIXES,
   monorepoRoleSourceGlobs,
   resolveIncludeRoots,
+  sealMonorepoRoleRoots,
   sharedLibraryLayer,
 } from '../ark-shared.mjs';
 import { withArkConfigMetadata } from './config-contract.mjs';
@@ -51,21 +52,11 @@ function peerIsolationEdges(layerNames, sliceFolders, message) {
   return rules;
 }
 
-// Named starter configs. Globs use `**` so they fit both flat (src/domain/**) and
-// modular (src/modules/x/domain/**) layouts. Every layer is optional, so the strict
-// check passes on a greenfield repo and each layer switches on as its dir gains files.
-//
-// Framework internals under `src/kernel/**` are NOT application architecture — a broad
-// `src/**/domain/**` would otherwise swallow `src/kernel/domain`. Do NOT use `**/kernel/**`
-// (that carves out legitimate `src/shared/kernel/**` SharedKernel paths).
+// `**` covers flat and modular layouts. Layers stay optional so a greenfield strict check stays green.
+// Exclude only src/kernel/** — `**/kernel/**` would drop legitimate src/shared/kernel/** paths.
 const FRAMEWORK_INTERNAL_EXCLUDE = ['src/kernel/**', '**/src/kernel/**'];
 
-/**
- * Shared high-spec domain globs. Prefer these over Application/Presentation scatter
- * (path-anchored specificity ranks interior domain above broad src/lib bags).
- * Include kernel/domain paths for event-kernel trees; framework src/kernel
- * exclude still applies when set on a layer.
- */
+/** Interior domain globs. They outrank broad src/lib bags. src/kernel exclude still applies. */
 export const DOMAIN_PATH_PATTERNS = Object.freeze([
   '**/domain/**',
   '**/entities/**',
@@ -400,12 +391,7 @@ export function withDefaultArkRules(config) {
   return { ...config, arkRules };
 }
 
-/**
- * Write starter arkrules/*.json for each arkRules map entry (AR08).
- * Uses sensor-role mapping so renamed layers get the right archetype;
- * unknown layers get a generic empty mold. Skips existing files unless force=true.
- * Rejects paths that escape arkrules/ (mirror managed-upgrade path safety).
- */
+/** Write arkrules/*.json per arkRules entry (AR08). Skips existing files unless force. Rejects escaping paths. */
 export function writeArkRulesTemplates(root, config, { force = false } = {}) {
   const refs = config?.arkRules;
   if (!refs || typeof refs !== 'object') return [];
@@ -453,12 +439,7 @@ function portsAndAdaptersRules() {
   ];
 }
 
-/**
- * UI-surface preset rules: the domain and orchestration stay out of the UI, while
- * presentation may reach data clients on day one (soft, `message` explains why).
- * Persistence → Presentation stays denied. Fresh objects per call.
- * @param {string} presentationToPersistenceMessage
- */
+/** UI-surface rules. Presentation may reach data clients (soft). Persistence → Presentation stays denied. */
 function uiSurfaceRules(presentationToPersistenceMessage) {
   return [
     { from: 'DomainModel', to: 'PresentationAdapters', allowed: false },
@@ -479,58 +460,6 @@ function uiSurfaceRules(presentationToPersistenceMessage) {
 function presetWithOverlays(baseConfig, root) {
   const config = root ? applyFrameworkLayoutOverlays(baseConfig, root) : baseConfig;
   return withArkConfigMetadata(withDefaultArkRules(config));
-}
-
-// Interior domain folders stay Domain inside a role root (DL-DOMAIN-SPECIFICITY).
-// These two globs cover DOMAIN_PATH_PATTERNS under the same matcher.
-const ROLE_ROOT_DOMAIN_EXCLUDES = Object.freeze(['**/domain/**', '**/entities/**']);
-
-// Next API shells already outrank pages and app folder globs by specificity (#288).
-// Excluding them from Presentation records that win so the file is not also
-// Presentation. Application still matches them, including inside a UI package
-// root, so presentation role globs are not excluded from Application.
-const PRESENTATION_API_EXCLUDES = Object.freeze([
-  '**/app/api/**',
-  '**/app/**/api/**',
-  '**/pages/api/**',
-  '**/pages/**/api/**',
-]);
-
-function uniqueGlobs(patterns) {
-  return [...new Set((patterns ?? []).filter((pattern) => typeof pattern === 'string' && pattern.length > 0))];
-}
-
-// A monorepo role root is one layer. Generic folder globs on the other layers
-// must not also match that tree, or a same-package import is reported as a
-// cross-layer violation (#373). Domain is not sealed against foreign roots.
-// Application is not sealed against presentation roots (Next API, #288).
-function sealMonorepoRoleRoots(layers, ownedByLayer) {
-  const owned = {};
-  for (const [name, patterns] of Object.entries(ownedByLayer)) {
-    owned[name] = uniqueGlobs(patterns);
-  }
-  const all = uniqueGlobs(Object.values(owned).flat());
-  for (const layer of layers) {
-    const mine = new Set(owned[layer.name] ?? []);
-    const exclude = [...(layer.exclude ?? [])];
-    const add = (pattern) => {
-      if (!exclude.includes(pattern)) exclude.push(pattern);
-    };
-    if (layer.name !== 'DomainModel') {
-      for (const glob of all) {
-        if (layer.name === 'ApplicationOrchestration' && (owned.PresentationAdapters ?? []).includes(glob)) {
-          continue;
-        }
-        if (!mine.has(glob)) add(glob);
-      }
-      for (const pattern of ROLE_ROOT_DOMAIN_EXCLUDES) add(pattern);
-    }
-    if (layer.name === 'PresentationAdapters') {
-      for (const pattern of PRESENTATION_API_EXCLUDES) add(pattern);
-    }
-    if (exclude.length > 0) layer.exclude = exclude;
-  }
-  return layers;
 }
 
 export const ARCHITECTURE_PRESETS = {
@@ -623,9 +552,7 @@ export const ARCHITECTURE_PRESETS = {
               'src/**/use-cases/**',
               ...APPLICATION_LIB_ORCHESTRATION_PATTERNS,
               ...NEXT_API_APPLICATION_PATTERNS,
-              // Greenfield residual: bare src/index.ts etc. Domain/Presentation/Persistence
-              // patterns outrank this by specificity. Next overlay replaces Application bags
-              // and must NOT reintroduce a lone src/** catch-all on App Router trees.
+              // Residual src/**. Specific patterns win. Next overlay must not put a lone src/** on App Router trees.
               'src/**',
             ],
             exclude: FRAMEWORK_INTERNAL_EXCLUDE,
@@ -682,10 +609,7 @@ export const ARCHITECTURE_PRESETS = {
       root
     );
   },
-  // Cross-package profile for workspace monorepos. Patterns match by directory NAME
-  // anywhere in the tree (`**/domain/**` hits packages/x/domain AND apps/y/src/domain),
-  // so one profile governs every package. include defaults to the detected workspace
-  // roots (falls back to packages+apps). Naming varies by repo — adjust and re-check.
+  // Directory-name globs (`**/domain/**`) cover every workspace package. include is the detected roots.
   monorepo: (includeDirs, root) => {
     let include =
       includeDirs && includeDirs.length > 0 ? [...includeDirs] : [];
@@ -896,9 +820,7 @@ export const ARCHITECTURE_PRESETS = {
             optional: true,
           },
         ],
-        // Next RSC often imports data clients from routes; deny is ideal but day-one
-        // ui-surface keeps this as a soft guidance edge (allowed) until ports exist —
-        // Persistence → Presentation stays denied when that edge appears.
+        // Day-one UI may reach data clients. Persistence → Presentation stays denied.
         rules: uiSurfaceRules(
           'UI/routes may reach data clients on day one (RSC); prefer application ports as the product grows.'
         ),
@@ -906,10 +828,7 @@ export const ARCHITECTURE_PRESETS = {
       root
     ),
 
-  /**
-   * Vertical Slice: feature folders own UI+logic+api; no cross-feature imports
-   * (peerIsolation). Shared primitives and pure lib/infra are the only escape hatches.
-   */
+  /** Feature folders own UI+logic+api. peerIsolation blocks cross-feature imports. */
   'vertical-slice': (_workspaces, root) =>
     presetWithOverlays(
       {
@@ -969,12 +888,7 @@ export const ARCHITECTURE_PRESETS = {
       root
     ),
 
-  /**
-   * DDD bounded contexts: per-context domain/application/infra/presentation + shared kernel.
-   * peerIsolation on every pair of context-local layers blocks cross-context imports
-   * (same or cross technical layer). SharedKernel is exempt (not in the peer matrix).
-   * Classic hexagonal denies still block e.g. Domain → Persistence within a context.
-   */
+  /** Per-context layers plus SharedKernel. peerIsolation blocks cross-context imports; hexagonal denies stay. */
   'ddd-bounded-contexts': (_workspaces, root) => {
     const contextLayers = [
       'DomainModel',
@@ -1162,13 +1076,7 @@ ARCHITECTURE_PRESETS['onion-architecture'] = ARCHITECTURE_PRESETS.hexagonal;
 /** Stable public preset keys (CLI help, score fit, docs). Order is display order. */
 export const ARCHITECTURE_PRESET_NAMES = Object.keys(ARCHITECTURE_PRESETS);
 
-/**
- * Additive P0-A retrofit: inject high-spec Next API → Application patterns when missing.
- * Pure — does not write files (DL-P0A-RETROFIT).
- *
- * @param {object} config ark.config-shaped object
- * @returns {{ changed: boolean, injected: string[], targetLayer: string|null, config: object }}
- */
+/** Inject missing Next API → Application patterns (DL-P0A-RETROFIT). Does not write files. */
 export function retrofitP0aApiApplicationPatterns(config) {
   const layers = Array.isArray(config?.layers) ? config.layers : [];
   const appLayer =
@@ -1197,11 +1105,5 @@ export function retrofitP0aApiApplicationPatterns(config) {
   };
 }
 
-// ── Layer suggestion engine ──────────────────────────────────────────────────
-// Everything here is HARVESTED from Ark's own canonical sources — the 11-layer defaults
-// (DEFAULT_LAYER_DIRECTORIES) and the named presets — so a suggestion can never drift from
-// what the gate actually enforces. No ad-hoc directory heuristics: a directory Ark doesn't
-// already know about is reported as "unrecognized — you classify", never guessed. This is
-// what lets `init`/`--coverage` PROPOSE where ungoverned code belongs instead of silently
-// leaving the majority of a repo ungoverned behind a false-green check.
+// Suggestions use only DEFAULT_LAYER_DIRECTORIES and named presets. Unknown dirs stay unrecognized.
 export const CANONICAL_LAYER_NAMES = new Set(DEFAULT_INTENT_PREFIXES.map((entry) => entry.layer));
