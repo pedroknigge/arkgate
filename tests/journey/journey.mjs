@@ -54,12 +54,14 @@ export async function journey(fixture, steps, options = {}) {
   fs.mkdirSync(project);
   fs.mkdirSync(home);
   fs.mkdirSync(tmp);
+  let restorePath;
   try {
     const candidate = resolveJourneyCandidate(options.candidate ?? {}, runRoot);
     copyFixtureFromIndex(fixture, project);
     commitFixture(project);
     const version = installCandidate(project, candidate.copied, fixture);
     const binFor = installedBins(project, version);
+    restorePath = activateDeclaredPackageManager(project, runRoot);
     let before = snapshotTree(project);
     const observedSteps = [];
     for (const step of steps) {
@@ -109,6 +111,7 @@ export async function journey(fixture, steps, options = {}) {
     if (cases) observation.cases = cases;
     return canonicalize(observation);
   } finally {
+    if (typeof restorePath === 'function') restorePath();
     if (options.keep) {
       process.stderr.write(`journey keep ${project}\n`);
     } else {
@@ -278,6 +281,51 @@ function commitFixture(project) {
       GIT_COMMITTER_DATE: '2026-01-01T00:00:00Z',
     }
   );
+}
+
+function commandOnPath(name) {
+  return spawnSync(name, ['--version'], { encoding: 'utf8' }).status === 0;
+}
+
+/**
+ * `npm run check:architecture` runs the emitted script (`pnpm exec ark-check`
+ * when package.json declares pnpm). The journey job does not install that
+ * manager, so the script exits 127 before ark-check starts. Install the
+ * declared manager into the run directory and put it on PATH for the steps.
+ */
+function activateDeclaredPackageManager(project, runRoot) {
+  const pkgPath = path.join(project, 'package.json');
+  if (!fs.existsSync(pkgPath)) return undefined;
+  let declared = '';
+  try {
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+    declared = typeof pkg.packageManager === 'string' ? pkg.packageManager.trim() : '';
+  } catch {
+    return undefined;
+  }
+  const at = declared.lastIndexOf('@');
+  if (at <= 0) return undefined;
+  const name = declared.slice(0, at);
+  const version = declared.slice(at + 1);
+  if ((name !== 'pnpm' && name !== 'yarn') || version.length === 0 || commandOnPath(name)) return undefined;
+  const prefix = path.join(runRoot, 'package-manager');
+  const installed = spawnSync(
+    'npm',
+    ['install', '--prefix', prefix, `${name}@${version}`, '--ignore-scripts', '--no-audit', '--no-fund'],
+    { encoding: 'utf8', timeout: INSTALL_TIMEOUT_MS, maxBuffer: MAX_BUFFER, env: process.env }
+  );
+  const bin = path.join(prefix, 'node_modules', '.bin', name);
+  if (installed.status !== 0 || !fs.existsSync(bin)) {
+    throw new JourneyError(
+      'setup',
+      `could not install ${declared} so the check script can run\n${installed.stderr || installed.stdout}`
+    );
+  }
+  const previous = process.env.PATH ?? '';
+  process.env.PATH = `${path.dirname(bin)}${path.delimiter}${previous}`;
+  return () => {
+    process.env.PATH = previous;
+  };
 }
 
 function installCandidate(project, tarball, fixture) {

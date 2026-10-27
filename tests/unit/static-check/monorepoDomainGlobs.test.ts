@@ -409,4 +409,23 @@ describe('shared workspace package layers (#366)', () => {
       expect.arrayContaining(['packages/api/src/**', 'packages/validators/src/**'])
     );
   });
+
+  it('keeps Expo and Start UI entries on Presentation so a Button import stays in-layer', () => {
+    const root = tmpRoot('ark-366-apps-');
+    write(root, 'package.json', JSON.stringify({ name: 'workpack', private: true, workspaces: ['apps/*', 'packages/*'] }));
+    write(root, 'pnpm-workspace.yaml', 'packages:\n  - "apps/*"\n  - "packages/*"\n');
+    write(root, 'apps/expo/package.json', JSON.stringify({ name: '@repo/expo', private: true, dependencies: { '@repo/ui': '*' } }));
+    write(root, 'apps/expo/app/index.tsx', 'import { Button } from "@repo/ui";\nexport function Home() { return Button; }\n');
+    write(root, 'apps/start/package.json', JSON.stringify({ name: '@repo/start', private: true, dependencies: { '@repo/ui': '*' } }));
+    write(root, 'apps/start/src/routes/index.tsx', 'import { Button } from "@repo/ui";\nexport function StartHome() { return Button; }\n');
+    write(root, 'packages/ui/package.json', JSON.stringify({ name: '@repo/ui', exports: './src/index.ts' }));
+    write(root, 'packages/ui/src/button.tsx', 'export function Button() { return null; }\n');
+    const config = ARCHITECTURE_PRESETS.monorepo([], root) as {
+      layers: Array<{ name: string; patterns?: string[]; exclude?: string[] }>;
+    };
+    const names = (rel: string) => matchingLayersForRelativePath(rel, config.layers).map((hit) => hit.layer).sort();
+    expect(names('apps/expo/app/index.tsx')).toEqual(['PresentationAdapters']);
+    expect(names('apps/start/src/routes/index.tsx')).toEqual(['PresentationAdapters']);
+    expect(names('packages/ui/src/button.tsx')).toEqual(['PresentationAdapters']);
+  });
 });
