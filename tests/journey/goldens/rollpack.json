@@ -1,0 +1,116 @@
+{
+  "cases": [
+    {
+      "expect": "fail",
+      "got": {
+        "archetype": "multi-app-workspace",
+        "checkExit": 1,
+        "claimedClean": true,
+        "domainToolConfigs": [
+          "eslint.config.mjs",
+          "rollup.config.mjs",
+          "vite.config.ts"
+        ],
+        "honest": false,
+        "projectedPercent": 100,
+        "recommendArchetype": "multi-app-workspace",
+        "startError": null,
+        "toolViolations": [
+          {
+            "file": "eslint.config.mjs",
+            "ruleId": "FORBIDDEN_GLOBAL"
+          },
+          {
+            "file": "rollup.config.mjs",
+            "ruleId": "FORBIDDEN_GLOBAL"
+          },
+          {
+            "file": "vite.config.ts",
+            "ruleId": "FORBIDDEN_GLOBAL"
+          }
+        ]
+      },
+      "id": "376-settings-workspace",
+      "met": false,
+      "note": "A settings-only pnpm-workspace.yaml is not a multi-app workspace. start and --recommend choose library-sdk. Root rollup/vite/eslint configs are not DomainModel. The first check exits 0. Apply does not report clean coverage when that check would fail on a tool-config violation Ark created.",
+      "owner": "#376",
+      "status": "expected-fail",
+      "want": {
+        "archetype": "library-sdk",
+        "checkExit": 0,
+        "domainToolConfigs": [],
+        "honest": true
+      }
+    }
+  ],
+  "fixture": "rollpack",
+  "schemaVersion": 1,
+  "steps": [
+    {
+      "command": "ark start --apply --json --yes --no-install --tools claude",
+      "exitCode": 0,
+      "filesDiff": {
+        ".ark/ci-merge-boundary.json": "added",
+        ".claude/settings.json": "added",
+        ".github/workflows/ark-check.yml": "added",
+        ".mcp.json": "added",
+        "AGENTS.md": "added",
+        "ark.config.json": "added",
+        "arkrules/ApplicationOrchestration.json": "added",
+        "arkrules/DomainModel.json": "added",
+        "arkrules/PersistenceAdapters.json": "added",
+        "arkrules/PresentationAdapters.json": "added",
+        "package.json": "modified"
+      },
+      "output": {
+        "archetype": "multi-app-workspace",
+        "claimedClean": true,
+        "domainToolConfigs": [
+          "eslint.config.mjs",
+          "rollup.config.mjs",
+          "vite.config.ts"
+        ],
+        "projectedPercent": 100,
+        "startError": null
+      }
+    },
+    {
+      "command": "ark-check --recommend --json",
+      "exitCode": 0,
+      "filesDiff": {},
+      "output": {
+        "archetype": "multi-app-workspace"
+      }
+    },
+    {
+      "command": "ark-check --json --no-cache --strict-config",
+      "exitCode": 1,
+      "filesDiff": {},
+      "output": {
+        "completeness": "complete",
+        "diagnostics": [
+          {
+            "file": "eslint.config.mjs",
+            "message": "DomainModel must not use the ambient global \"process\".",
+            "ruleId": "FORBIDDEN_GLOBAL",
+            "severity": "error"
+          },
+          {
+            "file": "rollup.config.mjs",
+            "message": "DomainModel must not use the ambient global \"process\".",
+            "ruleId": "FORBIDDEN_GLOBAL",
+            "severity": "error"
+          },
+          {
+            "file": "vite.config.ts",
+            "message": "DomainModel must not use the ambient global \"process\".",
+            "ruleId": "FORBIDDEN_GLOBAL",
+            "severity": "error"
+          }
+        ],
+        "ok": false,
+        "valid": false
+      }
+    }
+  ]
+}

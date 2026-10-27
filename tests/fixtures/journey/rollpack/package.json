@@ -1,0 +1,9 @@
+{
+  "name": "rollpack",
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "packageManager": "pnpm@10.15.0"
+}
