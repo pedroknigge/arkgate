@@ -88,6 +88,7 @@ const FIXTURE_SHAPES: FixtureShape[] = [
         workspaces: ['packages/*'],
       });
       writeFile(path.join(root, 'pnpm-workspace.yaml'), 'packages:\n  - packages/*\n');
+      writeJson(path.join(root, 'packages', 'api', 'package.json'), { name: '@mono/api' });
       writeFile(path.join(root, 'packages', 'api', 'src', 'index.ts'), 'export {};\n');
     },
     phase1Layer: 'DomainModel',

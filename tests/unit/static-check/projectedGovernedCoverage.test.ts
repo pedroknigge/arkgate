@@ -277,7 +277,11 @@ describe('resolveStartInitPreset', () => {
       expect(resolveStartInitPreset(markers, { mature: true })).toBe('monorepo');
       fs.unlinkSync(path.join(markers, 'rush.json'));
       writeFile(path.join(markers, 'pnpm-workspace.yaml'), 'packages:\n  - packages/*\n');
+      // A glob that matches no package is not a monorepo (#376).
+      expect(resolveStartInitPreset(markers, { mature: true })).toBeNull();
+      writeFile(path.join(markers, 'packages/core/package.json'), '{"name":"core"}\n');
       expect(resolveStartInitPreset(markers, { mature: true })).toBe('monorepo');
+      fs.rmSync(path.join(markers, 'packages'), { recursive: true, force: true });
       fs.unlinkSync(path.join(markers, 'pnpm-workspace.yaml'));
       writeFile(path.join(markers, 'lerna.json'), '{}\n');
       expect(resolveStartInitPreset(markers, { mature: true })).toBe('monorepo');
