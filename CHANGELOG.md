@@ -5,6 +5,9 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+### Fixed
+- A `pnpm-workspace.yaml` that only holds settings (`allowBuilds`, `catalog`) is not a multi-app workspace. `start` keeps a single package with `src/` and `exports` on library-sdk, and root `*.config.*` files (Rollup, Vite, ESLint) stay out of DomainModel. Apply does not call projected coverage a clean result when the first check would fail on a tool config that placement created (#376).
+
 ## 4.8.29 — 2026-10-23
 
 **Patch** over **4.8.28**. Weekly ship (#369, #370, #371). **Write. Check. Ship.** **No required config migration.** No `schemaVersion` bump. Does not close `K01` / `Z09`. This mother `ark.config.json` still does **not** turn `arkOrder` on.

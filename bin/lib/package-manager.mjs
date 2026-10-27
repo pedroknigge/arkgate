@@ -178,11 +178,39 @@ export function execCommandParts(root, bin, binArgs = []) {
 }
 
 /**
+ * Globs under `packages:` in pnpm-workspace.yaml.
+ * `null` when the file is missing or has no `packages:` key (settings only:
+ * allowBuilds, catalog, minimumReleaseAge). `[]` when the key is present and
+ * lists nothing. A settings-only file is not a workspace (#376).
+ */
+export function readPnpmWorkspacePackageGlobs(root) {
+  const file = path.join(root, 'pnpm-workspace.yaml');
+  if (!fs.existsSync(file)) return null;
+  const globs = [];
+  let inPackages = false;
+  let sawKey = false;
+  for (const line of fs.readFileSync(file, 'utf8').split('\n')) {
+    const keyMatch = line.match(/^([A-Za-z0-9_-]+):/);
+    if (keyMatch) {
+      inPackages = keyMatch[1] === 'packages';
+      if (inPackages) sawKey = true;
+      continue;
+    }
+    if (!inPackages) continue;
+    const item = line.match(/^\s+-\s*['"]?([^'"#]+?)['"]?\s*$/);
+    if (item) globs.push(item[1].trim());
+  }
+  return sawKey ? globs : null;
+}
+
+/**
  * True when this directory is a pnpm workspace root (needs `pnpm add -w` for root deps).
- * Nested packages under the workspace are not roots.
+ * A `packages:` key is pnpm workspace mode, even when those directories are not
+ * on disk yet. A settings-only file is not a workspace. Nested packages under
+ * the workspace are not roots.
  */
 export function isPnpmWorkspaceRoot(root) {
-  return fs.existsSync(path.join(root, 'pnpm-workspace.yaml'));
+  return Array.isArray(readPnpmWorkspacePackageGlobs(root));
 }
 
 /**

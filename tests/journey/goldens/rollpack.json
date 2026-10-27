@@ -1,40 +1,23 @@
 {
   "cases": [
     {
-      "expect": "fail",
+      "expect": "pass",
       "got": {
-        "archetype": "multi-app-workspace",
-        "checkExit": 1,
+        "archetype": "library-sdk",
+        "checkExit": 0,
         "claimedClean": true,
-        "domainToolConfigs": [
-          "eslint.config.mjs",
-          "rollup.config.mjs",
-          "vite.config.ts"
-        ],
-        "honest": false,
+        "domainToolConfigs": [],
+        "honest": true,
         "projectedPercent": 100,
-        "recommendArchetype": "multi-app-workspace",
+        "recommendArchetype": "library-sdk",
         "startError": null,
-        "toolViolations": [
-          {
-            "file": "eslint.config.mjs",
-            "ruleId": "FORBIDDEN_GLOBAL"
-          },
-          {
-            "file": "rollup.config.mjs",
-            "ruleId": "FORBIDDEN_GLOBAL"
-          },
-          {
-            "file": "vite.config.ts",
-            "ruleId": "FORBIDDEN_GLOBAL"
-          }
-        ]
+        "toolViolations": []
       },
       "id": "376-settings-workspace",
-      "met": false,
+      "met": true,
       "note": "A settings-only pnpm-workspace.yaml is not a multi-app workspace. start and --recommend choose library-sdk. Root rollup/vite/eslint configs are not DomainModel. The first check exits 0. Apply does not report clean coverage when that check would fail on a tool-config violation Ark created.",
       "owner": "#376",
-      "status": "expected-fail",
+      "status": "pass",
       "want": {
         "archetype": "library-sdk",
         "checkExit": 0,
@@ -63,13 +46,9 @@
         "package.json": "modified"
       },
       "output": {
-        "archetype": "multi-app-workspace",
+        "archetype": "library-sdk",
         "claimedClean": true,
-        "domainToolConfigs": [
-          "eslint.config.mjs",
-          "rollup.config.mjs",
-          "vite.config.ts"
-        ],
+        "domainToolConfigs": [],
         "projectedPercent": 100,
         "startError": null
       }
@@ -79,37 +58,18 @@
       "exitCode": 0,
       "filesDiff": {},
       "output": {
-        "archetype": "multi-app-workspace"
+        "archetype": "library-sdk"
       }
     },
     {
       "command": "ark-check --json --no-cache --strict-config",
-      "exitCode": 1,
+      "exitCode": 0,
       "filesDiff": {},
       "output": {
         "completeness": "complete",
-        "diagnostics": [
-          {
-            "file": "eslint.config.mjs",
-            "message": "DomainModel must not use the ambient global \"process\".",
-            "ruleId": "FORBIDDEN_GLOBAL",
-            "severity": "error"
-          },
-          {
-            "file": "rollup.config.mjs",
-            "message": "DomainModel must not use the ambient global \"process\".",
-            "ruleId": "FORBIDDEN_GLOBAL",
-            "severity": "error"
-          },
-          {
-            "file": "vite.config.ts",
-            "message": "DomainModel must not use the ambient global \"process\".",
-            "ruleId": "FORBIDDEN_GLOBAL",
-            "severity": "error"
-          }
-        ],
-        "ok": false,
-        "valid": false
+        "diagnostics": [],
+        "ok": true,
+        "valid": true
       }
     }
   ]

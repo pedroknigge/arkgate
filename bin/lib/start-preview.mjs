@@ -7,6 +7,7 @@ import {
   arkCommand,
   buildArchitectureRecommendation,
   evaluateStartShapeConfidenceGate,
+  isRootToolConfigRel,
   START_APPLY_REFUSE_FOOTER,
   treeHasArkOrderCandidate,
 } from '../ark-shared.mjs';
@@ -311,7 +312,14 @@ export function renderStartPreview(preview, options = {}) {
   }
   if (applying) {
     const percent = preview.projectedCoverage?.percent;
-    if (percent != null) console.log(`Projected governed coverage: ${percent}%`);
+    if (preview.claimedClean === false) {
+      console.log('The first check would fail. Projected coverage is not a clean result.');
+      for (const row of preview.firstCheck?.arkCreated ?? []) {
+        console.log(`  ${row.ruleId}  ${row.file}`);
+      }
+    } else if (percent != null) {
+      console.log(`Projected governed coverage: ${percent}%`);
+    }
     const verified = (preview.hostGuarantees || []).find((line) =>
       String(line).startsWith('Hard-write hook verified')
     );
@@ -525,6 +533,8 @@ export async function planStart(args, helpers) {
       coverage = {};
     }
     const afterRaw = treeFiles(shadowRoot);
+    // After the snapshot: a check that writes cache files must not become a planned mutation.
+    const firstCheck = observeShadowFirstCheck(shadowRoot, helpers);
     const after = new Map([...afterRaw].map(([file, content]) => [file, normalizedContent(content, shadowRoot, root)]));
     const changes = [];
     for (const file of [...new Set([...before.keys(), ...after.keys()])].sort()) {
@@ -546,7 +556,7 @@ export async function planStart(args, helpers) {
           restartRequired: true,
         })
       : null;
-    return {
+    return annotateApplyHonesty({
       version: 1,
       root,
       readOnly: true,
@@ -578,8 +588,67 @@ export async function planStart(args, helpers) {
         fs.existsSync(path.join(root, 'ark.config.json')),
       arkOrderCandidate: treeHasArkOrderCandidate(root),
       ...(runtimeActivation ? { runtimeActivation } : {}),
-    };
+    }, firstCheck);
   } finally {
     fs.rmSync(shadowRoot, { recursive: true, force: true });
   }
+}
+
+/**
+ * The shadow check's violations on root tool configs. Those are Ark-created:
+ * the plan placed a Rollup/Vite/ESLint config in a governed layer (#376).
+ * A check that did not exit with JSON does not invent a failure.
+ */
+function observeShadowFirstCheck(shadowRoot, helpers) {
+  if (!helpers?.arkCheck || !fs.existsSync(path.join(shadowRoot, 'ark.config.json'))) {
+    return { ok: null, arkCreated: [] };
+  }
+  const run = spawnSync(
+    process.execPath,
+    [helpers.arkCheck, '--root', shadowRoot, '--config', 'ark.config.json', '--json', '--no-cache'],
+    {
+      cwd: shadowRoot,
+      encoding: 'utf8',
+      maxBuffer: 16 * 1024 * 1024,
+      timeout: 120_000,
+    }
+  );
+  if (run.error || run.status === null) return { ok: null, arkCreated: [] };
+  let parsed = {};
+  try {
+    parsed = JSON.parse(run.stdout || '{}');
+  } catch {
+    return { ok: null, arkCreated: [] };
+  }
+  const violations = Array.isArray(parsed.violations) ? parsed.violations : [];
+  const arkCreated = violations
+    .filter((row) => isRootToolConfigRel(row?.file))
+    .map((row) => ({
+      file: String(row.file),
+      ruleId: String(row.ruleId ?? ''),
+      message: String(row.message ?? ''),
+    }));
+  return { ok: run.status === 0 && parsed.ok === true, arkCreated };
+}
+
+/**
+ * Apply may write the plan and still must not call coverage a clean result when
+ * the first check would fail on a root tool config Ark placed in a layer.
+ */
+export function annotateApplyHonesty(preview, firstCheck) {
+  const arkCreated = Array.isArray(firstCheck?.arkCreated) ? firstCheck.arkCreated : [];
+  const claimedClean = arkCreated.length === 0;
+  const unresolvedDecisions = [...(preview?.unresolvedDecisions ?? [])];
+  if (!claimedClean) {
+    const names = arkCreated.map((row) => `${row.file} (${row.ruleId})`).join(', ');
+    unresolvedDecisions.push(
+      `The first check would fail on ${names}. A root tool config was placed in a governed layer. Projected coverage is not a clean result.`
+    );
+  }
+  return {
+    ...preview,
+    firstCheck: { ok: firstCheck?.ok ?? null, arkCreated },
+    claimedClean,
+    unresolvedDecisions,
+  };
 }

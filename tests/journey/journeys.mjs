@@ -1092,7 +1092,7 @@ export const JOURNEY_CASES = Object.freeze({
     Object.freeze({
       id: '376-settings-workspace',
       owner: '#376',
-      expect: 'fail',
+      expect: 'pass',
       kind: 'rollpack-settings-workspace',
       note: 'A settings-only pnpm-workspace.yaml is not a multi-app workspace. start and --recommend choose library-sdk. Root rollup/vite/eslint configs are not DomainModel. The first check exits 0. Apply does not report clean coverage when that check would fail on a tool-config violation Ark created.',
       toolConfigs: Object.freeze(['eslint.config.mjs', 'rollup.config.mjs', 'vite.config.ts']),

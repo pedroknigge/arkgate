@@ -152,6 +152,7 @@ describe('#282 workspace manifest evidence', () => {
       'package.json',
       JSON.stringify({ name: 'mono', private: true, workspaces: { packages: ['packages/*'] } }, null, 2)
     );
+    write(root, 'packages/core/package.json', JSON.stringify({ name: '@scope/core' }));
     write(root, 'packages/core/src/index.ts', 'export const n = 1;\n');
     const signals = collectRepoShapeSignals(root);
     expect(signals.workspaces).toBe(true);
@@ -160,15 +161,16 @@ describe('#282 workspace manifest evidence', () => {
     expect(why.join(' ')).toMatch(/workspace monorepo/i);
   });
 
-  it('counts an empty-packages pnpm-workspace.yaml as workspace evidence', () => {
-    const root = tmp('ark-282-empty-yaml-');
+  it('does not treat a settings-only pnpm-workspace.yaml as a workspace (#376)', () => {
+    const root = tmp('ark-376-catalog-yaml-');
     write(root, 'package.json', JSON.stringify({ name: 'root', packageManager: 'pnpm@9.0.0' }));
     write(root, 'pnpm-workspace.yaml', '# catalog only\ncatalog:\n  typescript: 5.6.0\n');
     write(root, 'src/index.ts', 'export const n = 1;\n');
     const signals = collectRepoShapeSignals(root);
-    expect(signals.workspaces).toBe(true);
+    expect(signals.workspaces).toBe(false);
     const rec = buildArchitectureRecommendation(root);
-    expect(rec.why.join('\n')).not.toMatch(/not a workspace monorepo/i);
+    expect(rec.archetype).not.toBe('multi-app-workspace');
+    expect(rec.matchedSignals).not.toContain('workspaces');
   });
 
   it('--recommend --json on a pnpm workspace does not emit !workspaces or the stranger lie', () => {
