@@ -1,0 +1,80 @@
+{
+  "cases": [
+    {
+      "expect": "pass",
+      "got": {
+        "checkExit": 0,
+        "checkPassed": true,
+        "dualCount": 0,
+        "mentionsOverlap": false,
+        "primaryNextAction": "Make arkgate-check --strict-merge a required GitHub status, or write .ark/adoption-stance.json with stance: \"advisory-only\"",
+        "scriptLocal": true,
+        "violationCount": 0
+      },
+      "id": "373-fresh-apply",
+      "met": true,
+      "note": "start --apply on a pnpm workspace must leave check:architecture exiting 0. Doctor must not ask to fix overlapping layer globs. Coverage dual-membership is the count behind that sentence and must be 0. The script runs the installed ark-check, not a registry pin.",
+      "owner": "#373",
+      "status": "pass",
+      "want": {
+        "checkExit": 0,
+        "dualCount": 0,
+        "mentionsOverlap": false,
+        "scriptLocal": true
+      }
+    }
+  ],
+  "fixture": "globpack",
+  "schemaVersion": 1,
+  "steps": [
+    {
+      "command": "ark start --apply --json --yes --no-install --tools claude",
+      "exitCode": 0,
+      "filesDiff": {
+        ".ark/ci-merge-boundary.json": "added",
+        ".claude/settings.json": "added",
+        ".github/workflows/ark-check.yml": "added",
+        ".mcp.json": "added",
+        "AGENTS.md": "added",
+        "ark.config.json": "added",
+        "arkrules/ApplicationOrchestration.json": "added",
+        "arkrules/DomainModel.json": "added",
+        "arkrules/PersistenceAdapters.json": "added",
+        "arkrules/PresentationAdapters.json": "added",
+        "package.json": "modified"
+      },
+      "output": {
+        "checkScript": "pnpm --config.verify-deps-before-run=false exec ark-check --root . --config ark.config.json --strict-config",
+        "startError": null
+      }
+    },
+    {
+      "command": "npm run check:architecture",
+      "exitCode": 0,
+      "filesDiff": {},
+      "output": {
+        "headline": "✔ Ark check passed.",
+        "passed": true,
+        "violationCount": 0
+      }
+    },
+    {
+      "command": "ark-check --doctor --no-cache",
+      "exitCode": 0,
+      "filesDiff": {},
+      "output": {
+        "mentionsOverlap": false,
+        "primaryNextAction": "Make arkgate-check --strict-merge a required GitHub status, or write .ark/adoption-stance.json with stance: \"advisory-only\""
+      }
+    },
+    {
+      "command": "ark-check --coverage --json --no-cache",
+      "exitCode": 0,
+      "filesDiff": {},
+      "output": {
+        "dualCount": 0,
+        "dualSamples": []
+      }
+    }
+  ]
+}

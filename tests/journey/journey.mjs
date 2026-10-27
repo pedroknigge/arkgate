@@ -54,23 +54,34 @@ export async function journey(fixture, steps, options = {}) {
   fs.mkdirSync(project);
   fs.mkdirSync(home);
   fs.mkdirSync(tmp);
+  let restorePath;
   try {
     const candidate = resolveJourneyCandidate(options.candidate ?? {}, runRoot);
     copyFixtureFromIndex(fixture, project);
     commitFixture(project);
     const version = installCandidate(project, candidate.copied, fixture);
     const binFor = installedBins(project, version);
+    restorePath = activateDeclaredPackageManager(project, runRoot);
     let before = snapshotTree(project);
     const observedSteps = [];
     for (const step of steps) {
       const [bin, ...args] = step;
-      const result = spawnSync(process.execPath, [binFor.get(bin), ...args], {
-        cwd: project,
-        encoding: 'utf8',
-        timeout: STEP_TIMEOUT_MS,
-        maxBuffer: MAX_BUFFER,
-        env: stepEnv(home, tmp),
-      });
+      const scriptStep = isArchitectureScriptStep(step);
+      const result = scriptStep
+        ? spawnSync('npm', ['run', '--silent', 'check:architecture'], {
+            cwd: project,
+            encoding: 'utf8',
+            timeout: STEP_TIMEOUT_MS,
+            maxBuffer: MAX_BUFFER,
+            env: stepEnv(home, tmp),
+          })
+        : spawnSync(process.execPath, [binFor.get(bin), ...args], {
+            cwd: project,
+            encoding: 'utf8',
+            timeout: STEP_TIMEOUT_MS,
+            maxBuffer: MAX_BUFFER,
+            env: stepEnv(home, tmp),
+          });
       if (result.error || result.status === null) {
         throw new JourneyError(
           'spawn',
@@ -100,6 +111,7 @@ export async function journey(fixture, steps, options = {}) {
     if (cases) observation.cases = cases;
     return canonicalize(observation);
   } finally {
+    if (typeof restorePath === 'function') restorePath();
     if (options.keep) {
       process.stderr.write(`journey keep ${project}\n`);
     } else {
@@ -149,6 +161,15 @@ function assertFixtureName(fixture) {
   }
 }
 
+function isArchitectureScriptStep(step) {
+  return step.length === 3 && step[0] === 'npm' && step[1] === 'run' && step[2] === 'check:architecture';
+}
+
+/** Human doctor: the overlap sentence is Primary next action, not the JSON ranker. */
+function isHumanDoctorStep(step) {
+  return step[0] === 'ark-check' && step.includes('--doctor') && !step.includes('--json');
+}
+
 /** @param {readonly (readonly string[])[]} steps */
 function assertSteps(steps) {
   if (!Array.isArray(steps) || steps.length === 0) {
@@ -159,13 +180,15 @@ function assertSteps(steps) {
       throw new JourneyError('step', 'a step is [bin, ...args] and must include --json');
     }
     const [bin, ...args] = step;
-    if (!BINS.has(bin)) {
+    const scriptStep = isArchitectureScriptStep(step);
+    const humanDoctor = isHumanDoctorStep(step);
+    if (!scriptStep && !BINS.has(bin)) {
       throw new JourneyError('step', `step bin must be ark-check, arkgate-check, ark, or arkgate, got ${bin}`);
     }
-    if ((bin === 'ark' || bin === 'arkgate') && args[0] !== 'status' && args[0] !== 'start') {
+    if (!scriptStep && (bin === 'ark' || bin === 'arkgate') && args[0] !== 'status' && args[0] !== 'start') {
       throw new JourneyError('step', `${commandText(step)} may only run status or start`);
     }
-    if (!args.includes('--json')) {
+    if (!scriptStep && !humanDoctor && !args.includes('--json')) {
       throw new JourneyError('step', `${commandText(step)} must pass --json`);
     }
     let rootValue = false;
@@ -258,6 +281,51 @@ function commitFixture(project) {
       GIT_COMMITTER_DATE: '2026-01-01T00:00:00Z',
     }
   );
+}
+
+function commandOnPath(name) {
+  return spawnSync(name, ['--version'], { encoding: 'utf8' }).status === 0;
+}
+
+/**
+ * `npm run check:architecture` runs the emitted script (`pnpm exec ark-check`
+ * when package.json declares pnpm). The journey job does not install that
+ * manager, so the script exits 127 before ark-check starts. Install the
+ * declared manager into the run directory and put it on PATH for the steps.
+ */
+function activateDeclaredPackageManager(project, runRoot) {
+  const pkgPath = path.join(project, 'package.json');
+  if (!fs.existsSync(pkgPath)) return undefined;
+  let declared = '';
+  try {
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+    declared = typeof pkg.packageManager === 'string' ? pkg.packageManager.trim() : '';
+  } catch {
+    return undefined;
+  }
+  const at = declared.lastIndexOf('@');
+  if (at <= 0) return undefined;
+  const name = declared.slice(0, at);
+  const version = declared.slice(at + 1);
+  if ((name !== 'pnpm' && name !== 'yarn') || version.length === 0 || commandOnPath(name)) return undefined;
+  const prefix = path.join(runRoot, 'package-manager');
+  const installed = spawnSync(
+    'npm',
+    ['install', '--prefix', prefix, `${name}@${version}`, '--ignore-scripts', '--no-audit', '--no-fund'],
+    { encoding: 'utf8', timeout: INSTALL_TIMEOUT_MS, maxBuffer: MAX_BUFFER, env: process.env }
+  );
+  const bin = path.join(prefix, 'node_modules', '.bin', name);
+  if (installed.status !== 0 || !fs.existsSync(bin)) {
+    throw new JourneyError(
+      'setup',
+      `could not install ${declared} so the check script can run\n${installed.stderr || installed.stdout}`
+    );
+  }
+  const previous = process.env.PATH ?? '';
+  process.env.PATH = `${path.dirname(bin)}${path.delimiter}${previous}`;
+  return () => {
+    process.env.PATH = previous;
+  };
 }
 
 function installCandidate(project, tarball, fixture) {
@@ -394,6 +462,15 @@ function diffSnapshots(before, after) {
 }
 
 function projectStep(fixture, step, stdout, stderr, ctx) {
+  if (isArchitectureScriptStep(step) || isHumanDoctorStep(step)) {
+    const projected = projectPlainJourneyStep(fixture, step, stdout, stderr);
+    const normalized = applyPlaceholders(projected, ctx);
+    const residual = JSON.stringify(normalized);
+    if (residual.includes(ctx.project) || residual.includes(ctx.runRoot) || residual.includes(os.homedir())) {
+      throw new JourneyError('view', `${commandText(step)} observation still contains a machine path`);
+    }
+    return normalized;
+  }
   let parsed;
   try {
     parsed = JSON.parse(stdout);
@@ -442,10 +519,16 @@ function configRejectionView(stderr) {
   return { configRejected: true, message: text };
 }
 
+function projectPlainJourneyStep(fixture, step, stdout, stderr) {
+  if (fixture === 'globpack') return projectGlobpackPlain(step, stdout, stderr);
+  throw new JourneyError('view', `${commandText(step)} has no plain-text view`);
+}
+
 function projectFixture(fixture, step, parsed) {
   if (fixture === 'sortlint') return projectSortlint(step, parsed);
   if (fixture === 'rootnext') return projectRootnext(step, parsed);
   if (fixture === 'workpack') return projectWorkpack(step, parsed);
+  if (fixture === 'globpack') return projectGlobpack(step, parsed);
   if (CONFIG_FREE_FIXTURES.has(fixture)) return absentConfigView(step, parsed);
   const views = FIXTURE_VIEWS[fixture] ?? { check: checkView, doctor: doctorView };
   const project = step.includes('--doctor') ? views.doctor : views.check;
@@ -573,6 +656,75 @@ function workpackStartView(parsed) {
     archetype: typeof parsed?.analysis?.archetype === 'string' ? parsed.analysis.archetype : null,
     layers,
     startError: typeof parsed?.error === 'string' ? parsed.error : null,
+  };
+}
+
+function stripAnsi(text) {
+  return String(text ?? '').replace(/\u001b\[[0-9;]*m/g, '');
+}
+
+function projectGlobpack(step, parsed) {
+  if (step.includes('--coverage')) return projectGlobpackCoverage(parsed);
+  if (step.includes('start')) return projectGlobpackStart(parsed);
+  return checkView(parsed);
+}
+
+function projectGlobpackStart(parsed) {
+  const changes = Array.isArray(parsed?.changes) ? parsed.changes : [];
+  const pkgChange = changes.find((change) => change?.path === 'package.json') ?? null;
+  let checkScript = null;
+  if (pkgChange?.afterBase64) {
+    const pkg = JSON.parse(Buffer.from(pkgChange.afterBase64, 'base64').toString('utf8'));
+    const script = pkg?.scripts?.['check:architecture'];
+    checkScript = typeof script === 'string' ? script : null;
+  }
+  return {
+    checkScript,
+    startError: typeof parsed?.error === 'string' ? parsed.error : null,
+  };
+}
+
+function projectGlobpackCoverage(parsed) {
+  const dual = parsed?.coverage?.dualMembership ?? {};
+  const samples = Array.isArray(dual.samples) ? dual.samples : [];
+  const dualSamples = samples.map((sample) => ({
+    file: String(sample?.file ?? ''),
+    layers: Array.isArray(sample?.layers) ? sample.layers.map(String).sort() : [],
+    winner: sample?.winner == null ? null : String(sample.winner),
+  }));
+  dualSamples.sort(compareRows(['file']));
+  return {
+    dualCount: typeof dual.count === 'number' ? dual.count : null,
+    dualSamples,
+  };
+}
+
+function projectGlobpackPlain(step, stdout, stderr) {
+  const text = stripAnsi(`${stdout}\n${stderr}`);
+  if (isArchitectureScriptStep(step)) {
+    const passed = /Ark check passed/.test(text);
+    const countMatch = text.match(/(\d+) violation\(s\)/);
+    const headline =
+      text
+        .split('\n')
+        .map((line) => line.trim())
+        .find((line) => /Ark check passed|violation\(s\)|ERR_|error/i.test(line)) ?? null;
+    return {
+      headline,
+      passed,
+      violationCount: countMatch ? Number(countMatch[1]) : passed ? 0 : null,
+    };
+  }
+  const lines = text
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+  const index = lines.findIndex((line) => line === 'Primary next action');
+  const raw = index >= 0 ? lines[index + 1] ?? '' : '';
+  const primaryNextAction = raw.replace(/^\d+\.\s*/, '') || null;
+  return {
+    mentionsOverlap: /Fix overlapping layer globs/.test(primaryNextAction ?? ''),
+    primaryNextAction,
   };
 }
 
@@ -1373,6 +1525,36 @@ function packageGlobHas(patterns, needle) {
   return (patterns ?? []).some((pattern) => String(pattern).includes(needle));
 }
 
+function judgeGlobpack(spec, steps) {
+  const start = steps.find((entry) => entry.command.includes('start')) ?? null;
+  const script = steps.find((entry) => entry.command.startsWith('npm run check:architecture')) ?? null;
+  const doctor = steps.find((entry) => entry.command.includes('--doctor') && !entry.command.includes('--json')) ?? null;
+  const coverage = steps.find((entry) => entry.command.includes('--coverage')) ?? null;
+  const checkScript = start?.output?.checkScript ?? null;
+  const scriptLocal =
+    typeof checkScript === 'string' &&
+    /ark-check/.test(checkScript) &&
+    /--strict-config/.test(checkScript) &&
+    !/-p arkgate@/.test(checkScript);
+  const got = {
+    checkExit: script?.exitCode ?? null,
+    checkPassed: script?.output?.passed === true,
+    dualCount: coverage?.output?.dualCount ?? null,
+    mentionsOverlap: doctor?.output?.mentionsOverlap === true,
+    primaryNextAction: doctor?.output?.primaryNextAction ?? null,
+    scriptLocal,
+    violationCount: script?.output?.violationCount ?? null,
+  };
+  const met =
+    got.checkExit === spec.want.checkExit &&
+    got.checkPassed === true &&
+    got.violationCount === 0 &&
+    got.dualCount === spec.want.dualCount &&
+    got.mentionsOverlap === spec.want.mentionsOverlap &&
+    got.scriptLocal === spec.want.scriptLocal;
+  return { met, want: spec.want, got };
+}
+
 function judgeWorkpack(spec, steps) {
   const start = steps.find((entry) => entry.command.includes('start')) ?? null;
   const check = steps.find((entry) => !entry.command.includes('start')) ?? null;
@@ -1477,6 +1659,9 @@ function judgeSortlint(spec, steps) {
 function evaluateJourneyCase(spec, steps) {
   if (typeof spec.kind === 'string' && spec.kind.startsWith('workpack-')) {
     return caseResult(spec, judgeWorkpack(spec, steps));
+  }
+  if (typeof spec.kind === 'string' && spec.kind.startsWith('globpack-')) {
+    return caseResult(spec, judgeGlobpack(spec, steps));
   }
   if (typeof spec.kind === 'string' && spec.kind.startsWith('sortlint-')) {
     return caseResult(spec, judgeSortlint(spec, steps));

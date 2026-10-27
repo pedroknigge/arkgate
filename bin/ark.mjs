@@ -520,6 +520,9 @@ async function start(args) {
         }
       }
     }
+    if (!args.json) {
+      console.log(`Start apply complete. Next: ${arkCommand(args.root, 'ark-check', '--doctor')}`);
+    }
     return 0;
   }
   const root = args.root;

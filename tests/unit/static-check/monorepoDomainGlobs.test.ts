@@ -11,6 +11,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { ARCHITECTURE_PRESETS } from '../../../bin/lib/presets.mjs';
 import { sharedLibraryLayer } from '../../../bin/ark-shared.mjs';
+import { matchingLayersForRelativePath } from '../../../src/domain/layerMatch';
 import {
   collectDoctorNextActions,
   dualMatchNeedsGlobRepair,
@@ -139,7 +140,105 @@ describe('monorepo DomainModel globs (#269)', () => {
     const domain = domainPatterns(config);
     expect(domain).toContain('packages/schema/src/**');
     expect(domain).not.toEqual(expect.arrayContaining(['api/**', 'api/src/**', 'client/**', 'client/src/**']));
+    expect(applied.stdout).toMatch(/Start apply complete\. Next: .*ark-check --doctor/);
   }, 120_000);
+});
+
+describe('monorepo role roots do not overlap generic globs (#373)', () => {
+  function seedOverlapMonorepo(root: string) {
+    write(
+      root,
+      'package.json',
+      JSON.stringify({ name: 'globpack', private: true, packageManager: 'pnpm@10.33.4' })
+    );
+    write(root, 'pnpm-workspace.yaml', 'packages:\n  - "packages/*"\n  - "apps/*"\n');
+    write(root, 'packages/planner/package.json', JSON.stringify({ name: '@globpack/planner', private: true }));
+    write(root, 'packages/planner/src/plan.ts', 'export function plan(id: string) { return { id }; }\n');
+    write(
+      root,
+      'packages/planner/src/adapters/store/get.ts',
+      'import { plan } from "../../plan";\nexport function get(id: string) { return plan(id); }\n'
+    );
+    write(
+      root,
+      'packages/planner/src/pages/home.ts',
+      'import { get } from "../adapters/store/get";\nexport function home() { return get("home"); }\n'
+    );
+    write(
+      root,
+      'packages/schema/package.json',
+      JSON.stringify({ name: '@globpack/schema', type: 'module', exports: './src/index.ts' })
+    );
+    write(root, 'packages/schema/src/index.ts', 'export const schema = { name: "trip" };\n');
+    write(
+      root,
+      'packages/schema/src/adapters/parse/read.ts',
+      'import { schema } from "../../index";\nexport function read() { return schema; }\n'
+    );
+    write(
+      root,
+      'apps/site/package.json',
+      JSON.stringify({ name: '@globpack/site', private: true, dependencies: { react: '^19.0.0' } })
+    );
+    write(root, 'apps/site/tsconfig.json', JSON.stringify({ compilerOptions: { rootDir: 'og-image' } }));
+    write(root, 'apps/site/og-image/utils/font.ts', 'export const font = "sans";\n');
+    write(
+      root,
+      'apps/site/og-image/adapters/store.ts',
+      'import { font } from "../utils/font";\nexport function ogStore() { return font; }\n'
+    );
+    write(root, 'apps/site/pages/index.ts', 'import { font } from "../og-image/utils/font";\nexport function page() { return font; }\n');
+    write(root, 'apps/site/pages/api/health.ts', 'export function health() { return { ok: true }; }\n');
+    write(
+      root,
+      'apps/web/package.json',
+      JSON.stringify({ name: 'web', dependencies: { next: '16', react: '^19' } })
+    );
+    write(root, 'apps/web/src/app/page.tsx', 'export default function Page() { return null; }\n');
+    write(root, 'apps/web/src/app/api/health/route.ts', 'export function GET() { return null; }\n');
+  }
+
+  function layerNames(root: string, rel: string): string[] {
+    const config = ARCHITECTURE_PRESETS.monorepo([], root) as {
+      layers: Array<{ name: string; patterns?: string[]; exclude?: string[] }>;
+    };
+    return matchingLayersForRelativePath(rel, config.layers).map((hit) => hit.layer).sort();
+  }
+
+  it('maps each contested file to one layer and keeps Next API on Application', () => {
+    const root = tmpRoot('ark-373-globs-');
+    seedOverlapMonorepo(root);
+    expect(layerNames(root, 'packages/planner/src/adapters/store/get.ts')).toEqual([
+      'ApplicationOrchestration',
+    ]);
+    expect(layerNames(root, 'packages/planner/src/pages/home.ts')).toEqual(['ApplicationOrchestration']);
+    expect(layerNames(root, 'packages/planner/src/plan.ts')).toEqual(['ApplicationOrchestration']);
+    expect(layerNames(root, 'packages/planner/src/domain/trip.ts')).toEqual(['DomainModel']);
+    expect(layerNames(root, 'packages/schema/src/adapters/parse/read.ts')).toEqual(['DomainModel']);
+    expect(layerNames(root, 'apps/site/og-image/adapters/store.ts')).toEqual(['PresentationAdapters']);
+    expect(layerNames(root, 'apps/site/og-image/utils/font.ts')).toEqual(['PresentationAdapters']);
+    expect(layerNames(root, 'apps/site/pages/index.ts')).toEqual(['PresentationAdapters']);
+    expect(layerNames(root, 'apps/site/pages/api/health.ts')).toEqual(['ApplicationOrchestration']);
+    expect(layerNames(root, 'apps/web/src/app/page.tsx')).toEqual(['PresentationAdapters']);
+    expect(layerNames(root, 'apps/web/src/app/api/health/route.ts')).toEqual(['ApplicationOrchestration']);
+    expect(layerNames(root, 'tools/adapters/store.ts')).toEqual(['PersistenceAdapters']);
+
+    const config = ARCHITECTURE_PRESETS.monorepo([], root) as {
+      layers: Array<{ name: string; exclude?: string[] }>;
+    };
+    const exclude = (name: string) => config.layers.find((layer) => layer.name === name)?.exclude ?? [];
+    expect(exclude('DomainModel')).not.toEqual(expect.arrayContaining(['packages/planner/src/**']));
+    expect(exclude('ApplicationOrchestration')).toEqual(expect.arrayContaining(['packages/schema/src/**']));
+    expect(exclude('ApplicationOrchestration')).not.toEqual(
+      expect.arrayContaining(['packages/planner/src/**', 'apps/site/og-image/**', 'apps/web/src/**'])
+    );
+    expect(exclude('PresentationAdapters')).toEqual(
+      expect.arrayContaining(['packages/planner/src/**', '**/pages/api/**'])
+    );
+    expect(exclude('PersistenceAdapters')).toEqual(
+      expect.arrayContaining(['packages/planner/src/**', 'apps/site/og-image/**', 'packages/schema/src/**'])
+    );
+  });
 });
 
 describe('doctor overlapping-glob priority (#269)', () => {
@@ -309,5 +408,24 @@ describe('shared workspace package layers (#366)', () => {
     expect(patterns('ApplicationOrchestration')).toEqual(
       expect.arrayContaining(['packages/api/src/**', 'packages/validators/src/**'])
     );
+  });
+
+  it('keeps Expo and Start UI entries on Presentation so a Button import stays in-layer', () => {
+    const root = tmpRoot('ark-366-apps-');
+    write(root, 'package.json', JSON.stringify({ name: 'workpack', private: true, workspaces: ['apps/*', 'packages/*'] }));
+    write(root, 'pnpm-workspace.yaml', 'packages:\n  - "apps/*"\n  - "packages/*"\n');
+    write(root, 'apps/expo/package.json', JSON.stringify({ name: '@repo/expo', private: true, dependencies: { '@repo/ui': '*' } }));
+    write(root, 'apps/expo/app/index.tsx', 'import { Button } from "@repo/ui";\nexport function Home() { return Button; }\n');
+    write(root, 'apps/start/package.json', JSON.stringify({ name: '@repo/start', private: true, dependencies: { '@repo/ui': '*' } }));
+    write(root, 'apps/start/src/routes/index.tsx', 'import { Button } from "@repo/ui";\nexport function StartHome() { return Button; }\n');
+    write(root, 'packages/ui/package.json', JSON.stringify({ name: '@repo/ui', exports: './src/index.ts' }));
+    write(root, 'packages/ui/src/button.tsx', 'export function Button() { return null; }\n');
+    const config = ARCHITECTURE_PRESETS.monorepo([], root) as {
+      layers: Array<{ name: string; patterns?: string[]; exclude?: string[] }>;
+    };
+    const names = (rel: string) => matchingLayersForRelativePath(rel, config.layers).map((hit) => hit.layer).sort();
+    expect(names('apps/expo/app/index.tsx')).toEqual(['PresentationAdapters']);
+    expect(names('apps/start/src/routes/index.tsx')).toEqual(['PresentationAdapters']);
+    expect(names('packages/ui/src/button.tsx')).toEqual(['PresentationAdapters']);
   });
 });

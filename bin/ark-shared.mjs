@@ -1122,8 +1122,17 @@ export function sharedLibraryLayer(unit) {
   return 'DomainModel';
 }
 
+// apps/* with an app, pages, routes, components, or screens entry stay Presentation (#366).
+function appsShellUiEntry(unit, sourceRoot, root) {
+  const pkg = String(unit?.root ?? '').replace(/\\/g, '/');
+  if (!root || (unit?.role !== 'application' && unit?.role !== 'cli') || !/^apps(\/|$)/.test(pkg)) return false;
+  const abs = path.resolve(root, !sourceRoot || sourceRoot === '.' ? pkg : `${pkg}/${sourceRoot}`);
+  const names = ['app', 'pages', 'routes', 'components', 'screens'];
+  return names.includes(path.basename(abs).toLowerCase()) || names.some((name) => fs.existsSync(path.join(abs, name)));
+}
+
 /** Source root of an application unit that should land on Presentation, not Application. */
-export function isUiApplicationSource(unit, sourceRoot) {
+export function isUiApplicationSource(unit, sourceRoot, root) {
   if (!unit) return sourcePathLooksLikeUi(sourceRoot);
   const base =
     unit.root === '.'
@@ -1131,14 +1140,10 @@ export function isUiApplicationSource(unit, sourceRoot) {
       : sourceRoot === '.' || !sourceRoot
         ? unit.root
         : `${unit.root}/${sourceRoot}`;
-  return sourcePathLooksLikeUi(base) || isUiPackageUnit(unit);
+  return sourcePathLooksLikeUi(base) || isUiPackageUnit(unit) || appsShellUiEntry(unit, sourceRoot, root);
 }
 
-/**
- * Monorepo start globs for package units by role. `uiMode: 'ui'` keeps only UI
- * application roots (web/, frontend/, react/vue/svelte); `'not-ui'` drops them
- * so they are not parked on ApplicationOrchestration (#288).
- */
+/** Role source globs. `uiMode: 'ui'` keeps UI app roots; `'not-ui'` leaves them off Application (#288). */
 export function monorepoRoleSourceGlobs(units, roles, { root, domainScoped = false, uiMode } = {}) {
   if (!root || !Array.isArray(units)) return [];
   return units
@@ -1148,13 +1153,42 @@ export function monorepoRoleSourceGlobs(units, roles, { root, domainScoped = fal
         const base =
           unit.root === '.' ? sourceRoot : sourceRoot === '.' ? unit.root : `${unit.root}/${sourceRoot}`;
         if (!base || base === '.') return null;
-        const uiSource = isUiApplicationSource(unit, sourceRoot);
+        const uiSource = isUiApplicationSource(unit, sourceRoot, root);
         if (uiMode === 'ui' && !uiSource) return null;
         if (uiMode === 'not-ui' && uiSource) return null;
         return `${base}/**`;
       })
     )
     .filter((pattern) => pattern && (!domainScoped || /^(packages|libs)\//.test(pattern)));
+}
+
+const ROLE_DOMAIN_EXCLUDES = ['**/domain/**', '**/entities/**'];
+const PRESENTATION_API_EXCLUDES = ['**/app/api/**', '**/app/**/api/**', '**/pages/api/**', '**/pages/**/api/**'];
+
+function uniqueRoleGlobs(patterns) {
+  return [...new Set((patterns ?? []).filter((pattern) => typeof pattern === 'string' && pattern.length > 0))];
+}
+
+/** One layer per role root (#373). Domain stays open; Application stays open to presentation roots (#288). */
+export function sealMonorepoRoleRoots(layers, ownedByLayer) {
+  const owned = {};
+  for (const [name, patterns] of Object.entries(ownedByLayer)) owned[name] = uniqueRoleGlobs(patterns);
+  const all = uniqueRoleGlobs(Object.values(owned).flat());
+  const uiRoots = owned.PresentationAdapters ?? [];
+  for (const layer of layers) {
+    const mine = owned[layer.name] ?? [];
+    const exclude = [...(layer.exclude ?? [])];
+    const add = (pattern) => { if (!exclude.includes(pattern)) exclude.push(pattern); };
+    if (layer.name !== 'DomainModel') {
+      for (const glob of all) {
+        if (!(layer.name === 'ApplicationOrchestration' && uiRoots.includes(glob)) && !mine.includes(glob)) add(glob);
+      }
+      for (const pattern of ROLE_DOMAIN_EXCLUDES) add(pattern);
+    }
+    if (layer.name === 'PresentationAdapters') for (const pattern of PRESENTATION_API_EXCLUDES) add(pattern);
+    if (exclude.length > 0) layer.exclude = exclude;
+  }
+  return layers;
 }
 
 function entrypointDirs(pkg) {
