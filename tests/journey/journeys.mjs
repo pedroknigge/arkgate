@@ -77,12 +77,21 @@
  * a schema library, and a docs site (`og-image/`, `pages/api/`). After
  * `start --apply`, `check:architecture` exits 0 and doctor does not ask to
  * fix overlapping layer globs. The coverage dual-membership count is 0.
+ *
+ * #376 is `rollpack`: one library (`exports`, `src/index.ts`) whose
+ * `pnpm-workspace.yaml` has settings only (`allowBuilds`, no `packages:`).
+ * Root `rollup.config.mjs`, `vite.config.ts`, and `eslint.config.mjs` call
+ * `process`. `start` must choose `library-sdk`. Those configs must not land
+ * in DomainModel. The first check exits 0. Apply must not report clean
+ * coverage when that check would fail on a violation Ark created.
+ * `expect: 'fail'` records the claim while it is still red. When it holds,
+ * status becomes `unexpected-pass` until this file flips `expect` to `pass`.
  */
 const ABSENT_CONFIG_FIRST_STEP =
   'No ark.config.json found — run arkgate start (preview) then arkgate start --apply.';
 
 /** Fixtures that are a fresh tree: the journey refuses an ark.config.json here. */
-export const CONFIG_FREE_FIXTURES = new Set(['freshmini', 'freshmono', 'workpack', 'globpack']);
+export const CONFIG_FREE_FIXTURES = new Set(['freshmini', 'freshmono', 'workpack', 'globpack', 'rollpack']);
 
 /**
  * Fixtures whose package.json is the subject of the journey. The packed tarball
@@ -301,6 +310,11 @@ export const JOURNEYS = Object.freeze({
     Object.freeze(['ark', 'start', '--apply', '--json', '--yes', '--skip-package-manager', '--tools', 'claude']),
     Object.freeze(['ark-check', '--json', '--no-cache']),
     Object.freeze(['ark-check', '--doctor', '--json', '--no-cache']),
+  ]),
+  rollpack: Object.freeze([
+    Object.freeze(['ark', 'start', '--apply', '--json', '--yes', '--no-install', '--tools', 'claude']),
+    Object.freeze(['ark-check', '--recommend', '--json']),
+    Object.freeze(['ark-check', '--json', '--no-cache', '--strict-config']),
   ]),
 });
 
@@ -1071,6 +1085,22 @@ export const JOURNEY_CASES = Object.freeze({
         presentation: Object.freeze(['packages/ui/']),
         application: Object.freeze(['packages/api/', 'packages/validators/']),
         domainKeeps: Object.freeze(['packages/billing/']),
+      }),
+    }),
+  ]),
+  rollpack: Object.freeze([
+    Object.freeze({
+      id: '376-settings-workspace',
+      owner: '#376',
+      expect: 'pass',
+      kind: 'rollpack-settings-workspace',
+      note: 'A settings-only pnpm-workspace.yaml is not a multi-app workspace. start and --recommend choose library-sdk. Root rollup/vite/eslint configs are not DomainModel. The first check exits 0. Apply does not report clean coverage when that check would fail on a tool-config violation Ark created.',
+      toolConfigs: Object.freeze(['eslint.config.mjs', 'rollup.config.mjs', 'vite.config.ts']),
+      want: Object.freeze({
+        archetype: 'library-sdk',
+        checkExit: 0,
+        domainToolConfigs: Object.freeze([]),
+        honest: true,
       }),
     }),
   ]),

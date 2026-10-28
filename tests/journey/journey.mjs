@@ -11,6 +11,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { resolveCandidate } from '../../scripts/ts-compat-matrix.mjs';
+import { isScanExcludedRelative, layerForRelativePath } from '../../bin/ark-layer-match.mjs';
 import { CONFIG_FREE_FIXTURES, JOURNEY_CASES, JOURNEYS, MANIFEST_PRESERVING_FIXTURES } from './journeys.mjs';
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -529,6 +530,7 @@ function projectFixture(fixture, step, parsed) {
   if (fixture === 'rootnext') return projectRootnext(step, parsed);
   if (fixture === 'workpack') return projectWorkpack(step, parsed);
   if (fixture === 'globpack') return projectGlobpack(step, parsed);
+  if (fixture === 'rollpack') return projectRollpack(step, parsed);
   if (CONFIG_FREE_FIXTURES.has(fixture)) return absentConfigView(step, parsed);
   const views = FIXTURE_VIEWS[fixture] ?? { check: checkView, doctor: doctorView };
   const project = step.includes('--doctor') ? views.doctor : views.check;
@@ -661,6 +663,64 @@ function workpackStartView(parsed) {
 
 function stripAnsi(text) {
   return String(text ?? '').replace(/\u001b\[[0-9;]*m/g, '');
+}
+
+function projectRollpack(step, parsed) {
+  if (step.includes('start')) return rollpackStartView(parsed);
+  if (step.includes('--recommend')) return rollpackRecommendView(parsed);
+  return checkView(parsed);
+}
+
+function startPreviewBody(parsed) {
+  if (parsed?.error === 'start-shape-confidence-gate' && parsed.preview) return parsed.preview;
+  return parsed;
+}
+
+function configFromStart(parsed) {
+  const changes = Array.isArray(parsed?.changes) ? parsed.changes : [];
+  const configChange = changes.find((change) => change?.path === 'ark.config.json') ?? null;
+  if (!configChange?.afterBase64) return null;
+  try {
+    return JSON.parse(Buffer.from(configChange.afterBase64, 'base64').toString('utf8'));
+  } catch {
+    return null;
+  }
+}
+
+function claimedCleanFromStart(parsed) {
+  if (typeof parsed?.claimedClean === 'boolean') return parsed.claimedClean;
+  const percent = parsed?.projectedCoverage?.percent;
+  const decisions = Array.isArray(parsed?.unresolvedDecisions) ? parsed.unresolvedDecisions : [];
+  const warns = decisions.some((line) => /first check would fail/i.test(String(line)));
+  return typeof percent === 'number' && !warns;
+}
+
+function domainToolConfigs(config, files) {
+  if (!config) return [...files];
+  return files.filter((file) => {
+    if (isScanExcludedRelative(file, config)) return false;
+    return layerForRelativePath(file, config.layers) === 'DomainModel';
+  });
+}
+
+function rollpackStartView(parsed) {
+  const preview = startPreviewBody(parsed);
+  const config = configFromStart(preview);
+  const coverage = preview?.projectedCoverage ?? {};
+  const files = ['eslint.config.mjs', 'rollup.config.mjs', 'vite.config.ts'];
+  return {
+    archetype: typeof preview?.analysis?.archetype === 'string' ? preview.analysis.archetype : null,
+    claimedClean: claimedCleanFromStart(preview),
+    domainToolConfigs: domainToolConfigs(config, files),
+    projectedPercent: typeof coverage.percent === 'number' ? coverage.percent : null,
+    startError: typeof parsed?.error === 'string' ? parsed.error : null,
+  };
+}
+
+function rollpackRecommendView(parsed) {
+  return {
+    archetype: typeof parsed?.archetype === 'string' ? parsed.archetype : null,
+  };
 }
 
 function projectGlobpack(step, parsed) {
@@ -1601,6 +1661,43 @@ function judgeWorkpack(spec, steps) {
   return { met, want: spec.want, got };
 }
 
+function judgeRollpack(spec, steps) {
+  const start = steps.find((entry) => entry.command.includes('start')) ?? null;
+  const recommend = steps.find((entry) => entry.command.includes('--recommend')) ?? null;
+  const check =
+    steps.find((entry) => !entry.command.includes('start') && !entry.command.includes('--recommend')) ?? null;
+  const diagnostics = Array.isArray(check?.output?.diagnostics) ? check.output.diagnostics : [];
+  const toolFiles = Array.isArray(spec.toolConfigs) ? spec.toolConfigs : [];
+  const toolViolations = diagnostics
+    .filter((row) => toolFiles.includes(row.file))
+    .map((row) => ({ file: row.file, ruleId: row.ruleId }));
+  toolViolations.sort(compareRows(['file', 'ruleId']));
+  const domainToolConfigs = Array.isArray(start?.output?.domainToolConfigs)
+    ? [...start.output.domainToolConfigs].sort()
+    : null;
+  const claimedClean = start?.output?.claimedClean === true;
+  const honest = toolViolations.length > 0 ? claimedClean === false : claimedClean === true;
+  const got = {
+    archetype: start?.output?.archetype ?? null,
+    checkExit: check?.exitCode ?? null,
+    claimedClean,
+    domainToolConfigs,
+    honest,
+    projectedPercent: start?.output?.projectedPercent ?? null,
+    recommendArchetype: recommend?.output?.archetype ?? null,
+    startError: start?.output?.startError ?? null,
+    toolViolations,
+  };
+  const met =
+    got.archetype === spec.want.archetype &&
+    got.recommendArchetype === spec.want.archetype &&
+    got.checkExit === spec.want.checkExit &&
+    stable(got.domainToolConfigs) === stable([...(spec.want.domainToolConfigs ?? [])]) &&
+    got.honest === spec.want.honest &&
+    got.toolViolations.length === 0;
+  return { met, want: spec.want, got };
+}
+
 function keysAreSorted(keys) {
   for (let index = 1; index < keys.length; index += 1) {
     if (keys[index - 1] > keys[index]) return false;
@@ -1665,6 +1762,9 @@ function evaluateJourneyCase(spec, steps) {
   }
   if (typeof spec.kind === 'string' && spec.kind.startsWith('sortlint-')) {
     return caseResult(spec, judgeSortlint(spec, steps));
+  }
+  if (typeof spec.kind === 'string' && spec.kind.startsWith('rollpack-')) {
+    return caseResult(spec, judgeRollpack(spec, steps));
   }
   if (typeof spec.kind === 'string' && spec.kind.startsWith('rootnext-')) {
     return caseResult(spec, judgeRootnext(spec, steps));

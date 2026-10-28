@@ -19,9 +19,9 @@ import {
   arkCommand,
   execCommandParts,
   isPnpmWorkspaceRoot,
-  isNpmYarnWorkspaceRoot,
   packageInstallArgv,
   installDevHint,
+  readPnpmWorkspacePackageGlobs,
 } from './lib/package-manager.mjs';
 
 /**
@@ -58,6 +58,44 @@ export const DEFAULT_RULES = DEFAULT_ARK_CONFIG_RULES;
  * project via the layer's `forbiddenGlobals` in ark.config.json.
  */
 export const DEFAULT_DOMAIN_FORBIDDEN_GLOBALS = ['fetch', 'process', 'Date.now', 'Math.random'];
+
+/**
+ * Root build/tool configs (`rollup.config.mjs`, `vite.config.ts`, `eslint.config.mjs`).
+ * `*` does not cross `/`, so these never match a file under `src/` or a package.
+ * They are tooling, not domain code (#376).
+ */
+const ROOT_TOOL_CONFIG_GLOBS = Object.freeze([
+  '*.config.js',
+  '*.config.mjs',
+  '*.config.cjs',
+  '*.config.ts',
+  '*.config.mts',
+  '*.config.cts',
+  '*.config.jsx',
+  '*.config.tsx',
+]);
+
+const ROOT_TOOL_CONFIG_FILE = /^[^/]*\.config\.(?:js|mjs|cjs|ts|mts|cts|jsx|tsx)$/i;
+
+/** True for a repo-root tool config (`rollup.config.mjs`). Nested configs are not this. */
+export function isRootToolConfigRel(file) {
+  const rel = String(file ?? '')
+    .replace(/\\/g, '/')
+    .replace(/^\.\//, '');
+  return rel.length > 0 && !rel.includes('/') && ROOT_TOOL_CONFIG_FILE.test(rel);
+}
+
+function sealRootToolConfigs(config) {
+  config.exclude = [...new Set([...(config.exclude ?? []), ...ROOT_TOOL_CONFIG_GLOBS])];
+  for (const layer of config.layers ?? []) {
+    if (layer.name !== 'DomainModel') continue;
+    const exclude = [...(layer.exclude ?? [])];
+    for (const pattern of ROOT_TOOL_CONFIG_GLOBS) {
+      if (!exclude.includes(pattern)) exclude.push(pattern);
+    }
+    layer.exclude = exclude;
+  }
+}
 
 export function createElevenLayerConfig(options = {}) {
   const rootDir = options.rootDir ?? 'src';
@@ -526,6 +564,7 @@ export function applyFrameworkLayoutOverlays(config, root) {
       : 'library';
   }
 
+  sealRootToolConfigs(next);
   next.include = governedInclude(next, root);
   applyFrameworkLayerCaptions(next, signals);
   return withArkConfigMetadata(next);
@@ -783,20 +822,8 @@ export function detectWorkspaces(root) {
   const ws = Array.isArray(pkg?.workspaces) ? pkg.workspaces : pkg?.workspaces?.packages;
   if (Array.isArray(ws)) ws.forEach(addGlob);
 
-  const pnpmFile = path.join(root, 'pnpm-workspace.yaml');
-  if (fs.existsSync(pnpmFile)) {
-    let inPackages = false;
-    for (const line of fs.readFileSync(pnpmFile, 'utf8').split('\n')) {
-      const keyMatch = line.match(/^([A-Za-z0-9_-]+):/);
-      if (keyMatch) {
-        inPackages = keyMatch[1] === 'packages';
-        continue;
-      }
-      if (!inPackages) continue;
-      const item = line.match(/^\s+-\s*['"]?([^'"#]+?)['"]?\s*$/);
-      if (item) addGlob(item[1].trim());
-    }
-  }
+  const pnpmGlobs = readPnpmWorkspacePackageGlobs(root);
+  if (Array.isArray(pnpmGlobs)) pnpmGlobs.forEach(addGlob);
 
   // Rush monorepos often have no root package.json workspaces — only rush.json.
   const rushFile = path.join(root, 'rush.json');
@@ -855,6 +882,11 @@ export function detectWorkspaces(root) {
   }
 
   return [...dirs];
+}
+
+/** True when a declared workspace root actually contains a package. */
+function workspaceDirsHavePackages(root, dirs) {
+  return (dirs ?? []).some((dir) => dirContainsPackageJson(path.join(root, dir), 3));
 }
 
 /** True if dir (or a child within maxDepth) has a package.json — multi-package root signal. */
@@ -1347,12 +1379,12 @@ export function collectRepoShapeSignals(root) {
   const pkg = readPackageJson(root);
   const repoUnits = discoverRepoUnits(root);
   const workspaceDirs = detectWorkspaces(root);
-  // Manifest presence is workspace evidence even when globs parse to no dirs
-  // (pnpm-workspace.yaml without package.json#workspaces is the common case).
+  // A declared glob is a multi-app signal only when that root contains a package.
+  // A settings-only pnpm-workspace.yaml (no packages:) and globs that match no
+  // package directory are pnpm/npm config, not several apps (#376). rush.json
+  // and lerna.json stay markers. File presence alone is not.
   const workspaces =
-    workspaceDirs.length > 0 ||
-    isPnpmWorkspaceRoot(root) ||
-    isNpmYarnWorkspaceRoot(root) ||
+    workspaceDirsHavePackages(root, workspaceDirs) ||
     fs.existsSync(path.join(root, 'rush.json')) ||
     fs.existsSync(path.join(root, 'lerna.json'));
   // Include frontend/web/client — common Next monorepo app folders.
@@ -2035,12 +2067,14 @@ export function resolveStartInitPreset(root, rec = {}, archetype = rec.archetype
   const tsPackages = detectTsPackageRoots(root);
   const nestedTsPackages = tsPackages.filter((entry) => entry !== '.');
   const workspaces = detectWorkspaces(root);
+  // Phantom globs (`packages: ['missing/*']`) and a settings-only
+  // pnpm-workspace.yaml do not make a single library a monorepo (#376).
+  // A directory that exists still does — init keeps declared include roots.
   const looksLikeMonorepo =
-    includeRoots.length > 0 ||
+    workspaceDirsHavePackages(root, workspaces) ||
+    includeRoots.some((entry) => entry !== '.' && fs.existsSync(path.join(root, entry))) ||
     nestedTsPackages.length > 0 ||
-    workspaces.length > 0 ||
     fs.existsSync(path.join(root, 'rush.json')) ||
-    fs.existsSync(path.join(root, 'pnpm-workspace.yaml')) ||
     fs.existsSync(path.join(root, 'lerna.json')) ||
     fs.existsSync(path.join(root, 'apps')) ||
     fs.existsSync(path.join(root, 'packages'));

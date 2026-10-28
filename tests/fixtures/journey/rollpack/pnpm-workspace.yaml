@@ -1,0 +1,3 @@
+# pnpm 10 settings for a single package. No packages: key — not a workspace.
+allowBuilds:
+  esbuild: false
