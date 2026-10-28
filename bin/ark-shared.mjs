@@ -64,7 +64,7 @@ export const DEFAULT_DOMAIN_FORBIDDEN_GLOBALS = ['fetch', 'process', 'Date.now',
  * `*` does not cross `/`, so these never match a file under `src/` or a package.
  * They are tooling, not domain code (#376).
  */
-export const ROOT_TOOL_CONFIG_GLOBS = Object.freeze([
+const ROOT_TOOL_CONFIG_GLOBS = Object.freeze([
   '*.config.js',
   '*.config.mjs',
   '*.config.cjs',

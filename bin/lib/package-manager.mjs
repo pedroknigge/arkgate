@@ -216,7 +216,7 @@ export function isPnpmWorkspaceRoot(root) {
 /**
  * True when package.json declares npm/yarn workspaces (yarn classic needs `-W` at root).
  */
-export function isNpmYarnWorkspaceRoot(root) {
+function isNpmYarnWorkspaceRoot(root) {
   const pkg = readPackageJson(root);
   if (!pkg) return false;
   const ws = pkg.workspaces;
