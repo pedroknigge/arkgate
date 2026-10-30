@@ -13,6 +13,7 @@ import {
   DEFAULT_INTENT_PREFIXES,
   monorepoRoleSourceGlobs,
   resolveIncludeRoots,
+  scopePagesRouterHelpers,
   sealMonorepoRoleRoots,
   sharedLibraryLayer,
 } from '../ark-shared.mjs';
@@ -724,6 +725,7 @@ export const ARCHITECTURE_PRESETS = {
       PresentationAdapters: [...uiApplicationSourcePatterns, ...presentationLibraryGlobs],
       PersistenceAdapters: persistenceLibraryGlobs,
     });
+    scopePagesRouterHelpers(sealed.layers, root, uiApplicationSourcePatterns);
     return sealed;
   },
 

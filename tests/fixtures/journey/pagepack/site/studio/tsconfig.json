@@ -1,0 +1,8 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "jsx": "preserve",
+    "target": "ES2022"
+  },
+  "include": ["pages", "utils", "lib"]
+}
