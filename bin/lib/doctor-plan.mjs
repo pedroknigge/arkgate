@@ -680,7 +680,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
         : rulesUnderContract?.active === true || arkRun?.active === true || doctorAdvisories.arkOrder?.active === true
           ? { active: true, extraMergeTeeth: arkRun?.extraMergeTeeth === true || doctorAdvisories.arkOrder?.extraMergeTeeth === true }
           : null,
-      primaryNextAction: preferredDoctorPrimaryNextAction({ adopted, packageInstalled, selfHost, packageVersionTruth, postGreenPath, dualTruthNext, configMissing, analysisComplete, completenessReasons: options.completenessReasons, root }),
+      primaryNextAction: preferredDoctorPrimaryNextAction({ adopted, packageInstalled, selfHost, packageVersionTruth, postGreenPath, dualTruthNext, configMissing, analysisComplete, completenessReasons: options.completenessReasons, blockingCount: blockingActive, root }),
       operatingMode,
       packageInstalled,
       selfHost,
@@ -907,7 +907,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     cov,
     packageVersionTruth,
     dualTruthNext, packageInstalled, selfHost,
-    activeCount,
+    activeCount, blockingCount: blockingActive,
     writePath,
     gatesMissing,
     skillGaps,
@@ -961,7 +961,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     pureLayerOptIn,
     summary,
     suppressed,
-    activeCount,
+    activeCount, blockingActive,
     skillGaps,
     agentHomeGaps,
     warnings: options.warnings,
