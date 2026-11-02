@@ -115,16 +115,24 @@
       "phaseBroke": "check",
       "findingKind": "contain",
       "arkgateVersion": "4.8.29"
+    },
+    {
+      "iso": "2026-10-30T21:20:00.000Z",
+      "ok": false,
+      "durationSec": 74,
+      "phaseBroke": "check",
+      "findingKind": "contain",
+      "arkgateVersion": "4.8.30"
     }
   ],
   "aggregates": {
-    "okRate": 0.75,
-    "durationP50Sec": 219.0,
-    "runs": 12,
+    "okRate": 0.692,
+    "durationP50Sec": 215.0,
+    "runs": 13,
     "phaseBrokeDistribution": {
       "null": 3,
       "start-apply": 2,
-      "check": 3,
+      "check": 4,
       "recommend": 1,
       "install": 1,
       "doctor": 1,
@@ -133,9 +141,9 @@
     "findingKindDistribution": {
       "UX": 7,
       "install": 1,
-      "contain": 3,
+      "contain": 4,
       "guide": 1
     },
-    "updatedAt": "2026-10-27T21:20:00.000Z"
+    "updatedAt": "2026-10-30T21:20:00.000Z"
   }
 }
