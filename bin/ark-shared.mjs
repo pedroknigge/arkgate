@@ -214,15 +214,7 @@ function applyFrameworkLayerCaptions(config, signals) {
   }
 }
 
-/**
- * Framework-aware layout overlays. Detection uses collectRepoShapeSignals (deps + filenames).
- * Pure additive for patterns: never removes existing preset globs. Goal: Nest/Next/express
- * starters reach meaningful governed% under hexagonal/layered without a hand-written adopt pass.
- * Layer captions are the one replace: Next-flavored copy only when Next is present;
- * library-native copy on library-only / library-package monorepos. Generic preset
- * captions stay when neither applies.
- */
-
+/** Add Nest/Next/express globs. Does not remove preset patterns. */
 export function patternIncludeEntry(pattern) {
   let norm = String(pattern ?? '').replace(/\\/g, '/').replace(/^\.\//, '');
   if (!norm || norm[0] === '/') return null;
@@ -570,23 +562,7 @@ export function applyFrameworkLayoutOverlays(config, root) {
   return withArkConfigMetadata(next);
 }
 
-/**
- * Operating mode for the co-pilot surfaces (not "who the user is"):
- *   suggest | adapt | enforce
- *
- * ENFORCE means gates can honestly protect the tree. High governed% alone is not
- * enough when core layers are empty (presentation bag false-green) or core layers
- * with real files remain optional: true.
- *
- * @param {object} opts
- * @param {number|null} [opts.governedPercent]
- * @param {boolean|null} [opts.planMet]
- * @param {boolean} [opts.mature]
- * @param {number|null} [opts.totalFiles]
- * @param {string[]} [opts.emptyLayers] layer names with zero matched files
- * @param {number} [opts.coreOptionalWithFiles] count of core layers that have files but optional:true
- * @param {number|null} [opts.presentationShare] PresentationAdapters file share 0..1 when known
- */
+/** suggest | adapt | enforce. Empty scope, optional core layers, or a presentation bag stay adapt. */
 export function resolveOperatingMode({
   governedPercent = null,
   planMet = null,
@@ -634,14 +610,7 @@ export {
   isScanExcludedRelative,
 } from './ark-layer-match.mjs';
 
-/**
- * Resolve an intent name to its layer using the SAME semantics as
- * ArchitectureProfile.resolveLayer in src/kernel/layers/ArchitectureProfile.ts (which the
- * ark-mcp write-gate uses via createArchitectureProfile): every prefix is normalized to a
- * trailing '.', and the layer whose matching prefix is longest wins — regardless of config
- * declaration order. Keeping ark-check on these exact rules is what makes the CI gate and
- * the write-path gate classify identically. `layers` is an array of { name, prefixes }.
- */
+/** Longest intent prefix wins, the same rule the write-path gate uses. */
 export function resolveIntentLayer(intent, layers) {
   return resolveConfiguredIntentLayer(intent, layers);
 }
@@ -660,16 +629,7 @@ export {
   enrichViolationWithFixClass,
 } from './lib/remediation.mjs';
 
-/**
- * Normalize a required/imported TypeScript module for ark-check's host.
- * TS 5/6 expose `sys` and the AST helpers used by the scanner on the root export. Early TS 7 /
- * some ESM interop shapes
- * may nest under `.default` or omit `sys` — those are unusable for resolve/scan
- * and must fall through to a JS-API-compatible TypeScript (Ark's own or 5/6).
- *
- * @param {unknown} mod
- * @returns {object | null} usable typescript namespace, or null
- */
+/** TypeScript module with `sys`, or null when the import cannot scan. */
 export function usableTypescript(mod) {
   if (!mod || typeof mod !== 'object') return null;
   // Prefer root; if root has no sys but default does (CJS/ESM interop), use default.
@@ -1223,6 +1183,31 @@ export function sealMonorepoRoleRoots(layers, ownedByLayer) {
   return layers;
 }
 
+/** pages/api stays Application; sibling utils/lib inside that app root do too (#380). */
+export function scopePagesRouterHelpers(layers, root, presentationRoots) {
+  const globs = [];
+  for (const glob of presentationRoots ?? []) {
+    if (!root || typeof glob !== 'string' || !glob.endsWith('/**')) continue;
+    const base = glob.slice(0, -3);
+    if (!base || /[*?]/.test(base)) continue;
+    const hasApi = fs.statSync(path.join(root, base, 'pages', 'api'), { throwIfNoEntry: false })?.isDirectory();
+    if (!hasApi) continue;
+    for (const name of ['utils', 'lib']) {
+      const dir = path.join(root, base, name);
+      if (fs.statSync(dir, { throwIfNoEntry: false })?.isDirectory()) globs.push(`${base}/${name}/**`);
+    }
+  }
+  if (globs.length === 0) return layers;
+  for (const layer of layers) {
+    if (layer.name === 'ApplicationOrchestration') {
+      layer.patterns = [...new Set([...(layer.patterns ?? []), ...globs])];
+    } else if (layer.name === 'PresentationAdapters') {
+      layer.exclude = [...new Set([...(layer.exclude ?? []), ...globs])];
+    }
+  }
+  return layers;
+}
+
 function entrypointDirs(pkg) {
   const values = [];
   const add = (value) => {
@@ -1743,20 +1728,7 @@ function resolvePreset(archetypeDef, signals) {
   return archetypeDef.preset;
 }
 
-/**
- * Refuse start --apply when shape is too uncertain (NEW-START-LOW-CONFIDENCE-SHAPE).
- * Applies to **all** apply paths (not only --yes). Explicit --archetype / --preset / --force bypasses.
- * Fail-closed when confidence or projected coverage metrics are null/unknown.
- *
- * Rules:
- * - empty greenfield (totalFiles === 0) → allow (scaffold only; nothing to mis-classify yet)
- * - null confidence or null projected coverage → refuse (fail-closed)
- * - projected coverage < 50% → refuse (wrong include / vacuum)
- * - confidence < 0.6 AND projected coverage < 80% → refuse (weak shape + incomplete cover)
- * - confidence < 0.6 with coverage ≥ 80% → allow (thin-library / capped confidence but contract covers)
- *
- * @returns {{ ok: true } | { ok: false, reasons: string[], confidence: number|null, projectedCoverage: number|null }}
- */
+/** Refuse apply when confidence or projected coverage is too weak. --force and an explicit shape bypass. */
 export function evaluateStartShapeConfidenceGate({
   confidence,
   projectedCoveragePercent,

@@ -16,6 +16,7 @@ import {
   collectDoctorNextActions,
   dualMatchNeedsGlobRepair,
   overlappingGlobNextAction,
+  preferredDoctorPrimaryNextAction,
 } from '../../../bin/lib/doctor-next-actions.mjs';
 import { ADOPTED_NOT, NOT_ADOPTED_NEXT_ACTION } from '../../../bin/lib/adoption-stance.mjs';
 
@@ -427,5 +428,96 @@ describe('shared workspace package layers (#366)', () => {
     expect(names('apps/expo/app/index.tsx')).toEqual(['PresentationAdapters']);
     expect(names('apps/start/src/routes/index.tsx')).toEqual(['PresentationAdapters']);
     expect(names('packages/ui/src/button.tsx')).toEqual(['PresentationAdapters']);
+  });
+});
+
+describe('nested pages-router helpers (#380)', () => {
+  const fixture = path.join(REPO, 'tests/fixtures/journey/pagepack');
+
+  it('keeps pages/api and sibling utils/lib on Application, and pages on Presentation', () => {
+    const config = ARCHITECTURE_PRESETS.monorepo([], fixture) as {
+      layers: Array<{ name: string; patterns?: string[]; exclude?: string[] }>;
+    };
+    const names = (rel: string) =>
+      matchingLayersForRelativePath(rel, config.layers).map((hit) => hit.layer).sort();
+    expect(names('site/studio/pages/api/blog.ts')).toEqual(['ApplicationOrchestration']);
+    expect(names('site/studio/utils/fetchFont.ts')).toEqual(['ApplicationOrchestration']);
+    expect(names('site/studio/utils/params.ts')).toEqual(['ApplicationOrchestration']);
+    expect(names('site/studio/utils/env.ts')).toEqual(['ApplicationOrchestration']);
+    expect(names('site/studio/lib/parse.ts')).toEqual(['ApplicationOrchestration']);
+    expect(names('site/studio/pages/index.ts')).toEqual(['PresentationAdapters']);
+    expect(names('site/src/mark.ts')).toEqual(['ApplicationOrchestration']);
+    const presentation = config.layers.find((layer) => layer.name === 'PresentationAdapters');
+    expect(presentation?.patterns ?? []).toEqual(expect.arrayContaining(['site/studio/**']));
+    expect(presentation?.exclude ?? []).toEqual(
+      expect.arrayContaining(['site/studio/utils/**', 'site/studio/lib/**'])
+    );
+  });
+
+  it('does not rank strict-merge first while blocking violations remain', () => {
+    const actions = collectDoctorNextActions({
+      ...nextActionsCtx({ suggestions: [] }),
+      activeCount: 7,
+      blockingCount: 7,
+    });
+    expect(actions[0]).toMatch(/non-baselined violations/);
+    expect(actions.some((action) => /strict-merge/i.test(String(action)))).toBe(false);
+    const primary = preferredDoctorPrimaryNextAction({
+      adopted: ADOPTED_NOT,
+      analysisComplete: true,
+      blockingCount: 7,
+      root: '/tmp',
+    });
+    expect(primary).toMatch(/non-baselined violations/);
+    expect(primary).not.toMatch(/strict-merge/);
+  });
+
+  it('short doctor names failing violations and does not require strict-merge while the check is red', () => {
+    const root = tmpRoot('ark-380-doctor-');
+    write(root, 'package.json', JSON.stringify({ name: 'pagepack-red', private: true }));
+    write(
+      root,
+      'site/studio/utils/fetchFont.ts',
+      'export function fetchFont(name: string) { return name; }\n'
+    );
+    write(
+      root,
+      'site/studio/pages/api/blog.ts',
+      'import { fetchFont } from "../../utils/fetchFont";\nexport function blog() { return fetchFont("serif"); }\n'
+    );
+    write(
+      root,
+      'ark.config.json',
+      JSON.stringify(
+        {
+          include: ['site/studio'],
+          layers: [
+            { name: 'ApplicationOrchestration', patterns: ['**/pages/api/**'] },
+            {
+              name: 'PresentationAdapters',
+              patterns: ['site/studio/**'],
+              exclude: ['**/pages/api/**'],
+            },
+          ],
+          rules: [{ from: 'ApplicationOrchestration', to: 'PresentationAdapters', allowed: false }],
+        },
+        null,
+        2
+      )
+    );
+    const doctor = spawnSync(
+      process.execPath,
+      [path.join(REPO, 'bin/ark-check.mjs'), '--root', root, '--doctor', '--no-cache'],
+      { cwd: root, encoding: 'utf8' }
+    );
+    const text = `${doctor.stdout}\n${doctor.stderr}`.replace(/\u001b\[[0-9;]*m/g, '');
+    expect(doctor.status, text).toBe(0);
+    expect(text).toMatch(/1 failing violation/);
+    expect(text).toMatch(/ApplicationOrchestration → PresentationAdapters/);
+    const lines = text.split('\n').map((line) => line.trim());
+    const primary = lines[lines.findIndex((line) => line === 'Primary next action') + 1] ?? '';
+    expect(primary).toMatch(/non-baselined violations/);
+    expect(primary).not.toMatch(/strict-merge/);
+    expect(text).not.toMatch(/Make arkgate-check --strict-merge/);
   });
 });

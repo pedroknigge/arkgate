@@ -86,12 +86,18 @@
  * coverage when that check would fail on a violation Ark created.
  * `expect: 'fail'` records the claim while it is still red. When it holds,
  * status becomes `unexpected-pass` until this file flips `expect` to `pass`.
+ *
+ * #380 is `pagepack`: a pnpm workspace with `packages/*`, a parent `site`
+ * package, and a nested pages-router app `site/studio`. `pages/api` imports
+ * sibling `utils/` and `lib/`. After `start --apply`, `check:architecture`
+ * exits 0. Short `--doctor` names failing violations and does not recommend
+ * requiring `--strict-merge` while that check is red.
  */
 const ABSENT_CONFIG_FIRST_STEP =
   'No ark.config.json found — run arkgate start (preview) then arkgate start --apply.';
 
 /** Fixtures that are a fresh tree: the journey refuses an ark.config.json here. */
-export const CONFIG_FREE_FIXTURES = new Set(['freshmini', 'freshmono', 'workpack', 'globpack', 'rollpack']);
+export const CONFIG_FREE_FIXTURES = new Set(['freshmini', 'freshmono', 'workpack', 'globpack', 'rollpack', 'pagepack']);
 
 /**
  * Fixtures whose package.json is the subject of the journey. The packed tarball
@@ -315,6 +321,12 @@ export const JOURNEYS = Object.freeze({
     Object.freeze(['ark', 'start', '--apply', '--json', '--yes', '--no-install', '--tools', 'claude']),
     Object.freeze(['ark-check', '--recommend', '--json']),
     Object.freeze(['ark-check', '--json', '--no-cache', '--strict-config']),
+  ]),
+  pagepack: Object.freeze([
+    Object.freeze(['ark', 'start', '--apply', '--json', '--yes', '--no-install', '--tools', 'claude']),
+    Object.freeze(['npm', 'run', 'check:architecture']),
+    Object.freeze(['ark-check', '--doctor', '--no-cache']),
+    Object.freeze(['ark-check', '--coverage', '--json', '--no-cache']),
   ]),
 });
 
@@ -1085,6 +1097,21 @@ export const JOURNEY_CASES = Object.freeze({
         presentation: Object.freeze(['packages/ui/']),
         application: Object.freeze(['packages/api/', 'packages/validators/']),
         domainKeeps: Object.freeze(['packages/billing/']),
+      }),
+    }),
+  ]),
+  pagepack: Object.freeze([
+    Object.freeze({
+      id: '380-nested-pages-router',
+      owner: '#380',
+      expect: 'pass',
+      kind: 'pagepack-fresh-apply',
+      note: 'start --apply on a nested pages-router app must leave check:architecture exiting 0. pages/api may import sibling utils and lib. Short doctor names failing violations and does not recommend requiring --strict-merge while that check is red. Coverage dual-membership is 0.',
+      want: Object.freeze({
+        checkExit: 0,
+        violationCount: 0,
+        dualCount: 0,
+        failingViolations: 0,
       }),
     }),
   ]),

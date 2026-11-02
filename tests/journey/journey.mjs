@@ -522,6 +522,7 @@ function configRejectionView(stderr) {
 
 function projectPlainJourneyStep(fixture, step, stdout, stderr) {
   if (fixture === 'globpack') return projectGlobpackPlain(step, stdout, stderr);
+  if (fixture === 'pagepack') return projectPagepackPlain(step, stdout, stderr);
   throw new JourneyError('view', `${commandText(step)} has no plain-text view`);
 }
 
@@ -530,6 +531,7 @@ function projectFixture(fixture, step, parsed) {
   if (fixture === 'rootnext') return projectRootnext(step, parsed);
   if (fixture === 'workpack') return projectWorkpack(step, parsed);
   if (fixture === 'globpack') return projectGlobpack(step, parsed);
+  if (fixture === 'pagepack') return projectGlobpack(step, parsed);
   if (fixture === 'rollpack') return projectRollpack(step, parsed);
   if (CONFIG_FREE_FIXTURES.has(fixture)) return absentConfigView(step, parsed);
   const views = FIXTURE_VIEWS[fixture] ?? { check: checkView, doctor: doctorView };
@@ -756,6 +758,18 @@ function projectGlobpackCoverage(parsed) {
   return {
     dualCount: typeof dual.count === 'number' ? dual.count : null,
     dualSamples,
+  };
+}
+
+function projectPagepackPlain(step, stdout, stderr) {
+  const base = projectGlobpackPlain(step, stdout, stderr);
+  if (isArchitectureScriptStep(step)) return base;
+  const text = stripAnsi(`${stdout}\n${stderr}`);
+  const match = text.match(/(\d+) failing violation/);
+  return {
+    ...base,
+    failingViolations: match ? Number(match[1]) : 0,
+    recommendsStrictMerge: /strict-merge/i.test(String(base.primaryNextAction ?? '')),
   };
 }
 
@@ -1585,6 +1599,30 @@ function packageGlobHas(patterns, needle) {
   return (patterns ?? []).some((pattern) => String(pattern).includes(needle));
 }
 
+function judgePagepack(spec, steps) {
+  const script = steps.find((entry) => entry.command.startsWith('npm run check:architecture')) ?? null;
+  const doctor = steps.find((entry) => entry.command.includes('--doctor') && !entry.command.includes('--json')) ?? null;
+  const coverage = steps.find((entry) => entry.command.includes('--coverage')) ?? null;
+  const got = {
+    checkExit: script?.exitCode ?? null,
+    checkPassed: script?.output?.passed === true,
+    dualCount: coverage?.output?.dualCount ?? null,
+    failingViolations: doctor?.output?.failingViolations ?? null,
+    primaryNextAction: doctor?.output?.primaryNextAction ?? null,
+    recommendsStrictMerge: doctor?.output?.recommendsStrictMerge === true,
+    violationCount: script?.output?.violationCount ?? null,
+  };
+  const red = got.checkExit !== 0 || (got.violationCount ?? 0) > 0;
+  const met =
+    got.checkExit === spec.want.checkExit &&
+    got.checkPassed === true &&
+    got.violationCount === spec.want.violationCount &&
+    got.dualCount === spec.want.dualCount &&
+    got.failingViolations === spec.want.failingViolations &&
+    (red ? got.recommendsStrictMerge === false : true);
+  return { met, want: spec.want, got };
+}
+
 function judgeGlobpack(spec, steps) {
   const start = steps.find((entry) => entry.command.includes('start')) ?? null;
   const script = steps.find((entry) => entry.command.startsWith('npm run check:architecture')) ?? null;
@@ -1759,6 +1797,9 @@ function evaluateJourneyCase(spec, steps) {
   }
   if (typeof spec.kind === 'string' && spec.kind.startsWith('globpack-')) {
     return caseResult(spec, judgeGlobpack(spec, steps));
+  }
+  if (typeof spec.kind === 'string' && spec.kind.startsWith('pagepack-')) {
+    return caseResult(spec, judgePagepack(spec, steps));
   }
   if (typeof spec.kind === 'string' && spec.kind.startsWith('sortlint-')) {
     return caseResult(spec, judgeSortlint(spec, steps));

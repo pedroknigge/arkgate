@@ -119,6 +119,12 @@ export function printDoctorCompactHuman(view) {
   if (isDoctorHealthyNothingToDo(designFitness, uniqueActions, adopted)) {
     printHealthyHeadline(view, color);
   } else {
+    const failing = Number(view.blockingActive) || 0;
+    if (failing > 0) {
+      const topEdge = view.summary?.edges?.[0];
+      const edgeNote = topEdge?.edge ? ` (${topEdge.count} ${topEdge.edge})` : '';
+      line(bad, `${failing} failing violation${failing === 1 ? '' : 's'}${edgeNote} — not baselined`);
+    }
     console.log(color.bold('Primary next action'));
     console.log(`  1. ${uniqueActions[0]}`);
   }
@@ -172,20 +178,12 @@ export function printDoctorCompactHuman(view) {
     { line, warn, color }
   );
 
-  if (violations.length === 0) {
-    if (!analysisComplete) {
-      console.log('');
-      line(
-        warn,
-        'No reported violations — contract compliance is not verified until analysis is complete'
-      );
-    } else if (emptyScope || cov.governed.percent < 50) {
-      console.log('');
-      line(
-        warn,
-        'No active violations — coverage is still thin, so green is not yet honest enforcement'
-      );
-    }
+  if (violations.length === 0 && !analysisComplete) {
+    console.log('');
+    line(warn, 'No reported violations — contract compliance is not verified until analysis is complete');
+  } else if (violations.length === 0 && (emptyScope || cov.governed.percent < 50)) {
+    console.log('');
+    line(warn, 'No active violations — coverage is still thin, so green is not yet honest enforcement');
   }
 
   printSharedImportsSliceBridgeList(view.warnings);

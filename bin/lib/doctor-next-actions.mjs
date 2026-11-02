@@ -50,15 +50,25 @@ export function preferredDoctorPrimaryNextAction({
   configMissing,
   analysisComplete,
   completenessReasons,
+  blockingCount,
   root,
 } = {}) {
   if (configMissing === true) return ABSENT_CONFIG_FIRST_STEP;
   if (analysisComplete === false) return incompleteAnalysisNextAction(completenessReasons, root);
-  return (
+  const unresolved =
     packageUnresolvedNextAction({ packageInstalled, selfHost, packageVersionTruth }) ||
-    packagePinAbsentPrimaryAction({ selfHost, packageVersionTruth }) ||
-    (adopted === 'not-adopted' ? NOT_ADOPTED_NEXT_ACTION : postGreenPath?.action ?? dualTruthNext ?? null)
-  );
+    packagePinAbsentPrimaryAction({ selfHost, packageVersionTruth });
+  if (unresolved) return unresolved;
+  if (Number(blockingCount) > 0) return nonBaselinedViolationsAction(root);
+  return adopted === 'not-adopted' ? NOT_ADOPTED_NEXT_ACTION : postGreenPath?.action ?? dualTruthNext ?? null;
+}
+
+function nonBaselinedViolationsAction(root) {
+  return `resolve the non-baselined violations — see the classified plan (${arkCommand(root, 'ark-check', '--plan')}), then /ark-autopilot`;
+}
+
+function recommendsStrictMerge(action) {
+  return /strict-merge/i.test(String(action ?? ''));
 }
 
 function missingGateFiles(ctx) {
@@ -248,10 +258,8 @@ export function collectDoctorNextActions(ctx) {
         'Add arkgate to package.json and install so CI/npx resolve this CLI (PACKAGE_PIN_ABSENT)'
     );
   }
-  if (ctx.activeCount > 0) {
-    actions.push(
-      `resolve the non-baselined violations — see the classified plan (${arkCommand(ctx.root, 'ark-check', '--plan')}), then /ark-autopilot`
-    );
+  if (ctx.activeCount > 0 || Number(ctx.blockingCount) > 0) {
+    actions.push(nonBaselinedViolationsAction(ctx.root));
   }
   if (ctx.writePath?.gap?.fix && !gatesInstalled) actions.push(ctx.writePath.gap.fix);
   if (!gatesInstalled && missingFiles.length > 0) {
@@ -318,14 +326,17 @@ export function collectDoctorNextActions(ctx) {
   }
   if (ctx.analysisComplete === false) {
     const cause = incompleteAnalysisNextAction(ctx.completenessReasons, ctx.root);
-    const strictMerge = (action) => /strict-merge/i.test(String(action ?? ''));
-    return [cause, ...unique.filter((action) => action !== cause && !strictMerge(action))];
+    return [cause, ...unique.filter((action) => action !== cause && !recommendsStrictMerge(action))];
   }
   if (resolvePkg) {
     return [resolvePkg, ...unique.filter((a) => a !== resolvePkg)];
   }
   if (overlapAction) {
     return [overlapAction, ...unique.filter((a) => a !== overlapAction)];
+  }
+  if (Number(ctx.blockingCount) > 0) {
+    const fix = nonBaselinedViolationsAction(ctx.root);
+    return [fix, ...unique.filter((action) => action !== fix && !recommendsStrictMerge(action))];
   }
   if (notAdopted) {
     const next = ctx.notAdoptedNextAction || NOT_ADOPTED_NEXT_ACTION;
