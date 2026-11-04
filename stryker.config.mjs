@@ -33,11 +33,12 @@ const config = {
     // unhit for current hosts → NoCoverage string mutants).
     'bin/lib/write-path-detect.mjs:77-87',
     'bin/lib/write-path-detect.mjs:100-118',
-    'bin/lib/analysis-completeness.mjs:9-27',
+    'bin/lib/analysis-completeness.mjs:11-29',
     // 4.8.4 pinned 74-114 (the whole function). classifiedFileCount + JSDoc
     // growth moved the greenfield exemption and refuse return past 114.
     // #367 partial-cause helpers shifted emptyAnalysisRefusal to 126-186.
-    'bin/lib/analysis-completeness.mjs:126-186',
+    // #383 install-gap helpers shifted it to 162-222.
+    'bin/lib/analysis-completeness.mjs:162-222',
     // Receiver-trace merges shifted the same resolver body to 739-789; the memory
     // pass (lazy source reads, path reuse, resolution memo) shifted it to 786-839.
     // #367 package-extends message shifted it to 811-864.
