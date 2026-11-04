@@ -89,19 +89,19 @@
       "targets": [
         {
           "file": "bin/lib/analysis-completeness.mjs",
-          "startLine": 9,
-          "endLine": 27
+          "startLine": 11,
+          "endLine": 29
         }
       ]
     },
     {
       "id": "empty-analysis-refusal",
-      "note": "A verdict over zero governed files is a false green, and the refusal is one condition plus one sentence. Unpinned, a mutant could flip the greenfield exemption or the moved-root branch and ark-check would silently pass an empty analysis again. 4.8.4 pinned 74-114 (the whole function); classifiedFileCount growth left the exemption at 115 unpinned — retargeted to the function body. #367 partial-cause helpers shifted the same function body to 126-186.",
+      "note": "A verdict over zero governed files is a false green, and the refusal is one condition plus one sentence. Unpinned, a mutant could flip the greenfield exemption or the moved-root branch and ark-check would silently pass an empty analysis again. 4.8.4 pinned 74-114 (the whole function); classifiedFileCount growth left the exemption at 115 unpinned — retargeted to the function body. #367 partial-cause helpers shifted the same function body to 126-186. #383 install-gap helpers shifted it to 162-222.",
       "targets": [
         {
           "file": "bin/lib/analysis-completeness.mjs",
-          "startLine": 126,
-          "endLine": 186
+          "startLine": 162,
+          "endLine": 222
         }
       ]
     },

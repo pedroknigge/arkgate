@@ -40,6 +40,7 @@ regenerate it unasked.
 |------|----------------|
 | `app/api/**`, `src/app/api/**` | **ApplicationOrchestration** (orchestration shell) |
 | `pages/api/**`, `src/pages/api/**` | **ApplicationOrchestration** |
+| App-local `auth/` under a UI source root (`src/auth/**`) | **ApplicationOrchestration** |
 | UI routes (`app/(…)`, `page.tsx`, `components/**`) | **PresentationAdapters** |
 | Types / constants (`src/**/types/**`, `src/**/constants/**`) | **SharedKernel** |
 | Wiring (`src/**/composition/**`, `src/**/factories/**`, `bootstrap.ts`) | **CompositionRoot** |

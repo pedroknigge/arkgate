@@ -522,7 +522,7 @@ function configRejectionView(stderr) {
 
 function projectPlainJourneyStep(fixture, step, stdout, stderr) {
   if (fixture === 'globpack') return projectGlobpackPlain(step, stdout, stderr);
-  if (fixture === 'pagepack') return projectPagepackPlain(step, stdout, stderr);
+  if (fixture === 'pagepack' || fixture === 'routepack') return projectPagepackPlain(step, stdout, stderr);
   throw new JourneyError('view', `${commandText(step)} has no plain-text view`);
 }
 
@@ -531,7 +531,7 @@ function projectFixture(fixture, step, parsed) {
   if (fixture === 'rootnext') return projectRootnext(step, parsed);
   if (fixture === 'workpack') return projectWorkpack(step, parsed);
   if (fixture === 'globpack') return projectGlobpack(step, parsed);
-  if (fixture === 'pagepack') return projectGlobpack(step, parsed);
+  if (fixture === 'pagepack' || fixture === 'routepack') return projectGlobpack(step, parsed);
   if (fixture === 'rollpack') return projectRollpack(step, parsed);
   if (CONFIG_FREE_FIXTURES.has(fixture)) return absentConfigView(step, parsed);
   const views = FIXTURE_VIEWS[fixture] ?? { check: checkView, doctor: doctorView };
@@ -1798,7 +1798,10 @@ function evaluateJourneyCase(spec, steps) {
   if (typeof spec.kind === 'string' && spec.kind.startsWith('globpack-')) {
     return caseResult(spec, judgeGlobpack(spec, steps));
   }
-  if (typeof spec.kind === 'string' && spec.kind.startsWith('pagepack-')) {
+  if (
+    typeof spec.kind === 'string' &&
+    (spec.kind.startsWith('pagepack-') || spec.kind.startsWith('routepack-'))
+  ) {
     return caseResult(spec, judgePagepack(spec, steps));
   }
   if (typeof spec.kind === 'string' && spec.kind.startsWith('sortlint-')) {

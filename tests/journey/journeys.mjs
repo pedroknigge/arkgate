@@ -92,12 +92,25 @@
  * sibling `utils/` and `lib/`. After `start --apply`, `check:architecture`
  * exits 0. Short `--doctor` names failing violations and does not recommend
  * requiring `--strict-merge` while that check is red.
+ *
+ * #383 is `routepack`: a pnpm + turbo workspace with three apps and shared
+ * `api`, `auth`, `db`, `ui`, and `validators` packages. App Router routes
+ * import app-local `src/auth`. The API package imports the db package. App UI
+ * imports the db schema. After `start --apply`, `check:architecture` exits 0.
  */
 const ABSENT_CONFIG_FIRST_STEP =
   'No ark.config.json found — run arkgate start (preview) then arkgate start --apply.';
 
 /** Fixtures that are a fresh tree: the journey refuses an ark.config.json here. */
-export const CONFIG_FREE_FIXTURES = new Set(['freshmini', 'freshmono', 'workpack', 'globpack', 'rollpack', 'pagepack']);
+export const CONFIG_FREE_FIXTURES = new Set([
+  'freshmini',
+  'freshmono',
+  'workpack',
+  'globpack',
+  'rollpack',
+  'pagepack',
+  'routepack',
+]);
 
 /**
  * Fixtures whose package.json is the subject of the journey. The packed tarball
@@ -323,6 +336,12 @@ export const JOURNEYS = Object.freeze({
     Object.freeze(['ark-check', '--json', '--no-cache', '--strict-config']),
   ]),
   pagepack: Object.freeze([
+    Object.freeze(['ark', 'start', '--apply', '--json', '--yes', '--no-install', '--tools', 'claude']),
+    Object.freeze(['npm', 'run', 'check:architecture']),
+    Object.freeze(['ark-check', '--doctor', '--no-cache']),
+    Object.freeze(['ark-check', '--coverage', '--json', '--no-cache']),
+  ]),
+  routepack: Object.freeze([
     Object.freeze(['ark', 'start', '--apply', '--json', '--yes', '--no-install', '--tools', 'claude']),
     Object.freeze(['npm', 'run', 'check:architecture']),
     Object.freeze(['ark-check', '--doctor', '--no-cache']),
@@ -1097,6 +1116,21 @@ export const JOURNEY_CASES = Object.freeze({
         presentation: Object.freeze(['packages/ui/']),
         application: Object.freeze(['packages/api/', 'packages/validators/']),
         domainKeeps: Object.freeze(['packages/billing/']),
+      }),
+    }),
+  ]),
+  routepack: Object.freeze([
+    Object.freeze({
+      id: '383-stock-workspace',
+      owner: '#383',
+      expect: 'pass',
+      kind: 'routepack-fresh-apply',
+      note: 'start --apply on a stock pnpm + turbo workspace must leave check:architecture exiting 0. App Router routes may import app-local auth. The API package may import the db package. App UI may import the db schema. Short doctor does not recommend requiring --strict-merge while that check is red. Coverage dual-membership is 0.',
+      want: Object.freeze({
+        checkExit: 0,
+        violationCount: 0,
+        dualCount: 0,
+        failingViolations: 0,
       }),
     }),
   ]),

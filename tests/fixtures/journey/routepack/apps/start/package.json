@@ -1,0 +1,10 @@
+{
+  "name": "@routepack/start",
+  "private": true,
+  "version": "0.0.0",
+  "dependencies": {
+    "@routepack/auth": "*",
+    "@routepack/db": "*",
+    "@routepack/ui": "*"
+  }
+}

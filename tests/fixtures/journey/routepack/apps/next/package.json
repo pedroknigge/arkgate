@@ -1,0 +1,12 @@
+{
+  "name": "@routepack/next",
+  "private": true,
+  "version": "0.0.0",
+  "dependencies": {
+    "@routepack/api": "*",
+    "@routepack/auth": "*",
+    "@routepack/db": "*",
+    "@routepack/ui": "*",
+    "@routepack/validators": "*"
+  }
+}

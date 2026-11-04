@@ -166,8 +166,9 @@ describe('Z02 analysis completeness', () => {
     fs.writeFileSync(path.join(root, 'apps/web/src/page.ts'), 'export const page = 1;\n');
 
     const check = runCheck(CHECK, root, [], false);
+    expect(check.stderr).toContain('the violation count is partial, not the full tree');
     expect(check.stderr).toContain(
-      "Analysis incomplete: 1 tsconfig file extends a package that isn't installed; run `pnpm install` first."
+      "1 tsconfig file extends a package that isn't installed; run `pnpm install` first."
     );
 
     const doctor = runCheck(CHECK, root, ['--doctor']);
@@ -177,6 +178,12 @@ describe('Z02 analysis completeness', () => {
       "1 tsconfig file extends a package that isn't installed; run `pnpm install` first"
     );
     expect(parsed.doctor.primaryNextAction).not.toMatch(/strict-merge/i);
+
+    const human = runCheck(CHECK, root, ['--doctor'], false);
+    const text = `${human.stdout}\n${human.stderr}`.replace(/\u001b\[[0-9;]*m/g, '');
+    expect(human.status, text).toBe(0);
+    expect(text).toContain('the violation count is partial, not the full tree');
+    expect(text).toContain("1 tsconfig file extends a package that isn't installed; run `pnpm install` first.");
   });
 
   it('fails closed when snippet parsing is partial or unavailable', () => {
