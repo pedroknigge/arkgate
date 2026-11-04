@@ -1,0 +1,11 @@
+{
+  "name": "@routepack/db",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema.ts",
+    "./client": "./src/client.ts"
+  }
+}

@@ -21,6 +21,7 @@ import {
   shouldSkipArkgateInstall,
 } from './ark-shared.mjs';
 import { FALSE_GREEN_GAP_ID } from './lib/field-install.mjs';
+import { startApplyNextLine } from './lib/analysis-completeness.mjs';
 
 export { ensureProjectArkgateDependency };
 import { validateHardWriteRequest } from './lib/enforcement-profiles.mjs';
@@ -521,7 +522,7 @@ async function start(args) {
       }
     }
     if (!args.json) {
-      console.log(`Start apply complete. Next: ${arkCommand(args.root, 'ark-check', '--doctor')}`);
+      console.log(startApplyNextLine(args.root, arkCommand(args.root, 'ark-check', '--doctor')));
     }
     return 0;
   }

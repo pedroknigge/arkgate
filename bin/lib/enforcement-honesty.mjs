@@ -253,46 +253,7 @@ export function buildWritePathHonesty(activeHost, hardWriteActive = false, extra
   return out;
 }
 
-/**
- * One coherent anti-false-green product surface (P0-B / FG01).
- * finished is true only when residual honesty sensors are clear AND the graph
- * + mode are green — never when blocking violations, adapt/suggest residual,
- * missing baseline with debt, design residual, dual-truth, weak coverage,
- * pin-absent, or residual pilots remain.
- *
- * activeBlockingViolations must be failsStrict !== false counts only
- * (type-only placement debt must NOT force active-blocking-violations).
- *
- * Adapt/suggest policy (documented): unfinished when mode is adapt/suggest
- * unless whole-tree green AND zero design smells AND zero blocking — contract
- * and tree still disagree while operating outside enforce.
- * Never invents a numeric architecture score.
- *
- * @param {{
- *   coverageHonesty?: ReturnType<typeof buildCoverageHonesty>,
- *   baselineHonesty?: ReturnType<typeof buildBaselineHonesty>,
- *   writePathHonesty?: ReturnType<typeof buildWritePathHonesty>,
- *   designWeak?: boolean,
- *   designWeakLabel?: string | null,
- *   designSmellCount?: number,
- *   designSmellsWithOpenEdges?: boolean,
- *   packageVersionTruth?: {
- *     dualTruth?: boolean,
- *     note?: string,
- *     code?: string,
- *     cliVersion?: string | null,
- *   } | null,
- *   residualPilots?: boolean,
- *   pilotTarget?: string | null,
- *   arkRulesMergeHonesty?: Record<string, unknown> | null,
- *   primaryNextAction?: string | null,
- *   operatingMode?: string | null,
- *   activeBlockingViolations?: number | null,
- *   physicalCohesionResidual?: boolean,
- *   childWallAdvisory?: boolean,
- *   sliceAliasDebt?: boolean,
- * }} input
- */
+/** True when a cohesion finding has no suppressing reshape decision. */
 export function physicalCohesionResidualRemains(cohesion) {
   const findings = Array.isArray(cohesion?.findings) ? cohesion.findings : [];
   if (findings.length === 0) return false;
@@ -303,6 +264,7 @@ export function physicalCohesionResidualRemains(cohesion) {
   return findings.some((finding) => !covered.has(finding?.concept));
 }
 
+/** Anti-false-green surface. Finished only when residuals are clear and the graph is green. */
 export function buildProductHonesty(input = {}) {
   const reasons = [];
   const cov = input.coverageHonesty;

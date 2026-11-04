@@ -120,24 +120,6 @@
         "completeness": "complete",
         "diagnostics": [
           {
-            "file": "apps/web/app/page.tsx",
-            "message": "PresentationAdapters must not import PersistenceAdapters.",
-            "ruleId": "LAYER_IMPORT_VIOLATION",
-            "severity": "error"
-          },
-          {
-            "file": "apps/web/app/page.tsx",
-            "message": "PresentationAdapters must not import PersistenceAdapters.",
-            "ruleId": "LAYER_IMPORT_VIOLATION",
-            "severity": "error"
-          },
-          {
-            "file": "packages/api/src/router.ts",
-            "message": "ApplicationOrchestration must not import PersistenceAdapters.",
-            "ruleId": "LAYER_IMPORT_VIOLATION",
-            "severity": "error"
-          },
-          {
             "file": "packages/billing/src/domain/invoice.ts",
             "message": "DomainModel must not import PersistenceAdapters.",
             "ruleId": "LAYER_IMPORT_VIOLATION",

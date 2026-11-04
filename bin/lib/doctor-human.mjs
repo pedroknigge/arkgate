@@ -68,7 +68,9 @@ export function printDoctorCompactHuman(view) {
 
   console.log(color.bold(`Ark doctor — ${path.basename(path.resolve(root)) || '.'}`));
   console.log(color.dim(NORTH_STAR_ONE_LINE));
-  if (!analysisComplete) line(warn, analysisIncompleteStatement(completeness, view.completenessReasons, root));
+  if (!analysisComplete) {
+    line(warn, analysisIncompleteStatement(completeness, view.completenessReasons, root, true));
+  }
   printParseHealthSection(doctorAdvisories.parseHealth, { color, warn, line });
 
   const mode = operatingMode;

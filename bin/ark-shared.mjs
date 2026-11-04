@@ -1183,16 +1183,21 @@ export function sealMonorepoRoleRoots(layers, ownedByLayer) {
   return layers;
 }
 
-/** pages/api stays Application; sibling utils/lib inside that app root do too (#380). */
+/**
+ * pages/api stays Application; sibling utils/lib inside that app root do too (#380).
+ * App-local auth/ is a server helper, not UI, including next to App Router (#383).
+ */
 export function scopePagesRouterHelpers(layers, root, presentationRoots) {
   const globs = [];
   for (const glob of presentationRoots ?? []) {
     if (!root || typeof glob !== 'string' || !glob.endsWith('/**')) continue;
     const base = glob.slice(0, -3);
     if (!base || /[*?]/.test(base)) continue;
-    const hasApi = fs.statSync(path.join(root, base, 'pages', 'api'), { throwIfNoEntry: false })?.isDirectory();
-    if (!hasApi) continue;
-    for (const name of ['utils', 'lib']) {
+    const names = [];
+    const hasPagesApi = fs.statSync(path.join(root, base, 'pages', 'api'), { throwIfNoEntry: false })?.isDirectory();
+    if (hasPagesApi) names.push('utils', 'lib');
+    names.push('auth');
+    for (const name of names) {
       const dir = path.join(root, base, name);
       if (fs.statSync(dir, { throwIfNoEntry: false })?.isDirectory()) globs.push(`${base}/${name}/**`);
     }

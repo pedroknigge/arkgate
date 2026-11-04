@@ -645,6 +645,9 @@ globs win over broad `**/app/**` Presentation patterns. Reserved `app/api` globs
 appear on `ui-surface` / monorepo presets so a later Next route classifies correctly;
 **layer captions** mention Next App Router / Pages API / `app/api` only when Next is
 actually present. Library and package-monorepo start keep library-native captions.
+An app-local `auth/` directory under a UI source root is Application, so an App Router
+route can import `src/auth/server.ts`. The monorepo preset allows Application → Persistence
+and Presentation → Persistence. Domain still must not import Persistence.
 See [brownfield adoption](brownfield-adoption.md#nextjs-honesty-default-overlays--ui-surface--monorepo).
 
 ### ArkRules dual plane (when `arkRules` is present)

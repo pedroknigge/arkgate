@@ -349,7 +349,9 @@ export function buildRemediationPlan(
     statement =
       'No active import-rule violations — imports check out, but design smells remain (leftover design work). Shape work is plan B only; not healthy finished.';
   }
-  if (completeness !== ANALYSIS_COMPLETENESS.complete) statement = analysisIncompleteStatement(completeness, options.completenessReasons, root);
+  if (completeness !== ANALYSIS_COMPLETENESS.complete) {
+    statement = analysisIncompleteStatement(completeness, options.completenessReasons, root, true);
+  }
 
   // NEW-TYPEONLY-VOLUME: group type-only steps for plan messaging (value first).
   const typeOnlySteps = steps.filter((s) => s.typeOnly || s.namedBindingsTypeOnly);

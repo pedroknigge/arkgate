@@ -440,6 +440,19 @@ function portsAndAdaptersRules() {
   ];
 }
 
+// Monorepo day one (#383): API→db and UI→shared schema stay allowed. Domain→db stays denied.
+function monorepoDependencyRules() {
+  return [
+    { from: 'DomainModel', to: 'ApplicationOrchestration', allowed: false },
+    { from: 'DomainModel', to: 'PresentationAdapters', allowed: false },
+    { from: 'DomainModel', to: 'PersistenceAdapters', allowed: false },
+    { from: 'ApplicationOrchestration', to: 'PresentationAdapters', allowed: false },
+    { from: 'PresentationAdapters', to: 'DomainModel', allowed: false },
+    { from: 'PersistenceAdapters', to: 'ApplicationOrchestration', allowed: false },
+    { from: 'PersistenceAdapters', to: 'PresentationAdapters', allowed: false },
+  ];
+}
+
 /** UI-surface rules. Presentation may reach data clients (soft). Persistence → Presentation stays denied. */
 function uiSurfaceRules(presentationToPersistenceMessage) {
   return [
@@ -710,12 +723,7 @@ export const ARCHITECTURE_PRESETS = {
             optional: true,
           },
         ],
-        rules: [
-          { from: 'DomainModel', to: 'ApplicationOrchestration', allowed: false },
-          { from: 'DomainModel', to: 'PresentationAdapters', allowed: false },
-          { from: 'DomainModel', to: 'PersistenceAdapters', allowed: false },
-          ...portsAndAdaptersRules(),
-        ],
+        rules: monorepoDependencyRules(),
       },
       root
     );

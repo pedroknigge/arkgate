@@ -1,25 +1,7 @@
 /**
- * Deterministic contract smells (Phase W / W01) — meta-lint of ark.config.json itself.
- *
- * ArkGate validates code against the contract; these sensors validate the contract
- * against known contract anti-patterns: rule shapes that permit future degradation
- * even at 0 violations. Advisory only — they never change a pass/fail verdict, never
- * feed designWeak/patternBets, and never block a gate. Complements `soft-contract`
- * (missing rules) by detecting *permissive or unused* rules.
- *
- * Acknowledgments live in an optional sidecar (`.ark/contract-smell-acks.json`,
- * Q03 golden-pattern precedent) so the versioned config contract is untouched.
- * A malformed ack file (or a malformed edge inside it) never suppresses a smell.
- *
- * X02 — acks have a lifecycle: an optional `reviewBy` (YYYY-MM-DD) marks when a
- * deliberate exception must be re-reviewed. Past that date the ack stops
- * applying and the smell returns annotated — migration acks cannot fossilize.
- * Undated acks keep applying (backward compatible) but are counted and
- * reported so they can be given a date.
- *
- * Known limit (documented, deliberate): layer roles are inferred from layer NAMES
- * via substring heuristics — a name like "Auditorium" reads as audit-ish. The
- * surface is advisory, so a miss costs a warning line, never a verdict.
+ * Advisory meta-lint of ark.config.json. Never a gate verdict.
+ * Acks: `.ark/contract-smell-acks.json`. A past `reviewBy` stops applying.
+ * Layer roles come from names, so a name like "Auditorium" can read as audit.
  */
 import fs from 'node:fs';
 import path from 'node:path';

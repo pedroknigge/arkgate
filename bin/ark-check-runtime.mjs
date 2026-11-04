@@ -1955,7 +1955,7 @@ async function main() {
     }
     if (designCheck.failureText()) console.error(designCheck.failureText());
     if (!analysisComplete) {
-      console.error(color.yellow(analysisIncompleteStatement(completeness, completenessReasons, root)));
+      console.error(color.yellow(analysisIncompleteStatement(completeness, completenessReasons, root, true)));
     } else if (blockingViolations.length === 0 && (policyDelta?.valid ?? true)) {
       const placementDebt = activeViolations.filter((v) => v.failsStrict === false);
       const advisoryOnly = warnings.length > 0 && strictWarnings.length === 0;

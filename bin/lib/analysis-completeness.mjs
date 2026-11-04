@@ -1,4 +1,6 @@
 /** Shared fail-closed completeness semantics for CLI/MCP Tooling surfaces. */
+import fs from 'node:fs';
+import path from 'node:path';
 import { detectPackageManager } from './package-manager.mjs';
 
 export const ANALYSIS_COMPLETENESS = Object.freeze({
@@ -63,65 +65,99 @@ export function incompleteAnalysisNextAction(reasons, root) {
   );
 }
 
-export function analysisIncompleteStatement(completeness, reasons, root) {
+export function analysisIncompleteStatement(completeness, reasons, root, qualifyCount = false) {
   if (completeness !== ANALYSIS_COMPLETENESS.partial) {
     return 'Analysis unavailable: no API-compatible TypeScript host could produce architecture evidence.';
   }
   const cause = partialAnalysisCause(reasons, packageManagerOption(root));
-  if (cause) return `Analysis incomplete: ${cause}.`;
-  return 'Analysis incomplete: governed parse diagnostics prevent a complete architecture verdict.';
+  const qualifier = qualifyCount ? 'the violation count is partial, not the full tree. ' : '';
+  if (cause) return `Analysis incomplete: ${qualifier}${cause}.`;
+  return `Analysis incomplete: ${qualifier}governed parse diagnostics prevent a complete architecture verdict.`;
+}
+
+const EXTEND_SKIP = new Set(['node_modules', 'dist', 'build', 'coverage']);
+
+function extendPackageName(spec) {
+  if (!spec || spec[0] === '.' || spec[0] === '/' || /^[A-Za-z]:[\\/]/.test(spec)) return '';
+  const parts = spec.split('/');
+  if (spec[0] === '@') return parts[1] ? `${parts[0]}/${parts[1]}` : '';
+  return parts[0] || '';
+}
+
+function packageOnDisk(fromDir, name) {
+  const segments = name.split('/');
+  let dir = fromDir;
+  for (let hop = 0; hop < 12; hop += 1) {
+    if (fs.existsSync(path.join(dir, 'node_modules', ...segments))) return true;
+    const parent = path.dirname(dir);
+    if (parent === dir) return false;
+    dir = parent;
+  }
+  return false;
+}
+
+function unlinkedExtendCount(root) {
+  if (!root || !fs.existsSync(root)) return 0;
+  let files = 0;
+  const stack = [root];
+  while (stack.length) {
+    const dir = stack.pop();
+    let entries = [];
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+    for (const entry of entries) {
+      if (entry.isSymbolicLink() || entry.name[0] === '.' || EXTEND_SKIP.has(entry.name)) continue;
+      const abs = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        stack.push(abs);
+        continue;
+      }
+      if (!/^tsconfig.*\.json$/i.test(entry.name)) continue;
+      let text = '';
+      try {
+        text = fs.readFileSync(abs, 'utf8');
+      } catch {
+        continue;
+      }
+      const specs = [];
+      for (const match of text.matchAll(/"extends"\s*:\s*(\[[\s\S]*?\]|"[^"]+")/g)) {
+        const raw = match[1];
+        if (raw[0] === '[') specs.push(...[...raw.matchAll(/"([^"]+)"/g)].map((hit) => hit[1]));
+        else specs.push(raw.slice(1, -1));
+      }
+      if (specs.some((spec) => {
+        const name = extendPackageName(spec);
+        return name && !packageOnDisk(dir, name);
+      })) files += 1;
+    }
+  }
+  return files;
+}
+
+/** Next line after start --apply. A check before a full install is a partial count (#383). */
+export function startApplyNextLine(root, doctorCommand) {
+  const count = unlinkedExtendCount(root);
+  if (!count) return `Start apply complete. Next: ${doctorCommand}`;
+  const pm = detectPackageManager(root);
+  const fact =
+    count === 1
+      ? "1 tsconfig file extends a package that isn't installed"
+      : `${count} tsconfig files extend packages that aren't installed`;
+  return `Start apply complete. Next: \`${pm} install\`, then ${doctorCommand}. ${fact}, so a check before that install is a partial count.`;
 }
 
 /** Public diagnostic id for a verdict asked to certify an empty file set. */
 export const EMPTY_ANALYSIS_RULE_ID = 'ANALYSIS_COVERS_NO_FILES';
 
 /**
- * Refuse a verdict over zero governed files when the tree has source to govern.
- *
- * Every rule is vacuously satisfied on an empty set, so a green here certifies
- * nothing while reading exactly like a green over a governed tree. That is a
- * false green — the one failure mode CI trusts.
- *
- * The refusal separates ArkGate's own limitation from a fact about the repo, the
- * same way the coverage budget does. Two states are a mismatch and refuse:
- *
- * - source exists under the analyzed root and the contract governs none of it —
- *   the contract does not describe this tree;
- * - the analyzed root is not the root the caller asked for, because the contract
- *   was found outside it and its directory was adopted — ArkGate checked a
- *   different tree and found nothing in it.
- *
- * No governable source anywhere under the root, on the root the caller asked
- * for, is a genuinely greenfield repo: `--init` is designed to land a contract
- * before the code arrives, that is not a mismatch to refuse, and `--plan` /
- * `--doctor` already carry the `empty-scope` adoption gap for it.
- *
- * Report modes (`--plan`, `--doctor`, `--coverage`) are how a user diagnoses and
- * fixes an empty scope, so callers must not apply this refusal to them. It
- * belongs to the verdict path. (`--adopt-contract` and `--suggest-include` never
- * reach it: their handlers return earlier.)
- *
- * `ungovernedSourceCount` must come from a probe the contract cannot steer — see
- * `countUngovernedSourceFiles` in scan-files.mjs. Feeding it a count that honours
- * `config.exclude` reopens the false green through `exclude: ["**"]`.
- *
- * `classifiedFileCount` is optional. When omitted, included files are treated as
- * classified (the historical meaning of `governedFileCount`). When provided and
- * zero while include still matched files, this is the same vacuous green: import
- * rules cannot run on unclassified source. Omit the count when `layers` is empty
- * so `CONFIG_NO_LAYERS` stays the next step. Partial unclassified stays a warning.
- *
- * @param {{
- *   governedFileCount?: number,
- *   classifiedFileCount?: number,
- *   ungovernedSourceCount?: number,
- *   ungovernedSourceCap?: number,
- *   root?: string,
- *   requestedRoot?: string,
- *   configPath?: string,
- *   configWalkedUp?: boolean,
- * }} [input]
- * @returns {{ ruleId: string, message: string, nextAction: string } | null}
+ * Refuse a vacuous green over zero governed files when the tree has source.
+ * Mismatch: source exists and the contract governs none of it, or the contract
+ * was adopted from outside the requested root. A greenfield root with no source
+ * stays green. Callers must not apply this on report modes. `ungovernedSourceCount`
+ * must ignore `config.exclude`. Omit `classifiedFileCount` when `layers` is empty.
  */
 export function emptyAnalysisRefusal(input = {}) {
   const included = Number(input.governedFileCount);
