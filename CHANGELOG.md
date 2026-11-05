@@ -5,8 +5,15 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+## 4.8.31 — 2026-11-06
+
+**Patch** over **4.8.30**. Weekly ship (#382, #385). **Write. Check. Ship.** **No required config migration.** No `schemaVersion` bump. Does not close `K01` / `Z09`. This mother `ark.config.json` still does **not** turn `arkOrder` on.
+
+**Status: released** (tag `v4.8.31`). Run `npm view arkgate@4.8.31 version` to confirm (#314).
+
 ### Fixed
-- A stock pnpm workspace is green after `start`: Application may import Persistence, app UI may import a shared schema, and app-local `auth/` is Application. A check before install calls its violation count partial, and `start` names `pnpm install` when a tsconfig extends a package that is not installed (#383).
+- `utils/` and `lib/` under a Next app with `pages/api` stay Application, so those helpers stay importable and doctor does not show red violations (#382, #380).
+- A stock pnpm workspace is green after `start`: Application may import Persistence, app UI may import a shared schema, and app-local `auth/` is Application. A check before install calls its violation count partial, and `start` names `pnpm install` when a tsconfig extends a package that is not installed (#385, #383).
 
 ## 4.8.30 — 2026-10-30
 
