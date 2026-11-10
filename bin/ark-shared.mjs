@@ -530,9 +530,7 @@ export function applyFrameworkLayoutOverlays(config, root) {
   if (signals.libraryOnly && !signals.nestFramework && !signals.nextFramework) {
     ensureInclude('src');
     ensureInclude('lib');
-    // Published libraries commonly expose a root entrypoint instead of src/. Include that
-    // real surface, but not test files: a public package entrypoint is application code and
-    // must not remain outside the contract simply because it is JavaScript or root-level.
+    // Root entry is governed code. Tests stay out through the test exclude.
     ensureInclude('.');
     mergeLayerPatterns(next, 'DomainModel', [
       'src/**/*.ts',
@@ -550,14 +548,10 @@ export function applyFrameworkLayoutOverlays(config, root) {
       '*.mjs',
       '*.cjs',
     ]);
-    // Domain owns src/ and lib/ by extension. A residual directory catch-all on
-    // another layer (layered `src/**`) dual-matches every file, so no layer rule can fail.
+    // Residual src/** / lib/** dual-matches DomainModel's extension globs.
     for (const layer of next.layers ?? []) {
       if (layer.name === 'DomainModel' || !Array.isArray(layer.patterns)) continue;
-      layer.patterns = layer.patterns.filter((pattern) => {
-        const norm = String(pattern).replace(/\\/g, '/');
-        return norm !== 'src/**' && norm !== 'lib/**';
-      });
+      layer.patterns = layer.patterns.filter((pattern) => !['src/**', 'lib/**'].includes(String(pattern).replace(/\\/g, '/')));
     }
     next.frameworkOverlay = next.frameworkOverlay
       ? `${next.frameworkOverlay}+library`

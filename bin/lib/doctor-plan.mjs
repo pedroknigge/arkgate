@@ -235,21 +235,6 @@ export function runCoverage(root, config, files, rules, asJson) {
   }
 }
 
-// --doctor: one consolidated health view — coverage, violations, gates, skills, baseline,
-// and command runners — each with the exact command to fix it. Folds the data the other
-// modes already produce so a team sees "what state is my Ark adoption in?" at a glance.
-/**
- * @param {string} root
- * @param {object[]} activeViolations
- * @param {number|null} [governedPercent]
- * @param {number|null} [totalFiles]
- * @param {object} [options]
- * @param {object[]} [options.designSmells]
- * @param {object[]} [options.patternBets]
- * @param {object} [options.config]
- * @param {string[]} [options.files]
- * @param {object} [options.coverage]
- */
 export function buildRemediationPlan(
   root,
   activeViolations,
@@ -407,11 +392,7 @@ export function buildRemediationPlan(
   };
 }
 
-// `--plan`: print the classified remediation plan. Dual-focus output — a one-line headline
-// anyone can read, then the per-step detail a developer acts on. Read-only.
-/**
- * @param {object} [options] optional { config, files, coverage, designSmells, patternBets }
- */
+/** Print the classified remediation plan. Read-only. */
 export function runPlan(
   root,
   activeViolations,
