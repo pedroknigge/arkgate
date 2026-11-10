@@ -53,7 +53,6 @@ export {
   detectSkillGaps,
   skillCatalogStatus,
   skillGapsForActiveHost,
-  skillGapToolLabel,
   agentsMdSkillRefs,
   verifyHostSkillCatalog,
   printSkillAndCodexGapHints,
