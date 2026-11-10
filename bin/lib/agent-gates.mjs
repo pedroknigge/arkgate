@@ -52,7 +52,6 @@ export {
   assessSkillCatalogParity,
   detectSkillGaps,
   skillCatalogStatus,
-  skillGapsForActiveHost,
   agentsMdSkillRefs,
   verifyHostSkillCatalog,
   printSkillAndCodexGapHints,
