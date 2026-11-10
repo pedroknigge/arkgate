@@ -47,3 +47,30 @@ export const POST_GREEN_HUMAN =
 export const POST_GREEN_LEDE =
   'Import rules are clean, but leftover design work remains. That does not fail the check — it only means “done” is still wrong until you tidy shape.';
 
+/** Null when a layer rule can still fail. A high classification percent is not containment. */
+export function vacuousContainmentNote(cov) {
+  const layers = Array.isArray(cov?.layers) ? cov.layers : [];
+  if (layers.length === 0) return null;
+  const populated = layers.filter((row) => Number(row?.files) > 0).length;
+  const governed = cov?.governed ?? {};
+  const classified = Number(governed.classifiedFiles) || 0;
+  const total = Number(governed.totalFiles ?? cov?.totalFiles) || 0;
+  const dual = Number(cov?.dualMembership?.count) || 0;
+  const parts = [];
+  if (classified > 0 && dual >= classified) {
+    parts.push(`${dual} of ${classified} files match more than one layer`);
+  }
+  if (total > 0 && populated < 2 && layers.length - populated > 0) {
+    parts.push(`${populated} of ${layers.length} layers populated, so no layer rule can fail yet`);
+  }
+  return parts.length > 0 ? parts.join('; ') : null;
+}
+
+/** Human --coverage line. At >=80% a vacuous map is not "Governed: 100%". */
+export function formatGovernedCoverageLine(cov, classifiedFiles, totalFiles) {
+  const percent = Number(cov?.governed?.percent) || 0;
+  const note = percent >= 80 ? vacuousContainmentNote(cov) : null;
+  return note
+    ? `${note} — not full governance (${classifiedFiles}/${totalFiles} files classified).`
+    : `Governed: ${percent}% (${classifiedFiles}/${totalFiles} files).`;
+}

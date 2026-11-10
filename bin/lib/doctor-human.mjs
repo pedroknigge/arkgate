@@ -4,7 +4,8 @@
  */
 import path from 'node:path';
 import { arkCommand } from '../ark-shared.mjs';
-import { NORTH_STAR_ONE_LINE, operatingModeTitle } from './product-copy.mjs';
+import { NORTH_STAR_ONE_LINE, operatingModeTitle, formatGovernedCoverageLine } from './product-copy.mjs';
+export { formatGovernedCoverageLine, vacuousContainmentNote } from './product-copy.mjs';
 import { isDoctorHealthyNothingToDo } from './post-green-path.mjs';
 import { printParseHealthSection } from './parse-health.mjs';
 import { printDoctorAdvisories, printCompactExtraDoctorLines } from './doctor-advisories.mjs';
@@ -133,9 +134,9 @@ export function printDoctorCompactHuman(view) {
 
   console.log('');
   console.log(color.bold('Coverage'));
-  const govClaim = `Governed: ${cov.governed.percent}% (${cov.governed.classifiedFiles}/${cov.governed.totalFiles} files)`;
+  const govClaim = formatGovernedCoverageLine(cov, cov.governed.classifiedFiles, cov.governed.totalFiles).replace(/\.$/, '');
   if (emptyScope || cov.governed.percent < 50) line(bad, govClaim);
-  else if (cov.governed.percent >= 80) citedGreen(line, { ok, warn }, govClaim, ['ark.config.json', 'include', 'layers']);
+  else if (govClaim.startsWith('Governed:') && cov.governed.percent >= 80) citedGreen(line, { ok, warn }, govClaim, ['ark.config.json', 'include', 'layers']);
   else line(warn, govClaim);
   for (const row of cov.layers ?? []) {
     const guidance = layerGuidanceLine(row);

@@ -550,7 +550,15 @@ export function applyFrameworkLayoutOverlays(config, root) {
       '*.mjs',
       '*.cjs',
     ]);
-    // Prefer domain over application for a single-folder lib: only domain if no split.
+    // Domain owns src/ and lib/ by extension. A residual directory catch-all on
+    // another layer (layered `src/**`) dual-matches every file, so no layer rule can fail.
+    for (const layer of next.layers ?? []) {
+      if (layer.name === 'DomainModel' || !Array.isArray(layer.patterns)) continue;
+      layer.patterns = layer.patterns.filter((pattern) => {
+        const norm = String(pattern).replace(/\\/g, '/');
+        return norm !== 'src/**' && norm !== 'lib/**';
+      });
+    }
     next.frameworkOverlay = next.frameworkOverlay
       ? `${next.frameworkOverlay}+library`
       : 'library';

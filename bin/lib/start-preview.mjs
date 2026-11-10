@@ -12,6 +12,7 @@ import {
   treeHasArkOrderCandidate,
 } from '../ark-shared.mjs';
 import { withProjectedGovernedCoverage } from './projected-governed-coverage.mjs';
+import { vacuousContainmentNote } from './product-copy.mjs';
 import { ARKORDER_FIRST_CONTACT_NEXT, ARKORDER_ONE_BREATH } from './ark-order-doctor.mjs';
 import { resolveFirstStep } from './first-step.mjs';
 import { compactAgentInstructions, instructionRule, mcpJson } from './ci-and-commands.mjs';
@@ -318,7 +319,12 @@ export function renderStartPreview(preview, options = {}) {
         console.log(`  ${row.ruleId}  ${row.file}`);
       }
     } else if (percent != null) {
-      console.log(`Projected governed coverage: ${percent}%`);
+      const note = preview.containmentNote;
+      console.log(
+        note
+          ? `${note} — not full governance (${percent}% of in-scope files classified)`
+          : `Projected governed coverage: ${percent}%`
+      );
     }
     const verified = (preview.hostGuarantees || []).find((line) =>
       String(line).startsWith('Hard-write hook verified')
@@ -544,6 +550,8 @@ export async function planStart(args, helpers) {
       changes.push(change(file, oldContent, newContent));
     }
     const percent = coverage.governed?.percent ?? null;
+    const containmentNote =
+      typeof percent === 'number' && percent >= 80 ? vacuousContainmentNote(coverage) : null;
     const codexSelected = args.tools === 'codex';
     const runtimeActivation = codexSelected
       ? codexRuntimeActivation({
@@ -566,6 +574,7 @@ export async function planStart(args, helpers) {
         classifiedFiles: coverage.governed?.classifiedFiles ?? 0,
         totalFiles: coverage.governed?.totalFiles ?? coverage.totalFiles ?? 0,
       },
+      ...(containmentNote ? { containmentNote } : {}),
       changes,
       setupBudget: setupBudget(changes),
       commands: commands(root, args, helpers),
