@@ -13,7 +13,7 @@ import {
   codexProjectMcpIsValid,
 } from './codex-home.mjs';
 import { detectWritePathCapabilities } from './write-path-detect.mjs';
-import { detectActiveAgentHost, skillTemplateNames } from './skill-install.mjs';
+import { detectActiveAgentHost, skillCatalogStatus } from './skill-install.mjs';
 import { detectDeployPathQuality } from './deploy-path.mjs';
 import { collectWeakestLinkGaps } from './weakest-link.mjs';
 import { codexRuntimeActivation, withCiProviderEvidence } from './enforcement-state.mjs';
@@ -175,12 +175,13 @@ export function collectAdoptionGaps(root, config, coverage) {
   // --- Host completeness (only when project already adopted gates) ---
   const hosts = [];
   if (adopted && !isProducer) {
-    const skillNames = skillTemplateNames();
+    // Skill files come from skillCatalogStatus (canonical paths). This loop is
+    // host extras only, so it cannot disagree with the doctor skill line.
+    const skills = skillCatalogStatus(root);
     const hostChecks = [
       {
         host: 'grok',
         dir: '.grok',
-        skill: (n) => path.join(root, '.grok', 'skills', n, 'SKILL.md'),
         extras: [
           ['.grok/hooks/ark-write-gate.json', 'write-gate hook'],
           ['.grok/config.toml', 'project MCP config'],
@@ -190,14 +191,12 @@ export function collectAdoptionGaps(root, config, coverage) {
       {
         host: 'claude',
         dir: '.claude',
-        skill: (n) => path.join(root, '.claude', 'skills', n, 'SKILL.md'),
         extras: [['.claude/settings.json', 'settings/hooks']],
         toolsFlag: 'claude',
       },
       {
         host: 'cursor',
         dir: '.cursor',
-        skill: (n) => path.join(root, '.cursor', 'commands', `${n}.md`),
         extras: [
           ['.cursor/hooks.json', 'write-gate hook'],
           ['.cursor/mcp.json', 'MCP config (fallback)'],
@@ -207,8 +206,6 @@ export function collectAdoptionGaps(root, config, coverage) {
       {
         host: 'codex',
         dir: '.codex',
-        // Official Codex REPO skill catalog (Agent Skills standard) — not .codex/prompts.
-        skill: (n) => path.join(root, '.agents', 'skills', n, 'SKILL.md'),
         extras: [
           ['.codex/hooks.json', 'hooks'],
           ['.codex/config.toml', 'project MCP config'],
@@ -218,7 +215,6 @@ export function collectAdoptionGaps(root, config, coverage) {
       {
         host: 'antigravity',
         dir: '.agents',
-        skill: (n) => path.join(root, '.agents', 'skills', n, 'SKILL.md'),
         extras: [
           ['.agents/hooks.json', 'write-gate hook'],
           ['.agents/mcp_config.json', 'workspace MCP'],
@@ -232,7 +228,6 @@ export function collectAdoptionGaps(root, config, coverage) {
       {
         host: 'opencode',
         dir: '.opencode',
-        skill: (n) => path.join(root, '.opencode', 'skills', n, 'SKILL.md'),
         extras: [['opencode.json', 'project MCP config']],
         toolsFlag: 'opencode',
         presentIf: () =>
@@ -246,23 +241,24 @@ export function collectAdoptionGaps(root, config, coverage) {
           ? h.presentIf()
           : fs.existsSync(path.join(root, h.dir));
       if (!present) continue;
-      const missingSkills = skillNames.filter((n) => !fs.existsSync(h.skill(n)));
+      const missingSkills = skills.dayZero
+        ? skills.expectedCount
+        : (skills.missingByHost[h.host] ?? 0);
       const missingExtras = h.extras.filter(([rel]) => !fs.existsSync(path.join(root, rel)));
-      const complete = missingSkills.length === 0 && missingExtras.length === 0;
       hosts.push({
         host: h.host,
         present: true,
-        complete,
-        missingSkills: missingSkills.length,
+        complete: missingExtras.length === 0 && missingSkills === 0,
+        missingSkills,
         missingExtras: missingExtras.map(([, label]) => label),
       });
-      if (!complete) {
+      if (missingExtras.length > 0) {
         gaps.push({
           id: `host-${h.host}-incomplete`,
           severity: 'warn',
-          message: `${h.host} dir present but incomplete (${missingSkills.length} skill(s) missing${
-            missingExtras.length ? `; missing ${missingExtras.map(([, l]) => l).join(', ')}` : ''
-          })`,
+          message: `${h.host} dir present but incomplete (missing ${missingExtras
+            .map(([, label]) => label)
+            .join(', ')})`,
           fix: arkCommand(
             root,
             'ark-check',
@@ -270,6 +266,14 @@ export function collectAdoptionGaps(root, config, coverage) {
           ),
         });
       }
+    }
+    if (skills.dayZero && skills.message) {
+      gaps.push({
+        id: 'skill-catalog-absent',
+        severity: 'warn',
+        message: skills.message,
+        fix: skills.fix,
+      });
     }
   }
 

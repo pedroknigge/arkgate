@@ -1197,6 +1197,74 @@ export function skillGapsForActiveHost(skillGaps, env = process.env) {
 }
 
 /**
+ * One skills-status read for doctor text and adoption.
+ * Empty `detectSkillGaps` is not "current": a compact start leaves the expert
+ * pack uninstalled, and a green line must not cite `.agents/skills` when that
+ * directory is not on disk. Callers print `message` at most once.
+ * @param {string} root
+ * @param {object[]|undefined} skillGaps detectSkillGaps result; omit to scan
+ * @param {NodeJS.ProcessEnv} [env]
+ */
+export function skillCatalogStatus(root, skillGaps, env = process.env) {
+  const gaps = skillGaps === undefined ? detectSkillGaps(root) : skillGaps;
+  const human = skillGapsForActiveHost(gaps, env);
+  const legacyCodex = human.some((gap) => gap.tool === 'codex' && gap.legacyPromptsOnly);
+  const legacyAdvisory = human.some(
+    (gap) => gap.tool === 'codex' && gap.legacyAdvisory && gap.catalogComplete
+  );
+  const remaining = human.filter(
+    (gap) => !(gap.tool === 'codex' && (gap.legacyPromptsOnly || gap.legacyAdvisory))
+  );
+  const missing = remaining.reduce((sum, gap) => sum + (gap.missing || 0), 0);
+  const stale = remaining.reduce((sum, gap) => sum + (gap.stale || 0), 0);
+  const cite = SKILL_CANONICAL_DIR;
+  let citeExists = false;
+  let compact = false;
+  if (root) {
+    citeExists = fs.existsSync(path.join(root, cite));
+    try {
+      compact = isCompactRouterAgentsContent(fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8'));
+    } catch {
+      compact = false;
+    }
+  }
+  const dayZero = compact && !citeExists && missing + stale === 0 && !legacyCodex;
+  const current = citeExists && missing + stale === 0 && !legacyCodex;
+  const tools = remaining.map((gap) => skillGapToolLabel(gap.tool)).filter(Boolean);
+  const expectedCount = skillTemplateNames().length;
+  let message = null;
+  if (dayZero) {
+    const count = expectedCount > 0 ? `; ${expectedCount} /ark-* skills` : '';
+    message = `Skill pack not installed (.agents/skills is not on disk${count}). Compact start does not install it.`;
+  } else if (missing + stale > 0) {
+    message = `${missing} missing / ${stale} content-behind-package /ark-* skill(s) for ${tools.join(', ')}`;
+  }
+  const fix =
+    dayZero || missing + stale > 0
+      ? arkCommand(root, 'ark-check', '--install-agent-gates --skills-only')
+      : null;
+  const missingByHost = {};
+  for (const gap of gaps ?? []) {
+    if ((gap.missing || 0) > 0 && gap.tool) missingByHost[gap.tool] = gap.missing;
+  }
+  return {
+    current,
+    dayZero,
+    claim: '/ark-* skills current for detected tools',
+    cites: current ? [cite] : [],
+    message,
+    fix,
+    human,
+    legacyCodex,
+    legacyAdvisory,
+    missing,
+    stale,
+    expectedCount,
+    missingByHost,
+  };
+}
+
+/**
  * Human-facing skill / Codex catalog gap lines for ark-check (non-JSON).
  * @param {string} root
  * @param {{ skillGaps: object[], codexHomeGap: object|null, codexRepoSkillGap: object|null, codexSessionActive: boolean, env?: NodeJS.ProcessEnv, color: { dim: Function, yellow: Function } }} opts
