@@ -241,9 +241,7 @@ export function collectAdoptionGaps(root, config, coverage) {
           ? h.presentIf()
           : fs.existsSync(path.join(root, h.dir));
       if (!present) continue;
-      const missingSkills = skills.dayZero
-        ? skills.expectedCount
-        : (skills.missingByHost[h.host] ?? 0);
+      const missingSkills = skills.missingByHost[h.host] ?? 0;
       const missingExtras = h.extras.filter(([rel]) => !fs.existsSync(path.join(root, rel)));
       hosts.push({
         host: h.host,

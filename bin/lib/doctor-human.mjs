@@ -458,7 +458,6 @@ export function printDoctorDetailsHuman(view) {
       )
     );
   }
-  // Day-zero text is the single adoption gap from this same status.
   if (!skillStatus.dayZero && skillStatus.message) {
     line(warn, skillStatus.message);
   }
