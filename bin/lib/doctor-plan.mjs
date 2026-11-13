@@ -14,7 +14,7 @@ import { describePackageVersionDualTruth } from './field-install.mjs';
 import { withPinDependentGateFiles } from './pin-dependent-gates.mjs';
 import { detectAgentHomeGaps } from './agent-homes.mjs';
 import { collectDoctorNextActions, preferredDoctorPrimaryNextAction } from './doctor-next-actions.mjs';
-import { printDoctorCompactHuman, printDoctorDetailsHuman } from './doctor-human.mjs';
+import { printDoctorCompactHuman, printDoctorDetailsHuman, formatGovernedCoverageLine, vacuousContainmentNote } from './doctor-human.mjs';
 import { collectLayerOwnerResidual, layerGuidanceLine, placementDescriptionFields } from './layer-description.mjs';
 import { collectAdrPresenceResidual, printAdrPresenceHint } from './adr-presence.mjs';
 import { collectStatesTransitionsResidual } from './states-transitions-presence.mjs';
@@ -189,7 +189,7 @@ export function runCoverage(root, config, files, rules, asJson) {
   console.log(
     `${files.length} source file(s) in scope; ${unclassified.length} not matched by any layer.`
   );
-  console.log(`Governed: ${governed.percent}% (${classifiedFiles}/${files.length} files).`);
+  console.log(formatGovernedCoverageLine(cov, classifiedFiles, files.length));
   if (files.length > 0 && governed.percent < 50) {
     console.log('');
     console.log(
@@ -235,21 +235,6 @@ export function runCoverage(root, config, files, rules, asJson) {
   }
 }
 
-// --doctor: one consolidated health view — coverage, violations, gates, skills, baseline,
-// and command runners — each with the exact command to fix it. Folds the data the other
-// modes already produce so a team sees "what state is my Ark adoption in?" at a glance.
-/**
- * @param {string} root
- * @param {object[]} activeViolations
- * @param {number|null} [governedPercent]
- * @param {number|null} [totalFiles]
- * @param {object} [options]
- * @param {object[]} [options.designSmells]
- * @param {object[]} [options.patternBets]
- * @param {object} [options.config]
- * @param {string[]} [options.files]
- * @param {object} [options.coverage]
- */
 export function buildRemediationPlan(
   root,
   activeViolations,
@@ -407,11 +392,7 @@ export function buildRemediationPlan(
   };
 }
 
-// `--plan`: print the classified remediation plan. Dual-focus output — a one-line headline
-// anyone can read, then the per-step detail a developer acts on. Read-only.
-/**
- * @param {object} [options] optional { config, files, coverage, designSmells, patternBets }
- */
+/** Print the classified remediation plan. Read-only. */
 export function runPlan(
   root,
   activeViolations,
@@ -445,11 +426,11 @@ export function runPlan(
     );
   }
   if (governedPercent != null) {
-    const pctLabel =
-      governedPercent < 50
-        ? color.yellow(`Governed: ${governedPercent}% of in-scope files`)
-        : color.dim(`Governed: ${governedPercent}% of in-scope files`);
-    console.log(pctLabel);
+    const note = governedPercent >= 80 ? vacuousContainmentNote(options.coverage) : null;
+    const label = note
+      ? `${note} — not full governance (${governedPercent}% of in-scope files classified)`
+      : `Governed: ${governedPercent}% of in-scope files`;
+    console.log(governedPercent < 50 || note ? color.yellow(label) : color.dim(label));
   }
   if (plan.patternBets?.length && activeViolations.length === 0) {
     console.log('');

@@ -1488,7 +1488,9 @@ describe('ark init', () => {
       { encoding: 'utf8', stdio: 'pipe' }
     );
     expect(out).toMatch(/UI-focused repository|frontend-surface/);
-    expect(out).toContain('Projected governed coverage: 100%');
+    expect(out).toContain('layers populated, so no layer rule can fail yet');
+    expect(out).toContain('100% of in-scope files classified');
+    expect(out).not.toContain('Projected governed coverage: 100%');
   });
 
   it('`ark start` defaults to a complete read-only JSON preview and --apply writes its bytes', () => {

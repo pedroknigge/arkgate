@@ -12,6 +12,7 @@ import {
   treeHasArkOrderCandidate,
 } from '../ark-shared.mjs';
 import { withProjectedGovernedCoverage } from './projected-governed-coverage.mjs';
+import { vacuousContainmentNote } from './product-copy.mjs';
 import { ARKORDER_FIRST_CONTACT_NEXT, ARKORDER_ONE_BREATH } from './ark-order-doctor.mjs';
 import { resolveFirstStep } from './first-step.mjs';
 import { compactAgentInstructions, instructionRule, mcpJson } from './ci-and-commands.mjs';
@@ -122,15 +123,9 @@ function change(pathname, before, after) {
   };
 }
 
-/**
- * Compact start onboarding budget. Exported for pure unit tests.
- * Gate surface (non-arkrules) ≤ maxFiles; arkrules count toward bytes only.
- */
+/** Compact start budget. Gate files exclude arkrules/; those count toward bytes only. */
 export function setupBudget(changes) {
   const generatedChanges = changes.filter((item) => item.path !== 'package.json');
-  // Compact gate surface stays ≤8 files (MCP + one host + CI + AGENTS + config).
-  // ArkRules starters (arkrules/*.json) are opt-in contract content and count against
-  // the byte budget only — AR08 4.0 emit was failing field start at 10/8 otherwise.
   const gateChanges = generatedChanges.filter((item) => !item.path.startsWith('arkrules/'));
   const arkrulesFiles = generatedChanges.length - gateChanges.length;
   const bytes = generatedChanges.reduce(
@@ -318,7 +313,12 @@ export function renderStartPreview(preview, options = {}) {
         console.log(`  ${row.ruleId}  ${row.file}`);
       }
     } else if (percent != null) {
-      console.log(`Projected governed coverage: ${percent}%`);
+      const note = preview.containmentNote;
+      console.log(
+        note
+          ? `${note} — not full governance (${percent}% of in-scope files classified)`
+          : `Projected governed coverage: ${percent}%`
+      );
     }
     const verified = (preview.hostGuarantees || []).find((line) =>
       String(line).startsWith('Hard-write hook verified')
@@ -544,6 +544,8 @@ export async function planStart(args, helpers) {
       changes.push(change(file, oldContent, newContent));
     }
     const percent = coverage.governed?.percent ?? null;
+    const containmentNote =
+      typeof percent === 'number' && percent >= 80 ? vacuousContainmentNote(coverage) : null;
     const codexSelected = args.tools === 'codex';
     const runtimeActivation = codexSelected
       ? codexRuntimeActivation({
@@ -566,6 +568,7 @@ export async function planStart(args, helpers) {
         classifiedFiles: coverage.governed?.classifiedFiles ?? 0,
         totalFiles: coverage.governed?.totalFiles ?? coverage.totalFiles ?? 0,
       },
+      ...(containmentNote ? { containmentNote } : {}),
       changes,
       setupBudget: setupBudget(changes),
       commands: commands(root, args, helpers),
