@@ -10,7 +10,7 @@ import {
   patternSpecificity,
   resolveOperatingMode,
 } from '../ark-shared.mjs';
-import { collectAdoptionGaps, arkCheckCommand } from './agent-gates.mjs';
+import { collectAdoptionGaps, arkCheckCommand, skillCatalogStatus } from './agent-gates.mjs';
 import { LEFTOVER_DESIGN_LABEL } from './product-copy.mjs';
 import { CORE_LAYER_NAMES } from './core-layers.mjs';
 import {
@@ -898,8 +898,11 @@ export function renderHtmlReport({
   const legacyAdvisoryOnly = skillGaps.some(
     (gap) => gap?.legacyAdvisory === true && gap?.catalogComplete === true
   );
+  const skillStatus = skillCatalogStatus(root, skillGaps);
   const skillsParts = [];
-  if (actionableSkillGaps.length === 0) {
+  if (skillStatus.dayZero && skillStatus.message) {
+    skillsParts.push(`<div class="pill warn">${esc(skillStatus.message)}</div>`);
+  } else if (actionableSkillGaps.length === 0) {
     skillsParts.push(
       '<div class="pill good">Agent skills current for detected tools</div>'
     );

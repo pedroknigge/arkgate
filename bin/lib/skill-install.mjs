@@ -1197,58 +1197,84 @@ export function skillGapsForActiveHost(skillGaps, env = process.env) {
 }
 
 /**
+ * One skills-status read. A missing `.agents/skills` is not current.
+ * Callers print `message` at most once.
+ * @param {string} root
+ * @param {object[]|undefined} skillGaps detectSkillGaps result; omit to scan
+ * @param {NodeJS.ProcessEnv} [env]
+ */
+export function skillCatalogStatus(root, skillGaps, env = process.env) {
+  const gaps = skillGaps === undefined ? detectSkillGaps(root) : skillGaps ?? [];
+  const human = skillGapsForActiveHost(gaps, env);
+  const legacyCodex = human.some((g) => g.tool === 'codex' && g.legacyPromptsOnly);
+  const legacyAdvisory = human.some((g) => g.tool === 'codex' && g.legacyAdvisory && g.catalogComplete);
+  const rest = human.filter((g) => !(g.tool === 'codex' && (g.legacyPromptsOnly || g.legacyAdvisory)));
+  const missing = rest.reduce((s, g) => s + (g.missing || 0), 0);
+  const stale = rest.reduce((s, g) => s + (g.stale || 0), 0);
+  let citeExists = false;
+  let compact = false;
+  if (root) {
+    citeExists = fs.existsSync(path.join(root, SKILL_CANONICAL_DIR));
+    try {
+      compact = isCompactRouterAgentsContent(fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8'));
+    } catch { /* no AGENTS.md */ }
+  }
+  const dayZero = compact && !citeExists && missing + stale === 0 && !legacyCodex;
+  const current = citeExists && missing + stale === 0 && !legacyCodex;
+  const tools = rest.map((g) => skillGapToolLabel(g.tool)).filter(Boolean).join(', ');
+  const message = dayZero
+    ? 'Skill pack not installed (.agents/skills is not on disk). Compact start does not install it.'
+    : missing + stale > 0
+      ? `${missing} missing / ${stale} content-behind-package /ark-* skill(s) for ${tools}`
+      : null;
+  const missingByHost = {};
+  for (const g of gaps) if ((g.missing || 0) > 0 && g.tool) missingByHost[g.tool] = g.missing;
+  return {
+    current, dayZero, legacyCodex, legacyAdvisory, missing, stale, tools, missingByHost, message,
+    claim: '/ark-* skills current for detected tools',
+    cites: current ? [SKILL_CANONICAL_DIR] : [],
+    fix: message ? arkCommand(root, 'ark-check', '--install-agent-gates --skills-only') : null,
+  };
+}
+
+/**
  * Human-facing skill / Codex catalog gap lines for ark-check (non-JSON).
  * @param {string} root
  * @param {{ skillGaps: object[], codexHomeGap: object|null, codexRepoSkillGap: object|null, codexSessionActive: boolean, env?: NodeJS.ProcessEnv, color: { dim: Function, yellow: Function } }} opts
  */
 export function printSkillAndCodexGapHints(root, opts) {
-  const { skillGaps, codexHomeGap, codexRepoSkillGap, codexSessionActive, color } = opts;
-  const activeSkillGaps = skillGapsForActiveHost(skillGaps, opts.env);
-  if (activeSkillGaps.length > 0) {
-    const legacyCodex = activeSkillGaps.some(
-      (gap) => gap.tool === 'codex' && gap.legacyPromptsOnly
+  const { codexHomeGap, codexRepoSkillGap, codexSessionActive, color } = opts;
+  const status = skillCatalogStatus(root, opts.skillGaps, opts.env);
+  if (status.legacyCodex) {
+    console.log(
+      color.yellow(
+        'Codex has legacy flat .codex/prompts/ark-*.md only — those are not loadable as skills. ' +
+          `Install the real catalog: ${arkCommand(root, 'ark-check', '--install-agent-gates --skills-only --tools codex --force')}`
+      )
     );
-    const legacyAdvisory = activeSkillGaps.some(
-      (gap) => gap.tool === 'codex' && gap.legacyAdvisory && gap.catalogComplete
+  }
+  if (status.legacyAdvisory) {
+    console.log(
+      color.dim(
+        'Codex .agents/skills catalog is complete; leftover .codex/prompts/ark-*.md are not loadable and safe to delete (not required).'
+      )
     );
-    const remaining = activeSkillGaps.filter(
-      (gap) =>
-        !(gap.tool === 'codex' && (gap.legacyPromptsOnly || gap.legacyAdvisory))
+  }
+  if (status.missing > 0) {
+    console.log(
+      color.dim(
+        `${status.missing} /ark-* skill(s) not installed for ${status.tools} (this Ark version ships them). ` +
+          `Install: ${arkCommand(root, 'ark-check', '--install-agent-gates')}`
+      )
     );
-    const missingTotal = remaining.reduce((sum, gap) => sum + gap.missing, 0);
-    const staleTotal = remaining.reduce((sum, gap) => sum + gap.stale, 0);
-    const tools = remaining.map((gap) => skillGapToolLabel(gap.tool)).join(', ');
-    if (legacyCodex) {
-      console.log(
-        color.yellow(
-          'Codex has legacy flat .codex/prompts/ark-*.md only — those are not loadable as skills. ' +
-            `Install the real catalog: ${arkCommand(root, 'ark-check', '--install-agent-gates --skills-only --tools codex --force')}`
-        )
-      );
-    }
-    if (legacyAdvisory) {
-      console.log(
-        color.dim(
-          'Codex .agents/skills catalog is complete; leftover .codex/prompts/ark-*.md are not loadable and safe to delete (not required).'
-        )
-      );
-    }
-    if (missingTotal > 0) {
-      console.log(
-        color.dim(
-          `${missingTotal} /ark-* skill(s) not installed for ${tools} (this Ark version ships them). ` +
-            `Install: ${arkCommand(root, 'ark-check', '--install-agent-gates')}`
-        )
-      );
-    }
-    if (staleTotal > 0) {
-      console.log(
-        color.yellow(
-          `${staleTotal} /ark-* skill(s) content behind this Ark package for ${tools}. ` +
-            `Refresh skills only (do not re-adopt): ${arkCommand(root, 'ark-check', '--install-agent-gates --skills-only --force')}`
-        )
-      );
-    }
+  }
+  if (status.stale > 0) {
+    console.log(
+      color.yellow(
+        `${status.stale} /ark-* skill(s) content behind this Ark package for ${status.tools}. ` +
+          `Refresh skills only (do not re-adopt): ${arkCommand(root, 'ark-check', '--install-agent-gates --skills-only --force')}`
+      )
+    );
   }
   if (codexHomeGap) {
     const deferred = !codexSessionActive;

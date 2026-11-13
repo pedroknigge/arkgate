@@ -12,7 +12,7 @@ import { printDoctorAdvisories, printCompactExtraDoctorLines } from './doctor-ad
 import { designDeltaDoctorLines } from './design-delta.mjs';
 import { enforcementDoctorLines } from './enforcement-state.mjs';
 import { analysisIncompleteStatement } from './analysis-completeness.mjs';
-import { skillGapsForActiveHost, detectCodexHomeGap, codexConcernIsActive, skillGapToolLabel } from './agent-gates.mjs';
+import { skillCatalogStatus, detectCodexHomeGap, codexConcernIsActive } from './agent-gates.mjs';
 import { agentHomeConcernIsActive } from './agent-homes.mjs';
 import { layerGuidanceLine } from './layer-description.mjs';
 import { printSharedImportsSliceBridgeList } from './violations.mjs';
@@ -443,25 +443,14 @@ export function printDoctorDetailsHuman(view) {
     if (listedMissing.length > 0) line(bad, `Missing gates: ${listedMissing.join(', ')}`);
     if (skippableCi) line(warn, skippableCi);
   }
-  const humanSkillGaps = skillGapsForActiveHost(skillGaps);
-  const legacyCodex = humanSkillGaps.some((g) => g.tool === 'codex' && g.legacyPromptsOnly);
-  const codexLegacySafeDelete = humanSkillGaps.some(
-    (g) => g.tool === 'codex' && g.legacyAdvisory && g.catalogComplete
-  );
-  const remainingGaps = humanSkillGaps.filter(
-    (g) => !(g.tool === 'codex' && (g.legacyPromptsOnly || g.legacyAdvisory))
-  );
-  const remMiss = remainingGaps.reduce((s, g) => s + g.missing, 0);
-  const remStale = remainingGaps.reduce((s, g) => s + g.stale, 0);
-  if (remMiss + remStale === 0 && !legacyCodex) {
-    citedGreen(line, { ok, warn }, '/ark-* skills current for detected tools', [
-      '.agents/skills',
-    ]);
+  const skillStatus = skillCatalogStatus(root, skillGaps);
+  if (skillStatus.current) {
+    citedGreen(line, { ok, warn }, skillStatus.claim, skillStatus.cites);
   }
-  if (legacyCodex) {
+  if (skillStatus.legacyCodex) {
     line(warn, 'Codex: legacy flat .codex/prompts only (not a loadable skill catalog)');
   }
-  if (codexLegacySafeDelete) {
+  if (skillStatus.legacyAdvisory) {
     line(
       ' ',
       color.dim(
@@ -469,11 +458,8 @@ export function printDoctorDetailsHuman(view) {
       )
     );
   }
-  if (remMiss + remStale > 0) {
-    line(
-      warn,
-      `${remMiss} missing / ${remStale} content-behind-package /ark-* skill(s) for ${remainingGaps.map((g) => skillGapToolLabel(g.tool)).join(', ')}`
-    );
+  if (!skillStatus.dayZero && skillStatus.message) {
+    line(warn, skillStatus.message);
   }
   const codexHomeGap = detectCodexHomeGap(root);
   if (codexHomeGap) {
