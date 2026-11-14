@@ -74,8 +74,7 @@ These are **not** the day-to-day product path. They stay in the repo for evidenc
 | Runtime hardening (experimental) | [production-hardening.md](production-hardening.md) |
 
 Current release: [CHANGELOG](../CHANGELOG.md) (`arkgate@4.8.32`; confirm npm with `npm view arkgate@4.8.32 version`; does not close `K01`).
-Prior published: [CHANGELOG](../CHANGELOG.md) (`arkgate@4.8.31`).
-Prior published: [CHANGELOG](../CHANGELOG.md) (`arkgate@4.8.30`).
+Prior published: [CHANGELOG](../CHANGELOG.md) (`arkgate@4.8.31`, `arkgate@4.8.30`).
 Prior published: [CHANGELOG](../CHANGELOG.md) (`arkgate@4.8.29`).
 Prior published: [CHANGELOG](../CHANGELOG.md) (`arkgate@4.8.28`).
 Prior published: [CHANGELOG](../CHANGELOG.md) (`arkgate@4.8.27`).
