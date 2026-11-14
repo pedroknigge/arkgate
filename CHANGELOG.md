@@ -5,6 +5,16 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+## 4.8.32 — 2026-11-14
+
+Weekly ship. **No required config migration.** Does not close `K01` / `Z09`. This does **not** turn `arkOrder` on.
+
+**Status: released.** `npm view arkgate@4.8.32 version`.
+
+### Fixed
+- `src/**` overlap; doctor does not call one layer full governance (#393, #391).
+- skill-catalog: no `.agents/skills`; `--install-agent-gates --skills-only` (#394, #390).
+
 ## 4.8.31 — 2026-11-06
 
 **Patch** over **4.8.30**. Weekly ship (#382, #385). **Write. Check. Ship.** **No required config migration.** No `schemaVersion` bump. Does not close `K01` / `Z09`. This mother `ark.config.json` still does **not** turn `arkOrder` on.
