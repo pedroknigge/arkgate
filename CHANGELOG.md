@@ -5,6 +5,16 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+## 4.8.32 — 2026-11-14
+
+**Patch** over **4.8.31**. Weekly ship (#393, #394). **Write. Check. Ship.** **No required config migration.** No `schemaVersion` bump. Does not close `K01` / `Z09`. This mother `ark.config.json` still does **not** turn `arkOrder` on.
+
+**Status: released** (tag `v4.8.32`). Run `npm view arkgate@4.8.32 version` to confirm (#314).
+
+### Fixed
+- Library `start` no longer leaves a catch-all `src/**` on Application overlapping Domain, and the short doctor does not call a single populated layer (or a total dual-match) full governance (#393, #391).
+- Doctor and adoption share one skill-catalog status: doctor does not say `.agents/skills` is current when that directory is missing, and a compact start gets one next step (`--install-agent-gates --skills-only`) instead of a split green/missing verdict (#394, #390).
+
 ## 4.8.31 — 2026-11-06
 
 **Patch** over **4.8.30**. Weekly ship (#382, #385). **Write. Check. Ship.** **No required config migration.** No `schemaVersion` bump. Does not close `K01` / `Z09`. This mother `ark.config.json` still does **not** turn `arkOrder` on.
