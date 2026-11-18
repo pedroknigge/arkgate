@@ -97,6 +97,7 @@ Maintainer-only local notes may live under gitignored `internal/` — never comm
 
 - **Bug fixes:** PR with a failing test that goes green.
 - **Features / behavior:** open an issue first — keep the public surface small.
+- **Evidence:** the pull request body has an Evidence section (`.github/PULL_REQUEST_TEMPLATE.md`). Paste the report from `node .cursor/skills/verify-arkgate/verify.mjs`. The map is `docs/feature-map.json`.
 
 **Agent reports (human confirms first):** if a session finds a bug, false green, false red,
 missing doc, or improvable behavior **in ArkGate**, draft one GitHub issue for **this**

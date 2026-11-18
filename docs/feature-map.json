@@ -1,0 +1,391 @@
+{
+  "schemaVersion": 1,
+  "product": "arkgate",
+  "features": [
+    {
+      "id": "core-gate",
+      "name": "Core gate, write time and pull request",
+      "reach": [
+        { "kind": "command", "text": "npx arkgate-check --strict-merge" },
+        { "kind": "hook", "text": "Host PreToolUse runs arkgate-mcp --hook" },
+        { "kind": "skill", "text": "/ark-autopilot" }
+      ],
+      "proofs": [
+        {
+          "id": "write-hook",
+          "driver": true,
+          "needsDist": true,
+          "root": "eval/cases/domain-forbidden-global",
+          "cleanup": ["src/domain/clock.ts"],
+          "steps": [
+            {
+              "bin": "ark-mcp",
+              "args": ["--hook", "--root", "{root}"],
+              "stdin": {
+                "tool_name": "Write",
+                "tool_input": {
+                  "file_path": "{root}/src/domain/clock.ts",
+                  "content": "export const t = Date.now();\n"
+                }
+              },
+              "expect": {
+                "exit": 2,
+                "outputIncludes": ["FORBIDDEN_GLOBAL", "blocked"]
+              }
+            }
+          ]
+        },
+        {
+          "id": "pr-strict-merge",
+          "driver": true,
+          "workspace": { "copy": "eval/cases/domain-forbidden-global" },
+          "steps": [
+            {
+              "bin": "ark-check",
+              "args": ["--root", "{root}", "--install-agent-gates", "--tools", "cursor", "--force"],
+              "expect": {
+                "exit": 0,
+                "outputIncludes": [".github/workflows/ark-check.yml"],
+                "files": [
+                  { "path": ".github/workflows/ark-check.yml", "includes": ["--strict-merge"] },
+                  { "path": ".cursor/hooks.json", "includes": ["--hook"] }
+                ]
+              }
+            },
+            {
+              "bin": "ark-check",
+              "args": ["--root", "{root}", "--strict-merge", "--no-cache"],
+              "expect": {
+                "exit": 1,
+                "outputIncludes": ["FORBIDDEN_GLOBAL"]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "start",
+      "name": "start and start --apply",
+      "reach": [
+        { "kind": "command", "text": "npx arkgate start" },
+        { "kind": "command", "text": "npx arkgate start --apply" },
+        { "kind": "skill", "text": "/ark-adopt" }
+      ],
+      "proofs": [
+        {
+          "id": "preview",
+          "driver": true,
+          "workspace": {
+            "copy": "eval/cases/domain-forbidden-global",
+            "remove": ["ark.config.json"]
+          },
+          "steps": [
+            {
+              "bin": "ark",
+              "args": ["start", "--root", "{root}", "--yes", "--no-install"],
+              "expect": {
+                "exit": 0,
+                "outputIncludes": ["no files were changed", "create ark.config.json"],
+                "files": [{ "path": "ark.config.json", "absent": true }]
+              }
+            }
+          ]
+        },
+        {
+          "id": "apply",
+          "driver": true,
+          "workspace": {
+            "copy": "eval/cases/domain-forbidden-global",
+            "remove": ["ark.config.json"]
+          },
+          "steps": [
+            {
+              "bin": "ark",
+              "args": ["start", "--apply", "--root", "{root}", "--yes", "--skip-package-manager"],
+              "expect": {
+                "exit": 0,
+                "outputIncludes": ["Applied ", "start mutation"],
+                "files": [
+                  { "path": "ark.config.json", "includes": ["layers"] },
+                  { "path": "package.json", "absent": true }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "doctor",
+      "name": "doctor",
+      "reach": [
+        { "kind": "command", "text": "npx arkgate-check --doctor" }
+      ],
+      "proofs": [
+        {
+          "id": "status",
+          "driver": true,
+          "root": "eval/cases/domain-forbidden-global",
+          "steps": [
+            {
+              "bin": "ark-check",
+              "args": ["--root", "{root}", "--doctor", "--no-cache"],
+              "expect": {
+                "exit": 0,
+                "outputIncludes": ["Ark doctor", "Governed:"]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "coverage",
+      "name": "coverage",
+      "reach": [
+        { "kind": "command", "text": "npx arkgate-check --coverage" },
+        { "kind": "skill", "text": "/ark-coverage" }
+      ],
+      "proofs": [
+        {
+          "id": "json",
+          "driver": true,
+          "root": "eval/cases/domain-forbidden-global",
+          "steps": [
+            {
+              "bin": "ark-check",
+              "args": ["--root", "{root}", "--coverage", "--json", "--no-cache"],
+              "expect": {
+                "exit": 0,
+                "outputIncludes": ["\"percent\": 100"]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "recommend",
+      "name": "recommend",
+      "reach": [
+        { "kind": "command", "text": "npx arkgate-check --recommend" },
+        { "kind": "skill", "text": "/ark-adopt" }
+      ],
+      "proofs": [
+        {
+          "id": "json",
+          "driver": true,
+          "root": "eval/cases/domain-forbidden-global",
+          "steps": [
+            {
+              "bin": "ark-check",
+              "args": ["--root", "{root}", "--recommend", "--json", "--no-cache"],
+              "expect": {
+                "exit": 0,
+                "outputIncludes": ["\"archetype\":"]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "arkrules",
+      "name": "ArkRules",
+      "reach": [
+        { "kind": "command", "text": "npx arkgate-check" },
+        { "kind": "skill", "text": "/ark-contract" }
+      ],
+      "proofs": [
+        {
+          "id": "bad-aggregate",
+          "driver": true,
+          "workspace": {
+            "copy": "tests/fixtures/arkrules-poc-enforcement",
+            "rename": [["src/domain/Order.bad.ts", "src/domain/Order.ts"]],
+            "remove": ["src/domain/Order.good.ts"]
+          },
+          "steps": [
+            {
+              "bin": "ark-check",
+              "args": ["--root", "{root}", "--no-cache"],
+              "expect": {
+                "exit": 1,
+                "outputIncludes": ["ARKRULE_STRUCTURE", "aggregate-private-state"]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "arkrun",
+      "name": "ArkRun",
+      "reach": [
+        { "kind": "command", "text": "npx arkgate-check" },
+        { "kind": "skill", "text": "/ark-runtime" }
+      ],
+      "proofs": [
+        {
+          "id": "kernel-in-domain",
+          "driver": true,
+          "root": "tests/fixtures/arkrun-sensors/kernel-in-domain",
+          "steps": [
+            {
+              "bin": "ark-check",
+              "args": ["--root", "{root}", "--no-cache"],
+              "expect": {
+                "exit": 1,
+                "outputIncludes": ["ARKRUN_KERNEL_IN_DOMAIN"]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "arkorder",
+      "name": "ArkOrder",
+      "reach": [
+        { "kind": "command", "text": "npx arkgate-check" },
+        { "kind": "skill", "text": "/ark-order" }
+      ],
+      "proofs": [
+        {
+          "id": "xi-field-write",
+          "driver": true,
+          "workspace": {
+            "copy": "tests/fixtures/arkorder-skip-corpus/trees/xi-field-write",
+            "mergeJson": {
+              "path": "ark.config.json",
+              "sources": [
+                "tests/fixtures/arkorder-skip-corpus/contracts/layers.json",
+                "tests/fixtures/arkorder-skip-corpus/contracts/arkorder-enforced.json"
+              ]
+            }
+          },
+          "steps": [
+            {
+              "bin": "ark-check",
+              "args": ["--root", "{root}", "--no-cache"],
+              "expect": {
+                "exit": 1,
+                "outputIncludes": ["ARKORDER_XI_FIELD_WRITE"]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "host-hooks",
+      "name": "Host hooks",
+      "reach": [
+        { "kind": "command", "text": "npx arkgate-check --install-agent-gates --tools claude,cursor,codex,grok,antigravity,opencode" },
+        { "kind": "hook", "text": "PreToolUse on Claude, Cursor, Codex, Grok, and Antigravity. OpenCode registers MCP only." }
+      ],
+      "proofs": [
+        {
+          "id": "install-all",
+          "driver": true,
+          "workspace": { "copy": "eval/cases/domain-forbidden-global" },
+          "steps": [
+            {
+              "bin": "ark-check",
+              "args": [
+                "--root",
+                "{root}",
+                "--install-agent-gates",
+                "--tools",
+                "claude,cursor,codex,grok,antigravity,opencode",
+                "--force"
+              ],
+              "expect": {
+                "exit": 0,
+                "outputIncludes": ["Agent gates for:"],
+                "files": [
+                  { "path": ".claude/settings.json", "includes": ["--hook"] },
+                  { "path": ".cursor/hooks.json", "includes": ["--hook", "\"failClosed\": true"] },
+                  { "path": ".codex/hooks.json", "includes": ["--hook"] },
+                  { "path": ".grok/hooks/ark-write-gate.json", "includes": ["--hook"] },
+                  { "path": ".agents/hooks.json", "includes": ["--hook"] },
+                  { "path": "opencode.json", "includes": ["arkgate-mcp"], "excludes": ["--hook"] }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mcp",
+      "name": "MCP server",
+      "reach": [
+        { "kind": "command", "text": "npx arkgate-mcp" },
+        { "kind": "hook", "text": "ark_prepare_write after ark_identity" }
+      ],
+      "proofs": [
+        {
+          "id": "initialize-and-validate",
+          "driver": true,
+          "needsDist": true,
+          "root": "eval/cases/domain-forbidden-global",
+          "steps": [
+            {
+              "bin": "ark-mcp",
+              "args": ["--root", "{root}"],
+              "rpc": [
+                { "method": "initialize", "params": { "protocolVersion": "2024-11-05" } },
+                {
+                  "method": "tools/call",
+                  "params": {
+                    "name": "validate_code",
+                    "arguments": {
+                      "source": "export const t = Date.now();\n",
+                      "filePath": "src/domain/clock.ts"
+                    }
+                  }
+                }
+              ],
+              "expect": {
+                "exit": 0,
+                "outputIncludes": ["\"name\":\"arkgate\"", "FORBIDDEN_GLOBAL"]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "skills",
+      "name": "Skills",
+      "reach": [
+        { "kind": "command", "text": "npx arkgate-check --install-agent-gates --skills-only" },
+        { "kind": "skill", "text": "/ark-adopt, /ark-place, /ark-autopilot, /ark-explore, /ark-upgrade, /ark-runtime, /ark-order" }
+      ],
+      "proofs": [
+        {
+          "id": "skills-only",
+          "driver": true,
+          "workspace": { "copy": "eval/cases/domain-forbidden-global" },
+          "steps": [
+            {
+              "bin": "ark-check",
+              "args": ["--root", "{root}", "--install-agent-gates", "--skills-only", "--force"],
+              "expect": {
+                "exit": 0,
+                "outputIncludes": [".agents/skills/ark-adopt/SKILL.md"],
+                "files": [
+                  { "path": ".agents/skills/ark-adopt/SKILL.md", "includes": ["name: ark-adopt", "arkgate@"] },
+                  { "path": ".agents/skills/ark-runtime/SKILL.md", "includes": ["name: ark-runtime"] },
+                  { "path": ".agents/skills/ark-order/SKILL.md", "includes": ["name: ark-order"] }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
