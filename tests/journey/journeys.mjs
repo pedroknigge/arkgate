@@ -70,7 +70,8 @@
  * alphabetical, with a postinstall lint that refuses any other order, and a
  * tsconfig that extends a workspace package. The harness installs the packed
  * tarball without rewriting package.json, so `start --apply` is the edit that
- * inserts arkgate. Check must name the partial-analysis cause. Doctor must
+ * inserts arkgate. Check must name the partial-analysis cause. The declared
+ * pnpm workspaces stay outside include, so that check exits 1. Doctor must
  * not recommend strict-merge while that analysis is incomplete.
  *
  * #373 is `globpack`: a pnpm workspace with a private application package,
