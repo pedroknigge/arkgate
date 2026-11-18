@@ -730,6 +730,20 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
     { oftenAdvisory: true }
   ),
   entry(
+    'CONFIG_CATCH_ALL_OVERLAP',
+    'config',
+    'Catch-all overlaps another layer',
+    'A directory catch-all (such as src/**) matches the same paths as another layer’s pattern, and that pattern does not name a deeper directory. Every overlapping file would otherwise be reported as governed by whichever glob scores higher.',
+    'Remove the catch-all, or give the other layer a deeper directory (src/domain/** under src/**). An extension-only glob such as src/**/*.ts is not a deeper directory.'
+  ),
+  entry(
+    'CONFIG_WORKSPACE_OUT_OF_INCLUDE',
+    'config',
+    'Declared workspace is out of include',
+    'A workspace root from package.json workspaces, pnpm-workspace.yaml, rush.json, or lerna.json is neither covered by include nor listed in workspaceExclusions with a reason. Coverage of the included files is not coverage of the repo.',
+    'Add the workspace root to include, or set workspaceExclusions to [{ "root": "<root>", "reason": "why it stays out" }].'
+  ),
+  entry(
     'CONFIG_UNCLASSIFIED_FILES',
     'config',
     'Unclassified included files',

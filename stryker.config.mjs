@@ -72,15 +72,15 @@ const config = {
     // validateSliceContract call replaces the three slice validators.
     // The shared schema walker (schemaValidation.ts, jscpd dedupe) and knip's unused-export
     // cleanup moved the same decisions to 449-535; JSON.parse is 535.
-    'src/domain/configContract.ts:455-458',
-    'src/domain/configContract.ts:460-461',
-    'src/domain/configContract.ts:481-482',
-    'src/domain/configContract.ts:487-488',
-    'src/domain/configContract.ts:497-499',
-    'src/domain/configContract.ts:509-509',
-    'src/domain/configContract.ts:516-516',
-    'src/domain/configContract.ts:525-530',
-    'src/domain/configContract.ts:541-541',
+    'src/domain/configContract.ts:469-472',
+    'src/domain/configContract.ts:474-475',
+    'src/domain/configContract.ts:495-496',
+    'src/domain/configContract.ts:501-502',
+    'src/domain/configContract.ts:511-513',
+    'src/domain/configContract.ts:523-523',
+    'src/domain/configContract.ts:530-530',
+    'src/domain/configContract.ts:539-544',
+    'src/domain/configContract.ts:555-555',
     // DF04 — selective pure truth islands (fail-closed / ack / promote honesty).
     // peerIsolationDecision is the killable fail-closed core; findDeniedEdgeDecision wires it.
     // #297 inserted the shared-imports-slice hop. Slice-id JSDoc and #308
@@ -92,7 +92,9 @@ const config = {
     // #335/#336 mode, stop, and ratchet types above it moved it to 895-922; the
     // stars-identity JSDoc correction moved it to 897-924; the memory pass
     // sliceFolders parse cache moved it to 923-950; 4.8.27 entrypoints moved it to 965-992.
-    'src/domain/layerMatch.ts:965-992',
+    // The layer classification resolver was inserted above the same function.
+    // @cliMirror JSDoc on the resolver helpers moved it to 1295-1322.
+    'src/domain/layerMatch.ts:1295-1322',
     // AP02 (#264) shifted the helper; sharedImportsSlice and #308 sliceIdentity
     // compares shifted it again. Same policyDeltaAcknowledgementMatches body.
     // #326 compareChildSlices shifted the same function by 93 lines.

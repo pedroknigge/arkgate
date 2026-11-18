@@ -91,7 +91,7 @@
     },
     {
       "command": "ark-check --json --no-cache",
-      "exitCode": 0,
+      "exitCode": 1,
       "filesDiff": {},
       "output": {
         "completeness": "partial",

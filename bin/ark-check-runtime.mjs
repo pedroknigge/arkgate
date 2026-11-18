@@ -20,6 +20,7 @@ import {
   detectTsPackageRoots,
   resolveIncludeRoots,
   installDevHint,
+  classificationAccountsForPath,
   layerForFile,
 } from './ark-shared.mjs';
 
@@ -1193,7 +1194,10 @@ async function main() {
     const governedCount = governedFiles.length;
     return emptyAnalysisRefusal({
       governedFileCount: governedCount,
-      classifiedFileCount: classifiedCountFromFiles(governedFiles, loadConfig().layers, layerForFile, root),
+      classifiedFileCount: classifiedCountFromFiles(governedFiles, loadConfig().layers, (fileRoot, abs, layers) => {
+        const rel = path.relative(fileRoot, abs).split(path.sep).join('/');
+        return classificationAccountsForPath(rel, layers) ? 'accounted' : undefined;
+      }, root),
       // Probed only when nothing is governed, and never through the contract's own
       // exclude: the config under suspicion must not get to answer the question about
       // itself (`exclude: ["**"]` would otherwise read as greenfield and pass).

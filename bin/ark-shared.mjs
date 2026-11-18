@@ -134,8 +134,14 @@ function mergeLayerPatterns(config, layerName, patterns, extras = {}) {
     layer = { name: layerName, patterns: [], optional: true, ...extras };
     layers.push(layer);
   }
+  const ownedElsewhere = new Set(
+    layers.filter((entry) => entry !== layer).flatMap((entry) => entry.patterns ?? [])
+  );
   const set = new Set(layer.patterns ?? []);
-  for (const pattern of patterns) set.add(pattern);
+  for (const pattern of patterns) {
+    if (ownedElsewhere.has(pattern)) continue;
+    set.add(pattern);
+  }
   layer.patterns = [...set];
   for (const [key, value] of Object.entries(extras)) {
     if (layer[key] === undefined) layer[key] = value;
@@ -155,7 +161,7 @@ export const LIBRARY_LAYER_DESCRIPTIONS = Object.freeze({
   ApplicationOrchestration:
     'Use cases and the package public surface that coordinate the domain. No I/O of its own.',
   PresentationAdapters:
-    'Optional CLIs, docs, or demo UIs — not the published library core.',
+    'Published package entrypoints, including framework bindings. Not a demo app.',
 });
 
 function setLayerDescription(config, layerName, description) {
@@ -605,9 +611,9 @@ export function collectForbiddenGlobalUses(ts, sourceFile, forbidden) {
 
 // Layer glob matching — generated from canonical src/domain/layerMatch.ts (see generate:layer-match).
 export {
+  classificationAccountsForPath,
   globToRegExp,
   patternSpecificity,
-  matchingLayersForRelativePath,
   layerForFile,
   isScanExcludedRelative,
 } from './ark-layer-match.mjs';
@@ -767,7 +773,11 @@ function readPackageJson(root) {
  * 4. If still empty: conventional multi-package top-level dirs that exist and
  *    contain at least one package.json (packages, apps, plugins, services, …)
  */
-export function detectWorkspaces(root) {
+/**
+ * Workspace roots named by a manifest (package.json workspaces, pnpm-workspace.yaml,
+ * rush.json, lerna.json). Conventional directory guesses are not declared.
+ */
+export function detectDeclaredWorkspaces(root) {
   const dirs = new Set();
   const addGlob = (glob) => {
     if (typeof glob !== 'string') return;
@@ -813,6 +823,13 @@ export function detectWorkspaces(root) {
     }
   }
 
+  return [...dirs];
+}
+
+export function detectWorkspaces(root) {
+  const declared = detectDeclaredWorkspaces(root);
+  if (declared.length > 0) return declared;
+  const dirs = new Set();
   // Conventional multi-package roots when no explicit workspace manifest listed roots.
   if (dirs.size === 0) {
     const conventional = [
@@ -2136,7 +2153,13 @@ export function formatArchitectureRecommendationHuman(recommendation, options = 
       typeof classified === 'number' && typeof total === 'number'
         ? ` (${classified}/${total} files)`
         : '';
-    lines.push(`Projected governed coverage: ${projected}%${counts}`);
+    const scope = recommendation.projectedCoverage?.scopeLine;
+    const honesty = recommendation.projectedCoverage?.honestyLine;
+    lines.push(
+      typeof honesty === 'string' && honesty.length > 0 && !honesty.startsWith('Governed:')
+        ? `Projected coverage: ${honesty}`
+        : `Projected governed coverage: ${projected}%${counts}${scope ? `. ${scope}` : ''}`
+    );
   }
   if (recommendation.requiresConfirmation) {
     lines.push('⚠ Confirmation required before applying this recommendation.');

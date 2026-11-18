@@ -110,6 +110,8 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 | [`CONFIG_RULE_UNKNOWN_FROM_LAYER`](#CONFIG_RULE_UNKNOWN_FROM_LAYER) | config | Rule unknown from layer |
 | [`CONFIG_RULE_UNKNOWN_TO_LAYER`](#CONFIG_RULE_UNKNOWN_TO_LAYER) | config | Rule unknown to layer |
 | [`CONFIG_AMBIGUOUS_LAYERS`](#CONFIG_AMBIGUOUS_LAYERS) | config | Ambiguous layer classification |
+| [`CONFIG_CATCH_ALL_OVERLAP`](#CONFIG_CATCH_ALL_OVERLAP) | config | Catch-all overlaps another layer |
+| [`CONFIG_WORKSPACE_OUT_OF_INCLUDE`](#CONFIG_WORKSPACE_OUT_OF_INCLUDE) | config | Declared workspace is out of include |
 | [`CONFIG_UNCLASSIFIED_FILES`](#CONFIG_UNCLASSIFIED_FILES) | config | Unclassified included files |
 | [`CONFIG_LAYER_MISSING_OWNER`](#CONFIG_LAYER_MISSING_OWNER) | config | Layer missing owner |
 | [`CONFIG_SLICE_IDENTITY_COLLISION`](#CONFIG_SLICE_IDENTITY_COLLISION) | config | Starred slice prefixes share one id |
@@ -1056,6 +1058,24 @@ least 60% of the names matching. When a cap stops the pass, the section says
 
 - **Why:** Some files match multiple layers at equal specificity; classification falls back to declaration order.
 - **Fix:** Disambiguate overlapping patterns so each file has one clear layer owner.
+
+<a id="CONFIG_CATCH_ALL_OVERLAP"></a>
+
+### `CONFIG_CATCH_ALL_OVERLAP`
+
+**Catch-all overlaps another layer**
+
+- **Why:** A directory catch-all (such as `src/**`) matches the same paths as another layer’s pattern, and that pattern does not name a deeper directory. Every overlapping file would otherwise be reported as governed by whichever glob scores higher.
+- **Fix:** Remove the catch-all, or give the other layer a deeper directory (`src/domain/**` under `src/**`). An extension-only glob such as `src/**/*.ts` is not a deeper directory.
+
+<a id="CONFIG_WORKSPACE_OUT_OF_INCLUDE"></a>
+
+### `CONFIG_WORKSPACE_OUT_OF_INCLUDE`
+
+**Declared workspace is out of include**
+
+- **Why:** A workspace root from package.json workspaces, pnpm-workspace.yaml, rush.json, or lerna.json is neither covered by include nor listed in workspaceExclusions with a reason. Coverage of the included files is not coverage of the repo.
+- **Fix:** Add the workspace root to include, or set workspaceExclusions to `[{ "root": "<root>", "reason": "why it stays out" }]`.
 
 <a id="CONFIG_UNCLASSIFIED_FILES"></a>
 

@@ -32,6 +32,7 @@ import {
 } from './invariant-tests-path.mjs';
 import { loadArkRuleFileHints } from './arkrule-file-hints.mjs';
 import { collectGovernedFiles } from './scan-files.mjs';
+import { detectDeclaredWorkspaces } from '../ark-shared.mjs';
 import { projectImporterIndex } from './import-graph-projection.mjs';
 
 const HINT_CACHE_CAP = 16;
@@ -253,6 +254,7 @@ export function resolveArchitectureSnapshot({
   const analyzed = analyzeTrustedResolvedProject({
     contract: analysisContract,
     facts,
+    declaredWorkspaces: detectDeclaredWorkspaces(root),
     ...pinEvidence,
     ...(adopted ? { adopted: true } : {}),
     ...(adopted && pathPresent === false ? { invariantTestsPathPresent: false } : {}),

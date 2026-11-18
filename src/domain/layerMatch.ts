@@ -417,29 +417,359 @@ export function matchingLayersForRelativePath(
   );
 }
 
-export function layerForRelativePath(
-  relPath: string,
-  layers: LayerConfig[] | undefined
-): string | undefined {
-  // File paths (not globs): any OS separator → posix relative.
-  const rel = String(relPath).split(/[/\\]/).join('/');
-  let bestName: string | undefined;
-  let bestScore = -1;
-  for (const layer of layers ?? []) {
-    if ((layer.exclude ?? []).some((pattern) => globToRegExp(pattern).test(rel))) {
-      continue;
-    }
-    for (const pattern of layer.patterns ?? []) {
-      if (globToRegExp(pattern).test(rel)) {
-        const score = patternSpecificity(pattern, rel);
-        if (score > bestScore) {
-          bestScore = score;
-          bestName = layer.name;
+const NO_LAYERS: LayerConfig[] = [];
+const LAYER_CLASSIFICATION_TOKEN = Symbol('LayerClassification');
+
+/** Tool and build configs. Basename only, so a nested `packages/foo/vite.config.ts` counts. */
+const TOOLING_CONFIG_BASENAME = /^[\w.-]+\.config\.[cm]?[jt]sx?$/i;
+
+export function isToolingConfigPath(relPath: string): boolean {
+  const rel = normalizeRelPath(relPath);
+  const base = rel.slice(rel.lastIndexOf('/') + 1);
+  return TOOLING_CONFIG_BASENAME.test(base);
+}
+
+function normalizeRelPath(value: string): string {
+  return String(value).split(/[/\\]/).join('/').replace(/^\.\//, '').replace(/\/$/, '');
+}
+
+/**
+ * True when an include entry is the workspace root, or an ancestor of it.
+ * A child path does not cover the root.
+ * @cliMirror bin/lib/presets.mjs
+ */
+export function includeCoversWorkspace(
+  include: readonly string[] | undefined,
+  workspace: string
+): boolean {
+  const root = normalizeRelPath(workspace);
+  if (!root) return false;
+  return (include ?? []).some((entry) => {
+    const inc = normalizeRelPath(entry);
+    return inc === '.' || inc === root || root.startsWith(`${inc}/`);
+  });
+}
+
+/**
+ * Drop include entries already covered by an ancestor (`packages/lib` under `packages`).
+ * @cliMirror bin/lib/presets.mjs
+ */
+export function dedupeIncludeEntries(include: readonly string[]): string[] {
+  const norm = [
+    ...new Set((include ?? []).map((entry) => normalizeRelPath(entry)).filter(Boolean)),
+  ];
+  return norm.filter(
+    (entry) => !norm.some((other) => other !== entry && entry.startsWith(`${other}/`))
+  );
+}
+
+/**
+ * Directory catch-all prefix. `src/**` → `src`. Bare `**` → `''`.
+ * A pattern with a file-name constraint (`src/**\/*.ts`) is not a catch-all.
+ */
+function directoryCatchAllPrefix(pattern: string): string | null {
+  const glob = normalizeGlobSeparators(pattern);
+  if (glob === '**' || glob === '**/*') return '';
+  if (glob.endsWith('/**/*')) return glob.slice(0, -5);
+  if (glob.endsWith('/**')) return glob.slice(0, -3);
+  return null;
+}
+
+function patternSubsumes(broader: string, narrower: string): boolean {
+  const prefix = directoryCatchAllPrefix(broader);
+  if (prefix === null) return false;
+  if (prefix === '') return true;
+  const narrow = normalizeGlobSeparators(narrower);
+  return narrow === prefix || narrow.startsWith(`${prefix}/`);
+}
+
+/**
+ * The narrower pattern names a directory or file under the catch-all
+ * (`src/domain/**` under `src/**`, `bin/lib/foo.mjs` under `bin/**`,
+ * `src/domain/**` under a bare `**`).
+ * A bare `**` is never the deeper side. An extension-only pattern is not deeper.
+ */
+function isDeeperConcrete(broader: string, narrower: string): boolean {
+  const left = concreteGlobSegments(broader);
+  const right = concreteGlobSegments(narrower);
+  // A bare `**` has no concrete segment, so any pattern that names one is deeper.
+  // `**` itself is never the deeper side: an empty right side fails the length check.
+  if (right.length <= left.length) return false;
+  for (let i = 0; i < left.length; i += 1) {
+    if (left[i] !== right[i]) return false;
+  }
+  return true;
+}
+
+type CatchAllOverlap = {
+  catchAll: { layer: string; pattern: string };
+  overlapped: { layer: string; pattern: string };
+};
+
+const catchAllOverlapCache = new WeakMap<readonly LayerConfig[], CatchAllOverlap[]>();
+
+function catchAllOverlaps(layers: readonly LayerConfig[]): CatchAllOverlap[] {
+  const cached = catchAllOverlapCache.get(layers);
+  if (cached) return cached;
+  const found: CatchAllOverlap[] = [];
+  const seen = new Set<string>();
+  for (const left of layers) {
+    for (const right of layers) {
+      if (left === right || left.name === right.name) continue;
+      for (const broader of left.patterns ?? []) {
+        if (directoryCatchAllPrefix(broader) === null) continue;
+        for (const narrower of right.patterns ?? []) {
+          if (!patternSubsumes(broader, narrower) || isDeeperConcrete(broader, narrower)) continue;
+          const leftKey = `${left.name}\0${broader}`;
+          const rightKey = `${right.name}\0${narrower}`;
+          const key = leftKey < rightKey ? `${leftKey}\0${rightKey}` : `${rightKey}\0${leftKey}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          found.push({
+            catchAll: { layer: left.name, pattern: broader },
+            overlapped: { layer: right.name, pattern: narrower },
+          });
         }
       }
     }
   }
-  return bestName;
+  catchAllOverlapCache.set(layers, found);
+  return found;
+}
+
+function layerNamed(layers: readonly LayerConfig[], name: string): LayerConfig | undefined {
+  return layers.find((layer) => layer.name === name);
+}
+
+function layerPatternMatches(rel: string, layer: LayerConfig | undefined, pattern: string): boolean {
+  if (!layer) return false;
+  if ((layer.exclude ?? []).some((item) => globToRegExp(item).test(rel))) return false;
+  return globToRegExp(pattern).test(rel);
+}
+
+function bestLayerName(
+  rel: string,
+  layers: readonly LayerConfig[]
+): { layer: string; pattern: string } | undefined {
+  let bestName: string | undefined;
+  let bestPattern = '';
+  let bestScore = -1;
+  for (const layer of layers) {
+    if ((layer.exclude ?? []).some((pattern) => globToRegExp(pattern).test(rel))) continue;
+    for (const pattern of layer.patterns ?? []) {
+      if (!globToRegExp(pattern).test(rel)) continue;
+      const score = patternSpecificity(pattern, rel);
+      if (score > bestScore) {
+        bestScore = score;
+        bestName = layer.name;
+        bestPattern = pattern;
+      }
+    }
+  }
+  return bestName ? { layer: bestName, pattern: bestPattern } : undefined;
+}
+
+export type ClassifiedPath =
+  | {
+      readonly kind: 'source';
+      readonly path: string;
+      readonly layer: string;
+      readonly pattern: string;
+      readonly alsoMatched: readonly string[];
+    }
+  | { readonly kind: 'tooling'; readonly path: string }
+  | { readonly kind: 'unclassified'; readonly path: string }
+  | {
+      readonly kind: 'catch-all-overlap';
+      readonly path: string;
+      readonly catchAll: { readonly layer: string; readonly pattern: string };
+      readonly overlapped: { readonly layer: string; readonly pattern: string };
+    };
+
+export type WorkspaceScope =
+  | { readonly kind: 'included'; readonly root: string }
+  | { readonly kind: 'excluded'; readonly root: string; readonly reason: string }
+  | { readonly kind: 'missing'; readonly root: string };
+
+export type ClassificationFinding = {
+  readonly ruleId:
+    | 'CONFIG_CATCH_ALL_OVERLAP'
+    | 'CONFIG_WORKSPACE_OUT_OF_INCLUDE'
+    | 'CONFIG_UNCLASSIFIED_FILES';
+  readonly message: string;
+  readonly extra: Readonly<Record<string, unknown>>;
+};
+
+export type ResolveLayerClassificationInput = {
+  files: readonly string[];
+  layers: readonly LayerConfig[] | undefined;
+  include?: readonly string[];
+  /** Explicit workspace roots from the manifest. Omit to skip the workspace check. */
+  declaredWorkspaces?: readonly string[];
+  workspaceExclusions?: readonly { root?: unknown; reason?: unknown }[];
+};
+
+function classifyRelativePath(relPath: string, layers: readonly LayerConfig[]): ClassifiedPath {
+  const rel = normalizeRelPath(relPath);
+  if (isToolingConfigPath(rel)) return { kind: 'tooling', path: rel };
+  for (const pair of catchAllOverlaps(layers)) {
+    const left = layerNamed(layers, pair.catchAll.layer);
+    const right = layerNamed(layers, pair.overlapped.layer);
+    if (
+      layerPatternMatches(rel, left, pair.catchAll.pattern) &&
+      layerPatternMatches(rel, right, pair.overlapped.pattern)
+    ) {
+      return {
+        kind: 'catch-all-overlap',
+        path: rel,
+        catchAll: pair.catchAll,
+        overlapped: pair.overlapped,
+      };
+    }
+  }
+  const best = bestLayerName(rel, layers);
+  if (!best) return { kind: 'unclassified', path: rel };
+  const alsoMatched = matchingLayersForRelativePath(rel, layers as LayerConfig[])
+    .map((hit) => hit.layer)
+    .filter((name) => name !== best.layer);
+  return { kind: 'source', path: rel, layer: best.layer, pattern: best.pattern, alsoMatched };
+}
+
+function exclusionFor(
+  workspace: string,
+  exclusions: ResolveLayerClassificationInput['workspaceExclusions']
+): string | undefined {
+  const root = normalizeRelPath(workspace);
+  for (const entry of exclusions ?? []) {
+    if (!entry || typeof entry.root !== 'string' || typeof entry.reason !== 'string') continue;
+    if (normalizeRelPath(entry.root) !== root) continue;
+    const reason = entry.reason.trim();
+    if (reason.length > 0) return reason;
+  }
+  return undefined;
+}
+
+function catchAllMessage(pair: CatchAllOverlap): string {
+  const catchAll = pair.catchAll;
+  const overlapped = pair.overlapped;
+  return (
+    `Catch-all ${catchAll.pattern} on ${catchAll.layer} overlaps ${overlapped.pattern} on ${overlapped.layer}. ` +
+    `A catch-all may not overlap another layer. Remove ${catchAll.pattern} from ${catchAll.layer}, ` +
+    `or give ${overlapped.layer} a deeper directory than ${catchAll.pattern}.`
+  );
+}
+
+function workspaceOutMessage(root: string): string {
+  return (
+    `${root} is a declared workspace and is not in include. Add "${root}" to include, ` +
+    `or set workspaceExclusions to [{ "root": "${root}", "reason": "why it stays out" }].`
+  );
+}
+
+/**
+ * The only constructor of a layer classification.
+ * doctor, coverage, recommend, start, the write gate, CI, and the kernel read this object.
+ */
+export class LayerClassification {
+  readonly paths: readonly ClassifiedPath[];
+  readonly workspaces: readonly WorkspaceScope[];
+  readonly findings: readonly ClassificationFinding[];
+
+  private constructor(
+    token: typeof LAYER_CLASSIFICATION_TOKEN,
+    paths: readonly ClassifiedPath[],
+    workspaces: readonly WorkspaceScope[],
+    findings: readonly ClassificationFinding[]
+  ) {
+    if (token !== LAYER_CLASSIFICATION_TOKEN) {
+      throw new Error('LayerClassification is only constructed by LayerClassification.resolve()');
+    }
+    this.paths = paths;
+    this.workspaces = workspaces;
+    this.findings = findings;
+  }
+
+  static resolve(input: ResolveLayerClassificationInput): LayerClassification {
+    const layers = input.layers ?? NO_LAYERS;
+    const include = input.include ?? [];
+    const paths = input.files.map((file) => classifyRelativePath(file, layers));
+    const findings: ClassificationFinding[] = [];
+    for (const pair of catchAllOverlaps(layers)) {
+      const samples = paths
+        .filter(
+          (row): row is Extract<ClassifiedPath, { kind: 'catch-all-overlap' }> =>
+            row.kind === 'catch-all-overlap' &&
+            row.catchAll.pattern === pair.catchAll.pattern &&
+            row.catchAll.layer === pair.catchAll.layer &&
+            row.overlapped.pattern === pair.overlapped.pattern
+        )
+        .map((row) => row.path)
+        .slice(0, 5);
+      findings.push({
+        ruleId: 'CONFIG_CATCH_ALL_OVERLAP',
+        message: catchAllMessage(pair),
+        extra: {
+          catchAll: pair.catchAll,
+          overlapped: pair.overlapped,
+          samples,
+        },
+      });
+    }
+    const workspaces: WorkspaceScope[] = [];
+    if (input.declaredWorkspaces) {
+      const seen = new Set<string>();
+      for (const raw of input.declaredWorkspaces) {
+        const root = normalizeRelPath(String(raw ?? ''));
+        if (!root || seen.has(root)) continue;
+        seen.add(root);
+        const reason = exclusionFor(root, input.workspaceExclusions);
+        if (reason) {
+          workspaces.push({ kind: 'excluded', root, reason });
+          continue;
+        }
+        if (includeCoversWorkspace(include, root)) {
+          workspaces.push({ kind: 'included', root });
+          continue;
+        }
+        workspaces.push({ kind: 'missing', root });
+        findings.push({
+          ruleId: 'CONFIG_WORKSPACE_OUT_OF_INCLUDE',
+          message: workspaceOutMessage(root),
+          extra: { root },
+        });
+      }
+    }
+    const unclassified = paths.filter((row) => row.kind === 'unclassified').map((row) => row.path);
+    if (unclassified.length > 0) {
+      findings.push({
+        ruleId: 'CONFIG_UNCLASSIFIED_FILES',
+        message:
+          `${unclassified.length} included source file(s) are not matched by any configured layer; ` +
+          'ark-check will not enforce import rules for those source files.',
+        extra: { count: unclassified.length, samples: unclassified.slice(0, 5) },
+      });
+    }
+    return new LayerClassification(LAYER_CLASSIFICATION_TOKEN, paths, workspaces, findings);
+  }
+}
+
+export function layerForRelativePath(
+  relPath: string,
+  layers: LayerConfig[] | undefined
+): string | undefined {
+  const row = classifyRelativePath(relPath, layers ?? NO_LAYERS);
+  return row.kind === 'source' ? row.layer : undefined;
+}
+
+/**
+ * True when the path is source, tooling, or a catch-all overlap. Unclassified is the empty case.
+ * @cliMirror bin/ark-check-runtime.mjs
+ */
+export function classificationAccountsForPath(
+  relPath: string,
+  layers: LayerConfig[] | undefined
+): boolean {
+  return classifyRelativePath(relPath, layers ?? NO_LAYERS).kind !== 'unclassified';
 }
 
 /**

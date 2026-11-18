@@ -26,7 +26,7 @@ export const POST_GREEN_HUMAN =
 export const POST_GREEN_LEDE =
   'Import rules are clean, but leftover design work remains. That does not fail the check — it only means “done” is still wrong until you tidy shape.';
 
-/** Null when a layer rule can still fail. */
+/** Null when a layer rule can still fail and the scope is the whole declared tree. */
 export function vacuousContainmentNote(cov) {
   const layers = Array.isArray(cov?.layers) ? cov.layers : [];
   if (layers.length === 0) return null;
@@ -35,9 +35,16 @@ export function vacuousContainmentNote(cov) {
   const classified = Number(governed.classifiedFiles) || 0;
   const total = Number(governed.totalFiles ?? cov?.totalFiles) || 0;
   const dual = Number(cov?.dualMembership?.count) || 0;
+  const catchAll = Number(cov?.catchAllOverlap?.count) || 0;
+  const missing = Array.isArray(cov?.workspaceScope?.missing) ? cov.workspaceScope.missing : [];
   const parts = [];
-  if (classified > 0 && dual >= classified) {
+  if (catchAll > 0 && total > 0) {
+    parts.push(`${catchAll} of ${total} files match more than one layer`);
+  } else if (classified > 0 && dual >= classified) {
     parts.push(`${dual} of ${classified} files match more than one layer`);
+  }
+  if (missing.length > 0) {
+    parts.push(`${missing.join(', ')} declared workspace not in include`);
   }
   if (total > 0 && populated < 2 && layers.length - populated > 0) {
     parts.push(`${populated} of ${layers.length} layers populated, so no layer rule can fail yet`);
@@ -45,11 +52,28 @@ export function vacuousContainmentNote(cov) {
   return parts.length > 0 ? parts.join('; ') : null;
 }
 
-/** At >=80% a vacuous map is not "Governed: 100%". */
+export function classificationScopeSuffix(cov) {
+  const parts = [];
+  const excluded = Array.isArray(cov?.workspaceScope?.excluded) ? cov.workspaceScope.excluded : [];
+  for (const row of excluded) {
+    parts.push(
+      `${row.root}/ (declared workspace) out of scope: ${row.reason}. Add it to include to govern it.`
+    );
+  }
+  const tooling = Number(cov?.tooling?.count) || 0;
+  if (tooling > 0) parts.push(`${tooling} tool configs are tooling, not source.`);
+  return parts.join(' ');
+}
+
+/** At >=80%, or when a catch-all or a missing workspace makes 100% a lie. */
 export function formatGovernedCoverageLine(cov, classifiedFiles, totalFiles) {
   const percent = Number(cov?.governed?.percent) || 0;
-  const note = percent >= 80 ? vacuousContainmentNote(cov) : null;
-  return note
+  const catchAll = Number(cov?.catchAllOverlap?.count) || 0;
+  const missing = Array.isArray(cov?.workspaceScope?.missing) ? cov.workspaceScope.missing.length : 0;
+  const note = percent >= 80 || catchAll > 0 || missing > 0 ? vacuousContainmentNote(cov) : null;
+  const base = note
     ? `${note} — not full governance (${classifiedFiles}/${totalFiles} files classified).`
     : `Governed: ${percent}% (${classifiedFiles}/${totalFiles} files).`;
+  const extra = classificationScopeSuffix(cov);
+  return extra ? `${base} ${extra}` : base;
 }
