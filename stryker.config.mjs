@@ -92,8 +92,9 @@ const config = {
     // #335/#336 mode, stop, and ratchet types above it moved it to 895-922; the
     // stars-identity JSDoc correction moved it to 897-924; the memory pass
     // sliceFolders parse cache moved it to 923-950; 4.8.27 entrypoints moved it to 965-992.
-    // The layer classification resolver was inserted above the same function (1285-1312).
-    'src/domain/layerMatch.ts:1285-1312',
+    // The layer classification resolver was inserted above the same function.
+    // @cliMirror JSDoc on the resolver helpers moved it to 1295-1322.
+    'src/domain/layerMatch.ts:1295-1322',
     // AP02 (#264) shifted the helper; sharedImportsSlice and #308 sliceIdentity
     // compares shifted it again. Same policyDeltaAcknowledgementMatches body.
     // #326 compareChildSlices shifted the same function by 93 lines.

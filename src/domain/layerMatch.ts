@@ -433,7 +433,11 @@ function normalizeRelPath(value: string): string {
   return String(value).split(/[/\\]/).join('/').replace(/^\.\//, '').replace(/\/$/, '');
 }
 
-/** True when an include entry is the workspace root, or an ancestor of it. A child path does not cover the root. */
+/**
+ * True when an include entry is the workspace root, or an ancestor of it.
+ * A child path does not cover the root.
+ * @cliMirror bin/lib/presets.mjs
+ */
 export function includeCoversWorkspace(
   include: readonly string[] | undefined,
   workspace: string
@@ -446,7 +450,10 @@ export function includeCoversWorkspace(
   });
 }
 
-/** Drop include entries already covered by an ancestor (`packages/lib` under `packages`). */
+/**
+ * Drop include entries already covered by an ancestor (`packages/lib` under `packages`).
+ * @cliMirror bin/lib/presets.mjs
+ */
 export function dedupeIncludeEntries(include: readonly string[]): string[] {
   const norm = [
     ...new Set((include ?? []).map((entry) => normalizeRelPath(entry)).filter(Boolean)),
@@ -754,7 +761,10 @@ export function layerForRelativePath(
   return row.kind === 'source' ? row.layer : undefined;
 }
 
-/** True when the path is source, tooling, or a catch-all overlap. Unclassified is the empty case. */
+/**
+ * True when the path is source, tooling, or a catch-all overlap. Unclassified is the empty case.
+ * @cliMirror bin/ark-check-runtime.mjs
+ */
 export function classificationAccountsForPath(
   relPath: string,
   layers: LayerConfig[] | undefined

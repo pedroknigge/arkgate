@@ -614,7 +614,6 @@ export {
   classificationAccountsForPath,
   globToRegExp,
   patternSpecificity,
-  matchingLayersForRelativePath,
   layerForFile,
   isScanExcludedRelative,
 } from './ark-layer-match.mjs';
