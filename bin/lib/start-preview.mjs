@@ -12,7 +12,7 @@ import {
   treeHasArkOrderCandidate,
 } from '../ark-shared.mjs';
 import { withProjectedGovernedCoverage } from './projected-governed-coverage.mjs';
-import { vacuousContainmentNote } from './product-copy.mjs';
+import { classificationScopeSuffix, vacuousContainmentNote } from './product-copy.mjs';
 import { ARKORDER_FIRST_CONTACT_NEXT, ARKORDER_ONE_BREATH } from './ark-order-doctor.mjs';
 import { resolveFirstStep } from './first-step.mjs';
 import { compactAgentInstructions, instructionRule, mcpJson } from './ci-and-commands.mjs';
@@ -314,10 +314,12 @@ export function renderStartPreview(preview, options = {}) {
       }
     } else if (percent != null) {
       const note = preview.containmentNote;
+      const scope = preview.projectedCoverage?.scopeLine;
+      const scopeText = scope ? `. ${scope}` : '';
       console.log(
         note
-          ? `${note} — not full governance (${percent}% of in-scope files classified)`
-          : `Projected governed coverage: ${percent}%`
+          ? `${note} — not full governance (${percent}% of in-scope files classified)${scopeText}`
+          : `Projected governed coverage: ${percent}%${scopeText}`
       );
     }
     const verified = (preview.hostGuarantees || []).find((line) =>
@@ -567,6 +569,7 @@ export async function planStart(args, helpers) {
         percent,
         classifiedFiles: coverage.governed?.classifiedFiles ?? 0,
         totalFiles: coverage.governed?.totalFiles ?? coverage.totalFiles ?? 0,
+        scopeLine: classificationScopeSuffix(coverage),
       },
       ...(containmentNote ? { containmentNote } : {}),
       changes,

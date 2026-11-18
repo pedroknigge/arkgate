@@ -7,7 +7,8 @@
 import {
   childSliceConfigFindings,
   globToRegExp,
-  layerForRelativePath,
+  isToolingConfigPath,
+  LayerClassification,
   patternSpecificity,
   sliceIdentityCollisions,
 } from '../domain/layerMatch';
@@ -214,6 +215,7 @@ export function collectAnalysisConfigWarnings(
   const ambiguousPairs = new Set<string>();
   if (layers.length > 1) {
     for (const file of files) {
+      if (isToolingConfigPath(file)) continue;
       let topScore = -1;
       let topLayers: string[] = [];
       for (const layer of layers) {
@@ -241,15 +243,17 @@ export function collectAnalysisConfigWarnings(
     );
   }
 
-  const unclassified = files.filter((file) => !layerForRelativePath(file, layers));
-  if (unclassified.length > 0) {
-    warnings.push(
-      configWarning(
-        'CONFIG_UNCLASSIFIED_FILES',
-        `${unclassified.length} included source file(s) are not matched by any configured layer; ark-check will not enforce import rules for those source files.`,
-        { count: unclassified.length, samples: unclassified.slice(0, 5) }
-      )
-    );
+  const ledger = LayerClassification.resolve({
+    files,
+    layers,
+    include: Array.isArray(config.include)
+      ? config.include.filter((entry): entry is string => typeof entry === 'string')
+      : [],
+    declaredWorkspaces: input.declaredWorkspaces,
+    workspaceExclusions: config.workspaceExclusions,
+  });
+  for (const finding of ledger.findings) {
+    warnings.push(configWarning(finding.ruleId, finding.message, { ...finding.extra }));
   }
 
   for (const collision of sliceIdentityCollisions(rules)) {

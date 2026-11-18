@@ -59,7 +59,7 @@ function buildDerivedSource(canonicalTs) {
     compilerOptions: {
       module: ts.ModuleKind.ESNext,
       target: ts.ScriptTarget.ES2022,
-      removeComments: false,
+      removeComments: true,
     },
     fileName: 'layerMatch.ts',
     reportDiagnostics: true,

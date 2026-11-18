@@ -114,6 +114,19 @@ export const ARK_CONFIG_SCHEMA = {
         },
         name: { type: 'string', minLength: 1 },
         include: { ...stringArraySchema, minItems: 1, default: ['src'] },
+        workspaceExclusions: {
+            type: 'array',
+            description: 'Declared workspace roots left out of include on purpose. Each entry names the root and why. A declared workspace that is neither covered by include nor listed here fails the check.',
+            items: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['root', 'reason'],
+                properties: {
+                    root: { type: 'string', minLength: 1 },
+                    reason: { type: 'string', minLength: 1 },
+                },
+            },
+        },
         exclude: { ...stringArraySchema, default: [] },
         excludeGenerated: { type: 'boolean', default: true },
         frameworkOverlay: { type: 'string', minLength: 1 },

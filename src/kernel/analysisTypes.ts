@@ -68,6 +68,11 @@ export type AnalyzeResolvedProjectInput = {
   /** The running arkgate version, for the version-floor nextAction. */
   runningArkgateVersion?: string;
   /**
+   * Workspace roots declared by the package manifest. Omitted: the workspace
+   * check stays silent. Production scans always pass the list, including [].
+   */
+  declaredWorkspaces?: readonly string[];
+  /**
    * D0 adopted or --require-gates / --strict-merge. When true, a missing
    * domain-invariant tests path fails closed. Omitted stays silent.
    */
@@ -305,6 +310,11 @@ export type CollectAnalysisConfigWarningsInput = {
   config: ArkConfig;
   rules: ArkConfig['rules'];
   files: readonly string[];
+  /**
+   * Workspace roots declared by the package manifest (not conventional guesses).
+   * Omitted: the workspace check stays silent. An empty array means the manifest declares none.
+   */
+  declaredWorkspaces?: readonly string[];
   /**
    * Tooling FS evidence of arkgate pins in this repo (package.json, lockfile,
    * installed copy, hook scripts, CI). Omitted: version-floor warnings stay silent.

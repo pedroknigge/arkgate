@@ -5,7 +5,6 @@ import {
   arkCommand,
   buildArchitectureRecommendation,
   classifyRemediation,
-  layerForFile,
   resolveOperatingMode,
   shouldShowNewHereNudge,
 } from '../ark-shared.mjs';
@@ -21,14 +20,9 @@ import { collectStatesTransitionsResidual } from './states-transitions-presence.
 import { collectStatusTransitionCatalogResidual } from './status-transition-catalog.mjs';
 import { collectNoDomainFrontendResidual } from './no-domain-frontend.mjs';
 import { collectInvariantCoverageResiduals } from './invariant-tests-path.mjs';
-import { anyChildWallAdvisory, applyAdvisorySiblingRatchet, sliceAliasOwesMove } from '../ark-layer-match.mjs';
+import { anyChildWallAdvisory, applyAdvisorySiblingRatchet, LayerClassification, sliceAliasOwesMove } from '../ark-layer-match.mjs';
 export { printAdrPresenceHint };
 export { printDoctorCompactHuman, printDoctorDetailsHuman };
-/** Optional S3 dual-match classifier when ark-shared exports it (soft dep for S5 landing). */
-const matchingLayersForRelativePath =
-  typeof arkShared.matchingLayersForRelativePath === 'function'
-    ? arkShared.matchingLayersForRelativePath
-    : null;
 import {
   collectAdoptionGaps,
   detectSkillGaps,
@@ -93,33 +87,46 @@ function normalize(value) {
 export function computeCoverage(root, config, files, rules) {
   const layers = config.layers ?? [];
   const counts = new Map(layers.map((layer) => [layer.name, 0]));
+  const rels = files.map((file) => normalize(path.relative(root, file)));
+  const declared =
+    typeof arkShared.detectDeclaredWorkspaces === 'function'
+      ? arkShared.detectDeclaredWorkspaces(root)
+      : undefined;
+  const ledger = LayerClassification.resolve({
+    files: rels,
+    layers,
+    include: config.include ?? [],
+    declaredWorkspaces: declared,
+    workspaceExclusions: config.workspaceExclusions,
+  });
   const unclassified = [];
+  const tooling = [];
   const dualMembership = [];
-  for (const file of files) {
-    const rel = normalize(path.relative(root, file));
-    const layer = layerForFile(root, file, layers);
-    if (layer && counts.has(layer)) counts.set(layer, counts.get(layer) + 1);
-    else unclassified.push(rel);
-
-    // P0A-DUAL-MATCH: surface files that match 2+ layers (winner still single-valued).
-    // Soft: classifier is S3; S5 landing must not hard-require it.
-    if (matchingLayersForRelativePath) {
-      try {
-        const hits = matchingLayersForRelativePath(rel, layers);
-        if (hits.length > 1) {
-          dualMembership.push({
-            file: rel,
-            layers: hits.map((h) => h.layer),
-            winner: layer ?? hits[0]?.layer ?? null,
-            scores: Object.fromEntries(hits.map((h) => [h.layer, h.score])),
-          });
-        }
-      } catch {
-        /* pure classifier only — ignore if unavailable */
+  const catchAllFiles = [];
+  for (const row of ledger.paths) {
+    if (row.kind === 'tooling') tooling.push(row.path);
+    else if (row.kind === 'unclassified') unclassified.push(row.path);
+    else if (row.kind === 'catch-all-overlap') {
+      catchAllFiles.push(row.path);
+      dualMembership.push({
+        file: row.path,
+        layers: [row.catchAll.layer, row.overlapped.layer],
+        winner: row.catchAll.layer,
+        catchAll: row.catchAll.pattern,
+      });
+    } else if (row.kind === 'source') {
+      if (counts.has(row.layer)) counts.set(row.layer, counts.get(row.layer) + 1);
+      if (row.alsoMatched.length > 0) {
+        dualMembership.push({
+          file: row.path,
+          layers: [row.layer, ...row.alsoMatched],
+          winner: row.layer,
+        });
       }
     }
   }
   unclassified.sort();
+  tooling.sort();
   dualMembership.sort((a, b) => a.file.localeCompare(b.file));
   const layerRows = layers.map((layer) => ({
     name: layer.name,
@@ -133,17 +140,24 @@ export function computeCoverage(root, config, files, rules) {
   const layersWithoutRules = layerRows
     .map((row) => row.name)
     .filter((name) => !rules.some((rule) => rule.from === name || rule.to === name));
-  const classifiedFiles = files.length - unclassified.length;
-  // Empty scope is NOT "100% governed" — that was a false-green for monorepos/mis-includes
-  // (0/0 → ENFORCE). Zero files means the contract is not checking anything yet.
-  const fraction = files.length > 0 ? classifiedFiles / files.length : 0;
+  const classifiedFiles = [...counts.values()].reduce((sum, count) => sum + count, 0);
+  // Tool configs are not source. Empty scope is still not "100% governed".
+  const sourceTotal = classifiedFiles + unclassified.length + catchAllFiles.length;
+  const fraction = sourceTotal > 0 ? classifiedFiles / sourceTotal : 0;
+  const catchAllFinding = ledger.findings.find((finding) => finding.ruleId === 'CONFIG_CATCH_ALL_OVERLAP');
   return {
     include: config.include ?? [],
-    totalFiles: files.length,
-    emptyScope: files.length === 0,
-    governed: { classifiedFiles, totalFiles: files.length, percent: Math.round(fraction * 100) },
+    totalFiles: sourceTotal,
+    emptyScope: sourceTotal === 0,
+    governed: { classifiedFiles, totalFiles: sourceTotal, percent: Math.round(fraction * 100) },
     layers: layerRows,
     unclassified: { count: unclassified.length, files: unclassified },
+    tooling: { count: tooling.length, files: tooling },
+    workspaceScope: {
+      excluded: ledger.workspaces.filter((row) => row.kind === 'excluded'),
+      missing: ledger.workspaces.filter((row) => row.kind === 'missing').map((row) => row.root),
+    },
+    catchAllOverlap: { count: catchAllFiles.length },
     suggestions: buildUnclassifiedSuggestions(unclassified),
     emptyLayers,
     layersWithoutRules,
@@ -151,8 +165,9 @@ export function computeCoverage(root, config, files, rules) {
       count: dualMembership.length,
       // Cap samples so doctor/JSON stay bounded on large trees.
       samples: dualMembership.slice(0, 25),
-      note:
-        dualMembership.length > 0
+      note: catchAllFinding
+        ? catchAllFinding.message
+        : dualMembership.length > 0
           ? `${dualMembership.length} file(s) match multiple layers; classification uses highest path-anchored specificity (winner listed). Review overlapping globs if the winner looks wrong.`
           : null,
     },
@@ -187,9 +202,9 @@ export function runCoverage(root, config, files, rules, asJson) {
   console.log(`  ${pad('(unclassified)')}  ${String(unclassified.length).padStart(5)}`);
   console.log('');
   console.log(
-    `${files.length} source file(s) in scope; ${unclassified.length} not matched by any layer.`
+    `${governed.totalFiles} source file(s) in scope; ${unclassified.length} not matched by any layer.`
   );
-  console.log(formatGovernedCoverageLine(cov, classifiedFiles, files.length));
+  console.log(formatGovernedCoverageLine(cov, classifiedFiles, governed.totalFiles));
   if (files.length > 0 && governed.percent < 50) {
     console.log('');
     console.log(
@@ -222,11 +237,15 @@ export function runCoverage(root, config, files, rules, asJson) {
   if (cov.dualMembership?.count > 0) {
     console.log('');
     console.log(
-      `Dual-match: ${cov.dualMembership.count} file(s) match multiple layers (winner by path-anchored specificity).`
+      Number(cov.catchAllOverlap?.count) > 0
+        ? `Dual-match: ${cov.dualMembership.count} file(s) sit on a catch-all overlap. No layer wins.`
+        : `Dual-match: ${cov.dualMembership.count} file(s) match multiple layers (winner by path-anchored specificity).`
     );
     for (const sample of (cov.dualMembership.samples ?? []).slice(0, 5)) {
       console.log(
-        `  ${sample.file} → ${sample.winner} (also: ${sample.layers.filter((l) => l !== sample.winner).join(', ')})`
+        sample.catchAll
+          ? `  ${sample.file} matches ${sample.layers.join(' and ')} (${sample.catchAll})`
+          : `  ${sample.file} → ${sample.winner} (also: ${sample.layers.filter((l) => l !== sample.winner).join(', ')})`
       );
     }
     if (cov.dualMembership.count > 5) {

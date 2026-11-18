@@ -468,6 +468,7 @@ export function analyzeCanonicalResolvedProject(
     coverageRootsPresent?: boolean;
     arkgatePins?: AnalyzeResolvedProjectInput['arkgatePins'];
     runningArkgateVersion?: string;
+    declaredWorkspaces?: AnalyzeResolvedProjectInput['declaredWorkspaces'];
   }
 ): ResolvedAnalysisResult {
   const { facts } = input;
@@ -524,13 +525,26 @@ export function analyzeCanonicalResolvedProject(
         : {}),
     };
   });
-  const warnings = collectAnalysisConfigWarnings({
+  const configFindings = collectAnalysisConfigWarnings({
     config: input.contract.config,
     rules: input.contract.config.rules,
     files: files.map((file) => file.path),
     arkgatePins: input.arkgatePins,
     runningArkgateVersion: input.runningArkgateVersion,
+    declaredWorkspaces: input.declaredWorkspaces,
   });
+  // These two are the classification contract. A warning would leave `valid`
+  // true, so the write gate, a default check, and CI could still say ok.
+  const classificationViolations = configFindings.filter(
+    (finding) =>
+      finding.ruleId === 'CONFIG_CATCH_ALL_OVERLAP' ||
+      finding.ruleId === 'CONFIG_WORKSPACE_OUT_OF_INCLUDE'
+  );
+  const warnings = configFindings.filter(
+    (finding) =>
+      finding.ruleId !== 'CONFIG_CATCH_ALL_OVERLAP' &&
+      finding.ruleId !== 'CONFIG_WORKSPACE_OUT_OF_INCLUDE'
+  );
   const safety = evaluateSafety(input, facts);
   const arkRules = input.contract.arkRules ?? emptyEffectiveArkRules();
   const filePaths = files.map((file) => file.path);
@@ -714,6 +728,7 @@ export function analyzeCanonicalResolvedProject(
     files: files.filter((file) => file.layer).map((file) => file.path),
     contentViolations: [
       ...contentViolations(input, facts, layerByFile),
+      ...classificationViolations,
       ...arkRuleViolations,
       ...testsPathViolations,
       ...invariantViolations,
@@ -790,5 +805,6 @@ export function analyzeResolvedProject(input: AnalyzeResolvedProjectInput): Reso
     coverageRootsPresent: input.coverageRootsPresent,
     arkgatePins: input.arkgatePins,
     runningArkgateVersion: input.runningArkgateVersion,
+    declaredWorkspaces: input.declaredWorkspaces,
   });
 }

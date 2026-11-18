@@ -232,11 +232,23 @@ export type ArkConfigArkOrder = {
   appliesTo?: string[];
 };
 
+export type ArkConfigWorkspaceExclusion = {
+  /** Declared workspace root (`website`, `packages`). */
+  root: string;
+  /** Why this root stays out of include. Empty is not an exclusion. */
+  reason: string;
+};
+
 export type ArkConfig = {
   $schema: string;
   schemaVersion: ArkConfigSchemaVersion;
   name?: string;
   include: string[];
+  /**
+   * Declared workspace roots left out of include on purpose.
+   * A declared workspace that is neither covered by include nor listed here fails the check.
+   */
+  workspaceExclusions?: ArkConfigWorkspaceExclusion[];
   exclude?: string[];
   excludeGenerated?: boolean;
   frameworkOverlay?: string;

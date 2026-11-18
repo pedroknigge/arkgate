@@ -7,6 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { collectGovernedFiles } from './scan-files.mjs';
 import { computeCoverage } from './doctor-plan.mjs';
+import { classificationScopeSuffix, formatGovernedCoverageLine } from './product-copy.mjs';
 import { ARCHITECTURE_PRESETS } from './presets.mjs';
 import {
   detectWorkspaces,
@@ -70,10 +71,15 @@ export function measureProjectedGovernedCoverage(root, recommendation = {}) {
       emptyScope: true,
       source: resolved.source,
       preset: resolved.preset ?? null,
+      scopeLine: '',
     };
   }
+  const coverage = measureGovernedCoverage(root, resolved.config);
+  const summary = summarizeGovernedCoverage(coverage);
   return {
-    ...summarizeGovernedCoverage(measureGovernedCoverage(root, resolved.config)),
+    ...summary,
+    scopeLine: classificationScopeSuffix(coverage),
+    honestyLine: formatGovernedCoverageLine(coverage, summary.classifiedFiles, summary.totalFiles),
     source: resolved.source,
     preset: resolved.preset ?? recommendation.preset ?? null,
   };
@@ -109,6 +115,8 @@ export function withProjectedGovernedCoverage(recommendation, root) {
       percent,
       classifiedFiles: measured.classifiedFiles,
       totalFiles: measured.totalFiles,
+      scopeLine: measured.scopeLine ?? '',
+      honestyLine: measured.honestyLine ?? '',
     },
   };
 }

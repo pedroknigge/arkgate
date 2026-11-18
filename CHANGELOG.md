@@ -5,6 +5,12 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+### Fixed
+- One layer classification: a tool config is tooling, a catch-all may not overlap another layer, and a declared workspace is either in `include` or named in `workspaceExclusions` with a reason. Doctor, coverage, recommend, and the check read that same result (#407, #410).
+
+### Changed
+- Gate package size ceilings only. Linux pack measured 2027382 packed and 7239732 unpacked, 304 files. New ceilings are that measurement plus 1024 bytes: 2028406 packed and 7240756 unpacked. File count stays 304. Module line ceilings and the 99 ms hook ceiling are unchanged.
+
 ## 4.8.32 — 2026-11-14
 
 Weekly ship. **No required config migration.** Does not close `K01` / `Z09`. This does **not** turn `arkOrder` on.

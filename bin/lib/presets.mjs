@@ -9,8 +9,10 @@ import {
   cloneArchetypeForLayer,
   createElevenLayerConfig,
   DEFAULT_DOMAIN_FORBIDDEN_GLOBALS,
+  detectDeclaredWorkspaces,
   discoverRepoUnits,
   DEFAULT_INTENT_PREFIXES,
+  isNonProductRelativePath,
   monorepoRoleSourceGlobs,
   resolveIncludeRoots,
   scopePagesRouterHelpers,
@@ -18,9 +20,34 @@ import {
   sharedLibraryLayer,
 } from '../ark-shared.mjs';
 import { withArkConfigMetadata } from './config-contract.mjs';
+import { dedupeIncludeEntries, includeCoversWorkspace } from '../ark-layer-match.mjs';
 
 const PRESETS_DIR = path.dirname(fileURLToPath(import.meta.url));
 const ARKRULES_TEMPLATES_DIR = path.join(PRESETS_DIR, '../../templates/arkrules');
+
+const WORKSPACE_SKIP_REASON = { docs: 'docs site', example: 'examples', test: 'tests' };
+
+function workspaceSkipReason(workspace, units) {
+  const unit = units.find(
+    (entry) => entry.root === workspace || String(entry.root).startsWith(`${workspace}/`)
+  );
+  if (unit && WORKSPACE_SKIP_REASON[unit.role]) return WORKSPACE_SKIP_REASON[unit.role];
+  if (!isNonProductRelativePath(workspace)) return null;
+  const token = workspace.toLowerCase();
+  if (token.includes('example')) return 'examples';
+  if (token.includes('test') || token.includes('fixture')) return 'tests';
+  return 'docs site';
+}
+
+function exclusionsForDroppedWorkspaces(root, include, units) {
+  const exclusions = [];
+  for (const workspace of detectDeclaredWorkspaces(root)) {
+    if (includeCoversWorkspace(include, workspace)) continue;
+    const reason = workspaceSkipReason(workspace, units);
+    if (reason) exclusions.push({ root: workspace, reason });
+  }
+  return exclusions;
+}
 
 function denyUpward(names) {
   const rules = [];
@@ -641,6 +668,8 @@ export const ARCHITECTURE_PRESETS = {
     }
     // Turborepo: apps/ + packages/; Nx enterprise: apps/ + libs/ (+ packages/).
     if (include.length === 0) include = ['packages', 'apps', 'libs'];
+    include = dedupeIncludeEntries(include);
+    const workspaceExclusions = root ? exclusionsForDroppedWorkspaces(root, include, units) : [];
     // Per-package library layer (#366). Globs stay under packages/ or libs/.
     const libraryGlobs = (layer) =>
       monorepoRoleSourceGlobs(
@@ -663,6 +692,7 @@ export const ARCHITECTURE_PRESETS = {
     const sealed = presetWithOverlays(
       {
         include,
+        ...(workspaceExclusions.length > 0 ? { workspaceExclusions } : {}),
         layers: [
           {
             name: 'DomainModel',
