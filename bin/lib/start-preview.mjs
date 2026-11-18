@@ -548,6 +548,7 @@ export async function planStart(args, helpers) {
     const percent = coverage.governed?.percent ?? null;
     const containmentNote =
       typeof percent === 'number' && percent >= 80 ? vacuousContainmentNote(coverage) : null;
+    const scopeLine = classificationScopeSuffix(coverage);
     const codexSelected = args.tools === 'codex';
     const runtimeActivation = codexSelected
       ? codexRuntimeActivation({
@@ -569,7 +570,7 @@ export async function planStart(args, helpers) {
         percent,
         classifiedFiles: coverage.governed?.classifiedFiles ?? 0,
         totalFiles: coverage.governed?.totalFiles ?? coverage.totalFiles ?? 0,
-        scopeLine: classificationScopeSuffix(coverage),
+        ...(scopeLine ? { scopeLine } : {}),
       },
       ...(containmentNote ? { containmentNote } : {}),
       changes,

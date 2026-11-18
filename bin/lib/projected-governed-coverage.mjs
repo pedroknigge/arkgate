@@ -115,8 +115,8 @@ export function withProjectedGovernedCoverage(recommendation, root) {
       percent,
       classifiedFiles: measured.classifiedFiles,
       totalFiles: measured.totalFiles,
-      scopeLine: measured.scopeLine ?? '',
-      honestyLine: measured.honestyLine ?? '',
+      ...(measured.scopeLine ? { scopeLine: measured.scopeLine } : {}),
+      ...(measured.honestyLine ? { honestyLine: measured.honestyLine } : {}),
     },
   };
 }
