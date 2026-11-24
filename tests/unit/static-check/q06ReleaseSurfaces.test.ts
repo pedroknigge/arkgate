@@ -10,7 +10,7 @@ import { version } from '../../../src/version.ts';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 /** Tree package identity. */
-const CURRENT = '4.8.32';
+const CURRENT = '4.8.33';
 /** Version confirmed on npm `latest`. */
 const PUBLISHED_LATEST = '4.8.11';
 
@@ -140,7 +140,7 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
 
   it('keeps 4.8.11 published on npm latest and 4.8.10 as prior', () => {
     expect(PUBLISHED_LATEST).toBe('4.8.11');
-    expect(CURRENT).toBe('4.8.32');
+    expect(CURRENT).toBe('4.8.33');
     expect(read('docs/releases/4.8.9.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.8.9.md')).toMatch(/arkgate@4\.8\.9/);
     expect(read('docs/releases/4.8.9.md')).not.toMatch(/\*\*Status:\*\*\s*prepared/i);
@@ -742,7 +742,39 @@ describe('CHANGELOG + release note cover 4.8.32 weekly ship', () => {
     expect(read('docs/README.md')).toMatch(/Current release:.*4\.8\.32/s);
     expect(read('docs/README.md')).toMatch(/Prior published:.*4\.8\.31/s);
     expect(read('ROADMAP.md')).toMatch(/\| 326 \| `RL831` \| `done`/);
-    expect(read('ROADMAP.md')).toMatch(/\| 327 \| `RL832` \| `doing`/);
+    expect(read('ROADMAP.md')).toMatch(/\| 327 \| `RL832` \| `done`/);
+  });
+});
+
+describe('CHANGELOG + release note cover 4.8.33 weekly ship', () => {
+  it('records the release without asserting registry state (#314)', () => {
+    const changelog = changelogText();
+    const section = changelogSection(changelog, '4.8.33', '4.8.32');
+    expect(section).toMatch(/Status:\s*released/i);
+    expect(section).toMatch(/npm view arkgate@4\.8\.33 version/);
+    expect(section).not.toMatch(/npm `latest` is/);
+    expect(section).not.toMatch(/latest remains/);
+    expect(section).not.toMatch(/daily/i);
+    expect(section).toMatch(/Weekly ship/);
+    for (const ref of ['#414', '#413', '#412', '#416', '#407', '#410']) {
+      expect(section).toContain(ref);
+    }
+    expect(section).toMatch(/LayerClassification\.resolve/);
+    expect(section).toMatch(/src\/domain\/layerMatch\.ts/);
+    expect(section).toMatch(/CONFIG_CATCH_ALL_OVERLAP/);
+    expect(section).toMatch(/CONFIG_WORKSPACE_OUT_OF_INCLUDE/);
+    expect(section).toMatch(/workspaceExclusions/);
+    expect(section).toMatch(/eslint\/vite\/tsdown\/svelte/);
+    expect(section).toMatch(/Breaking behavior/);
+    expect(section).toMatch(/Add it to `include`/);
+    expect(section).toMatch(/Does not close\s*`K01`\s*\/\s*`Z09`/);
+    expect(section).toMatch(/does \*\*not\*\* turn `arkOrder` on/);
+    expect(section).not.toMatch(/Status:\s*prepared/i);
+    expect(fs.existsSync(path.join(REPO, 'docs/releases/4.8.33.md'))).toBe(false);
+    expect(read('docs/README.md')).toMatch(/Current release:.*4\.8\.33/s);
+    expect(read('docs/README.md')).toMatch(/Prior published:.*4\.8\.32/s);
+    expect(read('ROADMAP.md')).toMatch(/\| 327 \| `RL832` \| `done`/);
+    expect(read('ROADMAP.md')).toMatch(/\| 328 \| `RL833` \| `doing`/);
   });
 });
 
@@ -1838,7 +1870,7 @@ describe('CHANGELOG + release note cover 3.9.1 patch hygiene', () => {
       screen.indexOf('Write. Check. Ship.')
     );
     expect(screen).toMatch(/\*\*Contener · Guiar · Ordenar\*\*/);
-    expect(screen).toMatch(/npx arkgate@4\.8\.32 start/);
+    expect(screen).toMatch(/npx arkgate@4\.8\.33 start/);
     expect(screen).toMatch(/✖ LAYER_IMPORT_VIOLATION  src\/domain\/order\.ts:1/);
     expect(screen).toMatch(/fail-open/);
     expect(screen).toMatch(/needs a refactor/);
