@@ -5,11 +5,19 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
-### Fixed
-- One layer classification: a tool config is tooling, a catch-all may not overlap another layer, and a declared workspace is either in `include` or named in `workspaceExclusions` with a reason. Doctor, coverage, recommend, and the check read that same result (#407, #410).
+## 4.8.33 — 2026-11-24
 
-### Changed
-- Gate package size ceilings only. Linux pack measured 2027382 packed and 7239732 unpacked, 304 files. New ceilings are that measurement plus 1024 bytes: 2028406 packed and 7240756 unpacked. File count stays 304. Module line ceilings and the 99 ms hook ceiling are unchanged.
+Weekly ship. No `schemaVersion` bump. Does not close `K01` / `Z09`. This does **not** turn `arkOrder` on.
+
+**Status: released.** `npm view arkgate@4.8.33 version`.
+
+**Breaking behavior.** A declared workspace outside `include`, with no reason in `workspaceExclusions`, fails the check (`CONFIG_WORKSPACE_OUT_OF_INCLUDE`). Add it to `include`, or list it in `workspaceExclusions` with a reason.
+
+### Fixed
+- `LayerClassification.resolve` in `src/domain/layerMatch.ts` is the one classifier. Nested eslint/vite/tsdown/svelte configs are tooling. A catch-all overlap is `CONFIG_CATCH_ALL_OVERLAP`. Closes #407 and #410 (#414).
+
+### Added
+- Verification skill, feature map, and PR evidence (#413). Dogfood stats (#412, #416).
 
 ## 4.8.32 — 2026-11-14
 
