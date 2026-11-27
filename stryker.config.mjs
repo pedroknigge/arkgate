@@ -45,7 +45,9 @@ const config = {
     'bin/lib/resolved-candidate-facts.mjs:811-864',
     // managed-upgrade force-preserve covered by fieldGapS4 unit tests; not in critical
     // mutation groups for 4.1.0 (NoCoverage noise on toml-section branch residual).
-    'bin/lib/resident-hook.mjs:115-162',
+    // 4.9.0 fast residentRuntimeIdentity inserted 32 lines above residentEnvironmentIdentity;
+    // same snapshot-invalidation body now sits at 147-194.
+    'bin/lib/resident-hook.mjs:147-194',
     'bin/lib/ast-scan.mjs:11-42',
     'bin/lib/ast-scan.mjs:301-322',
     'bin/lib/ast-scan.mjs:411-427',

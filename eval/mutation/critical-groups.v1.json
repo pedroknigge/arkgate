@@ -130,11 +130,12 @@
     },
     {
       "id": "snapshot-invalidation",
+      "note": "4.9.0 fast residentRuntimeIdentity inserted 32 lines above residentEnvironmentIdentity; same residentEnvironmentIdentity + inputState body moved from 115-162 to 147-194.",
       "targets": [
         {
           "file": "bin/lib/resident-hook.mjs",
-          "startLine": 115,
-          "endLine": 162
+          "startLine": 147,
+          "endLine": 194
         }
       ]
     },
