@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -69,7 +68,6 @@ import {
 import { runRatchetCores } from './lib/core-ratchet.mjs';
 import { applyAdvisorySiblingRatchet } from './ark-layer-match.mjs';
 import {
-  baselineKey,
   baselineOccurrenceKeys,
   readBaseline,
   summarizeViolations,
@@ -118,11 +116,7 @@ import {
 import { ABSENT_CONFIG_FIRST_STEP } from './lib/first-step.mjs';
 import { reportUnavailableAnalysis } from './lib/unavailable-analysis.mjs';
 import { validateHardWriteRequest } from './lib/enforcement-profiles.mjs';
-import {
-  analyzePolicyTransition,
-  discoverLocalBaseRef,
-  normalizePolicyBaseRef,
-} from './lib/policy-delta-io.mjs';
+import { analyzePolicyTransition } from './lib/policy-delta-io.mjs';
 import {
   applyAgainstRatchet,
   bindTeamBaseRefs,
@@ -145,6 +139,51 @@ import {
 import { detectConfig, proposeForUncovered } from './lib/check-config-detect.mjs';
 import { runWatchMode } from './lib/check-watch.mjs';
 
+const resolveFromRoot = (root, target) =>
+  path.isAbsolute(target) ? target : path.join(root, target);
+
+/** Contain --config writes under project root (S0 security). */
+function requireContainedConfigPath(root, configPath) {
+  const contained = resolveConfigPathWithinRoot(root, configPath);
+  if (!contained.ok) {
+    console.error(contained.error);
+    process.exitCode = 2;
+    return null;
+  }
+  return contained.configPath;
+}
+
+function tryReadConfig(root, configPath) {
+  try {
+    return readConfig(root, configPath);
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exitCode = 2;
+    return null;
+  }
+}
+
+function printLayers(layers) {
+  for (const layer of layers) console.log(`  ${layer.name}: ${layer.patterns.join(', ')}`);
+}
+
+function emitResult(args, payload, humanLines, { exitCode, toStderr = false } = {}) {
+  if (args.json) {
+    console.log(JSON.stringify(payload, null, 2));
+  } else {
+    const out = toStderr ? console.error : console.log;
+    for (const line of humanLines) out(line);
+  }
+  if (exitCode !== undefined) process.exitCode = exitCode;
+}
+
+function countStaleBaselineKeys(baselineKeys, occurrenceKeys) {
+  const current = new Set(occurrenceKeys);
+  let stale = 0;
+  for (const key of baselineKeys) if (!current.has(key)) stale += 1;
+  return stale;
+}
+
 /** Path shown to humans: project-relative when inside root, absolute otherwise (no `../../..`). */
 function displayPathFromRoot(root, absPath) {
   const rel = path.relative(root, absPath);
@@ -155,9 +194,7 @@ function displayPathFromRoot(root, absPath) {
 }
 
 function readConfig(root, configPath) {
-  const fullPath = path.isAbsolute(configPath)
-    ? configPath
-    : path.join(root, configPath);
+  const fullPath = resolveFromRoot(root, configPath);
   if (!fs.existsSync(fullPath)) {
     return loadArkConfigContract(
       { include: ['src'], layers: [], rules: DEFAULT_RULES },
@@ -227,14 +264,8 @@ function runListPolicyPacks(args) {
 }
 
 function runApplyPolicyPack(args) {
-  // Contain --config writes under project root (S0 security).
-  const contained = resolveConfigPathWithinRoot(args.root, args.config);
-  if (!contained.ok) {
-    console.error(contained.error);
-    process.exitCode = 2;
-    return;
-  }
-  const configPath = contained.configPath;
+  const configPath = requireContainedConfigPath(args.root, args.config);
+  if (!configPath) return;
 
   if (fs.existsSync(configPath) && !args.force) {
     console.error(
@@ -248,33 +279,18 @@ function runApplyPolicyPack(args) {
     const { pack, config } = buildConfigFromPolicyPack(args.applyPolicyPack, args.root);
     fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
     writeArkRulesTemplates(args.root, config, { force: args.force === true });
-    if (args.json) {
-      console.log(
-        JSON.stringify(
-          {
-            ok: true,
-            pack: pack.id,
-            preset: pack.preset,
-            configPath,
-            phases: pack.phases,
-          },
-          null,
-          2
-        )
-      );
-    } else {
-      console.log(`Wrote ${configPath} (${pack.label})`);
-      console.log(`Preset: ${pack.preset}. Phase 1: ${(pack.phases?.['1'] ?? []).join(', ')}`);
-      console.log(`Verify: ${arkCommand(args.root, 'ark-check', '--root . --config ark.config.json --strict-config')}`);
-    }
+    emitResult(
+      args,
+      { ok: true, pack: pack.id, preset: pack.preset, configPath, phases: pack.phases },
+      [
+        `Wrote ${configPath} (${pack.label})`,
+        `Preset: ${pack.preset}. Phase 1: ${(pack.phases?.['1'] ?? []).join(', ')}`,
+        `Verify: ${arkCommand(args.root, 'ark-check', '--root . --config ark.config.json --strict-config')}`,
+      ]
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    if (args.json) {
-      console.log(JSON.stringify({ ok: false, error: message }, null, 2));
-    } else {
-      console.error(message);
-    }
-    process.exitCode = 2;
+    emitResult(args, { ok: false, error: message }, [message], { exitCode: 2, toStderr: true });
   }
 }
 
@@ -406,32 +422,18 @@ function writeAdoptGoldenPattern(root) {
  */
 function runAdoptContract(args) {
   const root = args.root;
-  // Contain --config writes under project root (S0 security). Refuse escape even
-  // before --write so dry-run + write share one path and cannot probe outside root.
-  const contained = resolveConfigPathWithinRoot(root, args.config);
-  if (!contained.ok) {
-    console.error(contained.error);
-    process.exitCode = 2;
-    return;
-  }
-  const configPath = contained.configPath;
+  const configPath = requireContainedConfigPath(root, args.config);
+  if (!configPath) return;
   let config;
-  try {
-    config = fs.existsSync(configPath)
-      ? readConfig(root, args.config)
-      : {
-          include: ['src'],
-          layers: ARCHITECTURE_PRESETS['ui-surface']([], root).layers,
-          rules: ARCHITECTURE_PRESETS['ui-surface']([], root).rules,
-        };
-  } catch (error) {
-    console.error(error instanceof Error ? error.message : String(error));
-    process.exitCode = 2;
-    return;
+  if (fs.existsSync(configPath)) {
+    config = tryReadConfig(root, args.config);
+    if (!config) return;
+  } else {
+    const uiSurface = ARCHITECTURE_PRESETS['ui-surface']([], root);
+    config = { include: ['src'], layers: uiSurface.layers, rules: uiSurface.rules };
   }
   const suggestedInclude = resolveIncludeRoots(root);
   const tsPackages = detectTsPackageRoots(root);
-  // SPA / Vercel: include root api + lib when present (NEW-SPA-DEFAULT-LAYOUT).
   const spaExtras = ['api', 'lib'].filter((d) => fs.existsSync(path.join(root, d)));
   const nextInclude = [
     ...new Set([
@@ -440,29 +442,16 @@ function runAdoptContract(args) {
       ...spaExtras,
     ]),
   ].filter(Boolean);
-  const files = collectGovernedFiles(root, { ...config, include: nextInclude.length ? nextInclude : config.include });
-  const cov = computeCoverage(root, { ...config, include: nextInclude.length ? nextInclude : config.include }, files, config.rules || []);
-  // UI-only patterns — never bare **/lib/** (data clients are Persistence).
-  const uiPatterns = [
-    '**/components/**',
-    '**/hooks/**',
-    '**/routes/**',
-    '**/app/**',
-    '**/pages/**',
-  ];
-  const persistencePatterns = [
-    ...PERSISTENCE_PATH_PATTERNS,
-  ];
-  const applicationPatterns = [
-    ...NEXT_API_APPLICATION_PATTERNS,
-    ...APPLICATION_LIB_ORCHESTRATION_PATTERNS,
-    'api/**',
-  ];
+  const expandedConfig = { ...config, include: nextInclude.length ? nextInclude : config.include };
+  const files = collectGovernedFiles(root, expandedConfig);
+  const cov = computeCoverage(root, expandedConfig, files, config.rules || []);
+  const uiPatterns = ['**/components/**', '**/hooks/**', '**/routes/**', '**/app/**', '**/pages/**'];
+  const persistencePatterns = [...PERSISTENCE_PATH_PATTERNS];
+  const applicationPatterns = [...NEXT_API_APPLICATION_PATTERNS, ...APPLICATION_LIB_ORCHESTRATION_PATTERNS, 'api/**'];
   const domainPatterns = [...DOMAIN_PATH_PATTERNS, 'src/**/domain/**'];
   const sharedKernelPatterns = [...SHARED_KERNEL_PATH_PATTERNS];
   const compositionRootPatterns = [...COMPOSITION_ROOT_PATH_PATTERNS];
 
-  // Build pattern additions from unclassified suggestions (path-aware).
   const byLayer = new Map([
     ['PresentationAdapters', [...uiPatterns]],
     ['PersistenceAdapters', [...persistencePatterns]],
@@ -475,48 +464,33 @@ function runAdoptContract(args) {
     if (suggestion.unrecognized || !suggestion.layer) continue;
     const dir = String(suggestion.dir || '');
     // Never dump bare lib/ into Presentation or Application.
-    if (dir === 'lib' || dir === 'src/lib' || dir.endsWith('/lib')) {
-      continue;
-    }
-    if (
-      suggestion.layer === 'PresentationAdapters' &&
-      (dir === 'lib' || dir.endsWith('/lib'))
-    ) {
-      continue;
-    }
+    if (dir === 'lib' || dir === 'src/lib' || dir.endsWith('/lib')) continue;
     let layerName = suggestion.layer;
     if (/(^|\/)(types|constants|shared)(\/|$)/i.test(dir)) layerName = 'SharedKernel';
     else if (/(^|\/)(composition|factories|bootstrap)(\/|$)/i.test(dir)) layerName = 'CompositionRoot';
     else if (/(^|\/)domain(\/|$)/i.test(dir)) layerName = 'DomainModel';
     const list = byLayer.get(layerName) ?? [];
     const glob = suggestion.dir === '.' ? null : `${suggestion.dir}/**`;
-    if (glob && !list.includes(glob) && glob !== 'src/lib/**' && glob !== 'lib/**') {
-      list.push(glob);
-    }
+    if (glob && !list.includes(glob) && glob !== 'src/lib/**' && glob !== 'lib/**') list.push(glob);
     byLayer.set(layerName, list);
   }
 
   const stripLibVacuum = (patterns) =>
     (patterns || []).filter((p) => p !== '**/lib/**' && p !== 'lib/**' && p !== 'src/lib/**');
+  const layers = ensureMatureAdoptionLayers(
+    (config.layers || []).map((layer) => {
+      const extras = byLayer.get(layer.name);
+      const cleaned = stripLibVacuum(layer.patterns || []);
+      return { ...layer, patterns: extras?.length ? [...new Set([...cleaned, ...extras])] : cleaned };
+    }),
+    byLayer
+  );
 
-  let layers = (config.layers || []).map((layer) => {
-    const extras = byLayer.get(layer.name);
-    const cleaned = stripLibVacuum(layer.patterns || []);
-    if (!extras?.length) return { ...layer, patterns: cleaned };
-    const patterns = [...new Set([...cleaned, ...extras])];
-    return { ...layer, patterns };
-  });
-  layers = ensureMatureAdoptionLayers(layers, byLayer);
-  // If no PresentationAdapters layer, leave layers as-is (don't invent full profile).
   const proposal = {
     ok: true,
-    before: {
-      include: config.include || [],
-      governedPercent: null,
-      totalFiles: null,
-    },
+    before: { include: config.include || [], governedPercent: null, totalFiles: null },
     after: {
-      include: nextInclude.length > 0 ? nextInclude : config.include,
+      include: expandedConfig.include,
       presentationPatterns: uiPatterns,
       persistencePatterns,
       applicationPatterns,
@@ -531,7 +505,6 @@ function runAdoptContract(args) {
     },
     wrote: false,
   };
-  // Compute before coverage for honesty.
   try {
     const beforeFiles = collectGovernedFiles(root, config);
     const beforeCov = computeCoverage(root, config, beforeFiles, config.rules || []);
@@ -542,53 +515,37 @@ function runAdoptContract(args) {
   }
 
   if (args.write) {
-    const existingRules = Array.isArray(config.rules) ? config.rules : [];
-    const rules = [...existingRules];
+    const rules = [...(Array.isArray(config.rules) ? config.rules : [])];
     for (const rule of MATURE_LAYER_RULES) {
       if (!rules.some((r) => r.from === rule.from && r.to === rule.to && r.allowed === rule.allowed)) {
         rules.push(rule);
       }
     }
-    const next = {
-      ...config,
-      include: proposal.after.include,
-      layers,
-      rules,
-    };
-    fs.writeFileSync(configPath, `${JSON.stringify(next, null, 2)}\n`);
+    fs.writeFileSync(configPath, `${JSON.stringify({ ...config, include: proposal.after.include, layers, rules }, null, 2)}\n`);
     proposal.golden = writeAdoptGoldenPattern(root);
     proposal.wrote = true;
   }
 
-  if (args.json) {
-    console.log(JSON.stringify(proposal, null, 2));
-    return;
+  const lines = [
+    color.bold('Contract adopt (coverage first)'),
+    `  before: include=[${(proposal.before.include || []).join(', ')}] governed=${proposal.before.governedPercent ?? '?'}% files=${proposal.before.totalFiles ?? '?'}`,
+    `  after:  include=[${(proposal.after.include || []).join(', ')}] governed=${proposal.after.governedPercent}% files=${proposal.after.totalFiles} unclassified=${proposal.after.unclassified}`,
+    `  presentation patterns += ${uiPatterns.join(', ')}`,
+    '  persistence patterns += (data clients / db / auth — never bare lib→Presentation)',
+    '  application patterns += Next/Vercel API shells (never bare src/lib/**)',
+    '  shared kernel += types/constants; composition root += wiring',
+    ...(proposal.wrote
+      ? [
+          color.green(`  wrote ${path.relative(root, configPath) || args.config}`),
+          color.dim(`  Next: ${arkCommand(root, 'ark-check', '--coverage')} then --plan`),
+        ]
+      : [color.dim('  Dry-run only. Re-run with --write to apply (does not weaken rules).')]),
+  ];
+  const emptyScope = (proposal.after.totalFiles ?? 0) === 0;
+  if (emptyScope) {
+    lines.push(color.yellow('  Empty scope remains — no TS packages found. Point include at your package roots manually.'));
   }
-  console.log(color.bold('Contract adopt (coverage first)'));
-  console.log(
-    `  before: include=[${(proposal.before.include || []).join(', ')}] governed=${proposal.before.governedPercent ?? '?'}% files=${proposal.before.totalFiles ?? '?'}`
-  );
-  console.log(
-    `  after:  include=[${(proposal.after.include || []).join(', ')}] governed=${proposal.after.governedPercent}% files=${proposal.after.totalFiles} unclassified=${proposal.after.unclassified}`
-  );
-  console.log(`  presentation patterns += ${uiPatterns.join(', ')}`);
-  console.log(`  persistence patterns += (data clients / db / auth — never bare lib→Presentation)`);
-  console.log(`  application patterns += Next/Vercel API shells (never bare src/lib/**)`);
-  console.log(`  shared kernel += types/constants; composition root += wiring`);
-  if (proposal.wrote) {
-    console.log(color.green(`  wrote ${path.relative(root, configPath) || args.config}`));
-    console.log(color.dim(`  Next: ${arkCommand(root, 'ark-check', '--coverage')} then --plan`));
-  } else {
-    console.log(color.dim('  Dry-run only. Re-run with --write to apply (does not weaken rules).'));
-  }
-  if ((proposal.after.totalFiles ?? 0) === 0) {
-    console.log(
-      color.yellow(
-        '  Empty scope remains — no TS packages found. Point include at your package roots manually.'
-      )
-    );
-    process.exitCode = 1;
-  }
+  emitResult(args, proposal, lines, { exitCode: emptyScope && !args.json ? 1 : undefined });
 }
 
 /**
@@ -792,27 +749,15 @@ function printPathDrift(root, args, report, written) {
  */
 function runMigrateContract(args) {
   const root = args.root;
-  // Contain --config writes under project root (S0 security).
-  const contained = resolveConfigPathWithinRoot(root, args.config);
-  if (!contained.ok) {
-    console.error(contained.error);
-    process.exitCode = 2;
-    return;
-  }
-  const configPath = contained.configPath;
+  const configPath = requireContainedConfigPath(root, args.config);
+  if (!configPath) return;
   if (!fs.existsSync(configPath)) {
     console.error(`No ${args.config} — nothing to migrate. Run ark start / ark-check --init first.`);
     process.exitCode = 2;
     return;
   }
-  let config;
-  try {
-    config = readConfig(root, args.config);
-  } catch (error) {
-    console.error(error instanceof Error ? error.message : String(error));
-    process.exitCode = 2;
-    return;
-  }
+  const config = tryReadConfig(root, args.config);
+  if (!config) return;
 
   const result = retrofitP0aApiApplicationPatterns(config);
   const proposal = {
@@ -822,41 +767,31 @@ function runMigrateContract(args) {
     targetLayer: result.targetLayer,
     wrote: false,
   };
-
   if (args.write && result.changed) {
     fs.writeFileSync(configPath, `${JSON.stringify(result.config, null, 2)}\n`);
     proposal.wrote = true;
   }
 
-  if (args.json) {
-    console.log(JSON.stringify(proposal, null, 2));
-    return;
-  }
-  console.log(color.bold('Contract migrate (P0-A API → Application, additive)'));
+  const lines = [color.bold('Contract migrate (P0-A API → Application, additive)')];
   if (!result.changed) {
-    console.log(color.dim('  No changes — Application already has high-spec app/api patterns (or no Application layer).'));
-    return;
-  }
-  console.log(`  target layer: ${result.targetLayer}`);
-  console.log(`  injecting: ${result.injected.join(', ')}`);
-  if (proposal.wrote) {
-    console.log(color.green(`  wrote ${path.relative(root, configPath) || args.config}`));
-    console.log(color.dim(`  Next: ${arkCommand(root, 'ark-check', '--coverage')} — API routes should classify as Application`));
+    lines.push(color.dim('  No changes — Application already has high-spec app/api patterns (or no Application layer).'));
   } else {
-    console.log(color.dim('  Dry-run only. Re-run with --write to apply.'));
+    lines.push(`  target layer: ${result.targetLayer}`, `  injecting: ${result.injected.join(', ')}`);
+    lines.push(
+      ...(proposal.wrote
+        ? [
+            color.green(`  wrote ${path.relative(root, configPath) || args.config}`),
+            color.dim(`  Next: ${arkCommand(root, 'ark-check', '--coverage')} — API routes should classify as Application`),
+          ]
+        : [color.dim('  Dry-run only. Re-run with --write to apply.')])
+    );
   }
+  emitResult(args, proposal, lines);
 }
 
-
-
 function runInit(args) {
-  const contained = resolveConfigPathWithinRoot(args.root, args.config);
-  if (!contained.ok) {
-    console.error(contained.error);
-    process.exitCode = 2;
-    return;
-  }
-  const configPath = contained.configPath;
+  const configPath = requireContainedConfigPath(args.root, args.config);
+  if (!configPath) return;
 
   if (fs.existsSync(configPath) && !args.force) {
     console.error(`${configPath} already exists. Re-run with --force to overwrite it.`);
@@ -880,12 +815,8 @@ function runInit(args) {
       args.root
     );
     fs.writeFileSync(configPath, `${JSON.stringify(finalConfig, null, 2)}\n`);
-    const arkrulesWritten = writeArkRulesTemplates(args.root, finalConfig, {
-      force: args.force === true,
-    });
-    if (arkrulesWritten.length > 0) {
-      console.log(`Wrote ArkRules templates: ${arkrulesWritten.join(', ')}`);
-    }
+    const arkrulesWritten = writeArkRulesTemplates(args.root, finalConfig, { force: args.force === true });
+    if (arkrulesWritten.length > 0) console.log(`Wrote ArkRules templates: ${arkrulesWritten.join(', ')}`);
     console.log(`Wrote ${configPath} (${args.preset} preset)`);
     if (finalConfig.frameworkOverlay) {
       console.log(
@@ -894,9 +825,7 @@ function runInit(args) {
     }
     console.log('');
     console.log('Layers (every layer optional, so the strict check passes before the directories exist):');
-    for (const layer of finalConfig.layers) {
-      console.log(`  ${layer.name}: ${layer.patterns.join(', ')}`);
-    }
+    printLayers(finalConfig.layers);
     if (args.preset === 'monorepo') {
       console.log('');
       console.log(`include: ${finalConfig.include.join(', ')} — patterns match by directory name in any`);
@@ -909,33 +838,19 @@ function runInit(args) {
 
   const { srcDir, config } = detectConfig(args.root);
   const greenfield = config.layers.length === 0;
-  // When no conventional src/ layout is found, a `workspaces` declaration means this is a
-  // monorepo — the src/** 11-layer starter would match nothing there, so use the
-  // cross-package monorepo profile anchored at the real workspace roots instead.
   const includeRoots = greenfield ? resolveIncludeRoots(args.root) : [];
   const tsPackages = greenfield ? detectTsPackageRoots(args.root) : [];
-  // Prefer monorepo/ui when nested TS packages exist without a conventional src layout.
   const mode = !greenfield
     ? 'detected'
     : includeRoots.length > 0 || tsPackages.length > 0
       ? 'monorepo'
       : 'greenfield';
-  // Greenfield: anchor the starter profile at src/ (the convention a fresh project will
-  // scaffold under) even when src/ doesn't exist yet — the layers are optional, so the
-  // check passes today and governance switches on the moment src/domain/ etc. appear.
-  // Detected configs also get framework overlays so Nest/Next flat files are classified.
   const finalConfig = withDefaultArkRules(
     mode === 'detected'
       ? applyFrameworkLayoutOverlays(config, args.root)
       : mode === 'monorepo'
-        ? ARCHITECTURE_PRESETS.monorepo(
-            includeRoots.length > 0 ? includeRoots : tsPackages,
-            args.root
-          )
-        : createElevenLayerConfig({
-            rootDir: srcDir === '.' ? 'src' : srcDir,
-            root: args.root,
-          })
+        ? ARCHITECTURE_PRESETS.monorepo(includeRoots.length > 0 ? includeRoots : tsPackages, args.root)
+        : createElevenLayerConfig({ rootDir: srcDir === '.' ? 'src' : srcDir, root: args.root })
   );
 
   fs.writeFileSync(configPath, `${JSON.stringify(finalConfig, null, 2)}\n`);
@@ -949,20 +864,14 @@ function runInit(args) {
     console.log('cross-package profile matching domain/application/presentation/persistence dirs');
     console.log('in any package. Every layer is optional, so the strict check passes now and each');
     console.log('switches on as matching directories gain files. Adjust patterns to your naming:');
-    for (const layer of finalConfig.layers) {
-      console.log(`  ${layer.name}: ${layer.patterns.join(', ')}`);
-    }
+    printLayers(finalConfig.layers);
     console.log('');
     console.log(`Verify what each layer actually governs: ${arkCommand(args.root, 'ark-check', '--coverage')}`);
   } else if (mode === 'greenfield') {
     console.log('No conventional layer directories found — generated the full 11-layer starter');
     console.log('profile instead. Every layer is marked optional, so the strict check passes now');
     console.log('and each layer starts being enforced as soon as its directory gains source files:');
-    for (const layer of finalConfig.layers) {
-      console.log(`  ${layer.name}: ${layer.patterns.join(', ')}`);
-    }
-    // The starter profile only governs src/. Existing source elsewhere would make the
-    // gate silently green, so surface it instead of pretending the project is covered.
+    printLayers(finalConfig.layers);
     const outside = walk(args.root, [], { root: args.root })
       .map((file) => normalize(path.relative(args.root, file)))
       .filter((rel) => !rel.startsWith('src/') && !rel.split('/').some((s) => s.startsWith('.')));
@@ -974,9 +883,7 @@ function runInit(args) {
     }
   } else {
     console.log('Detected layers:');
-    for (const layer of finalConfig.layers) {
-      console.log(`  ${layer.name}: ${layer.patterns.join(', ')}`);
-    }
+    printLayers(finalConfig.layers);
     const detected = new Set(finalConfig.layers.map((layer) => layer.name));
     const suggested = DEFAULT_INTENT_PREFIXES.filter((entry) => !detected.has(entry.layer));
     if (suggested.length > 0) {
@@ -1027,12 +934,8 @@ function runInit(args) {
 
 function readManifest(root, manifestPath) {
   if (!manifestPath) return undefined;
-  const fullPath = path.isAbsolute(manifestPath)
-    ? manifestPath
-    : path.join(root, manifestPath);
-  if (!fs.existsSync(fullPath)) {
-    throw new Error(`Manifest not found: ${fullPath}`);
-  }
+  const fullPath = resolveFromRoot(root, manifestPath);
+  if (!fs.existsSync(fullPath)) throw new Error(`Manifest not found: ${fullPath}`);
   return readJson(fullPath);
 }
 
@@ -1085,22 +988,10 @@ function applyConfigRootWalkUp(args) {
 async function main() {
   const args = applyConfigRootWalkUp(parseArgs(process.argv));
   if (await tryResidentDoctor(args)) return;
-  if (args.version) {
-    console.log(arkPackageVersion());
-    process.exit(0);
-  }
-  if (args.help) {
-    console.log(args.all ? checkUsageAll() : checkUsage());
-    return;
-  }
-  if (args.init) {
-    runInit(args);
-    return;
-  }
-  if (args.installAgentGates) {
-    runInstallAgentGates(args);
-    return;
-  }
+  if (args.version) { console.log(arkPackageVersion()); process.exit(0); }
+  if (args.help) { console.log(args.all ? checkUsageAll() : checkUsage()); return; }
+  if (args.init) return runInit(args);
+  if (args.installAgentGates) return runInstallAgentGates(args);
   if (args.printConfig) {
     if (args.printConfig !== 'eleven-layer') {
       console.error(`Unknown config profile: ${args.printConfig}`);
@@ -1110,79 +1001,41 @@ async function main() {
     console.log(JSON.stringify(createElevenLayerConfig(), null, 2));
     return;
   }
-
-  if (args.listPolicyPacks) {
-    runListPolicyPacks(args);
-    return;
-  }
-
-  if (args.applyPolicyPack) {
-    runApplyPolicyPack(args);
-    return;
-  }
-
-  if (args.suggestInclude) {
-    runSuggestInclude(args);
-    return;
-  }
-
-  if (args.adoptContract) {
-    runAdoptContract(args);
-    return;
-  }
-
-  if (args.migrateContract) {
-    runMigrateContract(args);
-    return;
-  }
-
-  if (args.pathDrift) {
-    await runPathDrift(args);
-    return;
-  }
+  if (args.listPolicyPacks) return runListPolicyPacks(args);
+  if (args.applyPolicyPack) return runApplyPolicyPack(args);
+  if (args.suggestInclude) return runSuggestInclude(args);
+  if (args.adoptContract) return runAdoptContract(args);
+  if (args.migrateContract) return runMigrateContract(args);
+  if (args.pathDrift) return runPathDrift(args);
 
   if (args.probeInvariants) {
-    // ADR 0039: owner-invoked, outside the gate path. Loaded only here; parseArgs
-    // refuses every pairing with --strict-merge, --changed, --local or --doctor.
+    // ADR 0039: owner-invoked, outside the gate path.
     const { runProbeInvariants } = await import('./lib/invariant-probe-cli.mjs');
     await runProbeInvariants(args, readConfig);
     return;
   }
-
   if (args.sensors) {
     const { runSensors } = await import('./lib/sensor-promote-cli.mjs');
     await withSensorsPartialModeHonesty(args, () => runSensors(args, readConfig));
     return;
   }
-
   if (args.recommend) {
     const { runRecommend } = await import('./lib/recommend-cli.mjs');
     runRecommend(args);
     return;
   }
 
-  // Empty analysis is a refusal: on zero governed files every later gate reports on
-  // nothing. It outranks --require-gates, so the caller hears the real reason instead
-  // of "Ark gates are not installed" in whatever directory the contract happened to
-  // live in — but it is evaluated LAZILY, so the cheap exits (a --changed run whose
-  // diff touches no product path, --require-gates with the gates present) still pay
-  // nothing for a filesystem walk they never needed.
-  //
-  // Report modes are exempt: --plan, --coverage and --doctor are how a user sees and
-  // fixes an empty scope (they already carry the `empty-scope` adoption gap), so
-  // refusing there would remove the only surface that explains the refusal.
   const root = args.root;
   const verdictPath = !args.plan && !args.coverage && !args.doctor;
   const configName = typeof args.config === 'string' ? args.config : '';
   const explicitConfigPath = path.isAbsolute(configName) || /[\\/]/.test(configName);
   if (verdictPath && args.configFound !== true && !explicitConfigPath) {
-    const message = ABSENT_CONFIG_FIRST_STEP;
-    if (args.json) {
-      console.log(JSON.stringify({ ok: false, error: 'NO_ARK_CONFIG', message, nextAction: message }, null, 2));
-    } else {
-      console.error(`${color.red('✖')} ${message}`);
-    }
-    process.exitCode = 1;
+    emitResult(
+      args,
+      { ok: false, error: 'NO_ARK_CONFIG', message: ABSENT_CONFIG_FIRST_STEP, nextAction: ABSENT_CONFIG_FIRST_STEP },
+      [`${color.red('✖')} ${ABSENT_CONFIG_FIRST_STEP}`],
+      { exitCode: 1, toStderr: true }
+    );
     return;
   }
   let configCache = null;
@@ -1194,42 +1047,36 @@ async function main() {
     const governedCount = governedFiles.length;
     return emptyAnalysisRefusal({
       governedFileCount: governedCount,
-      classifiedFileCount: classifiedCountFromFiles(governedFiles, loadConfig().layers, (fileRoot, abs, layers) => {
-        const rel = path.relative(fileRoot, abs).split(path.sep).join('/');
-        return classificationAccountsForPath(rel, layers) ? 'accounted' : undefined;
-      }, root),
-      // Probed only when nothing is governed, and never through the contract's own
-      // exclude: the config under suspicion must not get to answer the question about
-      // itself (`exclude: ["**"]` would otherwise read as greenfield and pass).
+      classifiedFileCount: classifiedCountFromFiles(
+        governedFiles,
+        loadConfig().layers,
+        (fileRoot, abs, layers) =>
+          classificationAccountsForPath(path.relative(fileRoot, abs).split(path.sep).join('/'), layers)
+            ? 'accounted'
+            : undefined,
+        root
+      ),
       ungovernedSourceCount: governedCount === 0 ? countUngovernedSourceFiles(root) : 0,
       ungovernedSourceCap: UNGOVERNED_PROBE_CAP,
       root,
       requestedRoot: args.requestedRoot,
-      configPath: path.isAbsolute(args.config) ? args.config : path.join(root, args.config),
+      configPath: resolveFromRoot(root, args.config),
       configWalkedUp: args.configWalkedUp === true,
     });
   };
-  const reportEmptyAnalysis = (refusal) => {
-    if (args.json) {
-      console.log(
-        JSON.stringify(
-          {
-            ok: false,
-            error: refusal.ruleId,
-            completeness: ANALYSIS_COMPLETENESS.unavailable,
-            message: refusal.message,
-            nextAction: refusal.nextAction,
-          },
-          null,
-          2
-        )
-      );
-    } else {
-      console.error(`${color.red('\u2716')} ${refusal.ruleId} ${refusal.message}`);
-      console.error(`Next: ${refusal.nextAction}`);
-    }
-    process.exitCode = 1;
-  };
+  const reportEmptyAnalysis = (refusal) =>
+    emitResult(
+      args,
+      {
+        ok: false,
+        error: refusal.ruleId,
+        completeness: ANALYSIS_COMPLETENESS.unavailable,
+        message: refusal.message,
+        nextAction: refusal.nextAction,
+      },
+      [`${color.red('\u2716')} ${refusal.ruleId} ${refusal.message}`, `Next: ${refusal.nextAction}`],
+      { exitCode: 1, toStderr: true }
+    );
 
   if (args.requireGates || args.requireWriteHook) {
     let writeRequest = null;
@@ -1241,14 +1088,12 @@ async function main() {
         force: true,
       });
       if (!writeRequest.ok) {
-        const payload = {
-          ok: false,
-          error: 'unsupported-enforcement-profile',
-          message: writeRequest.error,
-        };
-        if (args.json) console.log(JSON.stringify(payload, null, 2));
-        else console.error(writeRequest.error);
-        process.exitCode = 2;
+        emitResult(
+          args,
+          { ok: false, error: 'unsupported-enforcement-profile', message: writeRequest.error },
+          [writeRequest.error],
+          { exitCode: 2, toStderr: true }
+        );
         return;
       }
     }
@@ -1261,72 +1106,48 @@ async function main() {
       missing.push(`${writeRequest.host} hard-write hook`);
     }
     if (missing.length > 0) {
-      // "Gates not installed" is the wrong reason for a run that would have analyzed
-      // nothing: it sends the user to `ark init` for a problem they do not have. Only
-      // here do we pay for the walk — with the gates present we fall through and the
-      // verdict path below checks at its usual point. A contract that cannot even be
-      // read is not evidence of an empty analysis, so that throw falls back to the
-      // gate report instead of masking it.
       let refusal = null;
       if (verdictPath) {
-        try {
-          refusal = emptyAnalysisRefusalNow();
-        } catch {
-          refusal = null;
-        }
+        try { refusal = emptyAnalysisRefusalNow(); } catch { refusal = null; }
       }
       if (refusal) {
         reportEmptyAnalysis(refusal);
         return;
       }
-      const payload = {
-        ok: false,
-        error: 'missing-gates',
-        missing,
-        ...(writeRequest?.host ? { writeHost: writeRequest.host } : {}),
-      };
-      if (args.json) {
-        console.log(JSON.stringify(payload, null, 2));
-      } else {
-        console.error('Ark gates are not installed. Missing:');
-        for (const relativePath of missing) {
-          console.error(`  - ${relativePath}`);
-        }
-        const installArgs = writeRequest?.host
-          ? `--install-agent-gates --tools ${writeRequest.host} --require-write-hook ${writeRequest.host}`
-          : '--install-agent-gates';
-        console.error(
-          `\nRun \`${arkCommand(args.root, 'ark', 'init')}\` (or \`${arkCommand(args.root, 'ark-check', installArgs)}\`) to configure enforcement.`
-        );
-      }
-      process.exitCode = 1;
+      const installArgs = writeRequest?.host
+        ? `--install-agent-gates --tools ${writeRequest.host} --require-write-hook ${writeRequest.host}`
+        : '--install-agent-gates';
+      emitResult(
+        args,
+        { ok: false, error: 'missing-gates', missing, ...(writeRequest?.host ? { writeHost: writeRequest.host } : {}) },
+        [
+          'Ark gates are not installed. Missing:',
+          ...missing.map((relativePath) => `  - ${relativePath}`),
+          `\nRun \`${arkCommand(args.root, 'ark', 'init')}\` (or \`${arkCommand(args.root, 'ark-check', installArgs)}\`) to configure enforcement.`,
+        ],
+        { exitCode: 1, toStderr: true }
+      );
       return;
     }
     if (args.requireGates) {
       const ci = ciNotFailClosed(args.root);
       if (ci) {
-        const payload = {
-          ok: false,
-          error: ci.error,
-          message: ci.message,
-          workflowFile: ci.workflowFile,
-          nextAction: ci.nextAction,
-          ...(writeRequest?.host ? { writeHost: writeRequest.host } : {}),
-        };
-        if (args.json) {
-          console.log(JSON.stringify(payload, null, 2));
-        } else {
-          console.error(`${color.red('\u2716')} ${ci.error} ${ci.message}`);
-          console.error(`Next: ${ci.nextAction}`);
-        }
-        process.exitCode = 1;
+        emitResult(
+          args,
+          {
+            ok: false,
+            error: ci.error,
+            message: ci.message,
+            workflowFile: ci.workflowFile,
+            nextAction: ci.nextAction,
+            ...(writeRequest?.host ? { writeHost: writeRequest.host } : {}),
+          },
+          [`${color.red('\u2716')} ${ci.error} ${ci.message}`, `Next: ${ci.nextAction}`],
+          { exitCode: 1, toStderr: true }
+        );
         return;
       }
     }
-    // Gates present. This is a precondition, not a standalone report: stay quiet
-    // in --json mode so the architecture check below owns the single JSON output.
-    // When --require-gates is the only intent (no config/architecture run needed),
-    // callers still get a clear signal from the exit code and the human-mode line.
     if (!args.json) {
       if (args.requireGates) {
         const compactHost = compactRouterHost(args.root);
@@ -1335,11 +1156,10 @@ async function main() {
             (compactHost
               ? `AGENTS.md, compact host registration (${compactHost})`
               : REQUIRED_GATE_FILES.join(', '))
-        ); printAdrPresenceHint(args.root, (line) => console.log(line));
+        );
+        printAdrPresenceHint(args.root, (line) => console.log(line));
       }
-      if (writeRequest?.host) {
-        console.log(`Ark hard-write hook present for ${writeRequest.host}.`);
-      }
+      if (writeRequest?.host) console.log(`Ark hard-write hook present for ${writeRequest.host}.`);
     }
   }
 
@@ -1520,9 +1340,10 @@ async function main() {
   const designDelta = designCheck.result;
 
   if (args.doctor) {
+    const absConfig = resolveFromRoot(root, args.config);
     runDoctor(root, config, files, rules, violations, args.json, {
-      configPath: path.isAbsolute(args.config) ? args.config : path.join(root, args.config),
-      configMissing: !fs.existsSync(path.isAbsolute(args.config) ? args.config : path.join(root, args.config)),
+      configPath: absConfig,
+      configMissing: !fs.existsSync(absConfig),
       configRoot: args.configRoot ?? root,
       configWalkedUp: args.configWalkedUp === true,
       safety, designDelta,
@@ -1530,7 +1351,8 @@ async function main() {
       all: args.all === true, changed: args.changed === true, requireGates: args.requireGates === true,
       warnings, architectureFacts: importGraph ? { importGraph } : undefined,
     });
-    if (designDelta) process.exitCode = !designDelta.complete ? 2 : designDelta.valid ? 0 : 1; return;
+    if (designDelta) process.exitCode = !designDelta.complete ? 2 : designDelta.valid ? 0 : 1;
+    return;
   }
 
   if (args.ratchetCores) {
@@ -1539,7 +1361,6 @@ async function main() {
   }
 
   if (args.updateBaseline) {
-    // A persona can turn on --changed after parseArgs; a subset scan must never rewrite the baseline.
     if (args.changed) { console.error(UPDATE_BASELINE_SCOPE_MESSAGE); process.exitCode = 2; return; }
     if (!contractSessionFrom(args)) {
       console.error('Growing the baseline requires --contract-session. Freeze in a law-only PR.');
@@ -1547,8 +1368,6 @@ async function main() {
       return;
     }
     const summary = summarizeViolations(violations);
-    // Bloquear y avisar: a lopsided freeze buries a likely contract bug as "debt". Refuse it
-    // (unless --force), diagnose, and point at the contract fix instead of the baseline.
     if (summary.concentrated && !args.force) {
       console.error(
         `Refusing to freeze ${summary.total} violations: ${Math.round(summary.dominantShare * 100)}% are a single edge (${summary.dominant}).`
@@ -1561,11 +1380,7 @@ async function main() {
       return;
     }
     const baselineName = args.baseline || '.ark-baseline.json';
-    const fullBaselinePath = path.isAbsolute(baselineName)
-      ? baselineName
-      : path.join(root, baselineName);
-    // Zero debt: do not leave an empty baseline file (unclear policy — "is ratchet on?").
-    // Delete any existing empty/orphan baseline so doctor/CI stay honest.
+    const fullBaselinePath = resolveFromRoot(root, baselineName);
     if (violations.length === 0) {
       if (fs.existsSync(fullBaselinePath)) {
         fs.unlinkSync(fullBaselinePath);
@@ -1580,23 +1395,15 @@ async function main() {
     }
     const { fullPath, count } = writeBaseline(root, baselineName, violations);
     console.log(`Wrote ${fullPath} with ${count} frozen violation key(s).`);
-    // Keep existing package.json scripts + CI workflows on the ratchet without a
-    // full --force reinstall (field log: baseline after start left CI without --baseline).
     const baselineRel = path.isAbsolute(baselineName)
       ? path.relative(root, baselineName).split(path.sep).join('/')
       : String(baselineName).replace(/^\.\/+/, '');
-    const sync = syncBaselineIntoCheckSurfaces(root, {
-      baselineRel: baselineRel || '.ark-baseline.json',
-    });
-    if (sync.changed.length > 0) {
-      console.log(
-        `Synced --baseline into: ${sync.changed.map((c) => c.file).join(', ')}`
-      );
-    } else {
-      console.log(
-        'No existing check scripts/workflows needed a --baseline patch (add check:architecture or re-run --install-agent-gates).'
-      );
-    }
+    const sync = syncBaselineIntoCheckSurfaces(root, { baselineRel: baselineRel || '.ark-baseline.json' });
+    console.log(
+      sync.changed.length > 0
+        ? `Synced --baseline into: ${sync.changed.map((c) => c.file).join(', ')}`
+        : 'No existing check scripts/workflows needed a --baseline patch (add check:architecture or re-run --install-agent-gates).'
+    );
     console.log('Commit it and gate CI with: ark-check --baseline (only NEW violations fail).');
     if (summary.total > 0) printViolationBreakdown(summary);
     return;
@@ -1605,6 +1412,8 @@ async function main() {
   let suppressed = [];
   let activeViolations = violations;
   let staleBaselineKeys = 0;
+  const violationOccurrenceKeys = baselineOccurrenceKeys(violations);
+  const baselineTarget = args.against ? null : effectiveBaselineName(args, root);
   if (args.against) {
     const ratcheted = applyAgainstRatchet({
       violations,
@@ -1612,21 +1421,22 @@ async function main() {
       root,
       changed: args.changed,
       changedPaths,
-      occurrenceKeys: baselineOccurrenceKeys(violations),
+      occurrenceKeys: violationOccurrenceKeys,
       rules,
       layers: config.layers,
     });
     activeViolations = ratcheted.activeViolations;
     suppressed = ratcheted.suppressed;
-  } else if (effectiveBaselineName(args, root)) {
-    const baseline = readBaseline(root, effectiveBaselineName(args, root));
+  } else if (baselineTarget) {
+    const baseline = readBaseline(root, baselineTarget);
     if (baseline.exists) {
-      const occurrenceKeys = baselineOccurrenceKeys(violations);
-      const judged = applyAdvisorySiblingRatchet(violations, occurrenceKeys, baseline.keys, { rules, layers: config.layers });
-      suppressed = judged.filter((_, index) => baseline.keys.has(occurrenceKeys[index]));
-      activeViolations = judged.filter((_, index) => !baseline.keys.has(occurrenceKeys[index]));
-      const currentKeys = new Set(occurrenceKeys);
-      staleBaselineKeys = [...baseline.keys].filter((key) => !currentKeys.has(key)).length;
+      const judged = applyAdvisorySiblingRatchet(violations, violationOccurrenceKeys, baseline.keys, {
+        rules,
+        layers: config.layers,
+      });
+      suppressed = judged.filter((_, index) => baseline.keys.has(violationOccurrenceKeys[index]));
+      activeViolations = judged.filter((_, index) => !baseline.keys.has(violationOccurrenceKeys[index]));
+      staleBaselineKeys = countStaleBaselineKeys(baseline.keys, violationOccurrenceKeys);
     } else {
       warnings.push(
         configWarning(
@@ -1718,15 +1528,9 @@ async function main() {
     const existingOrigin = args.resetOrigin
       ? null
       : readJsonSafe(path.join(reportsDir(root), 'origin.json'));
-    // Pass the same baseline split as doctor so productHonesty dirty-freeze matches.
     const reportBaseline = readBaseline(root, args.baseline || '.ark-baseline.json');
-    // Doctor parity for improvement compass: stale keys = baseline keys not in current occurrence set.
-    // Only when analysis is complete — partial scans under-count current keys and inflate false stale residual
-    // (same gate as doctor-plan: baselineStale: analysisComplete ? staleBaseline : null).
-    const reportOccurrenceKeys = baselineOccurrenceKeys(violations);
-    const reportCurrentKeys = new Set(reportOccurrenceKeys);
     const reportBaselineStale = reportBaseline.exists
-      ? [...reportBaseline.keys].filter((key) => !reportCurrentKeys.has(key)).length
+      ? countStaleBaselineKeys(reportBaseline.keys, violationOccurrenceKeys)
       : 0;
     const { adoption: adoptionForReport, designDepth } = buildReportDepthPayload(
       root,
@@ -1828,7 +1632,7 @@ async function main() {
     const html = args.beginner
       ? renderBeginnerHtmlReport(reportPayload)
       : renderHtmlReport(reportPayload);
-    const reportPath = path.isAbsolute(args.report) ? args.report : path.join(root, args.report);
+    const reportPath = resolveFromRoot(root, args.report);
     fs.mkdirSync(path.dirname(reportPath), { recursive: true });
     fs.writeFileSync(reportPath, html);
 

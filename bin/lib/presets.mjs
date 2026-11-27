@@ -7,7 +7,6 @@ import { fileURLToPath } from 'node:url';
 import {
   applyFrameworkLayoutOverlays,
   cloneArchetypeForLayer,
-  createElevenLayerConfig,
   DEFAULT_DOMAIN_FORBIDDEN_GLOBALS,
   detectDeclaredWorkspaces,
   discoverRepoUnits,
@@ -451,52 +450,51 @@ export function writeArkRulesTemplates(root, config, { force = false } = {}) {
   return written;
 }
 
-/**
- * Deny edges shared by the ports-and-adapters presets after their DomainModel
- * rules: orchestration never reaches adapters, adapters never reach each other,
- * and presentation never reaches the domain directly. Fresh objects per call.
- */
-function portsAndAdaptersRules() {
-  return [
-    { from: 'ApplicationOrchestration', to: 'PersistenceAdapters', allowed: false },
-    { from: 'ApplicationOrchestration', to: 'PresentationAdapters', allowed: false },
-    { from: 'PresentationAdapters', to: 'PersistenceAdapters', allowed: false },
-    { from: 'PresentationAdapters', to: 'DomainModel', allowed: false },
-    { from: 'PersistenceAdapters', to: 'ApplicationOrchestration', allowed: false },
-    { from: 'PersistenceAdapters', to: 'PresentationAdapters', allowed: false },
-  ];
-}
+const denyPairs = (pairs) => pairs.map(([from, to]) => ({ from, to, allowed: false }));
+
+const DOMAIN_OUTWARD_DENIES = [
+  ['DomainModel', 'ApplicationOrchestration'],
+  ['DomainModel', 'PersistenceAdapters'],
+  ['DomainModel', 'PresentationAdapters'],
+];
+
+/** Deny edges shared by ports-and-adapters presets after DomainModel rules. Fresh objects per call. */
+const portsAndAdaptersRules = () =>
+  denyPairs([
+    ['ApplicationOrchestration', 'PersistenceAdapters'],
+    ['ApplicationOrchestration', 'PresentationAdapters'],
+    ['PresentationAdapters', 'PersistenceAdapters'],
+    ['PresentationAdapters', 'DomainModel'],
+    ['PersistenceAdapters', 'ApplicationOrchestration'],
+    ['PersistenceAdapters', 'PresentationAdapters'],
+  ]);
+
+const hexagonalCoreRules = () => [...denyPairs(DOMAIN_OUTWARD_DENIES), ...portsAndAdaptersRules()];
 
 // Monorepo day one (#383): API→db and UI→shared schema stay allowed. Domain→db stays denied.
-function monorepoDependencyRules() {
-  return [
-    { from: 'DomainModel', to: 'ApplicationOrchestration', allowed: false },
-    { from: 'DomainModel', to: 'PresentationAdapters', allowed: false },
-    { from: 'DomainModel', to: 'PersistenceAdapters', allowed: false },
-    { from: 'ApplicationOrchestration', to: 'PresentationAdapters', allowed: false },
-    { from: 'PresentationAdapters', to: 'DomainModel', allowed: false },
-    { from: 'PersistenceAdapters', to: 'ApplicationOrchestration', allowed: false },
-    { from: 'PersistenceAdapters', to: 'PresentationAdapters', allowed: false },
-  ];
-}
+const monorepoDependencyRules = () =>
+  denyPairs([
+    ...DOMAIN_OUTWARD_DENIES,
+    ['ApplicationOrchestration', 'PresentationAdapters'],
+    ['PresentationAdapters', 'DomainModel'],
+    ['PersistenceAdapters', 'ApplicationOrchestration'],
+    ['PersistenceAdapters', 'PresentationAdapters'],
+  ]);
 
 /** UI-surface rules. Presentation may reach data clients (soft). Persistence → Presentation stays denied. */
-function uiSurfaceRules(presentationToPersistenceMessage) {
-  return [
-    { from: 'DomainModel', to: 'PresentationAdapters', allowed: false },
-    { from: 'DomainModel', to: 'PersistenceAdapters', allowed: false },
-    { from: 'DomainModel', to: 'ApplicationOrchestration', allowed: false },
-    { from: 'ApplicationOrchestration', to: 'PresentationAdapters', allowed: false },
-    {
-      from: 'PresentationAdapters',
-      to: 'PersistenceAdapters',
-      allowed: true,
-      message: presentationToPersistenceMessage,
-    },
-    { from: 'PersistenceAdapters', to: 'PresentationAdapters', allowed: false },
-    { from: 'PersistenceAdapters', to: 'ApplicationOrchestration', allowed: false },
-  ];
-}
+const uiSurfaceRules = (message) => [
+  ...denyPairs([
+    ['DomainModel', 'PresentationAdapters'],
+    ['DomainModel', 'PersistenceAdapters'],
+    ['DomainModel', 'ApplicationOrchestration'],
+    ['ApplicationOrchestration', 'PresentationAdapters'],
+  ]),
+  { from: 'PresentationAdapters', to: 'PersistenceAdapters', allowed: true, message },
+  ...denyPairs([
+    ['PersistenceAdapters', 'PresentationAdapters'],
+    ['PersistenceAdapters', 'ApplicationOrchestration'],
+  ]),
+];
 
 function presetWithOverlays(baseConfig, root) {
   const config = root ? applyFrameworkLayoutOverlays(baseConfig, root) : baseConfig;
@@ -557,12 +555,7 @@ export const ARCHITECTURE_PRESETS = {
             optional: true,
           },
         ],
-        rules: [
-          { from: 'DomainModel', to: 'ApplicationOrchestration', allowed: false },
-          { from: 'DomainModel', to: 'PersistenceAdapters', allowed: false },
-          { from: 'DomainModel', to: 'PresentationAdapters', allowed: false },
-          ...portsAndAdaptersRules(),
-        ],
+        rules: hexagonalCoreRules(),
       },
       root
     ),
@@ -1003,14 +996,13 @@ export const ARCHITECTURE_PRESETS = {
           },
         ],
         rules: [
-          { from: 'DomainModel', to: 'ApplicationOrchestration', allowed: false },
-          { from: 'DomainModel', to: 'PersistenceAdapters', allowed: false },
-          { from: 'DomainModel', to: 'PresentationAdapters', allowed: false },
-          ...portsAndAdaptersRules(),
-          { from: 'SharedKernel', to: 'DomainModel', allowed: false },
-          { from: 'SharedKernel', to: 'ApplicationOrchestration', allowed: false },
-          { from: 'SharedKernel', to: 'PresentationAdapters', allowed: false },
-          { from: 'SharedKernel', to: 'PersistenceAdapters', allowed: false },
+          ...hexagonalCoreRules(),
+          ...denyPairs([
+            ['SharedKernel', 'DomainModel'],
+            ['SharedKernel', 'ApplicationOrchestration'],
+            ['SharedKernel', 'PresentationAdapters'],
+            ['SharedKernel', 'PersistenceAdapters'],
+          ]),
           ...peerIsolationEdges(
             contextLayers,
             sliceFolders,

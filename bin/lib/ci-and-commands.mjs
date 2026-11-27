@@ -7,7 +7,6 @@ import {
   arkCommand,
   detectPackageManager,
   execCommandParts,
-  execRunner,
   DEFAULT_INTENT_PREFIXES,
   DEFAULT_LAYER_DIRECTORIES,
 } from '../ark-shared.mjs';

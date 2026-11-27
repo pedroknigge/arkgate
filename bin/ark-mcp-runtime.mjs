@@ -6,10 +6,7 @@ import readline from 'node:readline';
 import { createHash, randomUUID } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import {
-  buildProcessPackageHonesty,
-  readProjectInstalledArkgateVersion,
-} from './lib/mcp-process-package.mjs';
+import { buildProcessPackageHonesty } from './lib/mcp-process-package.mjs';
 import {
   DEFAULT_INTENT_PREFIXES,
   DEFAULT_LAYER_DIRECTORIES,
