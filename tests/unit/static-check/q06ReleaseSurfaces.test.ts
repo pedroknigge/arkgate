@@ -220,7 +220,7 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
     expect(read('docs/releases/4.6.7.md')).not.toMatch(/\*\*Status:\*\*\s*current/i);
     expect(read('docs/releases/4.6.6.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.6.6.md')).toMatch(/6\. \[x\].*arkgate-site 4\.6\.6/s);
-    expect(read('ROADMAP.md')).toMatch(/npm `latest` is \*\*4\.8\.11\*\*/);
+    expect(read('ROADMAP.md')).toMatch(/npm `latest` is \*\*4\.9\.2\*\*/);
     expect(read('docs/releases/4.6.5.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.6.4.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.6.4.md')).not.toMatch(/\*\*Status:\*\*\s*prepared/i);
@@ -837,7 +837,7 @@ describe('CHANGELOG + release note cover 4.9.2 patch release', () => {
     expect(fs.existsSync(path.join(REPO, 'docs/releases/4.9.2.md'))).toBe(false);
     expect(read('docs/README.md')).toMatch(/Current release:.*4\.9\.2/s);
     expect(read('docs/README.md')).toMatch(/Prior published:.*4\.9\.1/s);
-    expect(read('ROADMAP.md')).toMatch(/\| 331 \| `RL902` \| `doing`/);
+    expect(read('ROADMAP.md')).toMatch(/\| 331 \| `RL902` \| `done`/);
   });
 });
 
