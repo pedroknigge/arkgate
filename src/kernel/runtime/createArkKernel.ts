@@ -166,9 +166,13 @@ export function createArkKernel(options: CreateArkKernelOptions = {}): ArkKernel
   });
   const brokerBound = typeof broker?.send === 'function';
   const activeInspectors = new Set<ArkRunInspectorHandle>();
-  const pendingTimers = new Set<ReturnType<typeof setTimeout>>();
   const decisionTape: ArkRunDecisionTapeRecord[] = [];
-  let decisionTapeCap = normalizeDecisionTapeCap(options.maxDecisionTapeSize);
+  const configuredDecisionTapeCap =
+    options.maxDecisionTapeSize === undefined
+      ? undefined
+      : normalizeDecisionTapeCap(options.maxDecisionTapeSize);
+  let requestedDecisionTapeCap: number | undefined;
+  let decisionTapeCap = configuredDecisionTapeCap ?? DEFAULT_DECISION_TAPE_SIZE;
   let disposed = false;
   let inboundUnsub: (() => void) | undefined;
 
@@ -265,7 +269,18 @@ export function createArkKernel(options: CreateArkKernelOptions = {}): ArkKernel
       const sanitized = sanitizeDecisionTapeRecord(record);
       if (!sanitized) return;
       if (maxSize !== undefined) {
-        decisionTapeCap = normalizeDecisionTapeCap(maxSize);
+        // Several ArkOrder planes can share one kernel tape. A later wire must
+        // never shrink the retention window of an earlier wire; the largest
+        // requested cap wins, bounded by the kernel's own configured cap.
+        const requested = normalizeDecisionTapeCap(maxSize);
+        requestedDecisionTapeCap =
+          requestedDecisionTapeCap === undefined
+            ? requested
+            : Math.max(requestedDecisionTapeCap, requested);
+        decisionTapeCap =
+          configuredDecisionTapeCap === undefined
+            ? requestedDecisionTapeCap
+            : Math.min(configuredDecisionTapeCap, requestedDecisionTapeCap);
       }
       decisionTape.push(sanitized);
       if (decisionTape.length > decisionTapeCap) {
@@ -363,10 +378,6 @@ export function createArkKernel(options: CreateArkKernelOptions = {}): ArkKernel
           /* Continue releasing remaining kernel resources if unsubscribe throws. */
         }
       }
-      for (const timer of pendingTimers) {
-        clearTimeout(timer);
-      }
-      pendingTimers.clear();
       eventBus.dispose();
       const inspectors = [...activeInspectors];
       activeInspectors.clear();

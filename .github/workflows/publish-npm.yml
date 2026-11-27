@@ -14,6 +14,7 @@ on:
         type: boolean
 
 permissions:
+  actions: read
   contents: write
   id-token: write
 
@@ -45,6 +46,22 @@ jobs:
 
       - name: Require GitHub release first
         run: gh release view "$RELEASE_TAG"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag }}
+
+      # A real publish must never ship from a red main. Dry runs stay cheap.
+      - name: Require green CI for the tag commit
+        if: ${{ !inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          tag_commit="$(git rev-list -n 1 "$RELEASE_TAG")"
+          conclusion="$(gh run list --workflow ci.yml --commit "$tag_commit" --limit 1 --json conclusion --jq '.[0].conclusion // "missing"')"
+          if [ "$conclusion" != "success" ]; then
+            echo "::error::CI for $RELEASE_TAG ($tag_commit) is $conclusion; publish refused."
+            exit 1
+          fi
+          echo "CI is green for $RELEASE_TAG ($tag_commit)."
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ inputs.tag }}

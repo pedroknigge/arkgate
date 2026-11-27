@@ -25,12 +25,18 @@ const FULL_PURE = [
   'tests/unit/analysis/z04ResolvedFactsResolver.test.ts',
   'tests/unit/analysis/z04ResolvedPreflight.test.ts',
 ];
-const FULL_CLI = [
+// Two independent serial lanes: adapter parity owns process-heavy fixture
+// builds, while the runtime lane owns resident hook + scale + parse health.
+// They start together with the pure lane, so the full corpus wall is the
+// slowest lane, not the sum. Keep each lane single-fork: the tests spawn CLIs.
+const FULL_CLI_RUNTIME = [
   ...PR_CLI,
   'tests/unit/scripts/hookPathBench.test.ts',
+  'tests/unit/static-check/y03ParseHealth.test.ts',
+];
+const FULL_CLI_ADAPTERS = [
   'tests/unit/adapters/adapterParity.test.ts',
   'tests/unit/adapters/z04ResolvedAdapterParity.test.ts',
-  'tests/unit/static-check/y03ParseHealth.test.ts',
 ];
 
 function parseArgs(argv) {
@@ -99,14 +105,34 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
   const budgets = JSON.parse(fs.readFileSync(BUDGETS, 'utf8'));
   const pure = args.mode === 'full' ? FULL_PURE : PR_PURE;
-  const cli = args.mode === 'full' ? FULL_CLI : PR_CLI;
+  const cliLanes =
+    args.mode === 'full'
+      ? [
+          { kind: 'serial-cli', files: FULL_CLI_RUNTIME },
+          { kind: 'serial-cli-adapters', files: FULL_CLI_ADAPTERS },
+        ]
+      : [{ kind: 'serial-cli', files: PR_CLI }];
   const configuredMax = budgets.modes[args.mode]?.maxWallMs;
   const timeoutMs = Number.isFinite(configuredMax) ? configuredMax : 30_000;
   const started = process.hrtime.bigint();
-  const lanes = await Promise.all([
-    runVitest(pure, 'pure', timeoutMs),
-    runVitest(cli, 'serial-cli', timeoutMs),
-  ]);
+  const lanes = [];
+  if (args.mode === 'full') {
+    // Pure first: its four threads must not compete with the resident hook's
+    // readiness window. The two serial lanes then start together.
+    lanes.push(await runVitest(pure, 'pure', timeoutMs));
+    lanes.push(
+      ...(await Promise.all(
+        cliLanes.map((lane) => runVitest(lane.files, lane.kind, timeoutMs))
+      ))
+    );
+  } else {
+    lanes.push(
+      ...(await Promise.all([
+        runVitest(pure, 'pure', timeoutMs),
+        ...cliLanes.map((lane) => runVitest(lane.files, lane.kind, timeoutMs)),
+      ]))
+    );
+  }
   const report = {
     schemaVersion: 1,
     mode: args.mode,

@@ -263,7 +263,8 @@ export interface EventBus {
    */
   subscribe<N extends IntentName, P>(
     intent: N | IntentCreator<N, P>,
-    handler: EventHandler<N, P>
+    handler: EventHandler<N, P>,
+    subscriberId?: string
   ): Unsubscribe;
 
   /**
@@ -315,4 +316,10 @@ export interface EventBus {
    * Sorted unique intent names currently subscribed on this bus.
    */
   listSubscribedIntents(): string[];
+
+  /**
+   * Subscriptions for runtime graph evidence. A subscriber id is used when
+   * supplied; otherwise the handler name or a stable anonymous label is used.
+   */
+  getSubscribers?(): ReadonlyArray<{ intent: string; subscriber: string }>;
 }

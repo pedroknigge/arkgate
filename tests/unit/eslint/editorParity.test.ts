@@ -469,6 +469,54 @@ describe('ArkRules structure sensors run in the editor', () => {
       .Program?.({ type: 'Program', loc: { start: { line: 1, column: 0 } } });
     expect(goodReports).toHaveLength(0);
   });
+
+  it('uses the project TypeScript AST so a dead closure cannot mask a mutator', () => {
+    const fixture = path.resolve('tests/fixtures/arkrules-poc-enforcement');
+    const root = fs.realpathSync(
+      fs.mkdtempSync(path.join(os.tmpdir(), 'ark-eslint-arkrules-ast-'))
+    );
+    temps.push(root);
+    fs.cpSync(fixture, root, { recursive: true });
+    fs.mkdirSync(path.join(root, 'node_modules'), { recursive: true });
+    fs.symlinkSync(
+      path.resolve('node_modules/typescript'),
+      path.join(root, 'node_modules/typescript'),
+      'dir'
+    );
+    const rel = 'src/domain/dead-closure.ts';
+    const source = `export class DeadClosure {
+  private total = 0;
+  private constructor() {}
+  static create() { return new DeadClosure(); }
+  fakeDeadClosure(n: number) {
+    const unused = () => { this.record({ type: 'Never' }); throw new Error('never'); };
+    void unused;
+    this.total = n;
+  }
+}
+`;
+    fs.writeFileSync(path.join(root, rel), source);
+
+    const cli = arkCheck(root);
+    const cliFindings = cli.diagnostics.filter(
+      (d) => d.ruleId === 'ARKRULE_STRUCTURE' && d.location.file === rel
+    );
+    expect(
+      cliFindings.some((d) => d.message.includes('DeadClosure.fakeDeadClosure'))
+    ).toBe(true);
+
+    const reports: Array<Record<string, any>> = [];
+    plugin.rules['arkrules-structure']!
+      .create({
+        filename: path.join(root, rel),
+        sourceCode: { getText: () => source, text: source },
+        report: (d: Record<string, unknown>) => reports.push(d),
+      })
+      .Program?.({ type: 'Program', loc: { start: { line: 1, column: 0 } } });
+    expect(
+      reports.filter((r) => String(r.diagnostic?.message).includes('fakeDeadClosure'))
+    ).toHaveLength(1);
+  });
 });
 
 describe('no-arkrun-direct-new lints the editor buffer', () => {

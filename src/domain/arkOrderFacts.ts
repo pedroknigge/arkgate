@@ -582,6 +582,43 @@ function collectObjectLiteralKeys(
   return keys;
 }
 
+function collectObjectLiteralKeysDetailed(
+  ts: TsAstLike,
+  obj: TsAstObjectLiteralExpression,
+  scope: AstScope,
+  visited = new Set<TsAstNode>()
+): { keys: string[]; incomplete: boolean } {
+  if (visited.has(obj)) return { keys: [], incomplete: false };
+  visited.add(obj);
+  const keys = new Set<string>();
+  let incomplete = false;
+  for (const prop of obj.properties) {
+    if (ts.isPropertyAssignment(prop)) {
+      const name = tsAstPropertyKeyName(ts, prop.name);
+      if (name) keys.add(name);
+      else incomplete = true;
+      continue;
+    }
+    if (ts.isShorthandPropertyAssignment(prop)) {
+      keys.add(prop.name.text);
+      continue;
+    }
+    if (ts.isSpreadAssignment(prop)) {
+      const spreadObj = resolveObjectLiteral(ts, prop.expression, scope);
+      if (!spreadObj) {
+        incomplete = true;
+        continue;
+      }
+      const nested = collectObjectLiteralKeysDetailed(ts, spreadObj, scope, visited);
+      for (const key of nested.keys) keys.add(key);
+      if (nested.incomplete) incomplete = true;
+      continue;
+    }
+    incomplete = true;
+  }
+  return { keys: [...keys], incomplete };
+}
+
 function extractArrayStringLiterals(
   ts: TsAstLike,
   node: TsAstNode,
@@ -630,28 +667,22 @@ function walkReleaseCallsAst(
 export function extractArkOrderReleaseKeyCountsFromSource(
   file: string,
   content: string,
-  options: ArkOrderAstOptions = {}
+  options: ArkOrderPlaneReceiverOptions = {}
 ): ResolvedArkOrderReleaseKeyCountFact[] {
+  const context = planeReceiverContext(file, content, options);
   const ast = parseArkOrderAst(file, content, options);
   if (ast) {
     const { ts, sourceFile } = ast;
     const facts: ResolvedArkOrderReleaseKeyCountFact[] = [];
-    walkReleaseCallsAst(ts, sourceFile, ({ call, xiObj }) => {
-      let keyCount = 0;
-      let hasSpread = false;
-      for (const prop of xiObj.properties) {
-        if (ts.isSpreadAssignment(prop)) {
-          hasSpread = true;
-        } else {
-          keyCount += 1;
-        }
-      }
-      if (keyCount === 0 && !hasSpread) return;
+    walkReleaseCallsAst(ts, sourceFile, ({ call, receiverExpr, xiObj, scope }) => {
+      if (!isPlaneReceiver(astReceiverIdentifier(ts, receiverExpr), context)) return;
+      const { keys, incomplete } = collectObjectLiteralKeysDetailed(ts, xiObj, scope);
+      if (keys.length === 0 && !incomplete) return;
       facts.push({
         file,
         line: tsAstNodeLine(sourceFile, call),
-        keyCount,
-        ...(hasSpread ? { incomplete: true } : {}),
+        keyCount: keys.length,
+        ...(incomplete ? { incomplete: true } : {}),
       });
     });
     return facts;
@@ -659,13 +690,20 @@ export function extractArkOrderReleaseKeyCountsFromSource(
 
   const source = stripCommentsPreservingLines(content);
   const facts: ResolvedArkOrderReleaseKeyCountFact[] = [];
-  const re = /\.release\s*\(\s*\{([^}]*)\}/g;
+  const re = /\.(?:release|proposeRelease)\s*\(\s*\{([^}]*)\}/g;
   let match: RegExpExecArray | null;
   while ((match = re.exec(source)) !== null) {
+    const before = source.slice(Math.max(0, match.index - 160), match.index);
+    if (!isPlaneReceiver(receiverBefore(before), context)) continue;
     const body = match[1] ?? '';
-    const keys = body.match(/\b[A-Za-z_][\w]*\s*:/g) ?? [];
-    if (keys.length === 0) continue;
-    facts.push({ file, line: lineAt(content, match.index), keyCount: keys.length });
+    const keys = new Set(literalKeys(body));
+    if (keys.size === 0) continue;
+    facts.push({
+      file,
+      line: lineAt(content, match.index),
+      keyCount: keys.size,
+      ...(/\b\.\.\./.test(body) ? { incomplete: true } : {}),
+    });
   }
   return facts;
 }

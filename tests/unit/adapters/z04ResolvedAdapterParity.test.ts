@@ -260,9 +260,35 @@ function applyChanges(root: string, candidateChanges: CandidateChange[]): void {
   }
 }
 
+function distIsFresh(): boolean {
+  const distEntry = path.resolve('dist/index.js');
+  if (!fs.existsSync(distEntry)) return false;
+  let latestInput = 0;
+  const visit = (dir: string): void => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const absolute = path.join(dir, entry.name);
+      if (entry.isDirectory()) visit(absolute);
+      else latestInput = Math.max(latestInput, fs.statSync(absolute).mtimeMs);
+    }
+  };
+  const sourceRoot = path.resolve('src');
+  if (!fs.existsSync(sourceRoot)) return false;
+  visit(sourceRoot);
+  for (const relative of ['package.json', 'tsup.config.ts', 'scripts/clean-gate-dist.mjs']) {
+    const absolute = path.resolve(relative);
+    if (fs.existsSync(absolute)) {
+      latestInput = Math.max(latestInput, fs.statSync(absolute).mtimeMs);
+    }
+  }
+  return fs.statSync(distEntry).mtimeMs >= latestInput;
+}
+
 beforeAll(() => {
   withDistLock(() => {
-    execSync('npm run build', { stdio: 'ignore' });
+    // CI and the full Z07 lane already build before running this corpus. Do not
+    // spend the bounded-feedback wall time on a second tsup build; rebuild only
+    // when dist is missing or older than its source inputs.
+    if (!distIsFresh()) execSync('npm run build', { stdio: 'ignore' });
     runtimeRoot = fs.mkdtempSync(path.join(process.cwd(), '.ark-z04-parity-runtime-'));
     fs.cpSync(path.resolve('bin'), path.join(runtimeRoot, 'bin'), {
       recursive: true,

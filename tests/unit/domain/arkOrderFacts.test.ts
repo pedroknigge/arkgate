@@ -351,8 +351,41 @@ plane.proposeRelease({ a, b, c, d: 4 });
     ]);
   });
 
+  it('extractArkOrderReleaseKeyCountsFromSource filters receivers and expands local spreads', () => {
+    const source = `
+import { createOrderPlane } from 'arkgate/order';
+const plane = createOrderPlane({ projector });
+const lock = { release: (x: unknown) => x };
+const other = { release: (x: unknown) => x };
+const XI = { a: 1, b: 2, c: 3, d: 4, e: 5, f: 6, g: 7, h: 8 };
+plane.release({ ...XI });
+plane.release({ ...XI, i: 9 });
+lock.release({ a: 1, b: 2, c: 3, d: 4, e: 5, f: 6, g: 7, h: 8 });
+other.release({ a: 1, b: 2, c: 3, d: 4, e: 5, f: 6, g: 7, h: 8 });
+`;
+    const facts = extractArkOrderReleaseKeyCountsFromSource('src/main.ts', source, { ts });
+    expect(facts).toEqual([
+      { file: 'src/main.ts', line: 7, keyCount: 8 },
+      { file: 'src/main.ts', line: 8, keyCount: 9 },
+    ]);
+
+    const lexical = extractArkOrderReleaseKeyCountsFromSource(
+      'src/main.ts',
+      `
+import { createOrderPlane } from 'arkgate/order';
+const plane = createOrderPlane({ projector });
+const lock = { release: (x: unknown) => x };
+plane.release({ a: 1, b: 2, c: 3, d: 4, e: 5, f: 6, g: 7, h: 8 });
+lock.release({ a: 1, b: 2, c: 3, d: 4, e: 5, f: 6, g: 7, h: 8 });
+`
+    );
+    expect(lexical).toEqual([{ file: 'src/main.ts', line: 5, keyCount: 8 }]);
+  });
+
   it('extractArkOrderReleaseKeyCountsFromSource ignores σ (arg1), comments, strings, and cyclic consts', () => {
     const source = `
+import { createOrderPlane } from 'arkgate/order';
+const plane = createOrderPlane({ projector });
 // plane.release({ a: 1, b: 2, c: 3, d: 4, e: 5, f: 6, g: 7, h: 8 });
 const fake = "plane.release({ a: 1, b: 2, c: 3, d: 4, e: 5, f: 6, g: 7, h: 8 })";
 const A: any = B;
@@ -364,9 +397,9 @@ function g() { const XI = Object.freeze({ a: 1, b: 2, c: 3 }); plane.release(XI)
 `;
     const facts = extractArkOrderReleaseKeyCountsFromSource('src/main.ts', source, { ts });
     expect(facts).toEqual([
-      { file: 'src/main.ts', line: 7, keyCount: 1 },
-      { file: 'src/main.ts', line: 8, keyCount: 1 },
-      { file: 'src/main.ts', line: 9, keyCount: 3 },
+      { file: 'src/main.ts', line: 9, keyCount: 1 },
+      { file: 'src/main.ts', line: 10, keyCount: 1 },
+      { file: 'src/main.ts', line: 11, keyCount: 3 },
     ]);
   });
 
