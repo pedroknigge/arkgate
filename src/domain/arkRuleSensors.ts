@@ -43,7 +43,8 @@ export const DOMAIN_INVARIANT_WORD_RE = new RegExp(
   `\\b(${DOMAIN_INVARIANT_WORDS.join('|')})\\b`
 );
 
-const EVENTS_ARRAY_PROP = '(?:_?pendingEvents|domainEvents|uncommittedEvents|recordedEvents)';
+const EVENTS_ARRAY_PROP =
+  '(?:_?pendingEvents|_?events|domainEvents|uncommittedEvents|recordedEvents)';
 
 export const DOMAIN_EVENTS_PUSH_RE = new RegExp(
   `\\bthis\\.${EVENTS_ARRAY_PROP}\\.push\\s*\\(`
@@ -805,7 +806,7 @@ export function buildArkRuleFileHints(
 
 const CONTROL_FLOW_METHOD_NAMES = new Set(['if', 'match', 'when']);
 const DOMAIN_INVARIANT_WORD_SET: ReadonlySet<string> = new Set(DOMAIN_INVARIANT_WORDS);
-const EVENTS_ARRAY_PROP_RE = /^_?(?:pendingEvents|domainEvents|uncommittedEvents|recordedEvents)$/;
+const EVENTS_ARRAY_PROP_RE = /^_?(?:pendingEvents|events|domainEvents|uncommittedEvents|recordedEvents)$/;
 const STATIC_FACTORY_NAME_RE = /^(?:create|of|from|parse|build|make|new)$/;
 
 export type ExtractClassShapesOptions = {
@@ -878,6 +879,15 @@ function methodBodyMutatesThisAst(
  * ThrowStatement inside the method's own body (rejects `const record = 1`, comments,
  * strings, and uninvoked nested closures).
  */
+/** Leftmost identifier of a property-access chain: `a.b.c` → `a`. */
+function leftmostReceiverIdentifier(ts: TsAstLike, expression: TsAstNode): string | null {
+  let current = unwrapTsAstExpression(ts, expression);
+  while (ts.isPropertyAccessExpression(current)) {
+    current = unwrapTsAstExpression(ts, current.expression);
+  }
+  return ts.isIdentifier(current) ? current.text : null;
+}
+
 function methodBodyHasGuardOrPublishAst(ts: TsAstLike, body: TsAstNode): boolean {
   let found = false;
   const visit = (node: TsAstNode): void => {
@@ -900,6 +910,14 @@ function methodBodyHasGuardOrPublishAst(ts: TsAstLike, body: TsAstNode): boolean
       }
       if (ts.isPropertyAccessExpression(callee)) {
         if (DOMAIN_INVARIANT_WORD_SET.has(callee.name.text)) {
+          found = true;
+          return;
+        }
+        // `ensureInvariants.rockIsOpen()` / `assertInvariants.rules.fact()`:
+        // the guard vocabulary sits at the head of the receiver chain, not at
+        // the called method name. The 4.8.32 lexical path accepted these.
+        const leftmost = leftmostReceiverIdentifier(ts, callee.expression);
+        if (leftmost && DOMAIN_INVARIANT_WORD_SET.has(leftmost)) {
           found = true;
           return;
         }
