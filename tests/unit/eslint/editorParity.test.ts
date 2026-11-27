@@ -517,6 +517,57 @@ describe('ArkRules structure sensors run in the editor', () => {
       reports.filter((r) => String(r.diagnostic?.message).includes('fakeDeadClosure'))
     ).toHaveLength(1);
   });
+
+  it('agrees with ark-check on guard receiver chains and this.events.push', () => {
+    const fixture = path.resolve('tests/fixtures/arkrules-poc-enforcement');
+    const root = fs.realpathSync(
+      fs.mkdtempSync(path.join(os.tmpdir(), 'ark-eslint-arkrules-rock-'))
+    );
+    temps.push(root);
+    fs.cpSync(fixture, root, { recursive: true });
+    fs.mkdirSync(path.join(root, 'node_modules'), { recursive: true });
+    fs.symlinkSync(
+      path.resolve('node_modules/typescript'),
+      path.join(root, 'node_modules/typescript'),
+      'dir'
+    );
+    const rel = 'src/domain/rock.ts';
+    const source = `export class Rock {
+  private title = "";
+  private events: unknown[] = [];
+  static create() { return new Rock(); }
+  renameA(t: string) { ensureInvariants.rockIsOpen(1, 2); this.title = t; }
+  renameB(t: string) { ensureInvariants(t); this.title = t; }
+  renameC(t: string) { this.title = t; this.events.push({ t }); }
+  renameD(t: string) { this.title = t; }
+}
+`;
+    fs.writeFileSync(path.join(root, rel), source);
+
+    const cli = arkCheck(root);
+    const cliMessages = cli.diagnostics
+      .filter((d) => d.ruleId === 'ARKRULE_STRUCTURE' && d.location.file === rel)
+      .map((d) => d.message)
+      .filter((message) => message.includes('Rock.'))
+      .sort();
+    expect(cliMessages.some((message) => message.includes('Rock.renameA'))).toBe(false);
+    expect(cliMessages.some((message) => message.includes('Rock.renameC'))).toBe(false);
+    expect(cliMessages.some((message) => message.includes('Rock.renameD'))).toBe(true);
+
+    const reports: Array<Record<string, any>> = [];
+    plugin.rules['arkrules-structure']!
+      .create({
+        filename: path.join(root, rel),
+        sourceCode: { getText: () => source, text: source },
+        report: (d: Record<string, unknown>) => reports.push(d),
+      })
+      .Program?.({ type: 'Program', loc: { start: { line: 1, column: 0 } } });
+    const editorMessages = reports
+      .map((r) => String(r.diagnostic?.message))
+      .filter((message) => message.includes('Rock.'))
+      .sort();
+    expect(editorMessages).toEqual(cliMessages);
+  });
 });
 
 describe('no-arkrun-direct-new lints the editor buffer', () => {

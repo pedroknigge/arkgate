@@ -10,7 +10,7 @@ import { version } from '../../../src/version.ts';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 /** Tree package identity. */
-const CURRENT = '4.9.2';
+const CURRENT = '4.9.3';
 /** Version confirmed on npm `latest`. */
 const PUBLISHED_LATEST = '4.8.11';
 
@@ -140,7 +140,7 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
 
   it('keeps 4.8.11 published on npm latest and 4.8.10 as prior', () => {
     expect(PUBLISHED_LATEST).toBe('4.8.11');
-    expect(CURRENT).toBe('4.9.2');
+    expect(CURRENT).toBe('4.9.3');
     expect(read('docs/releases/4.8.9.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.8.9.md')).toMatch(/arkgate@4\.8\.9/);
     expect(read('docs/releases/4.8.9.md')).not.toMatch(/\*\*Status:\*\*\s*prepared/i);
@@ -220,7 +220,7 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
     expect(read('docs/releases/4.6.7.md')).not.toMatch(/\*\*Status:\*\*\s*current/i);
     expect(read('docs/releases/4.6.6.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.6.6.md')).toMatch(/6\. \[x\].*arkgate-site 4\.6\.6/s);
-    expect(read('ROADMAP.md')).toMatch(/npm `latest` is \*\*4\.9\.2\*\*/);
+    expect(read('ROADMAP.md')).toMatch(/npm `latest` is \*\*4\.9\.3\*\*/);
     expect(read('docs/releases/4.6.5.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.6.4.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.6.4.md')).not.toMatch(/\*\*Status:\*\*\s*prepared/i);
@@ -835,9 +835,30 @@ describe('CHANGELOG + release note cover 4.9.2 patch release', () => {
     expect(section).toMatch(/does \*\*not\*\* turn `arkOrder` on/);
     expect(section).not.toMatch(/Status:\s*prepared/i);
     expect(fs.existsSync(path.join(REPO, 'docs/releases/4.9.2.md'))).toBe(false);
-    expect(read('docs/README.md')).toMatch(/Current release:.*4\.9\.2/s);
+    expect(read('docs/README.md')).toMatch(/Prior published:.*4\.9\.2/s);
     expect(read('docs/README.md')).toMatch(/Prior published:.*4\.9\.1/s);
     expect(read('ROADMAP.md')).toMatch(/\| 331 \| `RL902` \| `done`/);
+  });
+});
+
+describe('CHANGELOG + release note cover 4.9.3 patch release', () => {
+  it('records the release without asserting registry state (#314)', () => {
+    const changelog = changelogText();
+    const section = changelogSection(changelog, '4.9.3', '4.9.2');
+    expect(section).toMatch(/Status:\s*released/i);
+    expect(section).toMatch(/npm view arkgate@4\.9\.3 version/);
+    expect(section).not.toMatch(/npm `latest` is/);
+    expect(section).not.toMatch(/latest remains/);
+    expect(section).toMatch(/domain-event-on-mutation/);
+    expect(section).toMatch(/ensureInvariants/);
+    expect(section).toMatch(/events\.push/);
+    expect(section).toMatch(/Does not close\s*`K01`\s*\/\s*`Z09`/);
+    expect(section).toMatch(/does \*\*not\*\* turn `arkOrder` on/);
+    expect(section).not.toMatch(/Status:\s*prepared/i);
+    expect(fs.existsSync(path.join(REPO, 'docs/releases/4.9.3.md'))).toBe(false);
+    expect(read('docs/README.md')).toMatch(/Current release:.*4\.9\.3/s);
+    expect(read('docs/README.md')).toMatch(/Prior published:.*4\.9\.2/s);
+    expect(read('ROADMAP.md')).toMatch(/\| 332 \| `RL903` \| `doing`/);
   });
 });
 
@@ -1933,7 +1954,7 @@ describe('CHANGELOG + release note cover 3.9.1 patch hygiene', () => {
       screen.indexOf('Write. Check. Ship.')
     );
     expect(screen).toMatch(/\*\*Contener · Guiar · Ordenar\*\*/);
-    expect(screen).toMatch(/npx arkgate@4\.9\.2 start/);
+    expect(screen).toMatch(/npx arkgate@4\.9\.3 start/);
     expect(screen).toMatch(/✖ LAYER_IMPORT_VIOLATION  src\/domain\/order\.ts:1/);
     expect(screen).toMatch(/fail-open/);
     expect(screen).toMatch(/needs a refactor/);

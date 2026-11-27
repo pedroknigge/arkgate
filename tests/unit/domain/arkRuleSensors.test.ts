@@ -190,6 +190,70 @@ export class CityRegistration {
     }
   });
 
+  it('AR06 AST accepts guard receiver chains and plain events.push (4.9.0 regression)', () => {
+    const source = `
+export class Rock {
+  private title = "";
+  private events: unknown[] = [];
+  static create() { return new Rock(); }
+  renameA(t: string) { ensureInvariants.rockIsOpen(1, 2); this.title = t; }
+  renameB(t: string) { ensureInvariants(t); this.title = t; }
+  renameC(t: string) { this.title = t; this.events.push({ t }); }
+  renameD(t: string) { this.title = t; }
+}
+`;
+    const arkRules = effective([
+      { id: 'events', sensor: 'domain-event-on-mutation', mode: 'enforced' },
+    ]);
+    const messagesFor = (classShapes: ReturnType<typeof extractClassShapesFromSource>) =>
+      evaluateArkRuleSensors({
+        arkRules,
+        classShapes,
+        files: ['src/domain/rock.ts'],
+      }).map((finding) => finding.message);
+
+    const astMessages = messagesFor(
+      extractClassShapesFromSource('src/domain/rock.ts', source, { ts })
+    );
+    const lexerMessages = messagesFor(
+      extractClassShapesFromSource('src/domain/rock.ts', source)
+    );
+
+    for (const messages of [astMessages, lexerMessages]) {
+      expect(messages.some((message) => message.includes('Rock.renameA'))).toBe(false);
+      expect(messages.some((message) => message.includes('Rock.renameB'))).toBe(false);
+      expect(messages.some((message) => message.includes('Rock.renameC'))).toBe(false);
+      expect(messages.some((message) => message.includes('Rock.renameD'))).toBe(true);
+    }
+  });
+
+  it('AR06 helper propagation covers plain this.events.push and still flags an unguarded public caller', () => {
+    const source = `
+export class Rock {
+  private title = "";
+  private events: unknown[] = [];
+  private append(event: unknown) { this.events.push(event); }
+  private bump() { this.title = this.title + 1; }
+  recordThroughHelper(t: string) { this.title = t; this.append({ t }); }
+  mutateThroughUnguardedHelper() { this.bump(); }
+}
+`;
+    const shapes = extractClassShapesFromSource('src/domain/rock.ts', source, { ts });
+    const findings = evaluateArkRuleSensors({
+      arkRules: effective([
+        { id: 'events', sensor: 'domain-event-on-mutation', mode: 'enforced' },
+      ]),
+      classShapes: shapes,
+      files: ['src/domain/rock.ts'],
+    });
+    const messages = findings.map((finding) => finding.message);
+    expect(messages.some((message) => message.includes('Rock.recordThroughHelper'))).toBe(false);
+    expect(messages.some((message) => message.includes('Rock.append'))).toBe(false);
+    expect(
+      messages.some((message) => message.includes('Rock.mutateThroughUnguardedHelper'))
+    ).toBe(true);
+  });
+
   it('evaluates orchestration-only, thin-adapter, and no-anemic-model (AR07)', () => {
     const anemicShapes = extractClassShapesFromSource(
       'src/domain/customer.ts',

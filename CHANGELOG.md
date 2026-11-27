@@ -5,6 +5,21 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+## 4.9.3 — 2026-11-27
+
+Patch release — repairs the 4.9.0 AST regression in `domain-event-on-mutation` so the TypeScript path accepts the guard and publish evidence that 4.8.32's lexical path accepted. No `schemaVersion` bump. No required config migration. Does not close `K01` / `Z09`. This does **not** turn `arkOrder` on.
+
+**Status: released.** `npm view arkgate@4.9.3 version`.
+
+### Fixed
+
+- **`domain-event-on-mutation` accepts guard receiver chains.** `ensureInvariants.rockIsOpen()`, `ensureInvariants.fact()`, and `assertInvariants.rules.fact()` now count as guard evidence. The AST check previously tested only the called member name (`rockIsOpen` / `fact`), so it missed the guard vocabulary at the head of the receiver chain. A method that mutates with no guard and no publish still fails.
+- **Plain `events` / `_events` arrays count as publish.** `this.events.push(...)` and `this._events.push(...)` are accepted in the AST check, the lexical fallback, and the events-reset idiom, matching the 4.8.32 lexical path. The existing `pendingEvents`, `domainEvents`, `uncommittedEvents`, and `recordedEvents` names remain supported.
+- **ESLint ArkRules parity.** The editor rule and `ark-check` agree on both patterns; the 4.9.2 parity claim now covers guard receiver chains and plain `events`.
+- **Consumer regression closed.** On the blocked consumer tree the strict check drops from 168 `domain-event-on-mutation` findings to 5 real ones (`HiringRequest.execute`, `PositionProfile.execute`, `LineRetainageLedger.apply` / `.load` / `.open`) while the 320 advisory `LAYER_IMPORT_VIOLATION` sibling-slice findings stay identical to 4.8.32. No baseline was changed.
+
+No guard words were added and no module-level throw became a guard. A configurable guard/publish vocabulary (`requireRule`, `history.push`) is a follow-up, not part of this patch.
+
 ## 4.9.2 — 2026-11-27
 
 Patch release — consumer upgrade unblock, ArkOrder precision, ArkRun graph/tape fixes, ESLint AST parity, and a green-CI publish guard. No `schemaVersion` bump. No required config migration. Does not close `K01` / `Z09`. This does **not** turn `arkOrder` on.
