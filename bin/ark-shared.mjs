@@ -8,9 +8,9 @@ import {
 import { resolveFirstStep, textHasArkOrderCandidate } from './lib/first-step.mjs';
 import { collectForbiddenCapabilityUses } from './lib/analysis-engine.mjs';
 import {
-  DEFAULT_INTENT_PREFIXES as DOMAIN_DEFAULT_INTENT_PREFIXES,
+  DEFAULT_INTENT_PREFIXES,
   looksLikeArkIntent,
-  resolveIntentLayer as resolveConfiguredIntentLayer,
+  resolveIntentLayer,
 } from './lib/source-policy.mjs';
 import {
   presentLockfiles,
@@ -24,12 +24,12 @@ import {
   readPnpmWorkspacePackageGlobs,
 } from './lib/package-manager.mjs';
 
-/**
- * Default intent-prefix map shared by both CLIs and the ark-mcp write-path gate. The rule
- * matrix comes from the generated Domain config contract above. Prefixes mirror the runtime
- * profile but stay in this standalone CLI module because the CLIs run without a build step.
- */
-export const DEFAULT_INTENT_PREFIXES = DOMAIN_DEFAULT_INTENT_PREFIXES;
+export {
+  DEFAULT_INTENT_PREFIXES,
+  DEFAULT_ARK_CONFIG_RULES as DEFAULT_RULES,
+  resolveIntentLayer,
+  looksLikeArkIntent as looksLikeIntent,
+};
 
 export const DEFAULT_LAYER_DIRECTORIES = {
   DomainModel: ['domain'],
@@ -49,8 +49,6 @@ export const DEFAULT_LAYER_DIRECTORIES = {
   SecurityAuditObservability: ['security', 'audit', 'observability'],
   Kernel: ['kernel'],
 };
-
-export const DEFAULT_RULES = DEFAULT_ARK_CONFIG_RULES;
 
 /**
  * Default ambient globals forbidden in the domain layer: a pure domain does no I/O and is
@@ -114,7 +112,7 @@ export function createElevenLayerConfig(options = {}) {
         ? { forbiddenGlobals: DEFAULT_DOMAIN_FORBIDDEN_GLOBALS }
         : {}),
     })),
-    rules: DEFAULT_RULES,
+    rules: DEFAULT_ARK_CONFIG_RULES,
   });
   // When a project root is known, overlay Nest/Next/express filename conventions so a
   // flat framework starter is governed on day one (not "0% governed / false green").
@@ -164,10 +162,13 @@ export const LIBRARY_LAYER_DESCRIPTIONS = Object.freeze({
     'Published package entrypoints, including framework bindings. Not a demo app.',
 });
 
-function setLayerDescription(config, layerName, description) {
-  const layer = config.layers?.find((entry) => entry.name === layerName);
-  if (!layer || typeof description !== 'string' || description.length === 0) return;
-  layer.description = description;
+function applyLayerDescriptions(config, descriptions) {
+  for (const [name, description] of Object.entries(descriptions)) {
+    const layer = config.layers?.find((entry) => entry.name === name);
+    if (layer && typeof description === 'string' && description.length > 0) {
+      layer.description = description;
+    }
+  }
 }
 
 /** packages/* (or similar) of published libraries — no app/cli units, no web framework. */
@@ -179,7 +180,6 @@ export function isLibraryPackageMonorepo(signals) {
   const productive = units.filter(
     (unit) => unit.root !== '.' && !['docs', 'example', 'test'].includes(unit.role)
   );
-  if (productive.length === 0) return false;
   return (
     productive.some((unit) => unit.role === 'library') &&
     !productive.some((unit) => unit.role === 'application' || unit.role === 'cli')
@@ -187,36 +187,13 @@ export function isLibraryPackageMonorepo(signals) {
 }
 
 function applyFrameworkLayerCaptions(config, signals) {
-  const nextish = Boolean(
-    signals.nextFramework || (signals.ui && signals.toolHints?.includes('next'))
-  );
-  if (nextish) {
-    setLayerDescription(
-      config,
-      'ApplicationOrchestration',
-      NEXT_LAYER_DESCRIPTIONS.ApplicationOrchestration
-    );
-    setLayerDescription(
-      config,
-      'PresentationAdapters',
-      NEXT_LAYER_DESCRIPTIONS.PresentationAdapters
-    );
-    return;
-  }
-  if (
+  if (signals.nextFramework || (signals.ui && signals.toolHints?.includes('next'))) {
+    applyLayerDescriptions(config, NEXT_LAYER_DESCRIPTIONS);
+  } else if (
     (signals.libraryOnly && !signals.nestFramework && !signals.expressLike) ||
     isLibraryPackageMonorepo(signals)
   ) {
-    setLayerDescription(
-      config,
-      'ApplicationOrchestration',
-      LIBRARY_LAYER_DESCRIPTIONS.ApplicationOrchestration
-    );
-    setLayerDescription(
-      config,
-      'PresentationAdapters',
-      LIBRARY_LAYER_DESCRIPTIONS.PresentationAdapters
-    );
+    applyLayerDescriptions(config, LIBRARY_LAYER_DESCRIPTIONS);
   }
 }
 
@@ -244,6 +221,20 @@ export function governedInclude(config, root) {
   return include;
 }
 
+const NEXT_LIB_PERSISTENCE = [
+  'db', 'prisma', 'supabase', 'airtable', 'turso', 'firebase', 'firestore',
+  'mongodb', 'mongoose', 'drizzle', 'kysely', 'planetscale', 'neon', 'auth',
+];
+const ANY_LIB_PERSISTENCE = ['supabase', 'airtable', 'prisma', 'turso', 'db', 'auth'];
+const NEXT_EDGE_FILES = ['middleware', 'proxy'].flatMap((name) =>
+  ['src/', ''].flatMap((prefix) => ['ts', 'js'].map((ext) => `${prefix}${name}.${ext}`))
+);
+const NEXT_EXCLUDES = [
+  '**/public/**', '**/*.config.js', '**/*.config.ts', '**/*.config.mjs',
+  '**/playwright*.ts', '**/eslint.config.*', '**/postcss.config.*',
+  '**/prettier.config.*', '**/rstest.config.*', '**/scripts/**',
+];
+
 export function applyFrameworkLayoutOverlays(config, root) {
   if (!config || !root) return config;
   let signals;
@@ -264,304 +255,144 @@ export function applyFrameworkLayoutOverlays(config, root) {
     include: [...(config.include ?? ['src'])],
   };
 
-  // Ensure include covers where framework code actually lives (dirs or root files).
   // Single-file entries (e.g. Next 16 root `proxy.ts`) are valid scan roots — see scan-files.mjs.
-  const ensureInclude = (entry) => {
-    if (!next.include.includes(entry) && fs.existsSync(path.join(root, entry))) {
-      next.include.push(entry);
+  const ensureIncludes = (...entries) => {
+    for (const entry of entries) {
+      if (!next.include.includes(entry) && fs.existsSync(path.join(root, entry))) {
+        next.include.push(entry);
+      }
+    }
+  };
+  const mergeLayers = (map) => {
+    for (const [layerName, patterns] of Object.entries(map)) {
+      mergeLayerPatterns(next, layerName, patterns);
+    }
+  };
+  const addOverlay = (tag) => {
+    if (!String(next.frameworkOverlay || '').split('+').includes(tag)) {
+      next.frameworkOverlay = next.frameworkOverlay ? `${next.frameworkOverlay}+${tag}` : tag;
     }
   };
 
-  // Framework-free application layouts are common in clean-room starters and
-  // brownfield products. Govern their explicit source conventions without
-  // claiming a framework that package.json does not declare.
   if (signals.apiSurface && !signals.nestFramework && !signals.expressLike) {
-    ensureInclude('src');
-    // Controllers/routes/http stay Presentation. Do NOT add bare `src/**/api/**` —
-    // that swallows Application bags like `src/core/api/**` and Next `app/api/**`
-    // (P0-A API shell). API shells live on Application via NEXT_API / core patterns.
-    mergeLayerPatterns(next, 'PresentationAdapters', [
-      'src/**/routes/**',
-      'src/**/controllers/**',
-      'src/**/http/**',
-    ]);
-    mergeLayerPatterns(next, 'ApplicationOrchestration', [
-      'src/**/services/**',
-      'src/**/use-cases/**',
-      'src/**/usecases/**',
-      'src/**/api/**',
-    ]);
+    ensureIncludes('src');
+    // Controllers/routes/http stay Presentation; API shells live on Application.
+    mergeLayers({
+      PresentationAdapters: ['src/**/routes/**', 'src/**/controllers/**', 'src/**/http/**'],
+      ApplicationOrchestration: ['src/**/services/**', 'src/**/use-cases/**', 'src/**/usecases/**', 'src/**/api/**'],
+    });
   }
 
   if (signals.ui && !signals.nextFramework) {
-    ensureInclude('src');
+    ensureIncludes('src');
     mergeLayerPatterns(next, 'PresentationAdapters', [
-      'src/**/components/**',
-      'src/**/layouts/**',
-      'src/**/ui/**',
-      'src/**/routes/**',
-      'src/**/pages/**',
+      'src/**/components/**', 'src/**/layouts/**', 'src/**/ui/**', 'src/**/routes/**', 'src/**/pages/**',
     ]);
-    // Match the existing ui-surface profile: UI components may consume their
-    // display-domain models, while the domain still cannot depend on UI.
+    // UI components may consume display-domain models; domain still cannot depend on UI.
     next.rules = next.rules.filter(
       (rule) => !(rule.from === 'PresentationAdapters' && rule.to === 'DomainModel' && rule.allowed === false)
     );
   }
 
   if (signals.nestFramework) {
-    ensureInclude('src');
-    // Nest flat + modular conventions (controllers/services next to modules).
-    mergeLayerPatterns(next, 'PresentationAdapters', [
-      'src/**/*.controller.ts',
-      'src/**/*.controller.js',
-      'src/**/*.gateway.ts',
-      'src/**/*.resolver.ts',
-      'src/**/*.module.ts',
-      'src/**/main.ts',
-      'src/**/main.js',
-    ]);
-    mergeLayerPatterns(next, 'ApplicationOrchestration', [
-      'src/**/*.service.ts',
-      'src/**/*.service.js',
-      'src/**/*.provider.ts',
-      'src/**/*.interceptor.ts',
-      'src/**/*.guard.ts',
-      'src/**/*.pipe.ts',
-      'src/**/*.use-case.ts',
-      'src/**/*.usecase.ts',
-    ]);
-    mergeLayerPatterns(next, 'DomainModel', [
-      'src/**/*.entity.ts',
-      'src/**/*.vo.ts',
-      'src/**/*.value-object.ts',
-      'src/**/*.aggregate.ts',
-      'src/**/entities/**',
-      'src/**/domain/**',
-    ]);
-    mergeLayerPatterns(next, 'PersistenceAdapters', [
-      'src/**/*.repository.ts',
-      'src/**/*.repository.js',
-      'src/**/repositories/**',
-      'src/**/persistence/**',
-      'src/**/infra/**',
-      'src/**/infrastructure/**',
-    ]);
+    ensureIncludes('src');
+    mergeLayers({
+      PresentationAdapters: [
+        'src/**/*.controller.ts', 'src/**/*.controller.js', 'src/**/*.gateway.ts',
+        'src/**/*.resolver.ts', 'src/**/*.module.ts', 'src/**/main.ts', 'src/**/main.js',
+      ],
+      ApplicationOrchestration: [
+        'src/**/*.service.ts', 'src/**/*.service.js', 'src/**/*.provider.ts',
+        'src/**/*.interceptor.ts', 'src/**/*.guard.ts', 'src/**/*.pipe.ts',
+        'src/**/*.use-case.ts', 'src/**/*.usecase.ts',
+      ],
+      DomainModel: [
+        'src/**/*.entity.ts', 'src/**/*.vo.ts', 'src/**/*.value-object.ts',
+        'src/**/*.aggregate.ts', 'src/**/entities/**', 'src/**/domain/**',
+      ],
+      PersistenceAdapters: [
+        'src/**/*.repository.ts', 'src/**/*.repository.js', 'src/**/repositories/**',
+        'src/**/persistence/**', 'src/**/infra/**', 'src/**/infrastructure/**',
+      ],
+    });
     next.frameworkOverlay = 'nestjs';
   }
 
   if (signals.nextFramework || (signals.ui && signals.toolHints?.includes('next'))) {
-    ensureInclude('src');
-    ensureInclude('app');
-    ensureInclude('pages');
-    // Next network boundary files live at package root (or under src/). Layer patterns
-    // alone do not scan them unless they appear in `include` — Next 16 ships `proxy.ts`
-    // as the middleware rename; classic `middleware.ts` remains supported.
-    ensureInclude('proxy.ts');
-    ensureInclude('proxy.js');
-    ensureInclude('middleware.ts');
-    ensureInclude('middleware.js');
-    ensureInclude('src/proxy.ts');
-    ensureInclude('src/proxy.js');
-    ensureInclude('src/middleware.ts');
-    ensureInclude('src/middleware.js');
-    mergeLayerPatterns(next, 'PresentationAdapters', [
-      'src/app/**',
-      'src/pages/**',
-      'src/components/**',
-      'src/layouts/**',
-      'src/ui/**',
-      'app/**',
-      'pages/**',
-      'components/**',
-      'src/**/page.tsx',
-      'src/**/page.ts',
-      'src/**/layout.tsx',
-      'src/**/layout.ts',
-      'src/**/loading.tsx',
-      'src/**/error.tsx',
-      // Do NOT add bare src/**/route.ts here — that outranks app/api Application shells
-      // under path-anchored specificity (P0-A / DL-P0A-RETROFIT). Non-API route handlers
-      // still match via src/app/** Presentation; API route.ts is Application via app/api/**.
-      // Next middleware edge entry (classic + Next 16 proxy rename)
-      'src/middleware.ts',
-      'src/middleware.js',
-      'middleware.ts',
-      'middleware.js',
-      'src/proxy.ts',
-      'src/proxy.js',
-      'proxy.ts',
-      'proxy.js',
-    ]);
-    mergeLayerPatterns(next, 'ApplicationOrchestration', [
-      'src/features/**',
-      'src/server/**',
-      'src/services/**',
-      'src/use-cases/**',
-      // NEVER bare src/lib/** — that Application vacuum mis-layers Domain/Persistence
-      // (NEW-APP-VACUUM-LIB / DL-DOMAIN-SPECIFICITY). Prefer specific orchestration bags.
-      'src/lib/actions/**',
-      'src/lib/services/**',
-      'src/lib/server/**',
-      'src/lib/use-cases/**',
-      'src/lib/api-handlers/**',
-      'src/lib/handlers/**',
-      // Common Next "app core" bags — not the whole lib tree, not UI routes.
-      // Without these, monorepos like */src/core/** stay ungoverned and produce false greens.
-      'src/core/**',
-      '**/core/**',
-      'src/actions/**',
-      'src/**/actions.ts',
-      'src/**/actions.tsx',
-      // Next API routes are use-case / orchestration shells (not Presentation UI).
-      // Higher-specificity than src/app/** / app/** so they win over PresentationAdapters.
-      // Include route-group transparent shells: app/(marketing)/api/**
-      'src/app/api/**',
-      'app/api/**',
-      'src/pages/api/**',
-      'pages/api/**',
-      '**/app/api/**',
-      '**/pages/api/**',
-      '**/app/**/api/**',
-      '**/pages/**/api/**',
-      'src/app/**/api/**',
-      'app/**/api/**',
-    ]);
-    mergeLayerPatterns(next, 'DomainModel', [
-      'src/domain/**',
-      'src/entities/**',
-      '**/domain/**',
-      '**/entities/**',
-      '**/kernel/domain/**',
-      'src/**/domain/**',
-      'src/**/entities/**',
-      'src/**/model/**',
-      'src/**/models/**',
-    ]);
-    mergeLayerPatterns(next, 'PersistenceAdapters', [
-      'src/db/**',
-      'src/data/**',
-      'src/repositories/**',
-      'src/persistence/**',
-      'src/infrastructure/**',
-      'src/lib/db/**',
-      'src/lib/prisma/**',
-      'src/server/db/**',
-      // Conventional client data bags under lib/ (path-anchored specificity beats vacuum bags).
-      'src/lib/supabase/**',
-      'src/lib/airtable/**',
-      'src/lib/turso/**',
-      'src/lib/firebase/**',
-      'src/lib/firestore/**',
-      'src/lib/mongodb/**',
-      'src/lib/mongoose/**',
-      'src/lib/drizzle/**',
-      'src/lib/kysely/**',
-      'src/lib/planetscale/**',
-      'src/lib/neon/**',
-      'src/lib/auth/**',
-      '**/lib/supabase/**',
-      '**/lib/airtable/**',
-      '**/lib/prisma/**',
-      '**/lib/turso/**',
-      '**/lib/db/**',
-      '**/lib/auth/**',
-      '**/repositories/**',
-      '**/db/**',
-      '**/supabase/**',
-      '**/airtable/**',
-    ]);
-    // Demo assets, generated public output, and tool configs are not architecture surface.
-    const nextExcludes = [
-      '**/public/**',
-      '**/*.config.js',
-      '**/*.config.ts',
-      '**/*.config.mjs',
-      '**/playwright*.ts',
-      '**/eslint.config.*',
-      '**/postcss.config.*',
-      '**/prettier.config.*',
-      '**/rstest.config.*',
-      '**/scripts/**',
-    ];
-    next.exclude = [...new Set([...(next.exclude ?? []), ...nextExcludes])];
-    // Idempotent: re-applying overlays (e.g. re-init / re-start) must not yield "next+next".
-    if (!String(next.frameworkOverlay || '').split('+').includes('next')) {
-      next.frameworkOverlay = next.frameworkOverlay
-        ? `${next.frameworkOverlay}+next`
-        : 'next';
-    }
+    ensureIncludes(
+      'src', 'app', 'pages',
+      'proxy.ts', 'proxy.js', 'middleware.ts', 'middleware.js',
+      'src/proxy.ts', 'src/proxy.js', 'src/middleware.ts', 'src/middleware.js'
+    );
+    mergeLayers({
+      PresentationAdapters: [
+        'src/app/**', 'src/pages/**', 'src/components/**', 'src/layouts/**', 'src/ui/**',
+        'app/**', 'pages/**', 'components/**',
+        'src/**/page.tsx', 'src/**/page.ts', 'src/**/layout.tsx', 'src/**/layout.ts',
+        'src/**/loading.tsx', 'src/**/error.tsx',
+        ...NEXT_EDGE_FILES,
+      ],
+      ApplicationOrchestration: [
+        'src/features/**', 'src/server/**', 'src/services/**', 'src/use-cases/**',
+        // Never bare src/lib/** — prefer specific orchestration bags.
+        'src/lib/actions/**', 'src/lib/services/**', 'src/lib/server/**',
+        'src/lib/use-cases/**', 'src/lib/api-handlers/**', 'src/lib/handlers/**',
+        'src/core/**', '**/core/**', 'src/actions/**', 'src/**/actions.ts', 'src/**/actions.tsx',
+        'src/app/api/**', 'app/api/**', 'src/pages/api/**', 'pages/api/**',
+        '**/app/api/**', '**/pages/api/**', '**/app/**/api/**', '**/pages/**/api/**',
+        'src/app/**/api/**', 'app/**/api/**',
+      ],
+      DomainModel: [
+        'src/domain/**', 'src/entities/**', '**/domain/**', '**/entities/**',
+        '**/kernel/domain/**', 'src/**/domain/**', 'src/**/entities/**',
+        'src/**/model/**', 'src/**/models/**',
+      ],
+      PersistenceAdapters: [
+        'src/db/**', 'src/data/**', 'src/repositories/**', 'src/persistence/**', 'src/infrastructure/**',
+        'src/lib/db/**', 'src/lib/prisma/**', 'src/server/db/**',
+        ...NEXT_LIB_PERSISTENCE.slice(2).map((name) => `src/lib/${name}/**`),
+        ...ANY_LIB_PERSISTENCE.map((name) => `**/lib/${name}/**`),
+        '**/repositories/**', '**/db/**', '**/supabase/**', '**/airtable/**',
+      ],
+    });
+    next.exclude = [...new Set([...(next.exclude ?? []), ...NEXT_EXCLUDES])];
+    addOverlay('next');
   }
 
   if (signals.expressLike && !signals.nestFramework) {
-    ensureInclude('src');
-    mergeLayerPatterns(next, 'PresentationAdapters', [
-      'src/**/routes/**',
-      'src/**/controllers/**',
-      'src/**/http/**',
-      'src/**/api/**',
-      'src/**/middlewares/**',
-      'src/**/middleware/**',
-      'src/**/app.ts',
-      'src/**/app.js',
-      'src/**/server.ts',
-      'src/**/server.js',
-      'src/index.ts',
-      'src/index.js',
-    ]);
-    mergeLayerPatterns(next, 'ApplicationOrchestration', [
-      'src/**/services/**',
-      'src/**/use-cases/**',
-      'src/**/usecases/**',
-      'src/**/controllers/**', // thin express controllers often mix app logic
-    ]);
-    mergeLayerPatterns(next, 'DomainModel', [
-      'src/**/domain/**',
-      'src/**/entities/**',
-      'src/**/models/**',
-    ]);
-    mergeLayerPatterns(next, 'PersistenceAdapters', [
-      'src/**/repositories/**',
-      'src/**/persistence/**',
-      'src/**/infrastructure/**',
-      'src/**/db/**',
-      'src/**/data/**',
-    ]);
-    next.frameworkOverlay = next.frameworkOverlay
-      ? `${next.frameworkOverlay}+express`
-      : 'express';
+    ensureIncludes('src');
+    mergeLayers({
+      PresentationAdapters: [
+        'src/**/routes/**', 'src/**/controllers/**', 'src/**/http/**', 'src/**/api/**',
+        'src/**/middlewares/**', 'src/**/middleware/**', 'src/**/app.ts', 'src/**/app.js',
+        'src/**/server.ts', 'src/**/server.js', 'src/index.ts', 'src/index.js',
+      ],
+      ApplicationOrchestration: [
+        'src/**/services/**', 'src/**/use-cases/**', 'src/**/usecases/**', 'src/**/controllers/**',
+      ],
+      DomainModel: ['src/**/domain/**', 'src/**/entities/**', 'src/**/models/**'],
+      PersistenceAdapters: [
+        'src/**/repositories/**', 'src/**/persistence/**', 'src/**/infrastructure/**', 'src/**/db/**', 'src/**/data/**',
+      ],
+    });
+    addOverlay('express');
   }
 
   // Pure library: keep domain/application as the public surface under src/.
   if (signals.libraryOnly && !signals.nestFramework && !signals.nextFramework) {
-    ensureInclude('src');
-    ensureInclude('lib');
-    // Root entry is governed code. Tests stay out through the test exclude.
-    ensureInclude('.');
+    ensureIncludes('src', 'lib', '.');
     mergeLayerPatterns(next, 'DomainModel', [
-      'src/**/*.ts',
-      'src/**/*.tsx',
-      'src/**/*.js',
-      'src/**/*.mjs',
-      'src/**/*.cjs',
-      'lib/**/*.ts',
-      'lib/**/*.js',
-      'lib/**/*.mjs',
-      'lib/**/*.cjs',
-      '*.ts',
-      '*.tsx',
-      '*.js',
-      '*.mjs',
-      '*.cjs',
+      ...['ts', 'tsx', 'js', 'mjs', 'cjs'].map((ext) => `src/**/*.${ext}`),
+      ...['ts', 'js', 'mjs', 'cjs'].map((ext) => `lib/**/*.${ext}`),
+      ...['ts', 'tsx', 'js', 'mjs', 'cjs'].map((ext) => `*.${ext}`),
     ]);
-    // Residual src/** / lib/** dual-matches DomainModel's extension globs.
     for (const layer of next.layers ?? []) {
       if (layer.name === 'DomainModel' || !Array.isArray(layer.patterns)) continue;
-      layer.patterns = layer.patterns.filter((pattern) => !['src/**', 'lib/**'].includes(String(pattern).replace(/\\/g, '/')));
+      layer.patterns = layer.patterns.filter(
+        (pattern) => !['src/**', 'lib/**'].includes(String(pattern).replace(/\\/g, '/'))
+      );
     }
-    next.frameworkOverlay = next.frameworkOverlay
-      ? `${next.frameworkOverlay}+library`
-      : 'library';
+    addOverlay('library');
   }
 
   sealRootToolConfigs(next);
@@ -580,18 +411,12 @@ export function resolveOperatingMode({
   coreOptionalWithFiles = 0,
   presentationShare = null,
 } = {}) {
-  // Zero files in scope is never ENFORCE — the contract is not looking at any code.
-  if (totalFiles === 0) return 'adapt';
-  // Core layers still optional while holding real files → contract weaker than the tree.
-  if (coreOptionalWithFiles > 0) return 'adapt';
-  // Presentation-bag false green: almost everything is Presentation, Domain+Persistence empty.
+  if (totalFiles === 0 || coreOptionalWithFiles > 0) return 'adapt';
   const empty = Array.isArray(emptyLayers) ? emptyLayers : [];
-  const domainEmpty = empty.includes('DomainModel');
-  const persistenceEmpty = empty.includes('PersistenceAdapters');
   if (
     planMet === true &&
-    domainEmpty &&
-    persistenceEmpty &&
+    empty.includes('DomainModel') &&
+    empty.includes('PersistenceAdapters') &&
     presentationShare != null &&
     presentationShare >= 0.5 &&
     (governedPercent ?? 0) >= 50
@@ -599,15 +424,12 @@ export function resolveOperatingMode({
     return 'adapt';
   }
   if (planMet === true && (governedPercent == null || governedPercent >= 50)) return 'enforce';
-  if (governedPercent != null && governedPercent < 50) return 'adapt';
-  if (mature) return 'adapt';
-  if (governedPercent != null && governedPercent >= 50 && planMet === false) return 'adapt';
+  if (mature || (governedPercent != null && (governedPercent < 50 || planMet === false))) return 'adapt';
   return 'suggest';
 }
 
-export function collectForbiddenGlobalUses(ts, sourceFile, forbidden) {
-  return collectForbiddenCapabilityUses(ts, sourceFile, forbidden ?? []);
-}
+export const collectForbiddenGlobalUses = (ts, sourceFile, forbidden) =>
+  collectForbiddenCapabilityUses(ts, sourceFile, forbidden ?? []);
 
 // Layer glob matching — generated from canonical src/domain/layerMatch.ts (see generate:layer-match).
 export {
@@ -617,15 +439,6 @@ export {
   layerForFile,
   isScanExcludedRelative,
 } from './ark-layer-match.mjs';
-
-/** Longest intent prefix wins, the same rule the write-path gate uses. */
-export function resolveIntentLayer(intent, layers) {
-  return resolveConfiguredIntentLayer(intent, layers);
-}
-
-export function looksLikeIntent(value) {
-  return looksLikeArkIntent(value);
-}
 
 /**
  * Co-pilot Phase F — work classifier + fix-class enrich (R4).
@@ -748,10 +561,22 @@ const INTEGRATION_DIR_NAMES = new Set([
   'sync',
   'external',
 ]);
-const FSD_DIR_NAMES = new Set(['app', 'pages', 'features', 'entities', 'shared', 'widgets']);
 
 function normalizeRel(value) {
   return value.split(path.sep).join('/');
+}
+
+function readJsonc(file) {
+  try {
+    const text = fs
+      .readFileSync(file, 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/^\s*\/\/.*$/gm, '')
+      .replace(/,\s*([}\]])/g, '$1');
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
 }
 
 function readPackageJson(root) {
@@ -764,15 +589,6 @@ function readPackageJson(root) {
   }
 }
 
-/**
- * Workspace / multi-package roots for monorepo include.
- * Sources (universal — no project-specific names):
- * 1. package.json workspaces + pnpm-workspace.yaml
- * 2. rush.json projectFolder top segments (JSONC-tolerant)
- * 3. lerna.json packages globs
- * 4. If still empty: conventional multi-package top-level dirs that exist and
- *    contain at least one package.json (packages, apps, plugins, services, …)
- */
 /**
  * Workspace roots named by a manifest (package.json workspaces, pnpm-workspace.yaml,
  * rush.json, lerna.json). Conventional directory guesses are not declared.
@@ -797,70 +613,34 @@ export function detectDeclaredWorkspaces(root) {
   const pnpmGlobs = readPnpmWorkspacePackageGlobs(root);
   if (Array.isArray(pnpmGlobs)) pnpmGlobs.forEach(addGlob);
 
-  // Rush monorepos often have no root package.json workspaces — only rush.json.
-  const rushFile = path.join(root, 'rush.json');
-  if (fs.existsSync(rushFile)) {
-    try {
-      let text = fs.readFileSync(rushFile, 'utf8');
-      text = text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
-      const rush = JSON.parse(text);
-      for (const project of rush.projects || []) {
-        if (typeof project?.projectFolder === 'string') addTop(project.projectFolder);
-      }
-    } catch {
-      /* ignore malformed rush.json */
-    }
+  const rush = readJsonc(path.join(root, 'rush.json'));
+  for (const project of rush?.projects ?? []) {
+    if (typeof project?.projectFolder === 'string') addTop(project.projectFolder);
   }
 
-  // Lerna packages globs.
-  const lernaFile = path.join(root, 'lerna.json');
-  if (fs.existsSync(lernaFile)) {
-    try {
-      const lerna = JSON.parse(fs.readFileSync(lernaFile, 'utf8'));
-      if (Array.isArray(lerna.packages)) lerna.packages.forEach(addGlob);
-    } catch {
-      /* ignore */
-    }
-  }
+  const lerna = readJsonc(path.join(root, 'lerna.json'));
+  if (Array.isArray(lerna?.packages)) lerna.packages.forEach(addGlob);
 
   return [...dirs];
 }
 
+const CONVENTIONAL_WORKSPACE_DIRS = [
+  'packages', 'apps', 'plugins', 'services', 'server', 'servers', 'server-plugins',
+  'libs', 'lib', 'modules', 'foundations', 'pods', 'models', 'clients', 'sdks',
+  'tools', 'tooling', 'desktop', 'common',
+];
+
 export function detectWorkspaces(root) {
   const declared = detectDeclaredWorkspaces(root);
   if (declared.length > 0) return declared;
-  const dirs = new Set();
-  // Conventional multi-package roots when no explicit workspace manifest listed roots.
-  if (dirs.size === 0) {
-    const conventional = [
-      'packages',
-      'apps',
-      'plugins',
-      'services',
-      'server',
-      'servers',
-      'server-plugins',
-      'libs',
-      'lib',
-      'modules',
-      'foundations',
-      'pods',
-      'models',
-      'clients',
-      'sdks',
-      'tools',
-      'tooling',
-      'desktop',
-      'common',
-    ];
-    for (const name of conventional) {
-      const abs = path.join(root, name);
-      if (!fs.existsSync(abs) || !fs.statSync(abs).isDirectory()) continue;
-      if (dirContainsPackageJson(abs, 2)) dirs.add(name);
+  const dirs = [];
+  for (const name of CONVENTIONAL_WORKSPACE_DIRS) {
+    const abs = path.join(root, name);
+    if (fs.statSync(abs, { throwIfNoEntry: false })?.isDirectory() && dirContainsPackageJson(abs, 2)) {
+      dirs.push(name);
     }
   }
-
-  return [...dirs];
+  return dirs;
 }
 
 /** True when a declared workspace root actually contains a package. */
@@ -1038,19 +818,6 @@ export function resolveIncludeRoots(root) {
 
 function isSourceFile(name) {
   return /\.(tsx?|jsx?|mjsx?|cjsx?|mts|cts)$/i.test(name);
-}
-
-function readJsonc(file) {
-  try {
-    const text = fs
-      .readFileSync(file, 'utf8')
-      .replace(/\/\*[\s\S]*?\*\//g, '')
-      .replace(/^\s*\/\/.*$/gm, '')
-      .replace(/,\s*([}\]])/g, '$1');
-    return JSON.parse(text);
-  } catch {
-    return null;
-  }
 }
 
 function packageRole(rel, pkg) {
@@ -1333,33 +1100,29 @@ function listTopLevelDirNames(root, baseDir) {
   }
 }
 
-function dirExistsAnywhere(root, names) {
+function collectExistingDirNames(root) {
+  const found = new Set();
   const queue = ['.'];
   const seen = new Set();
   while (queue.length > 0) {
     const rel = queue.shift();
     if (seen.has(rel)) continue;
     seen.add(rel);
-    const abs = path.join(root, rel);
-    if (!fs.existsSync(abs)) continue;
     let entries;
     try {
-      entries = fs.readdirSync(abs, { withFileTypes: true });
+      entries = fs.readdirSync(path.join(root, rel), { withFileTypes: true });
     } catch {
       continue;
     }
     for (const entry of entries) {
-      if (!entry.isDirectory()) continue;
-      // Skip node_modules/dist and ALL dot-dirs so `.github/workflows/` (CI YAML) can't be read
-      // as an app "workflows"/saga signal, and Ark's own `.claude`/`.codex` don't self-perturb.
-      if (entry.name === 'node_modules' || entry.name === 'dist' || entry.name.startsWith('.')) continue;
-      if (isSkippedSourceDir(entry.name)) continue;
-      if (names.has(entry.name)) return true;
+      // Skip node_modules/dist/skipped and ALL dot-dirs (.github/workflows, .claude, etc.).
+      if (!entry.isDirectory() || entry.name.startsWith('.') || isSkippedSourceDir(entry.name)) continue;
+      found.add(entry.name);
       const child = rel === '.' ? entry.name : `${rel}/${entry.name}`;
       if (child.split('/').length < 8) queue.push(child);
     }
   }
-  return false;
+  return found;
 }
 
 function countTsxFiles(files) {
@@ -1368,14 +1131,11 @@ function countTsxFiles(files) {
 
 /**
  * Merge root + nested package.json dependencies (frontend/, packages/*, apps/*, …).
- * Hosts that only put `arkgate` at the monorepo root and Next under frontend/ must
- * still detect nextFramework so layout overlays (src/core/**) apply on day one.
  */
-export function collectAggregatedDeps(root) {
+export function collectAggregatedDeps(root, units = discoverRepoUnits(root)) {
   const deps = {};
-  for (const unit of discoverRepoUnits(root)) {
-    if (['docs', 'example', 'test'].includes(unit.role)) continue;
-    Object.assign(deps, unit.productionDeps);
+  for (const unit of units) {
+    if (!['docs', 'example', 'test'].includes(unit.role)) Object.assign(deps, unit.productionDeps);
   }
   return deps;
 }
@@ -1385,26 +1145,21 @@ export function collectAggregatedDeps(root) {
  * Vendor packages may appear in toolHints only — never as the primary label.
  */
 export function collectRepoShapeSignals(root) {
+  const exists = (...parts) => fs.existsSync(path.join(root, ...parts));
   const pkg = readPackageJson(root);
   const repoUnits = discoverRepoUnits(root);
   const workspaceDirs = detectWorkspaces(root);
-  // A declared glob is a multi-app signal only when that root contains a package.
-  // A settings-only pnpm-workspace.yaml (no packages:) and globs that match no
-  // package directory are pnpm/npm config, not several apps (#376). rush.json
-  // and lerna.json stay markers. File presence alone is not.
+  // A declared glob is a multi-app signal only when that root contains a package (#376).
   const workspaces =
-    workspaceDirsHavePackages(root, workspaceDirs) ||
-    fs.existsSync(path.join(root, 'rush.json')) ||
-    fs.existsSync(path.join(root, 'lerna.json'));
-  // Include frontend/web/client — common Next monorepo app folders.
+    workspaceDirsHavePackages(root, workspaceDirs) || exists('rush.json') || exists('lerna.json');
   const candidateScanDirs = repoUnits
     .filter((unit) => !['docs', 'example', 'test'].includes(unit.role))
-    .flatMap((unit) => unit.sourceRoots.map((sourceRoot) =>
-      normalizeRel(path.posix.join(unit.root === '.' ? '' : unit.root, sourceRoot))
-    ));
-  const srcDirs = [...new Set(candidateScanDirs)].filter((d) =>
-    fs.existsSync(path.join(root, d))
-  );
+    .flatMap((unit) =>
+      unit.sourceRoots.map((sourceRoot) =>
+        normalizeRel(path.posix.join(unit.root === '.' ? '' : unit.root, sourceRoot))
+      )
+    );
+  const srcDirs = [...new Set(candidateScanDirs)].filter((d) => exists(d));
   const scanRoots = srcDirs.length > 0 ? srcDirs.map((d) => path.join(root, d)) : [root];
   const sourceFiles = [...new Set(scanRoots.flatMap((dir) => walkSourceFiles(dir)))];
   const sourceFileCount = sourceFiles.length;
@@ -1412,169 +1167,135 @@ export function collectRepoShapeSignals(root) {
     .filter((unit) => ['docs', 'example', 'test'].includes(unit.role) && unit.root !== '.')
     .map((unit) => `${unit.root}/`);
   const productionFiles = walkSourceFiles(root).filter((file) => {
-    const rel = path.relative(root, file).split(path.sep).join('/');
+    const rel = normalizeRel(path.relative(root, file));
     return !excludedUnitRoots.some((prefix) => rel.startsWith(prefix));
   });
   const discoveredFileSet = new Set(sourceFiles.map((file) => path.resolve(file)));
-  // Files under detected source roots — NOT layer-governed coverage. User-facing
-  // "projected governed coverage" is computeCoverage (see projected-governed-coverage.mjs).
-  const discoveredSourceCoverage = productionFiles.length === 0
-    ? 0
-    : Math.round((productionFiles.filter((file) => discoveredFileSet.has(path.resolve(file))).length / productionFiles.length) * 100);
+  const discoveredSourceCoverage =
+    productionFiles.length === 0
+      ? 0
+      : Math.round(
+          (productionFiles.filter((file) => discoveredFileSet.has(path.resolve(file))).length /
+            productionFiles.length) *
+            100
+        );
   const tinyTree = sourceFileCount < 3;
 
-  // Nested package.json deps (not root-only) — critical for monorepo Next under frontend/
-  const deps = collectAggregatedDeps(root);
-  const hasUiFramework = Object.keys(deps).some((name) =>
+  const deps = collectAggregatedDeps(root, repoUnits);
+  const depNames = Object.keys(deps);
+  const hasUiFramework = depNames.some((name) =>
     /^(react|react-dom|vue|svelte|preact|solid-js)$/i.test(name.split('/')[0])
   );
-  const srcUiFiles = sourceFiles.filter((file) => {
-    const rel = path.relative(root, file).split(path.sep).join('/');
-    return (rel.includes('/src/') || rel.startsWith('src/')) && /\.(tsx|jsx)$/i.test(file);
-  });
+  const sourceRels = sourceFiles.map((file) => normalizeRel(path.relative(root, file)));
+  const srcUiFiles = sourceRels.filter(
+    (rel) => (rel.includes('/src/') || rel.startsWith('src/')) && /\.(tsx|jsx)$/i.test(rel)
+  );
 
   const topNames = new Set(srcDirs.flatMap((d) => listTopLevelDirNames(root, d)));
-  // Framework / filename signals — strong enough that a tiny Nest starter is not a "prototype".
-  // Nest detection: require real Nest surface (@nestjs/* or controller/module/gateway/resolver).
-  // Do NOT treat bare `*.service.ts` / `*.guard.ts` as Nest — many Next/Node apps use those
-  // names without Nest (false nestjs overlay + wrong doctor toolHints).
+  const existingDirs = collectExistingDirNames(root);
+  const hasDir = (names) => {
+    for (const name of names) if (existingDirs.has(name)) return true;
+    return false;
+  };
+
+  // Require real Nest surface (@nestjs/* or controller/module/gateway/resolver) — not bare *.service.ts.
   const nestFramework =
-    Object.keys(deps).some((name) => name.startsWith('@nestjs/')) ||
-    sourceFiles.some((file) =>
-      /\.(controller|module|gateway|resolver)\.ts$/i.test(file)
-    );
+    depNames.some((name) => name.startsWith('@nestjs/')) ||
+    sourceFiles.some((file) => /\.(controller|module|gateway|resolver)\.ts$/i.test(file));
   const nextFramework =
     Boolean(deps.next) ||
-    sourceFiles.some((file) => {
-      const rel = path.relative(root, file).split(path.sep).join('/');
-      return (
+    sourceRels.some(
+      (rel) =>
         /(^|\/)next\.config\./.test(rel) ||
-        // app/page.tsx OR app/dashboard/page.tsx (middle segment optional)
         /(^|\/)app\/(?:.*\/)?page\.(t|j)sx?$/.test(rel) ||
         /(^|\/)pages\/.+\.(t|j)sx?$/.test(rel)
-      );
-    });
-  const expressLike = Object.keys(deps).some((name) =>
+    );
+  const expressLike = depNames.some((name) =>
     /^(express|fastify|hono|koa|@hapi\/hako|restify)$/i.test(name)
   );
 
+  const tsxCount = countTsxFiles(sourceFiles);
   const ui =
-    dirExistsAnywhere(root, UI_DIR_NAMES) ||
-    countTsxFiles(sourceFiles) >= 2 ||
+    hasDir(UI_DIR_NAMES) ||
+    tsxCount >= 2 ||
     topNames.has('components') ||
     topNames.has('pages') ||
     nextFramework ||
     (hasUiFramework && srcUiFiles.length >= 1);
   const apiSurface =
-    dirExistsAnywhere(root, API_DIR_NAMES) ||
+    hasDir(API_DIR_NAMES) ||
     topNames.has('routes') ||
     topNames.has('controllers') ||
     nestFramework ||
     expressLike;
-  const persistenceFromDeps = Object.keys(deps).some((name) =>
+  const persistenceFromDeps = depNames.some((name) =>
     /^(prisma|drizzle-orm|typeorm|@libsql\/client|@supabase\/supabase-js|mongodb|pg|mysql2|better-sqlite3|knex)$/i.test(
       name
     )
   );
-  const persistence = dirExistsAnywhere(root, PERSISTENCE_DIR_NAMES) || persistenceFromDeps;
-  const jobs = dirExistsAnywhere(root, JOB_DIR_NAMES);
-  // App saga/workflow code only — CI under .github is skipped by walk/dirExists (dot-dirs).
-  const workflows = dirExistsAnywhere(root, WORKFLOW_DIR_NAMES);
-  const integration = dirExistsAnywhere(root, INTEGRATION_DIR_NAMES);
-  const domain = dirExistsAnywhere(root, new Set(['domain'])) || topNames.has('domain');
+  const persistence = hasDir(PERSISTENCE_DIR_NAMES) || persistenceFromDeps;
+  const jobs = hasDir(JOB_DIR_NAMES);
+  const workflows = hasDir(WORKFLOW_DIR_NAMES);
+  const integration = hasDir(INTEGRATION_DIR_NAMES);
+  const domain = existingDirs.has('domain') || topNames.has('domain');
   const application =
-    dirExistsAnywhere(root, new Set(['application', 'app', 'services'])) ||
-    topNames.has('application') ||
-    nestFramework;
+    hasDir(['application', 'app', 'services']) || topNames.has('application') || nestFramework;
   const featureSlicedLayout =
-    fs.existsSync(path.join(root, 'src')) &&
-    ['app', 'pages', 'features', 'entities', 'shared'].some((name) =>
-      fs.existsSync(path.join(root, 'src', name))
-    );
-  // Vertical slice: features/* co-located slices + shared/lib escape, without full FSD ladder
-  // (entities/widgets). Distinct from featureSlicedLayout which matches any FSD folder.
+    exists('src') && ['app', 'pages', 'features', 'entities', 'shared'].some((n) => exists('src', n));
   const verticalSliceLayout =
-    fs.existsSync(path.join(root, 'src', 'features')) &&
-    (fs.existsSync(path.join(root, 'src', 'shared')) ||
-      fs.existsSync(path.join(root, 'src', 'lib'))) &&
-    !fs.existsSync(path.join(root, 'src', 'entities')) &&
-    !fs.existsSync(path.join(root, 'src', 'widgets'));
-  // DDD multi-context tree (contexts/*/domain|application|infrastructure).
-  const dddBoundedContextsLayout =
-    fs.existsSync(path.join(root, 'src', 'contexts')) ||
-    fs.existsSync(path.join(root, 'src', 'bounded-contexts'));
+    exists('src', 'features') &&
+    (exists('src', 'shared') || exists('src', 'lib')) &&
+    !exists('src', 'entities') &&
+    !exists('src', 'widgets');
+  const dddBoundedContextsLayout = exists('src', 'contexts') || exists('src', 'bounded-contexts');
 
-  // Vite SPA + root Vercel api/ + lib/ (NEW-SPA-DEFAULT-LAYOUT / superinsights-class).
-  const viteDependency = Object.keys(deps).some(
+  const viteDependency = depNames.some(
     (name) => name === 'vite' || name.startsWith('vite/') || name === '@vitejs/plugin-react'
   );
-  const viteConfigPresent = [
-    'vite.config.ts',
-    'vite.config.js',
-    'vite.config.mjs',
-    'vite.config.mts',
-  ].some((name) => fs.existsSync(path.join(root, name)));
-  const rootApiDir = fs.existsSync(path.join(root, 'api'));
-  const rootLibDir = fs.existsSync(path.join(root, 'lib'));
+  const viteConfigPresent = ['ts', 'js', 'mjs', 'mts'].some((ext) => exists(`vite.config.${ext}`));
+  const rootApiDir = exists('api');
   const viteVercelSpaLayout =
     !nextFramework &&
     !nestFramework &&
     (viteDependency || viteConfigPresent) &&
-    (rootApiDir || rootLibDir) &&
+    (rootApiDir || exists('lib')) &&
     (ui || hasUiFramework || rootApiDir);
 
-  const hasBin = Boolean(pkg?.bin);
-  const hasExports = Boolean(pkg?.exports);
-  const hasMain = Boolean(pkg?.main || pkg?.module);
-  // A Nest/Next/express app is never a library-sdk, even if it has "main".
+  const cli = Boolean(pkg?.bin);
   const library =
-    !hasBin &&
+    !cli &&
     !nestFramework &&
     !nextFramework &&
     !expressLike &&
-    (hasExports || hasMain || pkg?.type === 'module') &&
+    (Boolean(pkg?.exports) || Boolean(pkg?.main || pkg?.module) || pkg?.type === 'module') &&
     !ui &&
     !apiSurface &&
     sourceFileCount > 0 &&
     sourceFileCount < 80;
-  const cli = hasBin;
 
-  const tsxCount = countTsxFiles(sourceFiles);
   const uiHeavy = ui && tsxCount >= 3;
-  const apiSurfaceOnly = apiSurface && !uiHeavy;
-  const persistenceHeavy = persistence && sourceFileCount >= 8;
-  const domainHeavy = domain && application;
-  const jobsOnly = jobs && !ui && !apiSurface;
-  const uiOnly = ui && !persistence && !apiSurface && !jobs;
-  const libraryOnly = library && !cli;
-
-  const fullStackProduct = ui && apiSurface && persistence;
-
-  const toolHints = Object.keys(deps).filter((name) =>
+  const toolHints = depNames.filter((name) =>
     /^(next|@nestjs|express|fastify|hono|prisma|drizzle|typeorm|supabase|react|vue|svelte)$/i.test(
       name.split('/')[0]
     )
   );
+  const addHint = (hint) => {
+    if (!toolHints.includes(hint)) toolHints.push(hint);
+  };
   if (nestFramework && !toolHints.some((h) => h.startsWith('@nestjs') || h === 'nestjs')) {
     toolHints.push('@nestjs/*');
   }
-  if (nextFramework && !toolHints.includes('next')) toolHints.push('next');
-  if (viteVercelSpaLayout && !toolHints.includes('vite')) toolHints.push('vite');
+  if (nextFramework) addHint('next');
+  if (viteVercelSpaLayout) addHint('vite');
 
-  // Turborepo / Nx markers (monorepo tooling — maps to monorepo preset, not separate engines).
   const monorepoTooling = [];
-  if (fs.existsSync(path.join(root, 'turbo.json'))) monorepoTooling.push('turborepo');
-  if (
-    fs.existsSync(path.join(root, 'nx.json')) ||
-    fs.existsSync(path.join(root, 'workspace.json'))
-  ) {
+  if (exists('turbo.json')) {
+    monorepoTooling.push('turborepo');
+    addHint('turborepo');
+  }
+  if (exists('nx.json') || exists('workspace.json')) {
     monorepoTooling.push('nx');
-  }
-  if (monorepoTooling.includes('turborepo') && !toolHints.includes('turborepo')) {
-    toolHints.push('turborepo');
-  }
-  if (monorepoTooling.includes('nx') && !toolHints.includes('nx')) {
-    toolHints.push('nx');
+    addHint('nx');
   }
 
   return {
@@ -1585,30 +1306,30 @@ export function collectRepoShapeSignals(root) {
     ui,
     uiHeavy,
     apiSurface,
-    apiSurfaceOnly,
+    apiSurfaceOnly: apiSurface && !uiHeavy,
     persistence,
-    persistenceHeavy,
+    persistenceHeavy: persistence && sourceFileCount >= 8,
     jobs,
-    jobsOnly,
+    jobsOnly: jobs && !ui && !apiSurface,
     workflows,
     integration,
     cli,
     library,
-    libraryOnly,
+    libraryOnly: library && !cli,
     tinyTree,
     sourceFileCount,
     discoveredSourceCoverage,
     domain,
     application,
-    domainHeavy,
-    uiOnly,
+    domainHeavy: domain && application,
+    uiOnly: ui && !persistence && !apiSurface && !jobs,
     featureSlicedLayout,
     verticalSliceLayout,
     dddBoundedContextsLayout,
     viteVercelSpaLayout,
     // null when absent so scoreArchetypes `if (signals.x)` is false for empty tooling
     monorepoTooling: monorepoTooling.length > 0 ? monorepoTooling : null,
-    fullStackProduct,
+    fullStackProduct: ui && apiSurface && persistence,
     persistenceFromDeps,
     nestFramework,
     nextFramework,
@@ -1690,18 +1411,7 @@ const NEGATIVE_SIGNAL_WHY = {
 
 /** Plain-language reasons for signals that scored the winning archetype. */
 export function whyFromMatchedSignals(signals, matched) {
-  const why = [];
-  for (const token of matched ?? []) {
-    if (token.startsWith('!')) {
-      const neg = token.slice(1);
-      const label = NEGATIVE_SIGNAL_WHY[neg];
-      if (label && signals[neg]) why.push(label(signals));
-      continue;
-    }
-    const label = SIGNAL_WHY[token];
-    if (label && signals[token]) why.push(label(signals));
-  }
-  return why;
+  return evidenceFromMatchedSignals(signals, matched).map((entry) => entry.explanation);
 }
 
 function evidenceFromMatchedSignals(signals, matched) {
@@ -2259,27 +1969,17 @@ const GALLERY_STARTER_BY_ARCHETYPE = Object.fromEntries(
   GALLERY_STARTERS.map(({ archetype, directory }) => [archetype, `${directory}/`])
 );
 
+const POLICY_PACK_PRESETS = new Set([
+  'hexagonal', 'layered', 'feature-sliced', 'monorepo',
+  'vertical-slice', 'ddd-bounded-contexts', 'ui-surface',
+]);
+
 /** Enthusiast pack id for a named preset, or null when none ships. */
 export function policyPackIdForPreset(preset) {
-  if (
-    preset === 'hexagonal' ||
-    preset === 'layered' ||
-    preset === 'feature-sliced' ||
-    preset === 'monorepo' ||
-    preset === 'vertical-slice' ||
-    preset === 'ddd-bounded-contexts' ||
-    preset === 'ui-surface' ||
-    preset === 'clean-architecture' ||
-    preset === 'onion-architecture'
-  ) {
-    // clean/onion alias packs → hexagonal enthusiast pack
-    const packPreset =
-      preset === 'clean-architecture' || preset === 'onion-architecture'
-        ? 'hexagonal'
-        : preset;
-    return `enthusiast-${packPreset}`;
+  if (preset === 'clean-architecture' || preset === 'onion-architecture') {
+    return 'enthusiast-hexagonal';
   }
-  return null;
+  return POLICY_PACK_PRESETS.has(preset) ? `enthusiast-${preset}` : null;
 }
 
 /** Machine-readable adoption record for optional commit (Phase E). */
@@ -2421,12 +2121,9 @@ const ARK_ORDER_BYTE_CAP = 64 * 1024;
 export function treeHasArkOrderCandidate(root) {
   if (typeof root !== 'string' || root.length === 0) return false;
   /** @type {string[]} */
-  const hinted = [];
-  /** @type {string[]} */
-  const rest = [];
+  const files = [];
   const stack = [root];
-  let walked = 0;
-  while (stack.length > 0 && walked < ARK_ORDER_WALK_CAP) {
+  while (stack.length > 0 && files.length < ARK_ORDER_WALK_CAP) {
     const dir = stack.pop();
     let entries;
     try {
@@ -2443,17 +2140,12 @@ export function treeHasArkOrderCandidate(root) {
         continue;
       }
       if (!entry.isFile() || !ARK_ORDER_SOURCE.test(entry.name)) continue;
-      walked += 1;
-      const spaced = full.split(path.sep).join(' ');
-      if (textHasArkOrderCandidate(spaced)) return true;
-      (textHasArkOrderCandidate(entry.name) ? hinted : rest).push(full);
-      if (walked >= ARK_ORDER_WALK_CAP) break;
+      if (textHasArkOrderCandidate(full.split(path.sep).join(' '))) return true;
+      files.push(full);
+      if (files.length >= ARK_ORDER_WALK_CAP) break;
     }
   }
-  let read = 0;
-  for (const file of hinted.concat(rest)) {
-    if (read >= ARK_ORDER_READ_CAP) break;
-    read += 1;
+  for (const file of files.slice(0, ARK_ORDER_READ_CAP)) {
     try {
       const stat = fs.statSync(file);
       if (!stat.isFile() || stat.size > ARK_ORDER_BYTE_CAP) continue;

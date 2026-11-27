@@ -5,6 +5,16 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+## 4.9.1 — 2026-11-27
+
+Patch release — CLI runtime minimization, dead-code removal, and repo-shape walk speedup across `bin/ark-shared.mjs`, `bin/ark-check-runtime.mjs`, and `bin/lib/check-args.mjs`. No `schemaVersion` bump. No required config migration. Does not close `K01` / `Z09`. This does **not** turn `arkOrder` on.
+
+**Status: released.** `npm view arkgate@4.9.1 version`.
+
+### Changed
+- **CLI runtime minimization (-593 net LOC):** removed 10 unused imports across `bin/` plus dead local/branch code (`FSD_DIR_NAMES`, unreachable `hinted` queue in `treeHasArkOrderCandidate`, duplicate `lib` branch in `runAdoptContract`), collapsed duplicated config-containment/error/preset-rule helpers, and replaced the repetitive `parseArgs` `else if` chain in `bin/lib/check-args.mjs` with data-driven flag maps.
+- **Repo-shape discovery speedup:** replaced 8 separate full-tree BFS walks (`dirExistsAnywhere`) in `collectRepoShapeSignals` with a single `collectExistingDirNames` pass and reused `repoUnits` in `collectAggregatedDeps`.
+
 ## 4.9.0 — 2026-11-27
 
 Minor release — 4-phase correctness, static AST precision, ArkRun evolution, and build deduplication across `arkgate`, `arkgate/order`, and `arkgate/runtime`. No `schemaVersion` bump. Does not close `K01` / `Z09`. This does **not** turn `arkOrder` on.

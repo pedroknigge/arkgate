@@ -54,23 +54,66 @@ export function localCheckEnvelope(args, root) {
   };
 }
 
+const BOOL_FLAGS = new Map([
+  ['--json', 'json'], ['--strict-config', 'strictConfig'], ['--init', 'init'],
+  ['--install-agent-gates', 'installAgentGates'], ['--compact', 'compact'],
+  ['--force', 'force'], ['--follow-config-root', 'followConfigRoot'],
+  ['--skills-only', 'skillsOnly'], ['--coverage', 'coverage'], ['--doctor', 'doctor'],
+  ['--plan', 'plan'], ['--rules-inventory', 'rulesInventory'], ['--path-drift', 'pathDrift'],
+  ['--sensors', 'sensors'], ['--apply', 'apply'], ['--recommend', 'recommend'],
+  ['--write-plan', 'writePlan'], ['--list-policy-packs', 'listPolicyPacks'],
+  ['--suggest-include', 'suggestInclude'], ['--adopt-contract', 'adoptContract'],
+  ['--migrate-contract', 'migrateContract'], ['--ratchet-cores', 'ratchetCores'],
+  ['--write', 'write'], ['--watch', 'watch'], ['--beginner', 'beginner'],
+  ['--codex-home', 'codexHome'], ['--prune-home-duplicates', 'pruneHomeDuplicates'],
+  ['--claude-home', 'claudeHome'], ['--grok-home', 'grokHome'],
+  ['--antigravity-home', 'antigravityHome'], ['--migrate-commands', 'migrateCommands'],
+  ['--no-cache', 'noCache'], ['--resident', 'resident'], ['--reset-origin', 'resetOrigin'],
+  ['--no-archive', 'noArchive'], ['--open', 'openReport'], ['--no-open', 'noOpenReport'],
+  ['--fail-on-new-smells', 'failOnNewSmells'], ['--contract-session', 'contractSession'],
+  ['--contract-diff', 'contractDiff'], ['--changed', 'changed'], ['--local', 'local'],
+  ['--help', 'help'], ['-h', 'help'], ['--all', 'all'], ['--version', 'version'], ['-V', 'version'],
+]);
+
+const VALUE_FLAGS = new Map([
+  ['--preset', 'preset'], ['--apply-policy-pack', 'applyPolicyPack'],
+  ['--policy-base', 'policyBase'], ['--policy-base-ref', 'policyBaseRef'],
+  ['--policy-ack', 'policyAck'], ['--base-ref', 'baseRef'], ['--against', 'against'],
+  ['--base', 'base'], ['--persona', 'persona'], ['--author', 'author'],
+  ['--config', 'config'], ['--manifest', 'manifest'], ['--print-config', 'printConfig'],
+  ['--tsconfig', 'tsconfig'],
+]);
+
+const DEFAULT_FALSE_KEYS = [
+  'json', 'strictConfig', 'strictMerge', 'requireGates', 'init', 'installAgentGates',
+  'compact', 'force', 'skillsOnly', 'failOnNewSmells', 'contractSession', 'contractDiff',
+  'changed', 'local', 'failUngoverned', 'updateBaseline', 'noCache', 'resident',
+  'coverage', 'migrateCommands', 'doctor', 'plan', 'pathDrift', 'sensors', 'apply',
+  'recommend', 'writePlan', 'listPolicyPacks', 'watch', 'beginner', 'openReport',
+  'noOpenReport', 'version', 'help', 'all', 'followConfigRoot',
+];
+
+const DEFAULT_UNDEF_KEYS = [
+  'manifest', 'printConfig', 'tsconfig', 'requireWriteHook', 'tools', 'baseline',
+  'policyBase', 'policyBaseRef', 'policyAck', 'baseRef', 'against', 'base',
+  'persona', 'author', 'promote', 'applyPolicyPack',
+];
+
+const presentFlags = (args, pairs) =>
+  pairs.filter(([key]) => Boolean(args[key])).map(([, flag]) => flag);
+
 /**
  * `--local` / `ARK_CHECK_LOCAL=1` reuse `--changed`. Env is ignored under
  * `--strict-merge` and under full-tree report modes so CI / doctor stay whole-tree.
  */
 export function applyLocalCheckMode(args, env = process.env) {
   const explicit = args.local === true;
-  const fromEnv = envFlagOn(env.ARK_CHECK_LOCAL);
-  if (!explicit && !fromEnv) return args;
-  const treeModes = [
-    args.doctor && '--doctor',
-    args.coverage && '--coverage',
-    args.plan && '--plan',
-    args.report && '--report',
-    args.promote && '--promote',
-    args.probeInvariants && '--probe-invariants',
-    args.updateBaseline && '--update-baseline',
-  ].filter(Boolean);
+  if (!explicit && !envFlagOn(env.ARK_CHECK_LOCAL)) return args;
+  const treeModes = presentFlags(args, [
+    ['doctor', '--doctor'], ['coverage', '--coverage'], ['plan', '--plan'],
+    ['report', '--report'], ['promote', '--promote'],
+    ['probeInvariants', '--probe-invariants'], ['updateBaseline', '--update-baseline'],
+  ]);
   if (args.strictMerge) {
     if (explicit) throw new Error(LOCAL_STRICT_MERGE_MESSAGE);
     return args;
@@ -88,56 +131,8 @@ export function parseArgs(argv, env = process.env) {
   const args = {
     root: process.cwd(),
     config: 'ark.config.json',
-    manifest: undefined,
-    printConfig: undefined,
-    tsconfig: undefined,
-    json: false,
-    strictConfig: false,
-    strictMerge: false,
-    requireGates: false,
-    requireWriteHook: undefined,
-    init: false,
-    installAgentGates: false,
-    compact: false,
-    tools: undefined,
-    force: false,
-    skillsOnly: false,
-    baseline: undefined,
-    policyBase: undefined,
-    policyBaseRef: undefined,
-    policyAck: undefined, failOnNewSmells: false, baseRef: undefined,
-    contractSession: false,
-    contractDiff: false,
-    changed: false,
-    local: false,
-    against: undefined,
-    base: undefined,
-    persona: undefined,
-    author: undefined,
-    failUngoverned: false,
-    updateBaseline: false,
-    noCache: false,
-    resident: false,
-    coverage: false,
-    migrateCommands: false,
-    doctor: false,
-    plan: false,
-    pathDrift: false,
-    sensors: false,
-    promote: undefined,
-    apply: false,
-    recommend: false,
-    writePlan: false,
-    listPolicyPacks: false,
-    applyPolicyPack: undefined,
-    watch: false,
-    beginner: false,
-    openReport: false,
-    noOpenReport: false,
-    version: false,
-    help: false,
-    all: false,
-    followConfigRoot: false,
+    ...Object.fromEntries(DEFAULT_UNDEF_KEYS.map((k) => [k, undefined])),
+    ...Object.fromEntries(DEFAULT_FALSE_KEYS.map((k) => [k, false])),
   };
   const requireValue = (flag, index) => {
     const value = argv[index + 1];
@@ -146,182 +141,114 @@ export function parseArgs(argv, env = process.env) {
     }
     return value;
   };
+  const nextOptional = (index, fallback) => {
+    const next = argv[index + 1];
+    return next && !next.startsWith('-') ? { value: next, consumed: true } : { value: fallback, consumed: false };
+  };
+
   for (let i = 2; i < argv.length; i += 1) {
     const arg = argv[i];
-    if (arg === '--json') args.json = true;
-    else if (arg === '--strict' || arg === '--strict-merge') {
+    const boolKey = BOOL_FLAGS.get(arg);
+    if (boolKey) {
+      args[boolKey] = true;
+      continue;
+    }
+    const valueKey = VALUE_FLAGS.get(arg);
+    if (valueKey) {
+      args[valueKey] = requireValue(arg, i++);
+      continue;
+    }
+    if (arg === '--strict' || arg === '--strict-merge') {
       args.strictConfig = true;
       args.requireGates = true;
       args.strictMerge = true;
-    }
-    else if (arg === '--strict-config') args.strictConfig = true;
-    else if (arg === '--require-gates') {
+    } else if (arg === '--require-gates') {
       args.requireGates = true;
       args.strictConfig = true;
-    }
-    else if (arg === '--require-write-hook') {
+    } else if (arg === '--require-write-hook') {
       args.requireWriteHook = requireValue(arg, i++).trim().toLowerCase();
-    }
-    else if (arg === '--init') args.init = true;
-    else if (arg === '--preset') args.preset = requireValue(arg, i++);
-    else if (arg === '--install-agent-gates') args.installAgentGates = true;
-    else if (arg === '--compact') args.compact = true;
-    else if (arg === '--tools') {
-      // Consume the next arg only when it isn't another flag (same rule as --baseline),
-      // so `--tools --force` can't silently eat --force as a "tool name".
+    } else if (arg === '--tools') {
       const next = argv[i + 1];
       if (next !== undefined && !next.startsWith('-')) {
         i += 1;
-        args.tools = next
-          .split(',')
-          .map((tool) => tool.trim().toLowerCase())
-          .filter(Boolean);
+        args.tools = next.split(',').map((tool) => tool.trim().toLowerCase()).filter(Boolean);
       } else {
-        args.tools = []; // flag without a value — rejected in runInstallAgentGates
+        args.tools = [];
       }
-    }
-    else if (arg === '--force') args.force = true;
-    else if (arg === '--follow-config-root') args.followConfigRoot = true;
-    else if (arg === '--skills-only') args.skillsOnly = true;
-    else if (arg === '--coverage') args.coverage = true;
-    else if (arg === '--doctor') args.doctor = true;
-    else if (arg === '--plan') args.plan = true;
-    else if (arg === '--rules-inventory') args.rulesInventory = true;
-    else if (arg === '--path-drift') args.pathDrift = true;
-    else if (arg === '--sensors') args.sensors = true;
-    else if (arg === '--promote' || arg.startsWith('--promote=')) {
-      // Optional value, same shape as --report / --baseline: bare --promote
-      // previews every declared rule from ONE run, which is the point (the loop
-      // it replaces was one full run per attempted promotion); a value narrows
-      // to that rule id.
-      // `--promote=<id>` too: a rule id may legally begin with '-', and the
-      // lookahead form can never pass one.
+    } else if (arg === '--promote' || arg.startsWith('--promote=')) {
       const eq = arg.indexOf('=');
       if (eq > 0) {
         args.promote = arg.slice(eq + 1);
       } else {
-        const next = argv[i + 1];
-        args.promote = next && !next.startsWith('-') ? argv[++i] : true;
+        const opt = nextOptional(i, true);
+        args.promote = opt.value;
+        if (opt.consumed) i += 1;
       }
-    }
-    else if (arg === '--probe-invariants' || arg.startsWith('--probe-invariants=')) {
-      // Same shape as --promote: bare probes every declared invariant; a value
-      // narrows to one id (`=<id>` also carries an id that begins with '-').
+    } else if (arg === '--probe-invariants' || arg.startsWith('--probe-invariants=')) {
       const eq = arg.indexOf('=');
       if (eq > 0) {
         args.probeInvariants = arg.slice(eq + 1) || true;
       } else {
-        const next = argv[i + 1];
-        args.probeInvariants = next && !next.startsWith('-') ? argv[++i] : true;
+        const opt = nextOptional(i, true);
+        args.probeInvariants = opt.value;
+        if (opt.consumed) i += 1;
       }
-    }
-    else if (arg === '--runner') {
+    } else if (arg === '--runner') {
       const value = requireValue(arg, i++).trim().toLowerCase();
       if (!PROBE_RUNNERS.includes(value)) {
         throw new Error(`--runner must be one of ${PROBE_RUNNERS.join(', ')} (got ${JSON.stringify(value)}).`);
       }
       args.runner = value;
-    }
-    else if (arg === '--apply') args.apply = true;
-    else if (arg === '--recommend') args.recommend = true;
-    else if (arg === '--write-plan') args.writePlan = true;
-    else if (arg === '--list-policy-packs') args.listPolicyPacks = true;
-    else if (arg === '--apply-policy-pack') args.applyPolicyPack = requireValue(arg, i++);
-    else if (arg === '--suggest-include') args.suggestInclude = true;
-    else if (arg === '--adopt-contract') args.adoptContract = true;
-    else if (arg === '--migrate-contract') args.migrateContract = true;
-    else if (arg === '--ratchet-cores') args.ratchetCores = true;
-    else if (arg === '--write') args.write = true;
-    else if (arg === '--watch') args.watch = true;
-    else if (arg === '--beginner') args.beginner = true;
-    else if (arg === '--codex-home') args.codexHome = true;
-    else if (arg === '--prune-home-duplicates') args.pruneHomeDuplicates = true;
-    else if (arg === '--claude-home') args.claudeHome = true;
-    else if (arg === '--grok-home') args.grokHome = true;
-    else if (arg === '--antigravity-home') args.antigravityHome = true;
-    else if (arg === '--agent-homes') {
+    } else if (arg === '--agent-homes') {
       args.agentHomes = true;
       args.codexHome = true;
       args.claudeHome = true;
       args.grokHome = true;
       args.antigravityHome = true;
-    }
-    else if (arg === '--migrate-commands') args.migrateCommands = true;
-    else if (arg === '--no-cache') args.noCache = true;
-    else if (arg === '--resident') args.resident = true;
-    else if (arg === '--report') {
-      const next = argv[i + 1];
-      args.report = next && !next.startsWith('-') ? argv[++i] : 'ark-report.html';
-    }
-    else if (arg === '--reset-origin') args.resetOrigin = true;
-    else if (arg === '--no-archive') args.noArchive = true;
-    else if (arg === '--open') args.openReport = true;
-    else if (arg === '--no-open') args.noOpenReport = true;
-    else if (arg === '--baseline' || arg === '--update-baseline') {
+    } else if (arg === '--report') {
+      const opt = nextOptional(i, 'ark-report.html');
+      args.report = opt.value;
+      if (opt.consumed) i += 1;
+    } else if (arg === '--baseline' || arg === '--update-baseline') {
       if (arg === '--update-baseline') args.updateBaseline = true;
-      // optional path value: consume the next arg only when it isn't another flag
-      const next = argv[i + 1];
-      args.baseline = next && !next.startsWith('-') ? argv[++i] : '.ark-baseline.json';
+      const opt = nextOptional(i, '.ark-baseline.json');
+      args.baseline = opt.value;
+      if (opt.consumed) i += 1;
+    } else if (arg === '--root') {
+      args.root = path.resolve(requireValue(arg, i++));
+    } else {
+      throw new Error(`Unknown argument: ${arg}. Run arkgate-check --help for usage.`);
     }
-    else if (arg === '--policy-base') args.policyBase = requireValue(arg, i++);
-    else if (arg === '--policy-base-ref') args.policyBaseRef = requireValue(arg, i++);
-    else if (arg === '--policy-ack') args.policyAck = requireValue(arg, i++); else if (arg === '--fail-on-new-smells') args.failOnNewSmells = true; else if (arg === '--base-ref') args.baseRef = requireValue(arg, i++);
-    else if (arg === '--contract-session') args.contractSession = true;
-    else if (arg === '--contract-diff') args.contractDiff = true;
-    else if (arg === '--changed') args.changed = true;
-    else if (arg === '--local') args.local = true;
-    else if (arg === '--against') args.against = requireValue(arg, i++);
-    else if (arg === '--base') args.base = requireValue(arg, i++);
-    else if (arg === '--persona') args.persona = requireValue(arg, i++);
-    else if (arg === '--author') args.author = requireValue(arg, i++);
-    else if (arg === '--root') args.root = path.resolve(requireValue(arg, i++));
-    else if (arg === '--config') args.config = requireValue(arg, i++);
-    else if (arg === '--manifest') args.manifest = requireValue(arg, i++);
-    else if (arg === '--print-config') args.printConfig = requireValue(arg, i++);
-    else if (arg === '--tsconfig') args.tsconfig = requireValue(arg, i++);
-    else if (arg === '--help' || arg === '-h') args.help = true;
-    else if (arg === '--all') args.all = true;
-    else if (arg === '--version' || arg === '-V') args.version = true;
-    else throw new Error(`Unknown argument: ${arg}. Run arkgate-check --help for usage.`);
   }
-  // A write flag that silently does nothing is how a caller comes to believe a
-  // change landed. --apply belongs to --promote; the other write surfaces use
-  // --write.
+
   if (args.apply && !args.promote) {
     throw new Error(
       '--apply applies to --promote. Run `arkgate-check --promote <ruleId> --apply`; the other write surfaces use --write.'
     );
   }
-  // Every report mode below returns from main() BEFORE --promote is reached, so
-  // pairing one with --promote --apply printed that report and exited 0 having
-  // written nothing. Same defect the guard above exists for, one level up.
   if (args.promote) {
-    const shadowing = [
-      args.sensors && '--sensors',
-      args.pathDrift && '--path-drift',
-      args.coverage && '--coverage',
-      args.recommend && '--recommend',
-      args.doctor && '--doctor',
-      args.plan && '--plan',
-      args.rulesInventory && '--rules-inventory',
-      args.suggestInclude && '--suggest-include',
-      args.adoptContract && '--adopt-contract',
-      args.migrateContract && '--migrate-contract',
-    ].filter(Boolean);
+    const shadowing = presentFlags(args, [
+      ['sensors', '--sensors'],
+      ['pathDrift', '--path-drift'],
+      ['coverage', '--coverage'],
+      ['recommend', '--recommend'],
+      ['doctor', '--doctor'],
+      ['plan', '--plan'],
+      ['rulesInventory', '--rules-inventory'],
+      ['suggestInclude', '--suggest-include'],
+      ['adoptContract', '--adopt-contract'],
+      ['migrateContract', '--migrate-contract'],
+    ]);
     if (shadowing.length > 0) {
       throw new Error(
         `--promote cannot be combined with ${shadowing.join(', ')}: that mode answers first and --promote would silently do nothing. Run them separately.`
       );
     }
-    // A narrowed scope cannot price a promotion. --changed counts findings over
-    // the changed files only and --baseline suppresses findings AFTER --promote
-    // has already returned, so either one turns the cost into an undercount
-    // printed as a fact.
-    const narrowing = [
-      args.changed && '--changed',
-      args.against && '--against',
-      args.baseline && '--baseline',
-    ].filter(Boolean);
+    const narrowing = presentFlags(args, [
+      ['changed', '--changed'],
+      ['against', '--against'],
+      ['baseline', '--baseline'],
+    ]);
     if (narrowing.length > 0) {
       throw new Error(
         `--promote cannot be combined with ${narrowing.join(', ')}: the promotion cost must be measured over the whole governed tree, and a narrowed or baselined scope would report an undercount as the price.`
@@ -338,36 +265,34 @@ export function parseArgs(argv, env = process.env) {
 /**
  * ADR 0039 D1: the probe runs the project's own tests in a temporary copy, so
  * it is never part of a check, the merge gate, status, or a changed-files scope.
- * Every pairing that would put it on one of those paths is refused, and a
- * report mode that answers first would make it silently do nothing.
  */
 function assertProbeInvariantsAlone(args) {
   if (args.runner && !args.probeInvariants) {
     throw new Error('--runner applies to --probe-invariants. Run `arkgate-check --probe-invariants --runner <id>`.');
   }
   if (!args.probeInvariants) return;
-  const gatePaths = [
-    args.local && '--local',
-    args.changed && '--changed',
-    args.strictMerge && '--strict-merge',
-    args.updateBaseline && '--update-baseline',
-    args.doctor && '--doctor',
-  ].filter(Boolean);
+  const gatePaths = presentFlags(args, [
+    ['local', '--local'],
+    ['changed', '--changed'],
+    ['strictMerge', '--strict-merge'],
+    ['updateBaseline', '--update-baseline'],
+    ['doctor', '--doctor'],
+  ]);
   if (gatePaths.length > 0) {
     throw new Error(
       `--probe-invariants cannot be combined with ${gatePaths.join(', ')}: the probe runs your tests in a temporary copy and is never part of a check, the merge gate, or status. Run it on its own.`
     );
   }
-  const shadowing = [
-    args.promote && '--promote',
-    args.sensors && '--sensors',
-    args.pathDrift && '--path-drift',
-    args.coverage && '--coverage',
-    args.plan && '--plan',
-    args.report && '--report',
-    args.rulesInventory && '--rules-inventory',
-    args.recommend && '--recommend',
-  ].filter(Boolean);
+  const shadowing = presentFlags(args, [
+    ['promote', '--promote'],
+    ['sensors', '--sensors'],
+    ['pathDrift', '--path-drift'],
+    ['coverage', '--coverage'],
+    ['plan', '--plan'],
+    ['report', '--report'],
+    ['rulesInventory', '--rules-inventory'],
+    ['recommend', '--recommend'],
+  ]);
   if (shadowing.length > 0) {
     throw new Error(
       `--probe-invariants cannot be combined with ${shadowing.join(', ')}: one of them would answer first and the other would silently do nothing. Run them separately.`

@@ -70,7 +70,6 @@ import {
   SKILL_TOOL_TARGETS,
   skillTemplates,
   stampSkill,
-  detectSkillGaps,
   arkPackageVersion,
   verifyHostSkillCatalog,
   canonicalSkillPath,

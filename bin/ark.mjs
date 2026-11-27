@@ -7,7 +7,6 @@ import readline from 'node:readline/promises';
 import {
   arkCommand,
   buildArchitectureRecommendation,
-  detectPackageManager,
   evaluateStartShapeConfidenceGate,
   resolveIncludeRoots,
   detectTsPackageRoots,

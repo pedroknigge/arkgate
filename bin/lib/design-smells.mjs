@@ -9,7 +9,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { layerForFile } from '../ark-shared.mjs';
 import { detectContractFalseGreenRisk } from './field-install.mjs';
-import { operatingModeTitle, LEFTOVER_DESIGN_LABEL } from './product-copy.mjs';
+import { operatingModeTitle } from './product-copy.mjs';
 
 /** Stable smell ids (doctor JSON + plan B + skills). */
 export const DESIGN_SMELL_IDS = Object.freeze([
