@@ -27,6 +27,11 @@ import {
 } from './extraMergeTeeth';
 import { deterministicNextAction } from './remediation';
 import type { ResolvedDependencyFact, ResolvedFactsReason } from './resolvedCandidateFactsTypes';
+import {
+  isDomainRoleLayer,
+  type TsAstLike,
+  type TsAstSourceFile,
+} from './sourcePolicy';
 
 export const ARKORDER_TIER1_SENSOR_IDS = [
   'arkorder-missing-plane',
@@ -94,15 +99,6 @@ function matchesArkOrderAppliesTo(
 ): boolean {
   if (!appliesTo || appliesTo.length === 0) return true;
   return appliesTo.some((pattern) => globToRegExp(pattern).test(file));
-}
-
-function isDomainRoleLayer(layer: string, intentPrefixes: readonly string[] = []): boolean {
-  const name = layer.trim();
-  if (/^domain(?:model)?$/i.test(name) || /^domain(?=[A-Z_\-\s])/i.test(name)) return true;
-  return intentPrefixes.some((prefix) => {
-    const normalized = prefix.trim().replace(/\.+$/, '');
-    return normalized === 'Domain' || normalized.startsWith('Domain.');
-  });
 }
 
 function finding(
@@ -321,10 +317,14 @@ export function evaluateArkOrderEditorSensors(input: {
   intentPrefixes?: readonly string[];
   /** Same extra-plane teeth floor ark-check applies (omitted = teeth allowed). */
   classification?: ExtraMergeTeethClassification;
+  /** Optional injected TypeScript compiler API for AST-backed fact extraction. */
+  ts?: TsAstLike | null;
+  sourceFile?: TsAstSourceFile | null;
 }): ArkOrderSensorFinding[] {
   if (!input.arkOrder) return [];
+  const astOpts = input.ts ? { ts: input.ts, ...(input.sourceFile ? { sourceFile: input.sourceFile } : {}) } : {};
   const planeCalls = extractArkOrderPlaneCallsFromSource(input.file, input.source);
-  const receivers = { planeRoots: input.arkOrder.planeRoots ?? [] };
+  const receivers = { planeRoots: input.arkOrder.planeRoots ?? [], ...astOpts };
   const genericUpdates = extractArkOrderGenericUpdatesFromSource(
     input.file,
     input.source,
@@ -350,9 +350,9 @@ export function evaluateArkOrderEditorSensors(input: {
     planeRootHits: [],
     xiFieldWrites: extractArkOrderXiFieldWritesFromSource(input.file, input.source, xiKeys),
     ingestWritesXi: extractArkOrderIngestWritesXiFromSource(input.file, input.source),
-    releaseKeyCounts: extractArkOrderReleaseKeyCountsFromSource(input.file, input.source),
+    releaseKeyCounts: extractArkOrderReleaseKeyCountsFromSource(input.file, input.source, astOpts),
     xiTtlKeys: extractArkOrderXiTtlKeysFromSource(input.file, input.source, receivers),
-    budgetLeaks: extractArkOrderBudgetLeaksFromSource(input.file, input.source),
+    budgetLeaks: extractArkOrderBudgetLeaksFromSource(input.file, input.source, astOpts),
     dependencies: extractArkOrderModuleImportsFromSource(input.file, input.source),
     layerForFile: () => input.fromLayer,
     ...(input.classification ? { classification: input.classification } : {}),

@@ -128,3 +128,287 @@ export function classifyPublishFacts(facts: PublishSyntaxFacts): SourcePolicyFin
   }
   return findings;
 }
+
+/** Intent prefixes are short tokens (`Domain.`, `Application.`). Bound the scan. */
+const INTENT_PREFIX_SCAN_LIMIT = 64;
+
+/**
+ * Strip trailing `.` without a regex. `\.+$` on config strings is CodeQL
+ * js/polynomial-redos (backtracking on long runs of `.`). Linear walk is enough.
+ */
+function stripTrailingDots(value: string): string {
+  let end = value.length;
+  while (end > 0 && value.charCodeAt(end - 1) === 46) {
+    end -= 1;
+  }
+  return end === value.length ? value : value.slice(0, end);
+}
+
+function normalizeIntentPrefix(prefix: string): string {
+  const trimmed = prefix.trim();
+  const bounded =
+    trimmed.length > INTENT_PREFIX_SCAN_LIMIT
+      ? trimmed.slice(0, INTENT_PREFIX_SCAN_LIMIT)
+      : trimmed;
+  return stripTrailingDots(bounded);
+}
+
+/**
+ * Canonical Domain-role layer predicate shared by ArkRun, ArkOrder, and ArkRules.
+ * Start-anchored domain/entity/aggregate (unanchored "model" would misclassify
+ * ReportingReadModels), or a `Domain.` intentPrefix.
+ */
+export function isDomainRoleLayer(
+  layer: string,
+  intentPrefixes: readonly string[] = []
+): boolean {
+  const name = layer.trim();
+  if (/^domain(?:model)?$/i.test(name) || /^domain(?=[A-Z_\-\s])/i.test(name)) return true;
+  if (/^(?:entit(?:y|ies)|aggregates?)(?:$|(?=[A-Z_\-\s]))/i.test(name)) return true;
+  return intentPrefixes.some((prefix) => {
+    const normalized = normalizeIntentPrefix(prefix);
+    return normalized === 'Domain' || normalized.startsWith('Domain.');
+  });
+}
+
+/** Structural TypeScript AST surface injected by Tooling callers (zero runtime dependency). */
+export interface TsAstNode {
+  readonly kind: number;
+  readonly pos?: number;
+  readonly end?: number;
+  readonly flags?: number;
+  readonly parent?: TsAstNode;
+  getStart?(sourceFile?: TsAstSourceFile, includeJsDocComment?: boolean): number;
+  getText?(sourceFile?: TsAstSourceFile): string;
+}
+
+export interface TsAstSourceFile extends TsAstNode {
+  readonly text: string;
+  readonly statements: readonly TsAstNode[];
+  readonly parseDiagnostics?: readonly unknown[];
+  getLineAndCharacterOfPosition(position: number): {
+    readonly line: number;
+    readonly character: number;
+  };
+}
+
+interface TsAstIdentifier extends TsAstNode {
+  readonly text: string;
+}
+
+interface TsAstLiteralLike extends TsAstNode {
+  readonly text: string;
+}
+
+interface TsAstPropertyAccessExpression extends TsAstNode {
+  readonly expression: TsAstNode;
+  readonly name: TsAstIdentifier;
+}
+
+interface TsAstCallExpression extends TsAstNode {
+  readonly expression: TsAstNode;
+  readonly arguments: readonly TsAstNode[];
+}
+
+export interface TsAstObjectLiteralExpression extends TsAstNode {
+  readonly properties: readonly TsAstNode[];
+}
+
+interface TsAstPropertyAssignment extends TsAstNode {
+  readonly name: TsAstNode;
+  readonly initializer: TsAstNode;
+}
+
+interface TsAstShorthandPropertyAssignment extends TsAstNode {
+  readonly name: TsAstIdentifier;
+}
+
+interface TsAstSpreadAssignment extends TsAstNode {
+  readonly expression: TsAstNode;
+}
+
+interface TsAstComputedPropertyName extends TsAstNode {
+  readonly expression: TsAstNode;
+}
+
+export interface TsAstArrayLiteralExpression extends TsAstNode {
+  readonly elements: readonly TsAstNode[];
+}
+
+interface TsAstSpreadElement extends TsAstNode {
+  readonly expression: TsAstNode;
+}
+
+interface TsAstVariableDeclaration extends TsAstNode {
+  readonly name: TsAstNode;
+  readonly initializer?: TsAstNode;
+}
+
+interface TsAstVariableDeclarationList extends TsAstNode {
+  readonly flags: number;
+  readonly declarations: readonly TsAstVariableDeclaration[];
+}
+
+interface TsAstVariableStatement extends TsAstNode {
+  readonly declarationList: TsAstVariableDeclarationList;
+}
+
+interface TsAstFunctionDeclaration extends TsAstNode {
+  readonly name?: TsAstIdentifier;
+  readonly body?: TsAstNode;
+}
+
+interface TsAstWrappedExpression extends TsAstNode {
+  readonly expression: TsAstNode;
+}
+
+interface TsAstBinaryExpression extends TsAstNode {
+  readonly left: TsAstNode;
+  readonly operatorToken: TsAstNode;
+  readonly right: TsAstNode;
+}
+
+interface TsAstClassDeclaration extends TsAstNode {
+  readonly name?: TsAstIdentifier;
+  readonly modifiers?: readonly TsAstNode[];
+  readonly members: readonly TsAstNode[];
+}
+
+interface TsAstMethodDeclaration extends TsAstNode {
+  readonly name: TsAstNode;
+  readonly modifiers?: readonly TsAstNode[];
+  readonly type?: TsAstNode;
+  readonly body?: TsAstNode;
+}
+
+interface TsAstPropertyDeclaration extends TsAstNode {
+  readonly name: TsAstNode;
+  readonly modifiers?: readonly TsAstNode[];
+}
+
+interface TsAstConstructorDeclaration extends TsAstNode {
+  readonly modifiers?: readonly TsAstNode[];
+}
+
+interface TsAstSetAccessorDeclaration extends TsAstNode {
+  readonly modifiers?: readonly TsAstNode[];
+}
+
+export interface TsAstLike {
+  readonly ScriptTarget: { readonly Latest: number };
+  readonly NodeFlags: { readonly Const: number };
+  readonly SyntaxKind: {
+    readonly ExportKeyword: number;
+    readonly DefaultKeyword: number;
+    readonly PrivateKeyword: number;
+    readonly ProtectedKeyword: number;
+    readonly ReadonlyKeyword: number;
+    readonly StaticKeyword: number;
+    readonly EqualsToken: number;
+    readonly FirstCompoundAssignment: number;
+    readonly LastCompoundAssignment: number;
+    readonly ThisKeyword: number;
+    readonly ThrowStatement: number;
+    readonly FunctionDeclaration: number;
+    readonly FunctionExpression: number;
+    readonly ArrowFunction: number;
+    readonly ClassDeclaration: number;
+    readonly MethodDeclaration: number;
+    readonly GetAccessor: number;
+    readonly SetAccessor: number;
+    readonly Block: number;
+  };
+  createSourceFile(
+    fileName: string,
+    sourceText: string,
+    languageVersion: number,
+    setParentNodes?: boolean
+  ): TsAstSourceFile;
+  forEachChild<T>(node: TsAstNode, cbNode: (node: TsAstNode) => T | undefined): T | undefined;
+  isCallExpression(node: TsAstNode): node is TsAstCallExpression;
+  isPropertyAccessExpression(node: TsAstNode): node is TsAstPropertyAccessExpression;
+  isIdentifier(node: TsAstNode): node is TsAstIdentifier;
+  isStringLiteral(node: TsAstNode): node is TsAstLiteralLike;
+  isNoSubstitutionTemplateLiteral(node: TsAstNode): node is TsAstLiteralLike;
+  isNumericLiteral(node: TsAstNode): node is TsAstLiteralLike;
+  isComputedPropertyName(node: TsAstNode): node is TsAstComputedPropertyName;
+  isObjectLiteralExpression(node: TsAstNode): node is TsAstObjectLiteralExpression;
+  isPropertyAssignment(node: TsAstNode): node is TsAstPropertyAssignment;
+  isShorthandPropertyAssignment(node: TsAstNode): node is TsAstShorthandPropertyAssignment;
+  isSpreadAssignment(node: TsAstNode): node is TsAstSpreadAssignment;
+  isArrayLiteralExpression(node: TsAstNode): node is TsAstArrayLiteralExpression;
+  isSpreadElement(node: TsAstNode): node is TsAstSpreadElement;
+  isVariableStatement(node: TsAstNode): node is TsAstVariableStatement;
+  isFunctionDeclaration(node: TsAstNode): node is TsAstFunctionDeclaration;
+  isParenthesizedExpression(node: TsAstNode): node is TsAstWrappedExpression;
+  isAsExpression(node: TsAstNode): node is TsAstWrappedExpression;
+  isSatisfiesExpression?(node: TsAstNode): node is TsAstWrappedExpression;
+  isNonNullExpression(node: TsAstNode): node is TsAstWrappedExpression;
+  isTypeAssertionExpression(node: TsAstNode): node is TsAstWrappedExpression;
+  isThrowStatement(node: TsAstNode): boolean;
+  isClassDeclaration(node: TsAstNode): node is TsAstClassDeclaration;
+  isMethodDeclaration(node: TsAstNode): node is TsAstMethodDeclaration;
+  isPropertyDeclaration(node: TsAstNode): node is TsAstPropertyDeclaration;
+  isConstructorDeclaration(node: TsAstNode): node is TsAstConstructorDeclaration;
+  isSetAccessorDeclaration(node: TsAstNode): node is TsAstSetAccessorDeclaration;
+  isBinaryExpression(node: TsAstNode): node is TsAstBinaryExpression;
+}
+
+/** 1-based line number of an AST node inside `sourceFile`. */
+export function tsAstNodeLine(sourceFile: TsAstSourceFile, node: TsAstNode): number {
+  const pos = typeof node.getStart === 'function' ? node.getStart(sourceFile) : node.pos ?? 0;
+  return sourceFile.getLineAndCharacterOfPosition(pos).line + 1;
+}
+
+/** Unwrap parens, `as`, `satisfies`, `!`, `<T>x`, and `Object.freeze(x)`. */
+export function unwrapTsAstExpression(ts: TsAstLike, node: TsAstNode): TsAstNode {
+  let current = node;
+  for (let depth = 0; depth < 16; depth += 1) {
+    if (
+      ts.isParenthesizedExpression(current) ||
+      ts.isAsExpression(current) ||
+      ts.isNonNullExpression(current) ||
+      ts.isTypeAssertionExpression(current) ||
+      (typeof ts.isSatisfiesExpression === 'function' && ts.isSatisfiesExpression(current))
+    ) {
+      current = current.expression;
+      continue;
+    }
+    if (
+      ts.isCallExpression(current) &&
+      ts.isPropertyAccessExpression(current.expression) &&
+      ts.isIdentifier(current.expression.expression) &&
+      current.expression.expression.text === 'Object' &&
+      current.expression.name.text === 'freeze' &&
+      current.arguments.length >= 1
+    ) {
+      current = current.arguments[0]!;
+      continue;
+    }
+    break;
+  }
+  return current;
+}
+
+/** Property key name for an identifier, string/template/numeric literal, or static computed key. */
+export function tsAstPropertyKeyName(ts: TsAstLike, nameNode: TsAstNode): string | null {
+  if (
+    ts.isIdentifier(nameNode) ||
+    ts.isStringLiteral(nameNode) ||
+    ts.isNoSubstitutionTemplateLiteral(nameNode) ||
+    ts.isNumericLiteral(nameNode)
+  ) {
+    return nameNode.text;
+  }
+  if (ts.isComputedPropertyName(nameNode)) {
+    const inner = unwrapTsAstExpression(ts, nameNode.expression);
+    if (
+      ts.isStringLiteral(inner) ||
+      ts.isNoSubstitutionTemplateLiteral(inner) ||
+      ts.isNumericLiteral(inner)
+    ) {
+      return inner.text;
+    }
+  }
+  return null;
+}

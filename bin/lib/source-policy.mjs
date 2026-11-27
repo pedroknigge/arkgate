@@ -92,3 +92,87 @@ export function classifyPublishFacts(facts) {
     }
     return findings;
 }
+/** Intent prefixes are short tokens (`Domain.`, `Application.`). Bound the scan. */
+const INTENT_PREFIX_SCAN_LIMIT = 64;
+/**
+ * Strip trailing `.` without a regex. `\.+$` on config strings is CodeQL
+ * js/polynomial-redos (backtracking on long runs of `.`). Linear walk is enough.
+ */
+function stripTrailingDots(value) {
+    let end = value.length;
+    while (end > 0 && value.charCodeAt(end - 1) === 46) {
+        end -= 1;
+    }
+    return end === value.length ? value : value.slice(0, end);
+}
+function normalizeIntentPrefix(prefix) {
+    const trimmed = prefix.trim();
+    const bounded = trimmed.length > INTENT_PREFIX_SCAN_LIMIT
+        ? trimmed.slice(0, INTENT_PREFIX_SCAN_LIMIT)
+        : trimmed;
+    return stripTrailingDots(bounded);
+}
+/**
+ * Canonical Domain-role layer predicate shared by ArkRun, ArkOrder, and ArkRules.
+ * Start-anchored domain/entity/aggregate (unanchored "model" would misclassify
+ * ReportingReadModels), or a `Domain.` intentPrefix.
+ */
+export function isDomainRoleLayer(layer, intentPrefixes = []) {
+    const name = layer.trim();
+    if (/^domain(?:model)?$/i.test(name) || /^domain(?=[A-Z_\-\s])/i.test(name))
+        return true;
+    if (/^(?:entit(?:y|ies)|aggregates?)(?:$|(?=[A-Z_\-\s]))/i.test(name))
+        return true;
+    return intentPrefixes.some((prefix) => {
+        const normalized = normalizeIntentPrefix(prefix);
+        return normalized === 'Domain' || normalized.startsWith('Domain.');
+    });
+}
+/** 1-based line number of an AST node inside `sourceFile`. */
+export function tsAstNodeLine(sourceFile, node) {
+    const pos = typeof node.getStart === 'function' ? node.getStart(sourceFile) : node.pos ?? 0;
+    return sourceFile.getLineAndCharacterOfPosition(pos).line + 1;
+}
+/** Unwrap parens, `as`, `satisfies`, `!`, `<T>x`, and `Object.freeze(x)`. */
+export function unwrapTsAstExpression(ts, node) {
+    let current = node;
+    for (let depth = 0; depth < 16; depth += 1) {
+        if (ts.isParenthesizedExpression(current) ||
+            ts.isAsExpression(current) ||
+            ts.isNonNullExpression(current) ||
+            ts.isTypeAssertionExpression(current) ||
+            (typeof ts.isSatisfiesExpression === 'function' && ts.isSatisfiesExpression(current))) {
+            current = current.expression;
+            continue;
+        }
+        if (ts.isCallExpression(current) &&
+            ts.isPropertyAccessExpression(current.expression) &&
+            ts.isIdentifier(current.expression.expression) &&
+            current.expression.expression.text === 'Object' &&
+            current.expression.name.text === 'freeze' &&
+            current.arguments.length >= 1) {
+            current = current.arguments[0];
+            continue;
+        }
+        break;
+    }
+    return current;
+}
+/** Property key name for an identifier, string/template/numeric literal, or static computed key. */
+export function tsAstPropertyKeyName(ts, nameNode) {
+    if (ts.isIdentifier(nameNode) ||
+        ts.isStringLiteral(nameNode) ||
+        ts.isNoSubstitutionTemplateLiteral(nameNode) ||
+        ts.isNumericLiteral(nameNode)) {
+        return nameNode.text;
+    }
+    if (ts.isComputedPropertyName(nameNode)) {
+        const inner = unwrapTsAstExpression(ts, nameNode.expression);
+        if (ts.isStringLiteral(inner) ||
+            ts.isNoSubstitutionTemplateLiteral(inner) ||
+            ts.isNumericLiteral(inner)) {
+            return inner.text;
+        }
+    }
+    return null;
+}

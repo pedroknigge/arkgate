@@ -10,6 +10,7 @@
 
 import { findClassDeclarations, maskStringsAndComments, scanClassMembers } from './class-source-scan.mjs';
 import { sourceHasPersistenceWrite, sourceHasTaggedSqlWrite, sourceImportsPersistenceDriverText, } from './persistence-write-hint.mjs';
+import { isDomainRoleLayer, tsAstPropertyKeyName, unwrapTsAstExpression, } from './source-policy.mjs';
 /** Keep in lockstep with arkRulesTypes.ARK_RULE_TIER2_SENSOR_IDS (self-contained for CLI gen). */
 const ARK_RULE_TIER2_SENSOR_IDS = ['no-anemic-model'];
 /**
@@ -392,42 +393,9 @@ export function collectEmptyAppliesToFindings(arkRules, files) {
         a.arkruleId.localeCompare(b.arkruleId) ||
         a.message.localeCompare(b.message));
 }
-/** Intent prefixes are short tokens (`Domain.`, `Application.`). Bound the scan. */
-const INTENT_PREFIX_SCAN_LIMIT = 64;
-/**
- * Strip trailing `.` without a regex. `\.+$` on config strings is CodeQL
- * js/polynomial-redos (backtracking on long runs of `.`). Linear walk is enough.
- */
-function stripTrailingDots(value) {
-    let end = value.length;
-    while (end > 0 && value.charCodeAt(end - 1) === 46) {
-        end -= 1;
-    }
-    return end === value.length ? value : value.slice(0, end);
-}
-function normalizeIntentPrefix(prefix) {
-    const trimmed = prefix.trim();
-    const bounded = trimmed.length > INTENT_PREFIX_SCAN_LIMIT
-        ? trimmed.slice(0, INTENT_PREFIX_SCAN_LIMIT)
-        : trimmed;
-    return stripTrailingDots(bounded);
-}
-function layerNameLooksDomain(layer) {
-    const lower = layer.toLowerCase();
-    return (lower.includes('domain') ||
-        lower.includes('entity') ||
-        lower.includes('aggregate') ||
-        lower.includes('model'));
-}
-function ownsDomainIntent(intentPrefixes) {
-    return intentPrefixes.some((prefix) => {
-        const normalized = normalizeIntentPrefix(prefix);
-        return normalized === 'Domain' || normalized.startsWith('Domain.');
-    });
-}
-/** Domain-role house: name or intentPrefixes. Keep aligned with rulesInventory. */
+/** Domain-role house: delegates to canonical sourcePolicy.isDomainRoleLayer. */
 export function isDomainRoleLayerName(layer, intentPrefixes = []) {
-    return layerNameLooksDomain(layer) || ownsDomainIntent(intentPrefixes);
+    return isDomainRoleLayer(layer, intentPrefixes);
 }
 /**
  * §2 catalog residual — ArkRules is on, Domain has code, invariants[] is empty.
@@ -553,23 +521,204 @@ export function buildArkRuleFileHints(fileContents, resolvedImportsByFile) {
     return out;
 }
 const CONTROL_FLOW_METHOD_NAMES = new Set(['if', 'match', 'when']);
+const DOMAIN_INVARIANT_WORD_SET = new Set(DOMAIN_INVARIANT_WORDS);
+const EVENTS_ARRAY_PROP_RE = /^_?(?:pendingEvents|domainEvents|uncommittedEvents|recordedEvents)$/;
+const STATIC_FACTORY_NAME_RE = /^(?:create|of|from|parse|build|make|new)$/;
+function hasAstModifier(node, kind) {
+    return Array.isArray(node.modifiers) && node.modifiers.some((mod) => mod.kind === kind);
+}
+function isNestedFunctionOrClassBoundary(ts, node) {
+    const k = node.kind;
+    return (k === ts.SyntaxKind.ClassDeclaration ||
+        k === ts.SyntaxKind.FunctionDeclaration ||
+        k === ts.SyntaxKind.FunctionExpression ||
+        k === ts.SyntaxKind.MethodDeclaration ||
+        k === ts.SyntaxKind.GetAccessor ||
+        k === ts.SyntaxKind.SetAccessor);
+}
+function isAssignmentOperator(ts, kind) {
+    return (kind === ts.SyntaxKind.EqualsToken ||
+        (kind >= ts.SyntaxKind.FirstCompoundAssignment && kind <= ts.SyntaxKind.LastCompoundAssignment));
+}
+function methodBodyMutatesThisAst(ts, body, methodName) {
+    let mutates = false;
+    const visit = (node) => {
+        if (mutates)
+            return;
+        if (node !== body && isNestedFunctionOrClassBoundary(ts, node))
+            return;
+        if (ts.isBinaryExpression(node) && isAssignmentOperator(ts, node.operatorToken.kind)) {
+            const left = unwrapTsAstExpression(ts, node.left);
+            if (ts.isPropertyAccessExpression(left) &&
+                left.expression.kind === ts.SyntaxKind.ThisKeyword) {
+                const right = unwrapTsAstExpression(ts, node.right);
+                const isEmptyArrayReset = node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
+                    ts.isArrayLiteralExpression(right) &&
+                    right.elements.length === 0 &&
+                    (EVENTS_ARRAY_PROP_RE.test(left.name.text) || /^pullEvents$/i.test(methodName));
+                if (!isEmptyArrayReset) {
+                    mutates = true;
+                    return;
+                }
+            }
+        }
+        ts.forEachChild(node, visit);
+    };
+    visit(body);
+    return mutates;
+}
 /**
- * Lightweight class-shape extraction from TypeScript source text (no compiler).
- * Conservative: prefers false negatives over false positives for mutability.
- * Tooling may replace with TypeScript-API facts; sensors consume the same shape.
- *
- * The header and body are walked by the shared tokenizer (classSourceScan):
- * type parameters (`class Box<T>`), generic `extends` / `implements` clauses, and
- * braces inside strings, comments, or template literals are handled. A class whose
- * header or body cannot be walked is still reported, with a truncation mark, so
- * enforced sensors say so instead of passing in silence.
+ * AST-backed verification for `domain-event-on-mutation`: requires a real CallExpression
+ * naming a domain invariant/publish verb or `this.<events>.push(...)`, or a real
+ * ThrowStatement inside the method's own body (rejects `const record = 1`, comments,
+ * strings, and uninvoked nested closures).
+ */
+function methodBodyHasGuardOrPublishAst(ts, body) {
+    let found = false;
+    const visit = (node) => {
+        if (found)
+            return;
+        if (node !== body &&
+            (isNestedFunctionOrClassBoundary(ts, node) || node.kind === ts.SyntaxKind.ArrowFunction)) {
+            return;
+        }
+        if (ts.isThrowStatement(node) || node.kind === ts.SyntaxKind.ThrowStatement) {
+            found = true;
+            return;
+        }
+        if (ts.isCallExpression(node)) {
+            const callee = unwrapTsAstExpression(ts, node.expression);
+            if (ts.isIdentifier(callee) && DOMAIN_INVARIANT_WORD_SET.has(callee.text)) {
+                found = true;
+                return;
+            }
+            if (ts.isPropertyAccessExpression(callee)) {
+                if (DOMAIN_INVARIANT_WORD_SET.has(callee.name.text)) {
+                    found = true;
+                    return;
+                }
+                if (callee.name.text === 'push') {
+                    const receiver = unwrapTsAstExpression(ts, callee.expression);
+                    if (ts.isPropertyAccessExpression(receiver) &&
+                        receiver.expression.kind === ts.SyntaxKind.ThisKeyword &&
+                        EVENTS_ARRAY_PROP_RE.test(receiver.name.text)) {
+                        found = true;
+                        return;
+                    }
+                }
+            }
+        }
+        ts.forEachChild(node, visit);
+    };
+    visit(body);
+    return found;
+}
+function extractClassShapesWithAst(file, ts, sourceFile) {
+    const shapes = [];
+    const visit = (node) => {
+        if (ts.isClassDeclaration(node)) {
+            const isExported = hasAstModifier(node, ts.SyntaxKind.ExportKeyword) &&
+                !hasAstModifier(node, ts.SyntaxKind.DefaultKeyword);
+            if (isExported && node.name) {
+                let publicMutableFieldCount = 0;
+                let hasPublicSetters = false;
+                let hasPublicConstructor = false;
+                let hasStaticFactory = false;
+                let methodCount = 0;
+                const mutatingMethods = [];
+                for (const member of node.members) {
+                    if (ts.isPropertyDeclaration(member)) {
+                        if (!hasAstModifier(member, ts.SyntaxKind.PrivateKeyword) &&
+                            !hasAstModifier(member, ts.SyntaxKind.ProtectedKeyword) &&
+                            !hasAstModifier(member, ts.SyntaxKind.ReadonlyKeyword) &&
+                            !hasAstModifier(member, ts.SyntaxKind.StaticKeyword)) {
+                            publicMutableFieldCount += 1;
+                        }
+                        continue;
+                    }
+                    if (ts.isSetAccessorDeclaration(member)) {
+                        if (!hasAstModifier(member, ts.SyntaxKind.PrivateKeyword) &&
+                            !hasAstModifier(member, ts.SyntaxKind.ProtectedKeyword)) {
+                            hasPublicSetters = true;
+                        }
+                        continue;
+                    }
+                    if (ts.isConstructorDeclaration(member)) {
+                        methodCount += 1;
+                        if (!hasAstModifier(member, ts.SyntaxKind.PrivateKeyword) &&
+                            !hasAstModifier(member, ts.SyntaxKind.ProtectedKeyword)) {
+                            hasPublicConstructor = true;
+                        }
+                        continue;
+                    }
+                    if (ts.isMethodDeclaration(member)) {
+                        methodCount += 1;
+                        const memberName = tsAstPropertyKeyName(ts, member.name);
+                        const isStatic = hasAstModifier(member, ts.SyntaxKind.StaticKeyword);
+                        if (isStatic) {
+                            if (memberName && STATIC_FACTORY_NAME_RE.test(memberName)) {
+                                hasStaticFactory = true;
+                            }
+                            else if (member.type) {
+                                const typeText = member.type.getText?.(sourceFile)?.trim() ?? '';
+                                if (/^[A-Za-z_]/.test(typeText))
+                                    hasStaticFactory = true;
+                            }
+                            continue;
+                        }
+                        if (!memberName || !member.body)
+                            continue;
+                        if (memberName === 'constructor' || CONTROL_FLOW_METHOD_NAMES.has(memberName)) {
+                            continue;
+                        }
+                        if (!methodBodyMutatesThisAst(ts, member.body, memberName))
+                            continue;
+                        mutatingMethods.push({
+                            name: memberName,
+                            referencesGuardOrPublish: methodBodyHasGuardOrPublishAst(ts, member.body),
+                        });
+                    }
+                }
+                const hasPublicMutableFields = publicMutableFieldCount > 0;
+                const dataOnly = methodCount <= 1 && publicMutableFieldCount >= 2 && hasPublicMutableFields;
+                shapes.push({
+                    file,
+                    className: node.name.text,
+                    exported: true,
+                    hasPublicMutableFields,
+                    hasPublicSetters,
+                    hasPublicConstructor,
+                    hasStaticFactory,
+                    mutatingMethods,
+                    dataOnly,
+                });
+            }
+        }
+        ts.forEachChild(node, visit);
+    };
+    visit(sourceFile);
+    return shapes;
+}
+/**
+ * Class-shape extraction from TypeScript source text.
+ * Uses real TypeScript AST verification when `options.ts` is supplied (and the file
+ * parses cleanly); falls back to the conservative lexical scanner when `ts` is absent
+ * or the file has parse diagnostics (preserving `truncatedUntil` reporting).
  *
  * Limitation (AR05/AR06): only `export class` / `export abstract class` forms.
  * `export default class`, re-exported classes, and non-exported aggregates are
  * invisible — enforced structure sensors stay silent (false negative). Silence
  * is never proof of compliance.
  */
-export function extractClassShapesFromSource(file, content) {
+export function extractClassShapesFromSource(file, content, options = {}) {
+    const ts = options.ts;
+    if (ts && typeof ts.createSourceFile === 'function') {
+        const sourceFile = options.sourceFile ?? ts.createSourceFile(file, content, ts.ScriptTarget.Latest, true);
+        const hasParseErrors = Array.isArray(sourceFile.parseDiagnostics) && sourceFile.parseDiagnostics.length > 0;
+        if (!hasParseErrors) {
+            return extractClassShapesWithAst(file, ts, sourceFile);
+        }
+    }
     const shapes = [];
     for (const decl of findClassDeclarations(content, { exportedOnly: true })) {
         const className = decl.name;

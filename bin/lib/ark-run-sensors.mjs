@@ -11,6 +11,7 @@
 import { extractArkRunImportedConstructorNamesFromSource, extractArkRunKernelCallsFromSource, extractArkRunManagedNewsFromSource, extractArkRunValueImportDependenciesFromSource, isArkRunKernelModuleSpecifier, isArkRunTransportBypassSpecifier, } from './ark-run-facts.mjs';
 import { extraMergeTeethAllowed, } from './extra-merge-teeth.mjs';
 import { deterministicNextAction } from './remediation.mjs';
+import { isDomainRoleLayer } from './source-policy.mjs';
 export const ARKRUN_TIER1_SENSOR_IDS = [
     'arkrun-missing-root',
     'arkrun-kernel-in-domain',
@@ -43,18 +44,6 @@ export const ARKRUN_RULE_IDS = {
     'arkrun-transport-bypass': 'ARKRUN_TRANSPORT_BYPASS',
 };
 export const ARKRUN_INTERACTION_NAME_INCOMPLETE = 'ARKRUN_INTERACTION_NAME_INCOMPLETE';
-function isDomainRoleLayer(layer, intentPrefixes = []) {
-    const name = layer.trim();
-    // Start-anchored Domain/entity/aggregate — unanchored "model" matches ReportingReadModels.
-    if (/^domain(?:model)?$/i.test(name) || /^domain(?=[A-Z_\-\s])/i.test(name))
-        return true;
-    if (/^(?:entit(?:y|ies)|aggregates?)(?:$|(?=[A-Z_\-\s]))/i.test(name))
-        return true;
-    return intentPrefixes.some((prefix) => {
-        const normalized = prefix.trim().replace(/\.+$/, '');
-        return normalized === 'Domain' || normalized.startsWith('Domain.');
-    });
-}
 function compareFindings(left, right) {
     return (left.file.localeCompare(right.file) ||
         left.ruleId.localeCompare(right.ruleId) ||

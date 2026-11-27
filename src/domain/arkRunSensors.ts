@@ -18,6 +18,7 @@ import {
   type ExtraMergeTeethClassification,
 } from './extraMergeTeeth';
 import { deterministicNextAction } from './remediation';
+import { isDomainRoleLayer } from './sourcePolicy';
 import type {
   ResolvedArkRunCompositionRootHitFact,
   ResolvedArkRunDeclarationFact,
@@ -102,17 +103,6 @@ export type EvaluateArkRunSensorsResult = {
   findings: ArkRunSensorFinding[];
   completenessReasons: ResolvedFactsReason[];
 };
-
-function isDomainRoleLayer(layer: string, intentPrefixes: readonly string[] = []): boolean {
-  const name = layer.trim();
-  // Start-anchored Domain/entity/aggregate — unanchored "model" matches ReportingReadModels.
-  if (/^domain(?:model)?$/i.test(name) || /^domain(?=[A-Z_\-\s])/i.test(name)) return true;
-  if (/^(?:entit(?:y|ies)|aggregates?)(?:$|(?=[A-Z_\-\s]))/i.test(name)) return true;
-  return intentPrefixes.some((prefix) => {
-    const normalized = prefix.trim().replace(/\.+$/, '');
-    return normalized === 'Domain' || normalized.startsWith('Domain.');
-  });
-}
 
 function compareFindings(left: ArkRunSensorFinding, right: ArkRunSensorFinding): number {
   return (

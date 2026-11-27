@@ -106,7 +106,7 @@ const TS_CLASS_SHAPE_FILE = /\.(tsx?|mts|cts)$/i;
  * class-shape extraction, and per-file hints ark-check runs, pinned to this one file.
  * Only enforced (failsStrict) findings block; advisory rules stay CI/doctor warnings.
  */
-function arkRulesSnippetViolations(source, context = {}) {
+function arkRulesSnippetViolations(source, context = {}, ts = null) {
   const arkRules = context.arkRules;
   const file = context.relFile;
   if (!arkRules || !(arkRules.structure?.length > 0) || typeof file !== 'string' || !file) {
@@ -120,7 +120,7 @@ function arkRulesSnippetViolations(source, context = {}) {
   let classShapes = [];
   if (TS_CLASS_SHAPE_FILE.test(file)) {
     try {
-      classShapes = extractClassShapesFromSource(file, source);
+      classShapes = extractClassShapesFromSource(file, source, ts ? { ts } : undefined);
     } catch {
       // Same as the CI resolver: shape extraction never fails the run.
       classShapes = [];
@@ -147,7 +147,7 @@ function arkRulesSnippetViolations(source, context = {}) {
 }
 
 /** ArkOrder editor sensors (generic update, kernel-in-domain, ξ writes) on one source. */
-function arkOrderSnippetViolations(source, context = {}) {
+function arkOrderSnippetViolations(source, context = {}, ts = null) {
   const arkOrder = context.arkOrder;
   const file = context.relFile;
   if (!arkOrder || typeof file !== 'string' || !file) return [];
@@ -162,6 +162,7 @@ function arkOrderSnippetViolations(source, context = {}) {
     fromLayer,
     intentPrefixes: layerMeta?.intentPrefixes ?? [],
     ...(context.classification ? { classification: context.classification } : {}),
+    ...(ts ? { ts } : {}),
   })
     .filter((finding) => finding.failsStrict)
     .map((finding) => ({
@@ -203,12 +204,12 @@ function contractLoadViolations(context = {}) {
  * Extras (ArkRules structure + ArkOrder) run only on files CI would scan. A file
  * outside include / excluded is never judged by these planes in CI either.
  */
-function extraPlaneSnippetViolations(source, context = {}) {
+function extraPlaneSnippetViolations(source, context = {}, ts = null) {
   if (context.inScope === false) return [];
   return [
     ...contractLoadViolations(context),
-    ...arkRulesSnippetViolations(source, context),
-    ...arkOrderSnippetViolations(source, context),
+    ...arkRulesSnippetViolations(source, context, ts),
+    ...arkOrderSnippetViolations(source, context, ts),
   ];
 }
 
@@ -288,7 +289,7 @@ function detectImmediateCycleViolations(ts, parsed, context = {}, existingViolat
 export function validateSnippetAnalysis({ gate, ts, source, context = {} }) {
   const observed = gate.validate(source, context);
   const arkRunViolations = arkRunSnippetViolations(source, context);
-  const extraViolations = extraPlaneSnippetViolations(source, context);
+  const extraViolations = extraPlaneSnippetViolations(source, context, ts);
   const base = {
     valid:
       Boolean(observed.lexicalValid ?? observed.valid) &&

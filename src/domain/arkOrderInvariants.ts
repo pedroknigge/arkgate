@@ -89,6 +89,14 @@ export function assertXiKeyCap(xi: Record<string, unknown>, maxXiKeys: number): 
 
 export function assertXiSchema(xi: XiRecord, schema: XiSchema | undefined): void {
   if (!schema) return;
+  for (const reqKey of schema.required ?? []) {
+    if (!Object.prototype.hasOwnProperty.call(xi, reqKey) || xi[reqKey] === undefined) {
+      throw new ArkOrderError(
+        'ARKORDER_SCHEMA',
+        `ξ is missing required key ${JSON.stringify(reqKey)}`
+      );
+    }
+  }
   const properties = schema.properties ?? {};
   const additional = schema.additionalProperties !== false ? true : false;
   for (const key of Object.keys(xi)) {
@@ -450,7 +458,7 @@ export function proposePatternChange(input: {
     merged[key] = value;
   }
   const candidate = successorRelease(input, merged);
-  if (candidate.hash === input.current.hash) {
+  if (xiRecordsEqual(candidate.xi, input.current.xi)) {
     throw new ArkOrderError(
       'ARKORDER_EMPTY_BLAST',
       'delta does not change ξ; that is not a pattern change'
