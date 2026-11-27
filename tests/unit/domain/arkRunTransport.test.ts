@@ -47,12 +47,25 @@ describe('RN11 ArkRun transport plan (ADR 0024)', () => {
     expect(blocking.notifySubscribers).toBe(true);
   });
 
-  it('falls back broker to local when no adapter is bound', () => {
+  it('falls back broker to local when no adapter is bound and honors ephemeral', () => {
     const fallback = resolveArkRunSendPlan({ transport: 'broker', brokerBound: false });
     expect(fallback.deliveredVia).toBe('local');
     expect(fallback.fallbackToLocal).toBe(true);
     expect(fallback.notifySubscribers).toBe(true);
-    expect(fallback.awaitHandlers).toBe(false);
+    expect(fallback.ephemeral).toBe(true);
+    expect(fallback.awaitHandlers).toBe(true);
+    expect(fallback.awaitHandoff).toBe(true);
+
+    const fireAndForgetFallback = resolveArkRunSendPlan({
+      transport: 'broker',
+      ephemeral: false,
+      brokerBound: false,
+    });
+    expect(fireAndForgetFallback.deliveredVia).toBe('local');
+    expect(fireAndForgetFallback.fallbackToLocal).toBe(true);
+    expect(fireAndForgetFallback.notifySubscribers).toBe(true);
+    expect(fireAndForgetFallback.awaitHandlers).toBe(false);
+    expect(fireAndForgetFallback.awaitHandoff).toBe(false);
   });
 
   it('hands off to broker only when an adapter is bound', () => {

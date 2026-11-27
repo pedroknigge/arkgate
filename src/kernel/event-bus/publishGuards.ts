@@ -4,7 +4,10 @@
  */
 import type { DomainEvent } from '../../domain/types';
 import type { IntentRegistry } from '../intent/IntentRegistry';
-import type { EventContractRegistry } from '../event-contracts';
+import type {
+  EventContractRegistry,
+  EventContractValidationResult,
+} from '../event-contracts';
 import { validateIntentName } from '../intent/validateIntentName';
 import {
   UnregisteredIntentError,
@@ -63,11 +66,12 @@ export function assertContractAllowed(
     eventContracts?: EventContractRegistry;
     strictEventContracts: boolean;
   }
-): void {
-  if (!options.eventContracts) return;
+): EventContractValidationResult | undefined {
+  if (!options.eventContracts) return undefined;
   const result = options.eventContracts.validate(event);
 
   if (!result.ok && (options.strictEventContracts || result.contract)) {
     throw new EventContractViolationError(event.intent, result.issues);
   }
+  return result;
 }

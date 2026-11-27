@@ -22,6 +22,7 @@ import type {
   ObservedLayerFlowMode,
   PublishedEventRecord,
   TraceRecord,
+  TraceSink,
   Unsubscribe,
 } from './types';
 import type { IntentRegistry } from '../intent/IntentRegistry';
@@ -48,6 +49,7 @@ import { enforcePublishPolicy } from './publishPolicy';
 import {
   appendTrace as appendTraceToBuffers,
   recordAudit as recordAuditToBuffers,
+  recordContractDeprecated,
   recordHandoffFailure,
   recordRawPublishDiagnostic,
   recordSuccessfulPublish,
@@ -227,10 +229,17 @@ export class EventBusImpl<Context = unknown> implements EventBus {
     });
 
     // 3. Contract again after interceptors
-    assertContractAllowed(event as DomainEvent, {
+    const contractValidation = assertContractAllowed(event as DomainEvent, {
       eventContracts: this.eventContracts,
       strictEventContracts: this.strictEventContracts,
     });
+    if (contractValidation?.warnings && contractValidation.warnings.length > 0) {
+      await recordContractDeprecated(
+        this.recording,
+        event as DomainEvent,
+        contractValidation.warnings
+      );
+    }
 
     // 4. Observed layer flow BEFORE graph edge registration
     await assertObservedLayerFlowAllowed(event as DomainEvent, {
@@ -272,9 +281,29 @@ export class EventBusImpl<Context = unknown> implements EventBus {
     // 7. Handlers + onPublish hook
     const handlerWork = (async () => {
       if (notifySubscribers) {
-        await Promise.all(
-          matching.map((sub) => this.invokeHandler(sub, event as DomainEvent))
-        );
+        if (this.rethrowHandlerErrors) {
+          const settledHandlers = await Promise.allSettled(
+            matching.map((sub) => this.invokeHandler(sub, event as DomainEvent))
+          );
+          const failures = settledHandlers
+            .filter(
+              (result): result is PromiseRejectedResult => result.status === 'rejected'
+            )
+            .map((result) => result.reason);
+          if (failures.length === 1) {
+            throw failures[0];
+          }
+          if (failures.length > 1) {
+            throw new AggregateError(
+              failures,
+              `${failures.length} handlers failed for intent "${event.intent}".`
+            );
+          }
+        } else {
+          await Promise.all(
+            matching.map((sub) => this.invokeHandler(sub, event as DomainEvent))
+          );
+        }
       }
       if (runOnPublish && this.onPublish) {
         await this.safeHook(
@@ -478,6 +507,30 @@ export class EventBusImpl<Context = unknown> implements EventBus {
 
   clearTrace(): void {
     this.recording.trace.length = 0;
+  }
+
+  subscribeTrace(sink: TraceSink): Unsubscribe {
+    this.recording.traceSinks.push(sink);
+    let active = true;
+    return () => {
+      if (!active) return;
+      active = false;
+      const idx = this.recording.traceSinks.indexOf(sink);
+      if (idx >= 0) this.recording.traceSinks.splice(idx, 1);
+    };
+  }
+
+  listSubscribedIntents(): string[] {
+    return [...this.subscriptionsByIntent.keys()].sort();
+  }
+
+  /** Release all subscriptions, interceptors, and trace sinks for kernel teardown. */
+  dispose(): void {
+    this.subscriptions.length = 0;
+    this.subscriptionsByIntent.clear();
+    this.interceptors.length = 0;
+    this.interceptorsByIntent.clear();
+    this.recording.traceSinks.length = 0;
   }
 
   private appendTrace(record: TraceRecord): void {

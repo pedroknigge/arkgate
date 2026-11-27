@@ -1,4 +1,5 @@
 import type { ArkKernel } from '../runtime';
+import type { ArkRunComponentFactory } from '../runtime/componentRegistry';
 import type { ArkTestHarness, ArkTestSnapshot } from './types';
 import type { AuditQuery, AuditRecord } from '../audit';
 import type { DomainEvent } from '../../domain/types';
@@ -48,6 +49,13 @@ export function createArkTestHarness(kernel: ArkKernel): ArkTestHarness {
       kernel.eventBus.clearTrace();
       await kernel.auditTrail.clear();
       await kernel.outbox.clear();
+    },
+
+    override<T, Input = unknown>(
+      id: string,
+      factory: ArkRunComponentFactory<T, Input>
+    ): void {
+      kernel.replaceForTest(id, factory);
     },
   };
 }

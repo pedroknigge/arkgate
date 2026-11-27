@@ -25,7 +25,7 @@ function formatStandardSchemaPath(
 
 function actualType(value: unknown): EventSchemaFieldType {
   if (Array.isArray(value)) return 'array';
-  if (value === null) return 'object';
+  if (value === null) return 'null';
   const type = typeof value;
   if (type === 'string' || type === 'number' || type === 'boolean' || type === 'object') {
     return type;
@@ -44,6 +44,19 @@ function validateSchemaField(
   contract: EventContract,
   issues: EventContractIssue[]
 ): void {
+  if (value === null) {
+    if (fieldSchema.nullable || fieldSchema.type === 'null' || fieldSchema.type === 'unknown') {
+      return;
+    }
+    issues.push({
+      intent: contract.intent,
+      version: contract.version,
+      field: path,
+      message: `Expected ${fieldSchema.type}, received null.`,
+    });
+    return;
+  }
+
   const valueType = actualType(value);
 
   if (fieldSchema.type !== 'unknown' && valueType !== fieldSchema.type) {
@@ -152,6 +165,7 @@ export class EventContractRegistryImpl implements EventContractRegistry {
     const version = event.metadata.eventVersion;
     const contract = this.get(event.intent, version);
     const issues: EventContractIssue[] = [];
+    const warnings: EventContractIssue[] = [];
 
     if (!contract) {
       return {
@@ -165,11 +179,12 @@ export class EventContractRegistryImpl implements EventContractRegistry {
               : 'No event contract registered for intent.',
           },
         ],
+        warnings,
       };
     }
 
     if (contract.deprecated) {
-      issues.push({
+      warnings.push({
         intent: event.intent,
         version: contract.version,
         message:
@@ -180,7 +195,7 @@ export class EventContractRegistryImpl implements EventContractRegistry {
     }
 
     const payload =
-      event.payload != null && typeof event.payload === 'object'
+      event.payload != null && typeof event.payload === 'object' && !Array.isArray(event.payload)
         ? (event.payload as Record<string, unknown>)
         : undefined;
 
@@ -230,7 +245,7 @@ export class EventContractRegistryImpl implements EventContractRegistry {
       }
     }
 
-    return { ok: issues.length === 0, contract, issues };
+    return { ok: issues.length === 0, contract, issues, warnings };
   }
 
   clear(): void {

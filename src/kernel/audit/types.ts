@@ -4,6 +4,7 @@ export type AuditRecordType =
   | 'event.published'
   | 'event.rawPublish'
   | 'event.handoffFailed'
+  | 'event.contractDeprecated'
   | 'event.intercepted'
   | 'interceptor.error'
   | 'policy.softViolation'
@@ -19,7 +20,9 @@ export type AuditRecordType =
   | 'workflow.completed'
   | 'workflow.failed'
   | 'projection.applied'
-  | 'metadata.changed';
+  | 'metadata.changed'
+  | 'order.decision'
+  | 'order.restored';
 
 export interface AuditRecord {
   id: string;

@@ -29,10 +29,10 @@ export type ArkRunInformationPackageComponent = {
 };
 
 const ARK_RUN_DECISION_TAPE_RESIDUAL_KINDS = ['absorb', 'escalate_up', 'hold'] as const;
-type ArkRunDecisionTapeResidualKind = (typeof ARK_RUN_DECISION_TAPE_RESIDUAL_KINDS)[number];
+export type ArkRunDecisionTapeResidualKind = (typeof ARK_RUN_DECISION_TAPE_RESIDUAL_KINDS)[number];
 
 /** Additive Order residual tape (ADR 0034 D6). Not a bus. Not durable. */
-type ArkRunDecisionTapeRecord = {
+export type ArkRunDecisionTapeRecord = {
   xiHash: string;
   event: { kind: string; payload?: Record<string, string | number | boolean | null> };
   residual: {
@@ -146,7 +146,7 @@ function sanitizeTapePayload(
   return sanitizeMetadata(value);
 }
 
-function sanitizeDecisionTapeRecord(value: unknown): ArkRunDecisionTapeRecord | undefined {
+export function sanitizeDecisionTapeRecord(value: unknown): ArkRunDecisionTapeRecord | undefined {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) return undefined;
   const record = value as Record<string, unknown>;
   const xiHash = typeof record.xiHash === 'string' ? record.xiHash.trim() : '';

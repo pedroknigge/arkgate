@@ -3,6 +3,7 @@ import type { DomainEvent } from '../../domain/types';
 import type { ObservabilityDriftReport } from '../observability';
 import type { OutboxRecord, OutboxStatus } from '../outbox';
 import type { TraceRecord, TraceRecordType } from '../event-bus';
+import type { ArkRunComponentFactory } from '../runtime/componentRegistry';
 
 export interface ArkTestSnapshot {
   events: DomainEvent[];
@@ -20,4 +21,8 @@ export interface ArkTestHarness {
   observability(): ObservabilityDriftReport;
   snapshot(): Promise<ArkTestSnapshot>;
   clear(): Promise<void>;
+  override<T, Input = unknown>(
+    id: string,
+    factory: ArkRunComponentFactory<T, Input>
+  ): void;
 }

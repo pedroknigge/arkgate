@@ -8,21 +8,27 @@ import type { MetadataRegistry } from '../metadata';
 import type { ObservabilityReporter } from '../observability';
 import type { Policy, PolicyEngine } from '../policy';
 import type { ProjectionRegistry } from '../projections';
-import type { EventBus, EventPublisher, ObservedLayerFlowMode } from '../event-bus';
+import type {
+  EventBus,
+  EventPublisher,
+  ObservedLayerFlowMode,
+  TraceSink,
+  Unsubscribe,
+} from '../event-bus';
 import type { IntentCreator } from '../intent';
 import type { IntentName } from '../../domain/types';
 import type { EventBufferStore } from '../outbox';
-import type { WorkflowEngine } from '../workflow';
-import type { DependencyInformationPackage } from '../../domain/arkRunInformationPackage';
+import type { WorkflowEngine, WorkflowStore } from '../workflow';
+import type {
+  ArkRunDecisionTapeRecord,
+  DependencyInformationPackage,
+} from '../../domain/arkRunInformationPackage';
 import type { ArkRunGraph, ArkRunGraphQuery } from '../../domain/arkRunGraph';
 import type {
   ArkRunInspectorBind,
   ArkRunInspectorSnapshot,
 } from '../../domain/arkRunInspector';
-import type {
-  ArkRunRegisterOptions,
-  ArkRunRegistrationHandle,
-} from './componentRegistry';
+import type { ArkRunComponentContainer } from './componentRegistry';
 import type { ArkRunInspectorHandle, StartArkRunInspectorOptions } from './inspector';
 import type {
   ArkRunBrokerAdapter,
@@ -30,7 +36,7 @@ import type {
   ArkRunSendResult,
 } from './transport';
 
-export interface ArkKernel {
+export interface ArkKernel extends ArkRunComponentContainer {
   instanceId: string;
   profile: ArchitectureProfile;
   registry: IntentRegistry;
@@ -58,10 +64,12 @@ export interface ArkKernel {
     payload: P,
     options?: ArkRunSendOptions
   ): Promise<ArkRunSendResult>;
-  /** Handle is declaration metadata only; the factory never leaves the registry. */
-  register<T>(options: ArkRunRegisterOptions<T>): ArkRunRegistrationHandle;
-  resolve<T = unknown>(id: string): T;
-  resolveSingleton<T = unknown>(id: string): T;
+  /** Subscribe a real-time trace sink on the kernel event bus. */
+  subscribeTrace(sink: TraceSink): Unsubscribe;
+  /** Append a sanitized Order decision tape entry (bounded). */
+  recordDecisionTape(record: ArkRunDecisionTapeRecord, maxSize?: number): void;
+  /** Current bounded Order decision tape entries (defensive copy). */
+  getDecisionTape(): ArkRunDecisionTapeRecord[];
   /** Tooling snapshot of ids, lifetime, and declarations — never construction. */
   getDependencyInformationPackage(): DependencyInformationPackage;
   /**
@@ -80,6 +88,13 @@ export interface ArkKernel {
    * Loads HTTP only when called.
    */
   startInspector(options?: StartArkRunInspectorOptions): Promise<ArkRunInspectorHandle>;
+  /**
+   * Tear down kernel resources: unsubscribes broker.onInbound, stops any started
+   * inspectors, clears trace sinks, bus subscriptions, and pending timers.
+   */
+  dispose(): Promise<void>;
+  /** Alias for `dispose()`. */
+  close(): Promise<void>;
   syncGraph(): void;
   manifest(): ArkManifest;
 }
@@ -98,6 +113,8 @@ export interface CreateArkKernelOptions {
   eventBuffer?: EventBufferStore;
   /** @deprecated Use eventBuffer. */
   outbox?: EventBufferStore;
+  /** Optional workflow snapshot store (default: in-memory, not durable). */
+  workflowStore?: WorkflowStore;
   metadata?: MetadataRegistry;
   projections?: ProjectionRegistry;
   /**
@@ -106,9 +123,24 @@ export interface CreateArkKernelOptions {
    * first. Pass Infinity for unbounded retention (pre-1.6 behavior).
    */
   maxHistorySize?: number;
+  /**
+   * Maximum entries kept in the Order decision tape. Default: 500.
+   */
+  maxDecisionTapeSize?: number;
   autoApplyProjections?: boolean;
+  strictRegistry?: boolean;
+  validateIntentNaming?: boolean;
   strictEventContracts?: boolean;
   requireKnownSource?: boolean;
+  /** When true, rethrow subscriber handler errors (aggregated if multiple fail). */
+  rethrowHandlerErrors?: boolean;
+  /** Lightweight real-time trace sinks attached to the kernel event bus. */
+  traceSinks?: TraceSink[];
+  /**
+   * Allow `replaceForTest()` / `harness.override()` on this kernel instance.
+   * Default: false (disabled outside tests).
+   */
+  allowOverrides?: boolean;
   /**
    * Enforce observed producer→event layer flows against the profile at runtime.
    * Defaults to 'hard' when strict is true and 'off' when strict is false.

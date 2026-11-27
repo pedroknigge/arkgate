@@ -11,6 +11,7 @@ import {
 } from '../../domain/arkRunTransport';
 import { SourceMetadataOverrideError } from '../event-bus/errors';
 import type { EventBusImpl } from '../event-bus/EventBus';
+import type { Unsubscribe } from '../event-bus/types';
 import type { IntentCreator } from '../intent';
 
 /**
@@ -19,6 +20,12 @@ import type { IntentCreator } from '../intent';
  */
 export interface ArkRunBrokerAdapter {
   send(event: DomainEvent): void | Promise<void>;
+  /**
+   * Optional inbound subscription for messages arriving from the external broker.
+   * Events passed to `deliver` enter the local EventBus pipeline without echoing
+   * back to `send()`. Return an unsubscribe function for `kernel.dispose()`.
+   */
+  onInbound?(deliver: (event: DomainEvent) => Promise<void>): Unsubscribe | void;
 }
 
 export interface ArkRunSendOptions {

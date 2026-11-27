@@ -7,7 +7,11 @@ import {
   buildArkRunInspectorWorkflowsMonitor,
   classifyArkRunInspectorStoreDurability,
 } from '../../domain/arkRunInspector';
-import { buildDependencyInformationPackage } from '../../domain/arkRunInformationPackage';
+import {
+  buildDependencyInformationPackage,
+  sanitizeDecisionTapeRecord,
+  type ArkRunDecisionTapeRecord,
+} from '../../domain/arkRunInformationPackage';
 import { unresolvableLayerFlowLayers } from '../../domain/sourcePolicy';
 import { ARK_RUN_EPHEMERAL_DEFAULT } from '../../domain/arkRunTransport';
 import { createAuditTrail } from '../audit';
@@ -31,7 +35,11 @@ import {
 import { createProjectionRegistry } from '../projections';
 import { createWorkflowEngine } from '../workflow';
 import { createComponentRegistry } from './componentRegistry';
-import { startArkRunInspector, type ArkRunInspectorSource } from './inspector';
+import {
+  startArkRunInspector,
+  type ArkRunInspectorHandle,
+  type ArkRunInspectorSource,
+} from './inspector';
 import { sendOnArkRunTransport } from './transport';
 import type {
   ArkKernel,
@@ -49,13 +57,38 @@ import { nextRuntimeId } from '../runtimeIds';
  */
 export const DEFAULT_MAX_HISTORY_SIZE = 1000;
 
+const DEFAULT_DECISION_TAPE_SIZE = 500;
+
+function normalizeDecisionTapeCap(value: number | undefined): number {
+  if (value === undefined) return DEFAULT_DECISION_TAPE_SIZE;
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < 1) {
+    throw new RangeError('maxDecisionTapeSize must be a positive integer.');
+  }
+  return value;
+}
+
+function cloneDecisionTapeRecord(
+  entry: ArkRunDecisionTapeRecord
+): ArkRunDecisionTapeRecord {
+  return {
+    xiHash: entry.xiHash,
+    event: {
+      kind: entry.event.kind,
+      ...(entry.event.payload ? { payload: { ...entry.event.payload } } : {}),
+    },
+    residual: { ...entry.residual },
+  };
+}
+
 function nextKernelInstanceId(): string {
   return nextRuntimeId('ark-kernel');
 }
 
 function portConstructorId(port: object, fallback: string): string {
   const name = (port as { constructor?: { name?: string } }).constructor?.name;
-  return typeof name === 'string' && name.length > 0 ? name : fallback;
+  return typeof name === 'string' && name.length > 0 && name !== 'Object'
+    ? name
+    : fallback;
 }
 
 export function createArkKernel(options: CreateArkKernelOptions = {}): ArkKernel {
@@ -91,12 +124,14 @@ export function createArkKernel(options: CreateArkKernelOptions = {}): ArkKernel
     intentRegistry: registry,
     dependencyGraph: graph,
     policyEngine,
-    strictRegistry: true,
-    validateIntentNaming: true,
+    strictRegistry: options.strictRegistry ?? strict,
+    validateIntentNaming: options.validateIntentNaming ?? strict,
     auditTrail,
     eventContracts,
     strictEventContracts: options.strictEventContracts ?? strict,
-    requireKnownSource: options.requireKnownSource ?? true,
+    requireKnownSource: options.requireKnownSource ?? strict,
+    rethrowHandlerErrors: options.rethrowHandlerErrors,
+    traceSinks: options.traceSinks,
     architectureProfile: profile,
     enforceObservedLayerFlow:
       options.enforceObservedLayerFlow ?? (strict ? 'hard' : 'off'),
@@ -114,15 +149,41 @@ export function createArkKernel(options: CreateArkKernelOptions = {}): ArkKernel
         },
   });
 
-  // createWorkflowEngine defaults to InMemoryWorkflowStore (not injectable via kernel options).
-  const workflowEngine = createWorkflowEngine(eventBus, { auditTrail });
+  const usedDefaultWorkflowStore = options.workflowStore === undefined;
+  const workflowEngine = createWorkflowEngine(eventBus, {
+    auditTrail,
+    store: options.workflowStore,
+  });
   const observability = createObservabilityReporter({
     registry,
     eventBus,
     graph,
   });
-  const components = createComponentRegistry();
+  let kernel!: ArkKernel;
+  const components = createComponentRegistry({
+    getKernel: () => kernel,
+    allowOverrides: options.allowOverrides === true,
+  });
   const brokerBound = typeof broker?.send === 'function';
+  const activeInspectors = new Set<ArkRunInspectorHandle>();
+  const pendingTimers = new Set<ReturnType<typeof setTimeout>>();
+  const decisionTape: ArkRunDecisionTapeRecord[] = [];
+  let decisionTapeCap = normalizeDecisionTapeCap(options.maxDecisionTapeSize);
+  let disposed = false;
+  let inboundUnsub: (() => void) | undefined;
+
+  if (typeof broker?.onInbound === 'function') {
+    const unsub = broker.onInbound(async (event) => {
+      if (disposed) return;
+      await eventBus.dispatch(event, undefined, undefined, {
+        notifySubscribers: true,
+        awaitHandlers: true,
+      });
+    });
+    if (typeof unsub === 'function') {
+      inboundUnsub = unsub;
+    }
+  }
 
   const outboxStoreId = usedDefaultEventBuffer
     ? 'InMemoryEventBuffer'
@@ -130,15 +191,18 @@ export function createArkKernel(options: CreateArkKernelOptions = {}): ArkKernel
   const auditStoreId = usedDefaultAudit
     ? 'InMemoryAuditStore'
     : portConstructorId(auditTrail, 'AuditTrail');
+  const workflowStoreId = usedDefaultWorkflowStore
+    ? 'InMemoryWorkflowStore'
+    : portConstructorId(options.workflowStore!, 'WorkflowStore');
   const hardening = buildArkRunInspectorHardening({
     stores: [
       classifyArkRunInspectorStoreDurability(outboxStoreId, 'outbox'),
       classifyArkRunInspectorStoreDurability(auditStoreId, 'audit'),
-      classifyArkRunInspectorStoreDurability('InMemoryWorkflowStore', 'workflow'),
+      classifyArkRunInspectorStoreDurability(workflowStoreId, 'workflow'),
     ],
   });
 
-  const kernel: ArkKernel = {
+  kernel = {
     instanceId,
     profile,
     registry,
@@ -176,19 +240,46 @@ export function createArkKernel(options: CreateArkKernelOptions = {}): ArkKernel
         sendOptions
       );
     },
-    register(options) {
-      return components.register(options);
+    register(regOptions) {
+      return components.register(regOptions);
     },
-    resolve(id) {
-      return components.resolve(id);
+    resolve(id, input) {
+      return components.resolve(id, input);
     },
     resolveSingleton(id) {
       return components.resolveSingleton(id);
+    },
+    has(id) {
+      return components.has(id);
+    },
+    hasSingleton(id) {
+      return components.hasSingleton(id);
+    },
+    replaceForTest(id, factory) {
+      components.replaceForTest(id, factory);
+    },
+    subscribeTrace(sink) {
+      return eventBus.subscribeTrace(sink);
+    },
+    recordDecisionTape(record, maxSize) {
+      const sanitized = sanitizeDecisionTapeRecord(record);
+      if (!sanitized) return;
+      if (maxSize !== undefined) {
+        decisionTapeCap = normalizeDecisionTapeCap(maxSize);
+      }
+      decisionTape.push(sanitized);
+      if (decisionTape.length > decisionTapeCap) {
+        decisionTape.splice(0, decisionTape.length - decisionTapeCap);
+      }
+    },
+    getDecisionTape() {
+      return decisionTape.map(cloneDecisionTapeRecord);
     },
     getDependencyInformationPackage() {
       return buildDependencyInformationPackage({
         kernelInstanceId: instanceId,
         components: components.snapshotComponents(),
+        decisionTape,
       });
     },
     requestGraph(query) {
@@ -201,7 +292,7 @@ export function createArkKernel(options: CreateArkKernelOptions = {}): ArkKernel
       );
     },
     getInspectorSnapshot(bind) {
-      return buildArkRunInspectorSnapshot({
+      const snapshot = buildArkRunInspectorSnapshot({
         kernelInstanceId: instanceId,
         host: bind?.host,
         port: bind?.port,
@@ -214,8 +305,16 @@ export function createArkKernel(options: CreateArkKernelOptions = {}): ArkKernel
         brokerBound,
         hardening,
       });
+      if (decisionTape.length > 0) {
+        snapshot.package = buildDependencyInformationPackage({
+          kernelInstanceId: instanceId,
+          components: components.snapshotComponents(),
+          decisionTape,
+        });
+      }
+      return snapshot;
     },
-    startInspector(options) {
+    async startInspector(inspectorOptions) {
       const inspectorSource: ArkRunInspectorSource = {
         getInspectorSnapshot: (bind) => kernel.getInspectorSnapshot(bind),
         requestGraph: (query) => kernel.requestGraph(query),
@@ -234,7 +333,41 @@ export function createArkKernel(options: CreateArkKernelOptions = {}): ArkKernel
           });
         },
       };
-      return startArkRunInspector(inspectorSource, options);
+      const rawHandle = await startArkRunInspector(inspectorSource, inspectorOptions);
+      const originalClose = rawHandle.close.bind(rawHandle);
+      const trackedHandle: ArkRunInspectorHandle = {
+        ...rawHandle,
+        async close() {
+          activeInspectors.delete(trackedHandle);
+          await originalClose();
+        },
+      };
+      activeInspectors.add(trackedHandle);
+      return trackedHandle;
+    },
+    async dispose() {
+      if (disposed) return;
+      disposed = true;
+      if (inboundUnsub) {
+        const unsub = inboundUnsub;
+        inboundUnsub = undefined;
+        try {
+          unsub();
+        } catch {
+          /* Continue releasing remaining kernel resources if unsubscribe throws. */
+        }
+      }
+      for (const timer of pendingTimers) {
+        clearTimeout(timer);
+      }
+      pendingTimers.clear();
+      eventBus.dispose();
+      const inspectors = [...activeInspectors];
+      activeInspectors.clear();
+      await Promise.allSettled(inspectors.map((handle) => handle.close()));
+    },
+    close() {
+      return kernel.dispose();
     },
     syncGraph,
     manifest() {
@@ -264,6 +397,8 @@ export function createStrictArkKernel(
   return createArkKernel({
     ...options,
     strict: true,
+    strictRegistry: options.strictRegistry ?? true,
+    validateIntentNaming: options.validateIntentNaming ?? true,
     strictEventContracts: options.strictEventContracts ?? true,
     requireKnownSource: options.requireKnownSource ?? true,
     enforceObservedLayerFlow: options.enforceObservedLayerFlow ?? 'hard',
