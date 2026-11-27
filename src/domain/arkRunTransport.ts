@@ -68,7 +68,7 @@ export function resolveArkRunSendPlan(input: ArkRunSendPlanInput): ArkRunSendPla
   const fallbackToLocal = transport === 'broker' && input.brokerBound !== true;
   const deliveredVia: ArkRunDeliveredVia =
     transport === 'broker' && !fallbackToLocal ? 'broker' : 'local';
-  const awaitHandlers = transport === 'localBlocking';
+  const awaitHandlers = transport === 'localBlocking' || (fallbackToLocal && ephemeral);
   return {
     transport,
     ephemeral,

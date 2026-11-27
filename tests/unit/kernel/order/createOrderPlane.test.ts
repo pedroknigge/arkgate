@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { ArkOrderError } from '../../../../src/domain/arkOrderError';
+import { proposePatternChange } from '../../../../src/domain/arkOrderInvariants';
 import {
   createOrderPlane,
   hashOf,
@@ -120,15 +121,34 @@ describe('createOrderPlane (Haken slaving)', () => {
     expect(p.current()?.xi.plan).toBe('pro');
   });
 
-  it('first release remains the freeze; same-ξ release is not unvalved (LV02)', () => {
-    const p = plane();
-    p.release({ plan: 'free', cycle: 'monthly', tenancy: 'single' }, { graceDays: 0 });
-    const again = p.release(
-      { plan: 'free', cycle: 'monthly', tenancy: 'single' },
-      { graceDays: 1 }
-    );
-    expect(again.xi.plan).toBe('free');
-    expect(again.sigma.graceDays).toBe(1);
+  it('O-02: release() is first freeze only; second release() with same ξ fails ARKORDER_UNVALVED_RELEASE', () => {
+    const saved: Release[] = [];
+    const p = createOrderPlane({
+      projector: billingProjector,
+      store: { load: () => null, save: (r) => void saved.push(r) },
+      clocks: { now: () => 1 },
+    });
+    const first = p.release({ plan: 'free', cycle: 'monthly', tenancy: 'single' }, { graceDays: 0 });
+    expect(first.version).toBe(1);
+    try {
+      p.release({ plan: 'free', cycle: 'monthly', tenancy: 'single' }, { graceDays: 1 });
+      throw new Error('expected unvalved deny on second release');
+    } catch (error) {
+      expect(error).toBeInstanceOf(ArkOrderError);
+      expect((error as ArkOrderError).code).toBe('ARKORDER_UNVALVED_RELEASE');
+      expect((error as ArkOrderError).message).toMatch(/refreshSigma/);
+      expect((error as ArkOrderError).message).toMatch(/proposeRelease/);
+    }
+    expect(p.current()).toBe(first);
+    expect(p.current()?.version).toBe(1);
+    expect(p.current()?.sigma.graceDays).toBe(0);
+    expect(saved).toEqual([first]);
+
+    // refreshSigma updates σ without bumping version or changing xiHash.
+    const refreshed = p.refreshSigma({ graceDays: 1 });
+    expect(refreshed.version).toBe(1);
+    expect(refreshed.xiHash).toBe(first.xiHash);
+    expect(refreshed.sigma.graceDays).toBe(1);
   });
 
   it('apply of a no-op proposal fails empty blast (LV02)', () => {
@@ -364,7 +384,7 @@ describe('createOrderPlane (Haken slaving)', () => {
     expect(() => (mutable.set as () => void)()).toThrow(/not a Haken operation/);
   });
 
-  it('RESTORE-001: restore installs a frozen Release; next version increments from it', () => {
+  it('RESTORE-001: restore installs a frozen Release; next version increments via valve, release() stays closed', () => {
     const source = plane();
     const frozen = source.release(
       { plan: 'pro', cycle: 'annual', tenancy: 'org' },
@@ -377,13 +397,17 @@ describe('createOrderPlane (Haken slaving)', () => {
     expect(target.current()?.version).toBe(1);
     expect(target.current()?.xi.plan).toBe('pro');
     expect(target.current()?.sigma.seatCap).toBe(9);
-    const next = target.release(
-      { plan: 'pro', cycle: 'annual', tenancy: 'org' },
-      { seatCap: 10 }
-    );
+    // O-02: restored plane is already initialized; release() must fail closed.
+    expect(() =>
+      target.release({ plan: 'pro', cycle: 'annual', tenancy: 'org' }, { seatCap: 10 })
+    ).toThrow(ArkOrderError);
+    const refreshed = target.refreshSigma({ seatCap: 10 });
+    expect(refreshed.version).toBe(1);
+    expect(refreshed.xiHash).toBe(frozen.xiHash);
+    expect(refreshed.sigma.seatCap).toBe(10);
+    const next = target.apply(target.proposeRelease({ plan: 'enterprise' }));
     expect(next.version).toBe(2);
-    expect(next.xiHash).toBe(frozen.xiHash);
-    expect(next.sigma.seatCap).toBe(10);
+    expect(next.xi.plan).toBe('enterprise');
   });
 
   it('RESTORE-001: invalid and tampered objects fail closed; restore is not durability', () => {
@@ -508,7 +532,10 @@ describe('createOrderPlane (Haken slaving)', () => {
     expect(codeOf(() => p.restore({ ...wire, version: 999 }))).toBe('ARKORDER_UNVALVED_RELEASE');
     expect(p.current()?.version).toBe(2);
     expect(p.restore({ ...wire, version: 3 }).version).toBe(3);
-    expect(p.release({ plan: 'pro', cycle: 'monthly', tenancy: 'single' }).version).toBe(4);
+    expect(codeOf(() => p.release({ plan: 'pro', cycle: 'monthly', tenancy: 'single' }))).toBe(
+      'ARKORDER_UNVALVED_RELEASE'
+    );
+    expect(p.apply(p.proposeRelease({ plan: 'free' })).version).toBe(4);
   });
 
   it('STORE-003: a freeze time after the plane clock fails closed (unhashed fields are bounded)', () => {
@@ -697,7 +724,131 @@ describe('createOrderPlane (Haken slaving)', () => {
     );
     const p = loose();
     p.release({ plan: 'free', n: null });
-    expect(codeOf(() => p.release({ plan: 'free', n: Number.NaN }))).toBe('ARKORDER_NESTED_XI');
+    expect(codeOf(() => p.proposeRelease({ n: Number.NaN }))).toBe('ARKORDER_NESTED_XI');
+    expect(codeOf(() => p.refreshSigma({ cap: Number.NaN }))).toBe('ARKORDER_NESTED_XI');
+    expect(codeOf(() => p.release({ plan: 'free', n: Number.NaN }))).toBe(
+      'ARKORDER_UNVALVED_RELEASE'
+    );
     expect(p.current()?.version).toBe(1);
+  });
+
+  it('O-01: xiSchema.required is enforced across release, proposeRelease, restore, and prototype keys', () => {
+    const codeOf = (fn: () => unknown): string | undefined => {
+      try {
+        fn();
+        return undefined;
+      } catch (error) {
+        return (error as ArkOrderError).code;
+      }
+    };
+    const make = (required: readonly string[]) =>
+      createOrderPlane({
+        projector: billingProjector,
+        xiSchema: {
+          required,
+          additionalProperties: true,
+          properties: {
+            plan: { type: 'string', enum: ['free', 'pro', 'enterprise'] },
+            region: { type: 'string' },
+            active: { type: 'boolean' },
+            retries: { type: 'number' },
+            note: { type: 'string' },
+            nullableFlag: { type: 'null' },
+          },
+        },
+        clocks: { now: () => 1 },
+      });
+
+    // Missing required key on initial release fails closed without persisting.
+    const missing = make(['plan']);
+    expect(codeOf(() => missing.release({ region: 'us' }))).toBe('ARKORDER_SCHEMA');
+    expect(missing.current()).toBeNull();
+
+    // Adversarial: inherited Object.prototype names must NOT satisfy required.
+    const protoCheck = make(['toString', 'constructor']);
+    expect(codeOf(() => protoCheck.release({ plan: 'free' }))).toBe('ARKORDER_SCHEMA');
+
+    // Valid falsy primitives satisfy required when types match.
+    const falsyOk = make(['plan', 'active', 'retries', 'note', 'nullableFlag']);
+    const frozen = falsyOk.release({
+      plan: 'free',
+      active: false,
+      retries: 0,
+      note: '',
+      nullableFlag: null,
+    });
+    expect(frozen.xi.active).toBe(false);
+    expect(frozen.xi.retries).toBe(0);
+
+    // Deleting a required key via proposeRelease({ plan: undefined }) fails closed.
+    const active = make(['plan']);
+    active.release({ plan: 'free', region: 'us' });
+    expect(codeOf(() => active.proposeRelease({ plan: undefined }))).toBe('ARKORDER_SCHEMA');
+
+    // Rehydrating a Release missing a required key via restore() fails closed.
+    const looseRelease = createOrderPlane({
+      projector: billingProjector,
+      clocks: { now: () => 1 },
+    }).release({ region: 'us' });
+    expect(codeOf(() => make(['plan']).restore(looseRelease))).toBe('ARKORDER_SCHEMA');
+  });
+
+  it('O-02: release() also rejects after store.load() initializes the plane', () => {
+    const store = createMemoryReleaseStore();
+    const first = createOrderPlane({
+      projector: billingProjector,
+      store,
+      clocks: { now: () => 1 },
+    });
+    first.release({ plan: 'free', cycle: 'monthly', tenancy: 'single' });
+
+    const reloaded = createOrderPlane({
+      projector: billingProjector,
+      store,
+      clocks: { now: () => 2 },
+    });
+    try {
+      reloaded.release({ plan: 'free', cycle: 'monthly', tenancy: 'single' }, { graceDays: 3 });
+      throw new Error('expected unvalved deny after store.load()');
+    } catch (error) {
+      expect(error).toBeInstanceOf(ArkOrderError);
+      expect((error as ArkOrderError).code).toBe('ARKORDER_UNVALVED_RELEASE');
+    }
+    expect(reloaded.current()?.version).toBe(1);
+  });
+
+  it('O-03: proposePatternChange checks structural xi equality, not 32-bit FNV-1a hash', () => {
+    const p = plane();
+    const base = p.release({ plan: 'free', cycle: 'monthly', tenancy: 'single' });
+    // Empty delta, equal value, and -0/0 equivalence fail with ARKORDER_EMPTY_BLAST.
+    expect(() => p.proposeRelease({})).toThrow(ArkOrderError);
+    expect(() => p.proposeRelease({ plan: 'free' })).toThrow(ArkOrderError);
+
+    const numPlane = createOrderPlane({
+      projector: (r) => ({
+        allowedKinds: r.xi.n === 0 ? ['Zero'] : ['NonZero'],
+        invalidated: [],
+      }),
+      clocks: { now: () => 1 },
+    });
+    numPlane.release({ n: 0 });
+    expect(() => numPlane.proposeRelease({ n: -0 })).toThrow(ArkOrderError);
+
+    // Adversarial: simulate a 32-bit FNV-1a hash collision where current.hash equals
+    // candidate.hash even though xi differs structurally. Must NOT throw ARKORDER_EMPTY_BLAST.
+    const nextXi = Object.freeze({ plan: 'pro', cycle: 'monthly', tenancy: 'single' });
+    const collidedCurrent: Release = Object.freeze({
+      ...base,
+      hash: hashReleasePayload(nextXi, base.sigma),
+    });
+    const proposal = proposePatternChange({
+      current: collidedCurrent,
+      delta: { plan: 'pro' },
+      projector: billingProjector,
+      maxXiKeys: 7,
+      now: 2,
+    });
+    expect(proposal.nextXi.plan).toBe('pro');
+    expect(proposal.blastRadius).toContain('SeatAdded');
   });
 });

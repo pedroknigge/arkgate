@@ -50,6 +50,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { transformSync } from 'esbuild';
 import ts from 'typescript';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -297,19 +298,6 @@ const MODULES = [
   },
 ];
 
-function banner(canonicalRel, derivedRel) {
-  return `/**
- * GENERATED FILE — do not edit by hand.
- *
- * Canonical algorithm: ${canonicalRel}
- * Regenerate: node scripts/generate-cli-pure.mjs
- * Drift check: node scripts/generate-cli-pure.mjs --check
- *
- * Pure CLI helper (${derivedRel}). Zero Node I/O.
- */
-`;
-}
-
 function stripLeadingBlockComment(js) {
   const trimmed = js.replace(/^\uFEFF/, '');
   if (!trimmed.startsWith('/*')) return trimmed;
@@ -400,7 +388,15 @@ function stripCliMirrorTags(source) {
 }
 
 function buildDerivedSource(canonicalRel, derivedRel, transpiledSource) {
-  return `${banner(canonicalRel, derivedRel)}\n${stripCliMirrorTags(transpiledSource)}`;
+  const cleaned = stripCliMirrorTags(transpiledSource);
+  const { code } = transformSync(cleaned, {
+    loader: 'js',
+    format: 'esm',
+    minify: true,
+    target: 'es2022',
+    legalComments: 'none',
+  });
+  return `// GENERATED FILE — do not edit by hand. Canonical: ${canonicalRel} -> ${derivedRel}; regenerate: npm run generate:cli-pure\n${code}`;
 }
 
 function normalizeNewlines(s) {

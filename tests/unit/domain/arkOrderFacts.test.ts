@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import ts from 'typescript';
 import {
   extractArkOrderBudgetLeaksFromSource,
   extractArkOrderGenericUpdatesFromSource,
   extractArkOrderIngestWritesXiFromSource,
+  extractArkOrderReleaseKeyCountsFromSource,
   extractArkOrderXiFieldWritesFromSource,
   extractArkOrderXiTtlKeysFromSource,
 } from '../../../src/domain/arkOrderFacts';
@@ -319,5 +321,102 @@ lock.release({ ttl: 5 });
         `const a = { allowedKinds: ['Seat'] }; const b = { cannotObserve: ['Seat'] };`
       )
     ).toEqual([]);
+  });
+});
+
+describe('Phase 2.1 TS AST ArkOrder extractors', () => {
+  it('extractArkOrderReleaseKeyCountsFromSource handles shorthand, quoted keys, URLs, ternaries, spreads, and local const bindings', () => {
+    const source = `
+import { createOrderPlane } from 'arkgate/order';
+const plane = createOrderPlane({ projector });
+const a = 'free', b = 'monthly', c = 'single';
+plane.release({ a, b, c });
+plane.release({ 'plan-id': 'pro', "region": 'us' });
+plane.release({ url: 'https://api.example.com:8443/a:b', mode: ok ? 'x:1' : 'y:2' });
+plane.release({ a: 1, b: 2, ...rest });
+plane.release({ ...rest });
+const XI = { plan: 'free', cycle: 'monthly', tenancy: 'single', tier: 'core' } as const;
+plane.release(XI);
+plane.proposeRelease({ a, b, c, d: 4 });
+`;
+    const facts = extractArkOrderReleaseKeyCountsFromSource('src/main.ts', source, { ts });
+    expect(facts).toEqual([
+      { file: 'src/main.ts', line: 5, keyCount: 3 },
+      { file: 'src/main.ts', line: 6, keyCount: 2 },
+      { file: 'src/main.ts', line: 7, keyCount: 2 },
+      { file: 'src/main.ts', line: 8, keyCount: 2, incomplete: true },
+      { file: 'src/main.ts', line: 9, keyCount: 0, incomplete: true },
+      { file: 'src/main.ts', line: 11, keyCount: 4 },
+      { file: 'src/main.ts', line: 12, keyCount: 4 },
+    ]);
+  });
+
+  it('extractArkOrderReleaseKeyCountsFromSource ignores σ (arg1), comments, strings, and cyclic consts', () => {
+    const source = `
+// plane.release({ a: 1, b: 2, c: 3, d: 4, e: 5, f: 6, g: 7, h: 8 });
+const fake = "plane.release({ a: 1, b: 2, c: 3, d: 4, e: 5, f: 6, g: 7, h: 8 })";
+const A: any = B;
+const B: any = A;
+plane.release(A);
+plane.release({ plan: 'free' }, { s1: 1, s2: 2, s3: 3, s4: 4, s5: 5, s6: 6, s7: 7, s8: 8 });
+function f() { const XI = { a: 1 }; plane.release(XI); }
+function g() { const XI = Object.freeze({ a: 1, b: 2, c: 3 }); plane.release(XI); }
+`;
+    const facts = extractArkOrderReleaseKeyCountsFromSource('src/main.ts', source, { ts });
+    expect(facts).toEqual([
+      { file: 'src/main.ts', line: 7, keyCount: 1 },
+      { file: 'src/main.ts', line: 8, keyCount: 1 },
+      { file: 'src/main.ts', line: 9, keyCount: 3 },
+    ]);
+  });
+
+  it('extractArkOrderXiTtlKeysFromSource resolves local consts, spreads, computed keys, and respects plane receiver & σ boundary', () => {
+    const source = `
+import { createOrderPlane } from 'arkgate/order';
+const plane = createOrderPlane({ projector });
+const XI_BAD = { plan: 'free', ttl: 30 };
+const META = { freshUntil: 100 };
+plane.release(XI_BAD);
+plane.proposeRelease({ plan: 'pro', ...META });
+plane.release({ ['maxAge']: 5 });
+plane.release({ plan: 'free' }, { freshUntil: 1500, ttl: 60 });
+lock.release(XI_BAD);
+`;
+    const facts = extractArkOrderXiTtlKeysFromSource('src/main.ts', source, { ts });
+    expect(facts).toEqual([
+      { file: 'src/main.ts', line: 6, key: 'ttl' },
+      { file: 'src/main.ts', line: 7, key: 'freshUntil' },
+      { file: 'src/main.ts', line: 8, key: 'maxAge' },
+    ]);
+  });
+
+  it('extractArkOrderBudgetLeaksFromSource resolves local const budget/projector/arrays without cross-plane bleed', () => {
+    const source = `
+import { createOrderPlane } from 'arkgate/order';
+const DENIED = ['LedgerRead'];
+const BUDGET = { cannotObserve: DENIED };
+const ALLOWED = ['Invoice', 'LedgerRead'];
+function billingProjector() {
+  return { allowedKinds: ALLOWED, invalidated: [] };
+}
+const OPTS = { projector: billingProjector, informationBudget: BUDGET };
+const planeA = createOrderPlane(OPTS);
+const planeB = createOrderPlane({
+  projector: () => ({ allowedKinds: ['AuditOnly'], invalidated: [] }),
+  informationBudget: { cannotObserve: ['OtherKind'] },
+});
+void planeA;
+void planeB;
+`;
+    const facts = extractArkOrderBudgetLeaksFromSource('src/main.ts', source, { ts });
+    expect(facts).toEqual([{ file: 'src/main.ts', line: 7, kind: 'LedgerRead' }]);
+
+    // Commented or stringified createOrderPlane does not trigger.
+    const silent = extractArkOrderBudgetLeaksFromSource(
+      'src/main.ts',
+      `// createOrderPlane({ projector: () => ({ allowedKinds: ['Seat'] }), informationBudget: { cannotObserve: ['Seat'] } });\n`,
+      { ts }
+    );
+    expect(silent).toEqual([]);
   });
 });

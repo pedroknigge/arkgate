@@ -1,13 +1,2 @@
-/**
- * GENERATED FILE — do not edit by hand.
- *
- * Canonical algorithm: src/domain/agentProjection.ts
- * Regenerate: node scripts/generate-cli-pure.mjs
- * Drift check: node scripts/generate-cli-pure.mjs --check
- *
- * Pure CLI helper (bin/lib/agent-projection.mjs). Zero Node I/O.
- */
-
-export { AGENT_PROJECTION_BEGIN_MARKER, AGENT_PROJECTION_END_MARKER, AGENT_PROJECTION_ENFORCEMENT_SURFACES, AGENT_PROJECTION_NON_ENFORCEMENT_LABEL, ARK_AGENT_PROJECTION_SCHEMA_VERSION, DEFAULT_AGENT_PROJECTION_RULE_IDS, } from './agent-projection-types.mjs';
-export { agentProjectionContentIdentity, buildAgentProjectionBeginMarker, buildAgentProjectionBlock, buildAgentProjectionBody, buildAgentProjectionMeta, formatAgentProjectionCatalogShortList, formatAgentProjectionLayers, } from './agent-projection-formatters.mjs';
-export { extractAgentProjectionBlock, mergeAgentProjectionDocument, parseAgentProjectionStamp, projectionHasNonEnforcementLabel, projectionMatchesPackageVersion, } from './agent-projection-merge.mjs';
+// GENERATED FILE — do not edit by hand. Canonical: src/domain/agentProjection.ts -> bin/lib/agent-projection.mjs; regenerate: npm run generate:cli-pure
+import{AGENT_PROJECTION_BEGIN_MARKER as t,AGENT_PROJECTION_END_MARKER as n,AGENT_PROJECTION_ENFORCEMENT_SURFACES as r,AGENT_PROJECTION_NON_ENFORCEMENT_LABEL as E,ARK_AGENT_PROJECTION_SCHEMA_VERSION as A,DEFAULT_AGENT_PROJECTION_RULE_IDS as N}from"./agent-projection-types.mjs";import{agentProjectionContentIdentity as i,buildAgentProjectionBeginMarker as c,buildAgentProjectionBlock as P,buildAgentProjectionBody as a,buildAgentProjectionMeta as O,formatAgentProjectionCatalogShortList as R,formatAgentProjectionLayers as T}from"./agent-projection-formatters.mjs";import{extractAgentProjectionBlock as j,mergeAgentProjectionDocument as C,parseAgentProjectionStamp as I,projectionHasNonEnforcementLabel as m,projectionMatchesPackageVersion as l}from"./agent-projection-merge.mjs";export{t as AGENT_PROJECTION_BEGIN_MARKER,n as AGENT_PROJECTION_END_MARKER,r as AGENT_PROJECTION_ENFORCEMENT_SURFACES,E as AGENT_PROJECTION_NON_ENFORCEMENT_LABEL,A as ARK_AGENT_PROJECTION_SCHEMA_VERSION,N as DEFAULT_AGENT_PROJECTION_RULE_IDS,i as agentProjectionContentIdentity,c as buildAgentProjectionBeginMarker,P as buildAgentProjectionBlock,a as buildAgentProjectionBody,O as buildAgentProjectionMeta,j as extractAgentProjectionBlock,R as formatAgentProjectionCatalogShortList,T as formatAgentProjectionLayers,C as mergeAgentProjectionDocument,I as parseAgentProjectionStamp,m as projectionHasNonEnforcementLabel,l as projectionMatchesPackageVersion};

@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest';
+import ts from 'typescript';
 import {
   ARKORDER_TIER1_SENSOR_IDS,
   evaluateArkOrderEditorSensors,
   evaluateArkOrderSensors,
 } from '../../../src/domain/arkOrderSensors';
+import { evaluateArkRunSensors } from '../../../src/domain/arkRunSensors';
+import { isDomainRoleLayerName } from '../../../src/domain/arkRuleSensors';
+import { isDomainRoleLayer } from '../../../src/domain/sourcePolicy';
 import type { ArkConfigArkOrder } from '../../../src/domain/configTypes';
 import { globToRegExp } from '../../../src/domain/layerMatch';
 
@@ -268,5 +272,117 @@ plane.release({ plan: 'free', ttl: 30 });
       classification: { governedPercent: 100, populatedLayerCount: 2 },
     });
     expect(result.findings.map((item) => item.ruleId)).toEqual(['ARKORDER_XI_FIELD_WRITE']);
+  });
+
+  it('O-04: Entities and Aggregates trigger ARKORDER_KERNEL_IN_DOMAIN and agree across ArkOrder, ArkRun, and ArkRules', () => {
+    const cases: Array<{ layer: string; prefixes?: string[]; expected: boolean }> = [
+      { layer: 'Domain', expected: true },
+      { layer: 'DomainModel', expected: true },
+      { layer: 'domain-core', expected: true },
+      { layer: 'Entity', expected: true },
+      { layer: 'Entities', expected: true },
+      { layer: 'Aggregate', expected: true },
+      { layer: 'Aggregates', expected: true },
+      { layer: 'AggregateRoot', expected: true },
+      { layer: 'ReportingReadModels', expected: false },
+      { layer: 'SharedKernel', expected: false },
+      { layer: 'ApplicationOrchestration', prefixes: ['Domain.'], expected: true },
+      { layer: 'ApplicationOrchestration', prefixes: ['Domain...'], expected: true },
+      { layer: 'ApplicationOrchestration', prefixes: ['Domain.Billing.'], expected: true },
+      { layer: 'ApplicationOrchestration', prefixes: ['DomainModel.'], expected: false },
+      { layer: 'ApplicationOrchestration', prefixes: ['.'.repeat(200)], expected: false },
+      { layer: 'ApplicationOrchestration', prefixes: ['Application.'], expected: false },
+    ];
+
+    for (const c of cases) {
+      const prefixes = c.prefixes ?? [];
+      expect(isDomainRoleLayer(c.layer, prefixes)).toBe(c.expected);
+      expect(isDomainRoleLayerName(c.layer, prefixes)).toBe(c.expected);
+
+      const orderRes = evaluateArkOrderSensors({
+        arkOrder: extra,
+        layers: [{ name: c.layer, patterns: ['src/x/**'], intentPrefixes: prefixes }],
+        planeCalls: [],
+        genericUpdates: [],
+        planeRootHits: [{ file: 'src/main.ts', matchedRoot: 'src/main.ts', hasPlaneFactory: true }],
+        dependencies: [
+          {
+            from: 'src/x/a.ts',
+            specifier: 'arkgate/order',
+            kind: 'import',
+            typeOnly: false,
+            line: 1,
+            resolution: 'resolved-external',
+          },
+        ],
+        layerForFile: () => c.layer,
+        classification: { governedPercent: 100, populatedLayerCount: 2 },
+      });
+      expect(orderRes.findings.some((f) => f.ruleId === 'ARKORDER_KERNEL_IN_DOMAIN')).toBe(
+        c.expected
+      );
+
+      const runRes = evaluateArkRunSensors({
+        arkRun: {
+          mode: 'enforced',
+          compositionRoots: ['src/main.ts'],
+          managedLayers: ['ApplicationOrchestration'],
+          requireDeclarations: false,
+        },
+        layers: [{ name: c.layer, patterns: ['src/x/**'], intentPrefixes: prefixes }],
+        kernelCalls: [],
+        managedNews: [],
+        compositionRootHits: [
+          { file: 'src/main.ts', matchedRoot: 'src/main.ts', hasKernelFactory: true },
+        ],
+        declarations: [],
+        dependencies: [
+          {
+            from: 'src/x/a.ts',
+            specifier: 'arkgate/runtime',
+            kind: 'import',
+            typeOnly: false,
+            line: 1,
+            resolution: 'resolved-external',
+          },
+        ],
+        layerForFile: () => c.layer,
+        classification: { governedPercent: 100, populatedLayerCount: 2 },
+      });
+      expect(runRes.findings.some((f) => f.ruleId === 'ARKRUN_KERNEL_IN_DOMAIN')).toBe(c.expected);
+    }
+
+    // Editor sensor also enforces Entities / Aggregates with AST ts passed through.
+    const editorFindings = evaluateArkOrderEditorSensors({
+      arkOrder: extra,
+      file: 'src/entities/order.ts',
+      fromLayer: 'Entities',
+      source: `import { createOrderPlane } from 'arkgate/order';\nvoid createOrderPlane;\n`,
+      ts,
+    });
+    expect(editorFindings.map((f) => f.ruleId)).toContain('ARKORDER_KERNEL_IN_DOMAIN');
+  });
+
+  it('Phase 2.1: editor sensor passes ts AST to detect local const XI TTL and key counts', () => {
+    const findings = evaluateArkOrderEditorSensors({
+      arkOrder: { ...extra, maxXiKeys: 2 },
+      file: 'src/main.ts',
+      fromLayer: 'ApplicationOrchestration',
+      ts,
+      source: `import { createOrderPlane } from 'arkgate/order';
+const BUDGET = { cannotObserve: ['LedgerRead'] };
+const XI = { plan, region, ttl: 30 };
+const plane = createOrderPlane({
+  projector: () => ({ allowedKinds: ['Invoice', 'LedgerRead'], invalidated: [] }),
+  informationBudget: BUDGET,
+});
+plane.release(XI);
+`,
+    });
+    expect(findings.map((f) => f.ruleId).sort()).toEqual([
+      'ARKORDER_INFORMATION_BUDGET',
+      'ARKORDER_TOO_MANY_PARAMS',
+      'ARKORDER_XI_TTL',
+    ]);
   });
 });

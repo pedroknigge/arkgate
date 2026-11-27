@@ -4,6 +4,7 @@
  */
 import type { DomainEvent, EventMetadata } from '../../domain/types';
 import type { AuditRecordType, AuditTrail } from '../audit';
+import type { EventContractIssue } from '../event-contracts';
 import type { EventBufferRecord, EventBufferStore } from '../outbox';
 import type { PublishedEventRecord, TraceRecord, TraceSink } from './types';
 
@@ -196,6 +197,33 @@ export async function recordHandoffFailure(
     details,
   });
   await recordAudit(buffers, 'event.handoffFailed', event, details);
+}
+
+/**
+ * Record a deprecated event-contract warning without blocking publish.
+ */
+export async function recordContractDeprecated(
+  buffers: RecordingBuffers,
+  event: DomainEvent,
+  warnings: EventContractIssue[]
+): Promise<void> {
+  if (warnings.length === 0) return;
+  const details = {
+    intent: event.intent,
+    version: warnings[0]?.version,
+    message: warnings.map((warning) => warning.message).join('; '),
+    warnings,
+  };
+  appendTrace(buffers, {
+    type: 'event.contractDeprecated',
+    timestamp: new Date().toISOString(),
+    intent: event.intent,
+    correlationId: event.metadata.correlationId,
+    traceId: event.metadata.traceId,
+    spanId: event.metadata.spanId,
+    details,
+  });
+  await recordAudit(buffers, 'event.contractDeprecated', event, details);
 }
 
 export function enrichMetadata(

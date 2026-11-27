@@ -448,6 +448,154 @@ describe('Z07 resident hook transport', () => {
     expect(unresolvedRoot.socket).not.toBe(before.socket);
   });
 
+  it('uses fast metadata identity inside node_modules and reserves full hash for local checkouts or strict env', () => {
+    const root = writeProject();
+    const installedPkg = path.join(root, 'node_modules', 'arkgate');
+    const bin = path.join(installedPkg, 'bin');
+    const lib = path.join(bin, 'lib');
+    const dist = path.join(installedPkg, 'dist');
+    fs.mkdirSync(lib, { recursive: true });
+    fs.mkdirSync(dist, { recursive: true });
+    const installedLauncher = path.join(bin, 'ark-mcp.mjs');
+    const analysis = path.join(lib, 'analysis-engine.mjs');
+    const distIndex = path.join(dist, 'index.js');
+    const pkgJson = path.join(installedPkg, 'package.json');
+    fs.writeFileSync(installedLauncher, 'export {};\n');
+    fs.writeFileSync(analysis, 'export const analysis = 1;\n');
+    fs.writeFileSync(distIndex, 'export const gate = 1;\n');
+    fs.writeFileSync(pkgJson, '{"name":"arkgate","version":"4.8.32"}\n');
+
+    const prevStrict = process.env.ARK_RESIDENT_STRICT_HASH;
+    delete process.env.ARK_RESIDENT_STRICT_HASH;
+    try {
+      const readdirSpy = vi.spyOn(fs, 'readdirSync');
+      const start = performance.now();
+      const first = residentHookEndpoint({
+        root,
+        config: 'ark.config.json',
+        launcher: installedLauncher,
+      });
+      const elapsedMs = performance.now() - start;
+      expect(readdirSpy).not.toHaveBeenCalled();
+      expect(elapsedMs).toBeLessThan(50);
+
+      // Fast path ignores unrelated helper file edits inside node_modules without traversing bin/.
+      fs.writeFileSync(analysis, 'export const analysis = 2;\n');
+      const afterHelperEdit = residentHookEndpoint({
+        root,
+        config: 'ark.config.json',
+        launcher: installedLauncher,
+      });
+      expect(afterHelperEdit.socket).toBe(first.socket);
+      expect(readdirSpy).not.toHaveBeenCalled();
+
+      // Changing package.json version invalidates identity even when mtime & byte length match.
+      const pkgStat = fs.statSync(pkgJson);
+      fs.writeFileSync(pkgJson, '{"name":"arkgate","version":"4.8.33"}\n');
+      fs.utimesSync(pkgJson, pkgStat.atime, pkgStat.mtime);
+      const afterVersionChange = residentHookEndpoint({
+        root,
+        config: 'ark.config.json',
+        launcher: installedLauncher,
+      });
+      expect(afterVersionChange.socket).not.toBe(first.socket);
+
+      // Changing dist/index.js size or mtime invalidates identity.
+      fs.writeFileSync(distIndex, 'export const gate = 123456;\n');
+      const afterDistSizeChange = residentHookEndpoint({
+        root,
+        config: 'ark.config.json',
+        launcher: installedLauncher,
+      });
+      expect(afterDistSizeChange.socket).not.toBe(afterVersionChange.socket);
+
+      const distStat = fs.statSync(distIndex);
+      fs.utimesSync(distIndex, distStat.atime, new Date(distStat.mtimeMs + 2000));
+      const afterDistMtimeChange = residentHookEndpoint({
+        root,
+        config: 'ark.config.json',
+        launcher: installedLauncher,
+      });
+      expect(afterDistMtimeChange.socket).not.toBe(afterDistSizeChange.socket);
+
+      // Removing dist/index.js changes identity cleanly ('missing' token) without throwing.
+      fs.unlinkSync(distIndex);
+      const afterDistMissing = residentHookEndpoint({
+        root,
+        config: 'ark.config.json',
+        launcher: installedLauncher,
+      });
+      expect(afterDistMissing.socket).not.toBe(afterDistMtimeChange.socket);
+      fs.writeFileSync(distIndex, 'export const gate = 123456;\n');
+
+      // Malformed package.json degrades cleanly without throwing.
+      fs.writeFileSync(pkgJson, '{ broken');
+      const afterBrokenPkg = residentHookEndpoint({
+        root,
+        config: 'ark.config.json',
+        launcher: installedLauncher,
+      });
+      expect(afterBrokenPkg.socket).toMatch(/\.sock$|arkgate-z07-/);
+      fs.writeFileSync(pkgJson, '{"name":"arkgate","version":"4.8.33"}\n');
+
+      // Strict env forces full directory traversal + SHA-256 content hashing inside node_modules.
+      process.env.ARK_RESIDENT_STRICT_HASH = '1';
+      readdirSpy.mockClear();
+      const strictBefore = residentHookEndpoint({
+        root,
+        config: 'ark.config.json',
+        launcher: installedLauncher,
+      });
+      expect(readdirSpy).toHaveBeenCalled();
+      expect(strictBefore.socket).not.toBe(afterDistSizeChange.socket);
+      fs.writeFileSync(analysis, 'export const analysis = 3;\n');
+      const strictAfter = residentHookEndpoint({
+        root,
+        config: 'ark.config.json',
+        launcher: installedLauncher,
+      });
+      expect(strictAfter.socket).not.toBe(strictBefore.socket);
+
+      // Adversarial path: substring "node_modules" in a directory name is NOT an installed package.
+      delete process.env.ARK_RESIDENT_STRICT_HASH;
+      const fakeDir = path.join(root, 'my_node_modules_checkout', 'arkgate');
+      fs.cpSync(installedPkg, fakeDir, { recursive: true });
+      readdirSpy.mockClear();
+      const fakeBefore = residentHookEndpoint({
+        root,
+        config: 'ark.config.json',
+        launcher: path.join(fakeDir, 'bin', 'ark-mcp.mjs'),
+      });
+      expect(readdirSpy).toHaveBeenCalled();
+      fs.writeFileSync(path.join(fakeDir, 'bin', 'lib', 'analysis-engine.mjs'), 'export const analysis = 99;\n');
+      const fakeAfter = residentHookEndpoint({
+        root,
+        config: 'ark.config.json',
+        launcher: path.join(fakeDir, 'bin', 'ark-mcp.mjs'),
+      });
+      expect(fakeAfter.socket).not.toBe(fakeBefore.socket);
+
+      // Symlink in node_modules/.bin pointing to a local checkout (npm link) uses strict hash.
+      if (process.platform !== 'win32') {
+        const dotBin = path.join(root, 'node_modules', '.bin');
+        fs.mkdirSync(dotBin, { recursive: true });
+        const npmLinkBin = path.join(dotBin, 'arkgate-mcp');
+        fs.symlinkSync(path.join(fakeDir, 'bin', 'ark-mcp.mjs'), npmLinkBin);
+        readdirSpy.mockClear();
+        const linkedEndpoint = residentHookEndpoint({
+          root,
+          config: 'ark.config.json',
+          launcher: npmLinkBin,
+        });
+        expect(readdirSpy).toHaveBeenCalled();
+        expect(linkedEndpoint.socket).toBe(fakeAfter.socket);
+      }
+    } finally {
+      if (prevStrict === undefined) delete process.env.ARK_RESIDENT_STRICT_HASH;
+      else process.env.ARK_RESIDENT_STRICT_HASH = prevStrict;
+    }
+  });
+
   it('keeps endpoint identity stable across symlink and junction root aliases', () => {
     const root = writeProject();
     fs.writeFileSync(path.join(root, 'ark.manifest.json'), '{}\n');

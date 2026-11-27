@@ -113,6 +113,7 @@ export type XiPropertySchema = {
 };
 
 export type XiSchema = {
+  readonly required?: readonly string[];
   readonly properties?: Readonly<Record<string, XiPropertySchema>>;
   readonly additionalProperties?: boolean;
 };

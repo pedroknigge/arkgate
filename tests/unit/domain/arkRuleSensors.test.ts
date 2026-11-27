@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
+import ts from 'typescript';
 import {
   buildEffectiveArkRules,
   loadArkRulesContract,
 } from '../../../src/domain/arkRulesContract';
+import { isDomainRoleLayer } from '../../../src/domain/sourcePolicy';
+import { validateSnippetAnalysis } from '../../../bin/lib/snippet-analysis.mjs';
 import {
   DOMAIN_INVARIANT_WORDS,
   buildArkRuleFileHints,
@@ -1011,13 +1014,177 @@ describe('INVARIANT_CATALOG_EMPTY residual', () => {
     ).toEqual([]);
   });
 
-  it('treats trailing-dot Domain prefixes as Domain without a regex', () => {
+  it('treats trailing-dot Domain prefixes as Domain without a regex and matches canonical isDomainRoleLayer', () => {
     expect(isDomainRoleLayerName('ApplicationOrchestration', ['Domain...'])).toBe(true);
     expect(isDomainRoleLayerName('ApplicationOrchestration', ['Domain.'])).toBe(true);
     expect(isDomainRoleLayerName('ApplicationOrchestration', ['.'.repeat(200)])).toBe(false);
     expect(isDomainRoleLayerName('ApplicationOrchestration', ['Application.'])).toBe(false);
-    expect(isDomainRoleLayerName('ReportingReadModels')).toBe(true);
+    expect(isDomainRoleLayerName('ReportingReadModels')).toBe(false);
     expect(isDomainRoleLayerName('SharedKernel')).toBe(false);
+    expect(isDomainRoleLayerName('Entities')).toBe(true);
+    expect(isDomainRoleLayerName('Aggregates')).toBe(true);
+    expect(isDomainRoleLayerName('Entities')).toBe(isDomainRoleLayer('Entities'));
+    expect(isDomainRoleLayerName('ReportingReadModels')).toBe(
+      isDomainRoleLayer('ReportingReadModels')
+    );
+  });
+
+  it('Phase 2.1 AST: domain-event-on-mutation rejects const record = 1 and dead closures while accepting real calls and throws', () => {
+    const source = `
+export class Order {
+  private total = 0;
+  private pendingEvents: unknown[] = [];
+  private otherItems: unknown[] = [];
+  private constructor() {}
+  static create() { return new Order(); }
+
+  // False-pass traps that plain-text regex previously missed:
+  fakeRecordVar(n: number) {
+    const record = 1;
+    this.total = n + record;
+  }
+  fakePropertyRef(n: number) {
+    const fn = this.record;
+    void fn;
+    this.total = n;
+  }
+  fakeStringAndComment(n: number) {
+    // this.ensureInvariants();
+    const s = 'this.record()';
+    void s;
+    this.total = n;
+  }
+  fakeUnthrownError(n: number) {
+    const err = new Error('not thrown');
+    void err;
+    this.total = n;
+  }
+  fakeDeadClosure(n: number) {
+    const unused = () => {
+      this.record({ type: 'Never' });
+      throw new Error('never');
+    };
+    void unused;
+    this.total = n;
+  }
+  fakeOtherPush(n: number) {
+    this.otherItems.push(n);
+    this.total = n;
+  }
+
+  // Legitimate guards & publishes:
+  realRecord(n: number) {
+    this.total = n;
+    this.record({ type: 'Changed' });
+  }
+  realEnsure(n: number) {
+    this.total = n;
+    this.ensureInvariants();
+  }
+  realPush(n: number) {
+    this.total = n;
+    this.pendingEvents.push({ type: 'Changed' });
+  }
+  realThrowGuard(n: number) {
+    if (n < 0) throw new Error('negative');
+    this.total = n;
+  }
+  realDirectThrow(n: number) {
+    this.total = n;
+    throw new Error('rejected');
+  }
+  private record(_e: unknown) {}
+  private ensureInvariants() {}
+}
+`;
+    const shapes = extractClassShapesFromSource('src/domain/order.ts', source, { ts });
+    expect(shapes).toHaveLength(1);
+    const byName = new Map(
+      shapes[0]!.mutatingMethods.map((m) => [m.name, m.referencesGuardOrPublish])
+    );
+
+    expect(byName.get('fakeRecordVar')).toBe(false);
+    expect(byName.get('fakePropertyRef')).toBe(false);
+    expect(byName.get('fakeStringAndComment')).toBe(false);
+    expect(byName.get('fakeUnthrownError')).toBe(false);
+    expect(byName.get('fakeDeadClosure')).toBe(false);
+    expect(byName.get('fakeOtherPush')).toBe(false);
+
+    expect(byName.get('realRecord')).toBe(true);
+    expect(byName.get('realEnsure')).toBe(true);
+    expect(byName.get('realPush')).toBe(true);
+    expect(byName.get('realThrowGuard')).toBe(true);
+    expect(byName.get('realDirectThrow')).toBe(true);
+
+    const findings = evaluateArkRuleSensors({
+      arkRules: effective([
+        { id: 'events', sensor: 'domain-event-on-mutation', mode: 'enforced' },
+      ]),
+      classShapes: shapes,
+      files: ['src/domain/order.ts'],
+    });
+    const flagged = findings.map((f) => f.message);
+    expect(flagged.some((m) => m.includes('fakeRecordVar'))).toBe(true);
+    expect(flagged.some((m) => m.includes('fakeDeadClosure'))).toBe(true);
+    expect(flagged.some((m) => m.includes('realRecord'))).toBe(false);
+    expect(flagged.some((m) => m.includes('realThrowGuard'))).toBe(false);
+
+    // Truncated/unclosed class still falls back to lexical scanner to report truncatedUntil.
+    const truncated = extractClassShapesFromSource(
+      'src/domain/broken.ts',
+      `export class Broken {\n  private x = 0;\n  mutate() { this.x = 1;\n`,
+      { ts }
+    );
+    expect(truncated[0]?.truncatedUntil).toBeTypeOf('number');
+  });
+
+  it('Phase 2.1: validateSnippetAnalysis forwards ts AST to ArkRules and ArkOrder snippet checks', () => {
+    const stubGate = { validate: () => ({ valid: true, lexicalValid: true, violations: [] }) };
+    const arkRules = effective([
+      { id: 'events', sensor: 'domain-event-on-mutation', mode: 'enforced' },
+    ]);
+    const rulesSnippet = validateSnippetAnalysis({
+      gate: stubGate,
+      ts,
+      source: `export class Order {
+  private total = 0;
+  private constructor() {}
+  static create() { return new Order(); }
+  bump(n: number) { const record = 1; this.total = n + record; }
+}`,
+      context: {
+        relFile: 'src/domain/order.ts',
+        filePath: 'src/domain/order.ts',
+        layer: 'DomainModel',
+        layers: [{ name: 'DomainModel', patterns: ['src/domain/**'] }],
+        arkRules,
+      },
+    });
+    expect(rulesSnippet.violations.some((v: { code?: string }) => v.code === 'domain-event-on-mutation')).toBe(true);
+
+    const orderSnippet = validateSnippetAnalysis({
+      gate: stubGate,
+      ts,
+      source: `import { createOrderPlane } from 'arkgate/order';
+const plane = createOrderPlane({ projector: () => ({ allowedKinds: ['A'], invalidated: [] }) });
+const XI = { plan: 'free', ttl: 30 };
+plane.release(XI);
+`,
+      context: {
+        relFile: 'src/main.ts',
+        filePath: 'src/main.ts',
+        layer: 'ApplicationOrchestration',
+        layers: [{ name: 'ApplicationOrchestration', patterns: ['src/**'] }],
+        arkOrder: {
+          mode: 'enforced',
+          planeRoots: ['src/main.ts'],
+          managedLayers: ['ApplicationOrchestration'],
+          maxXiKeys: 7,
+          xiKeys: ['plan'],
+        },
+      },
+    });
+    expect(orderSnippet.violations.some((v: { ruleId?: string }) => v.ruleId === 'ARKORDER_XI_TTL')).toBe(true);
   });
 
   it('failsStrict only when a domain structure rule is already enforced', () => {

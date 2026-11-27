@@ -1438,7 +1438,9 @@ export function resolveCandidateFacts({
     if (/\.(tsx?|mts|cts)$/i.test(candidate.path)) {
       if (arkRulesActive || arkRunActive) {
         try {
-          classShapes.push(...extractClassShapesFromSource(candidate.path, content));
+          classShapes.push(
+            ...extractClassShapesFromSource(candidate.path, content, { ts, sourceFile })
+          );
         } catch {
           // Never fail the resolver for shape extraction; sensors stay silent on this file.
         }
@@ -1486,9 +1488,19 @@ export function resolveCandidateFacts({
           // Never fail the resolver for ArkOrder ingest-writes-ξ extraction.
         }
         try {
-          arkOrderReleaseKeyCounts.push(
-            ...extractArkOrderReleaseKeyCountsFromSource(candidate.path, content)
-          );
+          for (const fact of extractArkOrderReleaseKeyCountsFromSource(candidate.path, content, {
+            ts,
+            sourceFile,
+          })) {
+            // Schema 1.2 requires positive integer keyCount and closed keys {file, line, keyCount}.
+            if (fact.keyCount >= 1) {
+              arkOrderReleaseKeyCounts.push({
+                file: fact.file,
+                line: fact.line,
+                keyCount: fact.keyCount,
+              });
+            }
+          }
         } catch {
           // Never fail the resolver for ArkOrder release key-count extraction.
         }
@@ -1496,6 +1508,8 @@ export function resolveCandidateFacts({
           arkOrderXiTtlKeys.push(
             ...extractArkOrderXiTtlKeysFromSource(candidate.path, content, {
               planeRoots: planeRootPatterns,
+              ts,
+              sourceFile,
             })
           );
         } catch {
@@ -1503,7 +1517,7 @@ export function resolveCandidateFacts({
         }
         try {
           arkOrderBudgetLeaks.push(
-            ...extractArkOrderBudgetLeaksFromSource(candidate.path, content)
+            ...extractArkOrderBudgetLeaksFromSource(candidate.path, content, { ts, sourceFile })
           );
         } catch {
           // Never fail the resolver for ArkOrder information-budget extraction.

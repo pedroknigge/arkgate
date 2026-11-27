@@ -1,5 +1,6 @@
 export * from './types';
 export type {
+  ArkRunComponentFactory,
   ArkRunRegisterOptions,
   ArkRunRegistrationHandle,
 } from './componentRegistry';
@@ -13,7 +14,10 @@ export {
   ARK_RUN_INFORMATION_PACKAGE_SCHEMA_VERSION,
   appendDecisionTape,
   buildDependencyInformationPackage,
+  sanitizeDecisionTapeRecord,
   type ArkRunComponentLifetime,
+  type ArkRunDecisionTapeRecord,
+  type ArkRunDecisionTapeResidualKind,
   type ArkRunExtendedInfo,
   type ArkRunInformationPackageComponent,
   type DependencyInformationPackage,
@@ -119,3 +123,16 @@ export {
   createStrictArkKernel,
   createStrictArkKernelFromConfig,
 } from './createArkKernel';
+export {
+  DEFAULT_MAX_DECISION_TAPE_SIZE,
+  wireOrderPlane,
+  type OrderAbsorbDispatch,
+  type OrderEscalateDispatch,
+  type OrderPlaneIngestOutcome,
+  type OrderPlaneRaiseFn,
+  type OrderPlaneRestoreOptions,
+  type OrderPlaneRestoreResult,
+  type OrderPlaneTravelAction,
+  type WireOrderPlaneOptions,
+  type WiredOrderPlane,
+} from './wireOrderPlane';

@@ -21,6 +21,7 @@ export type TraceRecordType =
   | 'event.published'
   | 'event.rawPublish'
   | 'event.handoffFailed'
+  | 'event.contractDeprecated'
   | 'event.intercepted'
   | 'interceptor.error'
   | 'policy.hardViolation'
@@ -304,4 +305,14 @@ export interface EventBus {
    * Clears the observability trace.
    */
   clearTrace(): void;
+
+  /**
+   * Subscribe a real-time trace sink. Returns an unsubscribe function.
+   */
+  subscribeTrace(sink: TraceSink): Unsubscribe;
+
+  /**
+   * Sorted unique intent names currently subscribed on this bus.
+   */
+  listSubscribedIntents(): string[];
 }

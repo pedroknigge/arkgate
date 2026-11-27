@@ -8,8 +8,14 @@ import {
   type ArkRunExtendedInfo,
   type ArkRunInformationPackageComponent,
 } from '../../domain/arkRunInformationPackage';
+import type { ArkKernel } from './types';
 
-export type ArkRunRegisterOptions<T = unknown> = {
+export type ArkRunComponentFactory<T = unknown, Input = unknown> = (
+  kernel: ArkKernel,
+  input: Input
+) => T;
+
+export type ArkRunRegisterOptions<T = unknown, Input = unknown> = {
   id: string;
   lifetime?: ArkRunComponentLifetime;
   uses?: readonly string[];
@@ -17,14 +23,16 @@ export type ArkRunRegisterOptions<T = unknown> = {
   raises?: readonly string[];
   sends?: readonly string[];
   extendedInfo?: ArkRunExtendedInfo;
-  factory?: () => T;
+  factory?: ArkRunComponentFactory<T, Input>;
 };
 
 export type ArkRunRegistrationHandle = ArkRunInformationPackageComponent;
 
+type InternalFactory = (kernel: ArkKernel, input: unknown) => unknown;
+
 type InternalRecord = {
   component: ArkRunInformationPackageComponent;
-  factory?: () => unknown;
+  factory?: InternalFactory;
 };
 
 const LIFETIMES = new Set<string>(['singleton', 'transient']);
@@ -61,17 +69,41 @@ function closedLifetime(value: unknown): ArkRunComponentLifetime {
   throw new Error('ArkRun component lifetime must be "singleton" or "transient".');
 }
 
-export type ComponentRegistry = {
-  register<T>(options: ArkRunRegisterOptions<T>): ArkRunRegistrationHandle;
-  resolve<T = unknown>(id: string): T;
+export interface ArkRunComponentContainer {
+  /** Handle is declaration metadata only; the factory never leaves the registry. */
+  register<T, Input = unknown>(
+    options: ArkRunRegisterOptions<T, Input>
+  ): ArkRunRegistrationHandle;
+  resolve<T = unknown, Input = unknown>(id: string, input?: Input): T;
   resolveSingleton<T = unknown>(id: string): T;
+  has(id: string): boolean;
+  hasSingleton(id: string): boolean;
+  /**
+   * Test-only component factory replacement. Requires `{ allowOverrides: true }`
+   * on the kernel options; invalidates any cached singleton for `id`.
+   */
+  replaceForTest<T, Input = unknown>(
+    id: string,
+    factory: ArkRunComponentFactory<T, Input>
+  ): void;
+}
+
+export interface ComponentRegistry extends ArkRunComponentContainer {
   snapshotComponents(): ArkRunInformationPackageComponent[];
+}
+
+export type CreateComponentRegistryOptions = {
+  getKernel: () => ArkKernel;
+  allowOverrides?: boolean;
 };
 
-export function createComponentRegistry(): ComponentRegistry {
+export function createComponentRegistry(
+  options: CreateComponentRegistryOptions
+): ComponentRegistry {
   const records = new Map<string, InternalRecord>();
   const singletons = new Map<string, unknown>();
   const resolving = new Set<string>();
+  const allowOverrides = options.allowOverrides === true;
 
   function mustRecord(id: string): InternalRecord {
     const record = records.get(id);
@@ -81,7 +113,11 @@ export function createComponentRegistry(): ComponentRegistry {
     return record;
   }
 
-  function instantiate(id: string, record: InternalRecord): unknown {
+  function instantiate(
+    id: string,
+    record: InternalRecord,
+    input: unknown
+  ): unknown {
     if (!record.factory) {
       throw new Error(
         `ArkRun component "${id}" has no factory; declarations-only registrations cannot be resolved.`
@@ -92,7 +128,7 @@ export function createComponentRegistry(): ComponentRegistry {
     }
     resolving.add(id);
     try {
-      return record.factory();
+      return record.factory(options.getKernel(), input);
     } finally {
       resolving.delete(id);
     }
@@ -100,40 +136,50 @@ export function createComponentRegistry(): ComponentRegistry {
 
   function singleton(id: string, record: InternalRecord): unknown {
     if (singletons.has(id)) return singletons.get(id);
-    const instance = instantiate(id, record);
+    const instance = instantiate(id, record, undefined);
     singletons.set(id, instance);
     return instance;
   }
 
   return {
-    register<T>(options: ArkRunRegisterOptions<T>): ArkRunRegistrationHandle {
-      const id = typeof options?.id === 'string' ? options.id.trim() : '';
+    register<T, Input = unknown>(
+      regOptions: ArkRunRegisterOptions<T, Input>
+    ): ArkRunRegistrationHandle {
+      const id = typeof regOptions?.id === 'string' ? regOptions.id.trim() : '';
       if (!id) throw new Error('ArkRun component id must be a non-empty string.');
       if (records.has(id)) {
         throw new Error(`ArkRun component "${id}" is already registered.`);
       }
-      const lifetime = closedLifetime(options.lifetime);
+      const lifetime = closedLifetime(regOptions.lifetime);
       const component = sanitizeArkRunComponent({
         id,
         lifetime,
-        uses: options.uses,
-        reactsTo: options.reactsTo,
-        raises: options.raises,
-        sends: options.sends,
-        extendedInfo: options.extendedInfo,
+        uses: regOptions.uses,
+        reactsTo: regOptions.reactsTo,
+        raises: regOptions.raises,
+        sends: regOptions.sends,
+        extendedInfo: regOptions.extendedInfo,
       });
       if (!component) {
         throw new Error('ArkRun component id must be a non-empty string.');
       }
-      const factory = typeof options.factory === 'function' ? options.factory : undefined;
+      const factory =
+        typeof regOptions.factory === 'function'
+          ? (regOptions.factory as InternalFactory)
+          : undefined;
       records.set(id, { component, factory });
       return cloneComponent(component);
     },
 
-    resolve<T = unknown>(id: string): T {
+    resolve<T = unknown, Input = unknown>(id: string, input?: Input): T {
       const record = mustRecord(id);
       if (record.component.lifetime === 'transient') {
-        return instantiate(id, record) as T;
+        return instantiate(id, record, input) as T;
+      }
+      if (input !== undefined) {
+        throw new Error(
+          `ArkRun component "${id}" is a singleton and does not accept resolve input; use lifetime "transient" for per-call input.`
+        );
       }
       return singleton(id, record) as T;
     },
@@ -146,6 +192,31 @@ export function createComponentRegistry(): ComponentRegistry {
         );
       }
       return singleton(id, record) as T;
+    },
+
+    has(id: string): boolean {
+      return records.has(id);
+    },
+
+    hasSingleton(id: string): boolean {
+      return singletons.has(id);
+    },
+
+    replaceForTest<T, Input = unknown>(
+      id: string,
+      factory: ArkRunComponentFactory<T, Input>
+    ): void {
+      if (!allowOverrides) {
+        throw new Error(
+          'ArkRun component overrides are disabled. Pass { allowOverrides: true } when creating a test kernel.'
+        );
+      }
+      if (typeof factory !== 'function') {
+        throw new Error('ArkRun override factory must be a function.');
+      }
+      const record = mustRecord(id);
+      record.factory = factory as InternalFactory;
+      singletons.delete(id);
     },
 
     snapshotComponents(): ArkRunInformationPackageComponent[] {

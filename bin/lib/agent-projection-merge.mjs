@@ -1,148 +1,16 @@
-/**
- * GENERATED FILE — do not edit by hand.
- *
- * Canonical algorithm: src/domain/agentProjectionMerge.ts
- * Regenerate: node scripts/generate-cli-pure.mjs
- * Drift check: node scripts/generate-cli-pure.mjs --check
- *
- * Pure CLI helper (bin/lib/agent-projection-merge.mjs). Zero Node I/O.
- */
+// GENERATED FILE — do not edit by hand. Canonical: src/domain/agentProjectionMerge.ts -> bin/lib/agent-projection-merge.mjs; regenerate: npm run generate:cli-pure
+import{agentProjectionContentIdentity as g,ensureTrailingNewline as u,normalizeNewlines as f,safeVersion as m}from"./agent-projection-formatters.mjs";const p=/<!--\s*arkgate:agent-projection:begin\b([^>]*)-->/i,k=/<!--\s*arkgate:agent-projection:end\s*-->/i,E=/\barkgateVersion=([A-Za-z0-9._+-]+)/i,h=/\bschema=([A-Za-z0-9._+-]+)/i;function x(o){const n=f(o??""),e=p.exec(n);if(!e)return{block:null,body:null,before:n,after:"",beginAttrs:null};const i=e.index,a=i+e[0].length,t=n.slice(a),r=k.exec(t);if(!r)return{block:null,body:null,before:n,after:"",beginAttrs:null};const c=r.index,l=c+r[0].length;let s=t.slice(0,c);s.startsWith(`
+`)&&(s=s.slice(1));const d=n.slice(i,a+l),b=t.slice(l);return{block:d,body:s,before:n.slice(0,i),after:b,beginAttrs:e[1]??""}}function A(o){const n=String(o??""),i=p.exec(n)?.[1]??n,a=E.exec(i),t=h.exec(i),r=/\bnonAuthoritative\s*=\s*true\b/i.test(i);return{arkgateVersion:a?.[1]??null,schemaVersion:t?.[1]??null,nonAuthoritative:r}}function B(o,n){const e=A(o).arkgateVersion;return e?e===m(n):!1}function $(o){return String(o??"").includes("non-authoritative")}function I(o,n){const e=u(f(n)),a=x(e).body??e.replace(p,"").replace(k,"").trim()+`
+`,t=g(a);if(o==null||!String(o).trim())return{content:u(`# Ark Enforcement
 
-import { agentProjectionContentIdentity, ensureTrailingNewline, normalizeNewlines, safeVersion, } from './agent-projection-formatters.mjs';
-const BEGIN_LINE_RE = /<!--\s*arkgate:agent-projection:begin\b([^>]*)-->/i;
-const END_LINE_RE = /<!--\s*arkgate:agent-projection:end\s*-->/i;
-// Attribute values: alnum + common version/schema tokens only (avoid open char-class ranges).
-const VERSION_ATTR_RE = /\barkgateVersion=([A-Za-z0-9._+-]+)/i;
-const SCHEMA_ATTR_RE = /\bschema=([A-Za-z0-9._+-]+)/i;
-/**
- * Extract the managed projection block from a document (AGENTS.md or equivalent).
- */
-export function extractAgentProjectionBlock(document) {
-    const text = normalizeNewlines(document ?? '');
-    const beginMatch = BEGIN_LINE_RE.exec(text);
-    if (!beginMatch) {
-        return { block: null, body: null, before: text, after: '', beginAttrs: null };
-    }
-    const beginIndex = beginMatch.index;
-    const beginEnd = beginIndex + beginMatch[0].length;
-    const rest = text.slice(beginEnd);
-    const endMatch = END_LINE_RE.exec(rest);
-    if (!endMatch) {
-        // Unclosed block: treat as absent so merge can insert a well-formed block.
-        return { block: null, body: null, before: text, after: '', beginAttrs: null };
-    }
-    const endIndexInRest = endMatch.index;
-    const endEndInRest = endIndexInRest + endMatch[0].length;
-    // Strip a single leading newline after the begin marker; keep body content as-is.
-    let body = rest.slice(0, endIndexInRest);
-    if (body.startsWith('\n'))
-        body = body.slice(1);
-    const block = text.slice(beginIndex, beginEnd + endEndInRest);
-    const after = rest.slice(endEndInRest);
-    return {
-        block,
-        body,
-        before: text.slice(0, beginIndex),
-        after,
-        beginAttrs: beginMatch[1] ?? '',
-    };
-}
-/**
- * Parse stamps from a projection begin marker or full block/document.
- */
-export function parseAgentProjectionStamp(source) {
-    const text = String(source ?? '');
-    const begin = BEGIN_LINE_RE.exec(text);
-    const attrs = begin?.[1] ?? text;
-    const versionMatch = VERSION_ATTR_RE.exec(attrs);
-    const schemaMatch = SCHEMA_ATTR_RE.exec(attrs);
-    const nonAuthoritative = /\bnonAuthoritative\s*=\s*true\b/i.test(attrs);
-    return {
-        arkgateVersion: versionMatch?.[1] ?? null,
-        schemaVersion: schemaMatch?.[1] ?? null,
-        nonAuthoritative,
-    };
-}
-/**
- * True when the document/block stamps the given package version.
- */
-export function projectionMatchesPackageVersion(source, packageVersion) {
-    const stamped = parseAgentProjectionStamp(source).arkgateVersion;
-    if (!stamped)
-        return false;
-    return stamped === safeVersion(packageVersion);
-}
-/**
- * True when body text carries the non-enforcement label (substring match).
- */
-export function projectionHasNonEnforcementLabel(bodyOrBlock) {
-    return String(bodyOrBlock ?? '').includes('non-authoritative');
-}
-/**
- * Merge a desired projection block into an existing document without rewriting
- * customized content **outside** the managed markers.
- *
- * - Missing document → create `# Ark Enforcement` + block
- * - Existing markers → replace block when content-identity differs; else unchanged
- * - No markers → insert block after the first markdown H1 (or at top)
- */
-export function mergeAgentProjectionDocument(existing, desiredBlock) {
-    const desired = ensureTrailingNewline(normalizeNewlines(desiredBlock));
-    const desiredExtract = extractAgentProjectionBlock(desired);
-    const desiredBody = desiredExtract.body ??
-        desired.replace(BEGIN_LINE_RE, '').replace(END_LINE_RE, '').trim() + '\n';
-    const contentIdentity = agentProjectionContentIdentity(desiredBody);
-    if (existing == null || !String(existing).trim()) {
-        return {
-            content: ensureTrailingNewline(`# Ark Enforcement\n\n${desired}`),
-            action: 'created',
-            previousBlock: null,
-            contentIdentity,
-            preservedOutsideBlock: false,
-        };
-    }
-    const current = normalizeNewlines(existing);
-    const extracted = extractAgentProjectionBlock(current);
-    if (extracted.block != null) {
-        const currentBody = extracted.body ?? '';
-        if (agentProjectionContentIdentity(currentBody) === contentIdentity) {
-            return {
-                content: ensureTrailingNewline(current),
-                action: 'unchanged',
-                previousBlock: extracted.block,
-                contentIdentity,
-                preservedOutsideBlock: true,
-            };
-        }
-        const before = extracted.before.replace(/\s*$/, '\n\n');
-        const after = extracted.after.replace(/^\s*/, '\n');
-        return {
-            content: ensureTrailingNewline(`${before}${desired.trimEnd()}\n${after}`),
-            action: 'block-replaced',
-            previousBlock: extracted.block,
-            contentIdentity,
-            preservedOutsideBlock: true,
-        };
-    }
-    // Insert after first H1 line when present.
-    const h1 = /^(#\s+[^\n]*\n)/m.exec(current);
-    if (h1 && h1.index != null) {
-        const insertAt = h1.index + h1[1].length;
-        const before = current.slice(0, insertAt).replace(/\s*$/, '\n\n');
-        const after = current.slice(insertAt).replace(/^\s*/, '\n');
-        return {
-            content: ensureTrailingNewline(`${before}${desired.trimEnd()}\n${after}`),
-            action: 'block-inserted',
-            previousBlock: null,
-            contentIdentity,
-            preservedOutsideBlock: true,
-        };
-    }
-    return {
-        content: ensureTrailingNewline(`${desired.trimEnd()}\n\n${current.trimStart()}`),
-        action: 'block-inserted',
-        previousBlock: null,
-        contentIdentity,
-        preservedOutsideBlock: true,
-    };
-}
+${e}`),action:"created",previousBlock:null,contentIdentity:t,preservedOutsideBlock:!1};const r=f(o),c=x(r);if(c.block!=null){const s=c.body??"";if(g(s)===t)return{content:u(r),action:"unchanged",previousBlock:c.block,contentIdentity:t,preservedOutsideBlock:!0};const d=c.before.replace(/\s*$/,`
+
+`),b=c.after.replace(/^\s*/,`
+`);return{content:u(`${d}${e.trimEnd()}
+${b}`),action:"block-replaced",previousBlock:c.block,contentIdentity:t,preservedOutsideBlock:!0}}const l=/^(#\s+[^\n]*\n)/m.exec(r);if(l&&l.index!=null){const s=l.index+l[1].length,d=r.slice(0,s).replace(/\s*$/,`
+
+`),b=r.slice(s).replace(/^\s*/,`
+`);return{content:u(`${d}${e.trimEnd()}
+${b}`),action:"block-inserted",previousBlock:null,contentIdentity:t,preservedOutsideBlock:!0}}return{content:u(`${e.trimEnd()}
+
+${r.trimStart()}`),action:"block-inserted",previousBlock:null,contentIdentity:t,preservedOutsideBlock:!0}}export{x as extractAgentProjectionBlock,I as mergeAgentProjectionDocument,A as parseAgentProjectionStamp,$ as projectionHasNonEnforcementLabel,B as projectionMatchesPackageVersion};

@@ -6,11 +6,14 @@ export type EventSchemaFieldType =
   | 'boolean'
   | 'object'
   | 'array'
+  | 'null'
   | 'unknown';
 
 export interface EventSchemaField {
   type: EventSchemaFieldType;
   required?: boolean;
+  /** When true, `null` is accepted for this field regardless of `type`. */
+  nullable?: boolean;
   description?: string;
   /** Allowed literal values for this field. Compared with Object.is. */
   enum?: unknown[];
@@ -74,6 +77,7 @@ export interface EventContractValidationResult {
   ok: boolean;
   contract?: EventContract;
   issues: EventContractIssue[];
+  warnings?: EventContractIssue[];
 }
 
 export interface EventContractRegistry {

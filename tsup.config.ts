@@ -53,28 +53,21 @@ const shared: Options = {
   define: { __ARKGATE_VERSION__: JSON.stringify(pkg.version) },
 };
 
-export default defineConfig([
-  {
-    ...shared,
-    entry: {
-      index: 'src/gate.ts',
-      'eslint/index': 'src/eslint/index.ts',
-      'order/index': 'src/kernel/order/index.ts',
-    },
-    splitting: false,
-    onSuccess: async () => {
-      patchEslintCjs();
-    },
+export default defineConfig({
+  ...shared,
+  // Share domain/kernel chunks across all five public entries so gate, eslint,
+  // order, runtime, and nestjs execute the same compiled code without duplicating
+  // pure domain logic, while keeping runtime/nestjs error classes identical
+  // (instanceof works) and public export surfaces strictly isolated per entry.
+  entry: {
+    index: 'src/gate.ts',
+    'eslint/index': 'src/eslint/index.ts',
+    'order/index': 'src/kernel/order/index.ts',
+    'runtime/index': 'src/runtime/index.ts',
+    'nestjs/index': 'src/nestjs/index.ts',
   },
-  {
-    ...shared,
-    // arkgate/runtime and arkgate/nestjs share ONE kernel chunk: an ArkModule
-    // kernel throws the same error classes arkgate/runtime exports (instanceof
-    // works) and module-level state is not duplicated between the two entries.
-    entry: {
-      'runtime/index': 'src/runtime/index.ts',
-      'nestjs/index': 'src/nestjs/index.ts',
-    },
-    splitting: true,
+  splitting: true,
+  onSuccess: async () => {
+    patchEslintCjs();
   },
-]);
+});

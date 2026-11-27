@@ -13,7 +13,6 @@ import {
   createFrozenRelease,
   DEFAULT_MAX_XI_KEYS,
   fieldEventIdentity,
-  freezeRecord,
   isForbiddenPlaneMethod,
   proposePatternChange,
   refreshSigmaRecord,
@@ -121,7 +120,10 @@ export function createOrderPlane(options: CreateOrderPlaneOptions): OrderPlane {
   const plane: OrderPlane = {
     release(xi, sigma) {
       if (current) {
-        assertUnvalvedRelease(current, freezeRecord(xi, 'ξ'));
+        throw new ArkOrderError(
+          'ARKORDER_UNVALVED_RELEASE',
+          'release() is for the first freeze only; use refreshSigma() if ξ is unchanged or proposeRelease() then apply() to change ξ'
+        );
       }
       return persist(
         withinBudget(

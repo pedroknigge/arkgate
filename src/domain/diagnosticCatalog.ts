@@ -610,6 +610,13 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
     'Adjust the code to satisfy the named policy, or change the policy only through an explicit contract decision.'
   ),
   entry(
+    'POLICY_WEAKENING_BLOCKED',
+    'config',
+    'Law file weakening blocked by write gate',
+    'A direct Write/Edit/MultiEdit/ApplyPatch change weakens ark.config.json or a referenced ArkRules catalog without an active contract session or matching policy acknowledgement.',
+    'Keep the architecture rules intact, or run an explicit contract session (ARK_CONTRACT_SESSION=1) / matching --policy-ack acknowledgement for an intentional weakening.'
+  ),
+  entry(
     'EXTENSION_ERROR',
     'snippet-policy',
     'AI gate extension error',

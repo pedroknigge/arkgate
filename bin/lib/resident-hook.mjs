@@ -44,10 +44,42 @@ export function residentDoctorEnvironment(env = process.env) {
   return { digest: `sha256:${hash.digest('hex')}` };
 }
 
+function isInstalledInNodeModules(packageRoot) {
+  return path.resolve(packageRoot).split(/[\\/]+/).includes('node_modules');
+}
+
+function statToken(filePath) {
+  try {
+    const stat = fs.statSync(filePath, { bigint: true });
+    const mtime = stat.mtimeNs !== undefined ? String(stat.mtimeNs) : String(stat.mtimeMs);
+    return `${String(stat.size)}:${mtime}`;
+  } catch {
+    return 'missing';
+  }
+}
+
 function residentRuntimeIdentity(launcher) {
   const hash = createHash('sha256');
   const packageRoot = path.dirname(path.dirname(launcher));
-  const files = [path.join(packageRoot, 'package.json')];
+  const pkgPath = path.join(packageRoot, 'package.json');
+  if (isInstalledInNodeModules(packageRoot) && process.env.ARK_RESIDENT_STRICT_HASH !== '1') {
+    let pkgVersion = 'missing';
+    try {
+      const parsed = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+      pkgVersion = typeof parsed?.version === 'string' ? parsed.version : 'unknown';
+    } catch {
+      pkgVersion = 'missing';
+    }
+    hash
+      .update('fast\0')
+      .update(pkgVersion)
+      .update('\0')
+      .update(statToken(pkgPath))
+      .update('\0')
+      .update(statToken(path.join(packageRoot, 'dist', 'index.js')));
+    return hash.digest('hex');
+  }
+  const files = [pkgPath];
   const visit = (directory) => {
     try {
       for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {

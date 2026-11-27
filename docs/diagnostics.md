@@ -95,6 +95,7 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 | [`FORBIDDEN_SUBSTRING`](#FORBIDDEN_SUBSTRING) | snippet-policy | Forbidden substring |
 | [`FORBIDDEN_IMPORT`](#FORBIDDEN_IMPORT) | snippet-policy | Forbidden import target |
 | [`POLICY_VIOLATION`](#POLICY_VIOLATION) | snippet-policy | Policy engine violation |
+| [`POLICY_WEAKENING_BLOCKED`](#POLICY_WEAKENING_BLOCKED) | config | Law file weakening blocked by write gate |
 | [`EXTENSION_ERROR`](#EXTENSION_ERROR) | snippet-policy | AI gate extension error |
 | [`AST_ANALYZER_ERROR`](#AST_ANALYZER_ERROR) | snippet-policy | AST analyzer error |
 | [`CONFIG_INVALID_DYNAMIC_IMPORT_ALLOWLIST`](#CONFIG_INVALID_DYNAMIC_IMPORT_ALLOWLIST) | config | Invalid dynamicImportAllowlist |
@@ -921,6 +922,15 @@ least 60% of the names matching. When a cap stops the pass, the section says
 
 - **Why:** A registered Policy failed on the snippet or generated code under evaluation.
 - **Fix:** Adjust the code to satisfy the named policy, or change the policy only through an explicit contract decision.
+
+<a id="POLICY_WEAKENING_BLOCKED"></a>
+
+### `POLICY_WEAKENING_BLOCKED`
+
+**Law file weakening blocked by write gate**
+
+- **Why:** A direct Write/Edit/MultiEdit/ApplyPatch change weakens ark.config.json or a referenced ArkRules catalog without an active contract session or matching policy acknowledgement.
+- **Fix:** Keep the architecture rules intact, or run an explicit contract session (ARK_CONTRACT_SESSION=1) / matching --policy-ack acknowledgement for an intentional weakening.
 
 <a id="EXTENSION_ERROR"></a>
 

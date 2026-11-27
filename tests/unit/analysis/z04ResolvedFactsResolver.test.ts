@@ -302,13 +302,51 @@ describe('Z04 shipped resolved candidate facts resolver', () => {
       ])
     );
 
+    // G-02: package name "arkgate" receives NO hardcoded exemption — safety.allowInMemory governs it.
     const providerConfig = configAt(providerRoot);
+    const providerFacts = resolveCandidateFacts({
+      root: providerRoot,
+      config: providerConfig,
+      ts: loaded.ts,
+    });
     const provider = analyzeResolvedProject({
       contract: loadContract(providerConfig),
-      facts: resolveCandidateFacts({ root: providerRoot, config: providerConfig, ts: loaded.ts }),
+      facts: providerFacts,
     });
-    expect(provider.safety.inMemoryProductionStores).toEqual([]);
-    expect(provider.ir.warnings.map(({ ruleId }) => ruleId)).not.toContain(
+    expect(provider.safety.inMemoryProductionStores.length).toBeGreaterThan(0);
+    expect(provider.ir.warnings.map(({ ruleId }) => ruleId)).toContain(
+      'IN_MEMORY_STORE_IN_PRODUCTION_SOURCE'
+    );
+
+    // Default (omitted safety.allowInMemory) on package name "arkgate" also reports the warning.
+    const providerDefaultConfig = { ...providerConfig, safety: {} };
+    const providerDefault = analyzeResolvedProject({
+      contract: loadContract(providerDefaultConfig),
+      facts: resolveCandidateFacts({
+        root: providerRoot,
+        config: providerDefaultConfig,
+        ts: loaded.ts,
+      }),
+    });
+    expect(providerDefault.ir.warnings.map(({ ruleId }) => ruleId)).toContain(
+      'IN_MEMORY_STORE_IN_PRODUCTION_SOURCE'
+    );
+
+    // Only explicit safety.allowInMemory: true suppresses IN_MEMORY_STORE_IN_PRODUCTION_SOURCE.
+    const providerAllowedConfig = {
+      ...providerConfig,
+      safety: { ...providerConfig.safety, allowInMemory: true },
+    };
+    const providerAllowed = analyzeResolvedProject({
+      contract: loadContract(providerAllowedConfig),
+      facts: resolveCandidateFacts({
+        root: providerRoot,
+        config: providerAllowedConfig,
+        ts: loaded.ts,
+      }),
+    });
+    expect(providerAllowed.safety.inMemoryProductionStores).toEqual([]);
+    expect(providerAllowed.ir.warnings.map(({ ruleId }) => ruleId)).not.toContain(
       'IN_MEMORY_STORE_IN_PRODUCTION_SOURCE'
     );
   });

@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ARK_RUN_INSPECTOR_CONSOLE_PATH,
   ARK_RUN_INSPECTOR_DEFAULT_HOST,
+  ARK_RUN_INSPECTOR_DEFAULT_MAX_EVENTS,
   ARK_RUN_INSPECTOR_DEFAULT_PORT,
   ARK_RUN_INSPECTOR_MONITOR_SAMPLE_LIMIT,
   ARK_RUN_INSPECTOR_SCHEMA_VERSION,
   ARK_RUN_INSPECTOR_SSE_EVENT,
+  ARK_RUN_INSPECTOR_TRACE_EVENT,
   ArkRunInspectorBindError,
   ArkRunInspectorProductionError,
   arkRunInspectorUrl,
@@ -13,10 +16,13 @@ import {
   buildArkRunInspectorSnapshot,
   buildArkRunInspectorWorkflowsMonitor,
   classifyArkRunInspectorStoreDurability,
+  createArkRunInspectorEventRingBuffer,
   formatArkRunInspectorSseEvent,
+  formatArkRunInspectorTraceSseEvent,
   isArkRunInspectorLoopbackHost,
   isArkRunInspectorProductionEnv,
   resolveArkRunInspectorBind,
+  sanitizeArkRunInspectorTraceEvent,
 } from '../../../src/domain/arkRunInspector';
 import { ARK_RUN_TRANSPORT_KINDS } from '../../../src/domain/arkRunTransport';
 
@@ -319,5 +325,81 @@ describe('PROD-004 outbox/workflows monitors + hardening (pure)', () => {
       'memory',
       'memory',
     ]);
+  });
+});
+
+describe('Phase 3.4 SSE trace sanitization & ring buffer (pure)', () => {
+  it('sanitizes trace events against factories, payloads, functions, circular refs, and non-finite numbers', () => {
+    expect(ARK_RUN_INSPECTOR_CONSOLE_PATH).toBe('/console');
+    expect(ARK_RUN_INSPECTOR_TRACE_EVENT).toBe('trace');
+    expect(ARK_RUN_INSPECTOR_DEFAULT_MAX_EVENTS).toBe(200);
+
+    const circular: Record<string, unknown> = {
+      type: 'event.published',
+      intent: 'Domain.Order.Placed',
+      payload: { card: '4111' },
+      factory: () => 'leak',
+      instance: { secret: true },
+      dto: { ssn: '123' },
+      fn: () => {},
+      details: {
+        subscribersNotified: 2,
+        badNum: Number.NaN,
+        nestedPayload: { ok: true },
+        payload: { nestedSecret: 'drop' },
+      },
+    };
+    circular.self = circular;
+
+    const clean = sanitizeArkRunInspectorTraceEvent(circular);
+    expect(clean).toEqual({
+      type: 'event.published',
+      intent: 'Domain.Order.Placed',
+      details: {
+        subscribersNotified: 2,
+        badNum: null,
+        nestedPayload: { ok: true },
+      },
+    });
+    expect(JSON.stringify(clean)).not.toMatch(/4111|secret|leak|123|drop/);
+    expect(sanitizeArkRunInspectorTraceEvent('plain')).toEqual({ value: 'plain' });
+    expect(sanitizeArkRunInspectorTraceEvent(undefined)).toEqual({ value: null });
+  });
+
+  it('formats trace SSE frames with optional positive integer id', () => {
+    expect(formatArkRunInspectorTraceSseEvent({ type: 'event.published', intent: 'A.B' }, 7)).toBe(
+      'id: 7\nevent: trace\ndata: {"type":"event.published","intent":"A.B"}\n\n'
+    );
+    expect(formatArkRunInspectorTraceSseEvent({ type: 'event.published' }, 0)).toBe(
+      'event: trace\ndata: {"type":"event.published"}\n\n'
+    );
+    expect(formatArkRunInspectorTraceSseEvent({ type: 'event.published' }, -3)).toBe(
+      'event: trace\ndata: {"type":"event.published"}\n\n'
+    );
+  });
+
+  it('bounds ring buffer capacity, evicts oldest, and supports Last-Event-ID replay', () => {
+    const ring = createArkRunInspectorEventRingBuffer(3);
+    expect(ring.capacity).toBe(3);
+    for (let i = 1; i <= 5; i += 1) {
+      ring.push({ type: 'event.published', intent: `Domain.E${i}` });
+    }
+    expect(ring.size()).toBe(3);
+    expect(ring.list().map((e) => e.id)).toEqual([3, 4, 5]);
+    expect(ring.list(3).map((e) => e.id)).toEqual([4, 5]);
+    expect(ring.list(5)).toEqual([]);
+
+    // Zero capacity stores nothing while still advancing ids.
+    const zero = createArkRunInspectorEventRingBuffer(0);
+    expect(zero.capacity).toBe(0);
+    expect(zero.push({ type: 't' }).id).toBe(1);
+    expect(zero.size()).toBe(0);
+    expect(zero.list()).toEqual([]);
+
+    // Negative / non-finite capacities clamp safely.
+    expect(createArkRunInspectorEventRingBuffer(-10).capacity).toBe(0);
+    expect(createArkRunInspectorEventRingBuffer(Number.NaN).capacity).toBe(
+      ARK_RUN_INSPECTOR_DEFAULT_MAX_EVENTS
+    );
   });
 });

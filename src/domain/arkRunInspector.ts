@@ -21,7 +21,10 @@ export const ARK_RUN_INSPECTOR_EVENTS_PATH = '/events';
 export const ARK_RUN_INSPECTOR_GRAPH_PATH = '/graph';
 export const ARK_RUN_INSPECTOR_OUTBOX_PATH = '/outbox';
 export const ARK_RUN_INSPECTOR_WORKFLOWS_PATH = '/workflows';
+export const ARK_RUN_INSPECTOR_CONSOLE_PATH = '/console';
 export const ARK_RUN_INSPECTOR_SSE_EVENT = 'snapshot';
+export const ARK_RUN_INSPECTOR_TRACE_EVENT = 'trace';
+export const ARK_RUN_INSPECTOR_DEFAULT_MAX_EVENTS = 200;
 export const ARK_RUN_INSPECTOR_TRANSPORT_FALLBACK = 'in-process-local' as const;
 /** Server-side sample cap for outbox/workflows monitors (DoS floor). */
 export const ARK_RUN_INSPECTOR_MONITOR_SAMPLE_LIMIT = 32;
@@ -585,4 +588,112 @@ export function buildArkRunInspectorSnapshot(
 
 export function formatArkRunInspectorSseEvent(snapshot: unknown): string {
   return `event: ${ARK_RUN_INSPECTOR_SSE_EVENT}\ndata: ${JSON.stringify(snapshot)}\n\n`;
+}
+
+const TRACE_REDACTED_KEY_RE = /^(factory|factories|instance|instances|input|dto|payload)$/i;
+
+function sanitizeTraceValue(value: unknown, seen: Set<object>): unknown {
+  if (value === null || value === undefined) return value;
+  if (typeof value === 'string' || typeof value === 'boolean') return value;
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  if (typeof value !== 'object') return undefined;
+  if (seen.has(value)) return undefined;
+  seen.add(value);
+  try {
+    if (Array.isArray(value)) {
+      const items: unknown[] = [];
+      for (const item of value) {
+        const clean = sanitizeTraceValue(item, seen);
+        if (clean !== undefined) items.push(clean);
+      }
+      return items;
+    }
+    const out: Record<string, unknown> = {};
+    for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+      if (TRACE_REDACTED_KEY_RE.test(key)) continue;
+      const clean = sanitizeTraceValue(child, seen);
+      if (clean !== undefined) out[key] = clean;
+    }
+    return out;
+  } finally {
+    seen.delete(value);
+  }
+}
+
+/**
+ * Sanitize a trace record for SSE push (strips functions, circular refs, and
+ * factory/instance/payload/dto keys).
+ */
+export function sanitizeArkRunInspectorTraceEvent(record: unknown): Record<string, unknown> {
+  const clean = sanitizeTraceValue(record, new Set());
+  if (clean && typeof clean === 'object' && !Array.isArray(clean)) {
+    return clean as Record<string, unknown>;
+  }
+  return { value: clean ?? null };
+}
+
+export function formatArkRunInspectorTraceSseEvent(trace: unknown, id?: number): string {
+  const prefix =
+    typeof id === 'number' && Number.isInteger(id) && id > 0 ? `id: ${id}\n` : '';
+  return `${prefix}event: ${ARK_RUN_INSPECTOR_TRACE_EVENT}\ndata: ${JSON.stringify(
+    sanitizeArkRunInspectorTraceEvent(trace)
+  )}\n\n`;
+}
+
+type ArkRunInspectorBufferedEvent = {
+  id: number;
+  event: Record<string, unknown>;
+};
+
+export type ArkRunInspectorEventRingBuffer = {
+  readonly capacity: number;
+  push(record: unknown): ArkRunInspectorBufferedEvent;
+  list(afterId?: number): ArkRunInspectorBufferedEvent[];
+  size(): number;
+};
+
+function closedMaxEvents(value: unknown): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return ARK_RUN_INSPECTOR_DEFAULT_MAX_EVENTS;
+  }
+  return Math.max(0, Math.trunc(value));
+}
+
+/**
+ * Bounded FIFO ring buffer for SSE trace replay. Evicts oldest entries once
+ * capacity is exceeded so long-running local inspector sessions stay bounded.
+ */
+export function createArkRunInspectorEventRingBuffer(
+  maxEvents?: number
+): ArkRunInspectorEventRingBuffer {
+  const capacity = closedMaxEvents(maxEvents);
+  const entries: ArkRunInspectorBufferedEvent[] = [];
+  let nextId = 0;
+
+  return {
+    capacity,
+    push(record: unknown): ArkRunInspectorBufferedEvent {
+      nextId += 1;
+      const item: ArkRunInspectorBufferedEvent = {
+        id: nextId,
+        event: sanitizeArkRunInspectorTraceEvent(record),
+      };
+      if (capacity > 0) {
+        entries.push(item);
+        if (entries.length > capacity) {
+          entries.splice(0, entries.length - capacity);
+        }
+      }
+      return item;
+    },
+    list(afterId?: number): ArkRunInspectorBufferedEvent[] {
+      if (typeof afterId === 'number' && Number.isInteger(afterId) && afterId > 0) {
+        return entries.filter((entry) => entry.id > afterId);
+      }
+      return [...entries];
+    },
+    size(): number {
+      return entries.length;
+    },
+  };
 }

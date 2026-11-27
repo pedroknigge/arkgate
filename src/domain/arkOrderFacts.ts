@@ -5,6 +5,16 @@ import type { ResolvedDependencyFact } from './resolvedCandidateFactsTypes';
 import { XI_TTL_KEY_RE } from './arkOrderTypes';
 import { globToRegExp } from './layerMatch';
 import { sourceHasPersistenceWrite, sourceImportsPersistenceDriverText } from './persistenceWriteHint';
+import {
+  tsAstNodeLine,
+  tsAstPropertyKeyName,
+  unwrapTsAstExpression,
+  type TsAstArrayLiteralExpression,
+  type TsAstLike,
+  type TsAstNode,
+  type TsAstObjectLiteralExpression,
+  type TsAstSourceFile,
+} from './sourcePolicy';
 
 const ARKORDER_PLANE_FACTORY = 'createOrderPlane';
 
@@ -41,6 +51,13 @@ export type ResolvedArkOrderReleaseKeyCountFact = {
   file: string;
   line: number;
   keyCount: number;
+  incomplete?: boolean;
+};
+
+/** Optional TypeScript compiler API host for AST-backed fact extraction. */
+export type ArkOrderAstOptions = {
+  ts?: TsAstLike | null;
+  sourceFile?: TsAstSourceFile | null;
 };
 
 /** A freshness key (ttl/freshUntil/maxAge) inside the ξ literal of plane.release / proposeRelease. */
@@ -162,7 +179,7 @@ const NAMED_IMPORT_RE = /\bimport\s+(?:type\s+)?\{([^}]*)\}\s*from\s*['"]([^'"]+
 const RELATIVE_EXTENSIONS = ['', '.ts', '.tsx', '.mts', '.cts', '.js', '.jsx', '.mjs', '.cjs'];
 
 /** Receiver-resolution context for the plane-bound extractors. */
-export type ArkOrderPlaneReceiverOptions = {
+export type ArkOrderPlaneReceiverOptions = ArkOrderAstOptions & {
   /** Declared `arkOrder.planeRoots` globs; a named import from one resolves to a plane. */
   planeRoots?: readonly string[];
 };
@@ -421,11 +438,225 @@ export function extractArkOrderIngestWritesXiFromSource(
   return facts;
 }
 
-/** Count primitive keys in `.release({ ... })` object literals (no nested ξ). */
+type AstScope = ReadonlyMap<string, TsAstNode>;
+
+function parseArkOrderAst(
+  file: string,
+  content: string,
+  options?: ArkOrderAstOptions
+): { ts: TsAstLike; sourceFile: TsAstSourceFile } | null {
+  const ts = options?.ts;
+  if (!ts || typeof ts.createSourceFile !== 'function') return null;
+  const sourceFile =
+    options.sourceFile ?? ts.createSourceFile(file, content, ts.ScriptTarget.Latest, true);
+  return { ts, sourceFile };
+}
+
+function collectBlockConstScope(
+  ts: TsAstLike,
+  container: TsAstNode,
+  parentScope: AstScope
+): AstScope {
+  let next: Map<string, TsAstNode> | null = null;
+  const bind = (name: string, target: TsAstNode) => {
+    if (!next) next = new Map(parentScope);
+    next.set(name, target);
+  };
+  ts.forEachChild(container, (child) => {
+    if (ts.isVariableStatement(child)) {
+      const isConst = (child.declarationList.flags & ts.NodeFlags.Const) !== 0;
+      if (!isConst) return;
+      for (const decl of child.declarationList.declarations) {
+        if (ts.isIdentifier(decl.name) && decl.initializer) {
+          bind(decl.name.text, decl.initializer);
+        }
+      }
+      return;
+    }
+    if (ts.isFunctionDeclaration(child) && child.name && child.body) {
+      bind(child.name.text, child);
+    }
+  });
+  return next ?? parentScope;
+}
+
+function walkAstWithScope(
+  ts: TsAstLike,
+  node: TsAstNode,
+  scope: AstScope,
+  visitor: (current: TsAstNode, activeScope: AstScope) => void
+): void {
+  const activeScope = collectBlockConstScope(ts, node, scope);
+  visitor(node, activeScope);
+  ts.forEachChild(node, (child) => {
+    walkAstWithScope(ts, child, activeScope, visitor);
+  });
+}
+
+function resolveAstTarget(
+  ts: TsAstLike,
+  node: TsAstNode,
+  scope: AstScope,
+  visited = new Set<string>()
+): TsAstNode {
+  const expr = unwrapTsAstExpression(ts, node);
+  if (ts.isIdentifier(expr)) {
+    if (visited.has(expr.text)) return expr;
+    const bound = scope.get(expr.text);
+    if (!bound) return expr;
+    const nextVisited = new Set(visited);
+    nextVisited.add(expr.text);
+    return resolveAstTarget(ts, bound, scope, nextVisited);
+  }
+  return expr;
+}
+
+function resolveObjectLiteral(
+  ts: TsAstLike,
+  node: TsAstNode,
+  scope: AstScope
+): TsAstObjectLiteralExpression | null {
+  const resolved = resolveAstTarget(ts, node, scope);
+  return ts.isObjectLiteralExpression(resolved) ? resolved : null;
+}
+
+function resolveArrayLiteral(
+  ts: TsAstLike,
+  node: TsAstNode,
+  scope: AstScope
+): TsAstArrayLiteralExpression | null {
+  const resolved = resolveAstTarget(ts, node, scope);
+  return ts.isArrayLiteralExpression(resolved) ? resolved : null;
+}
+
+function astReceiverIdentifier(ts: TsAstLike, expr: TsAstNode): string | null {
+  const unwrapped = unwrapTsAstExpression(ts, expr);
+  if (ts.isIdentifier(unwrapped)) return unwrapped.text;
+  if (ts.isPropertyAccessExpression(unwrapped)) return unwrapped.name.text;
+  return null;
+}
+
+function objectPropertyValue(
+  ts: TsAstLike,
+  obj: TsAstObjectLiteralExpression,
+  targetKey: string
+): TsAstNode | null {
+  for (const prop of obj.properties) {
+    if (ts.isPropertyAssignment(prop)) {
+      if (tsAstPropertyKeyName(ts, prop.name) === targetKey) return prop.initializer;
+      continue;
+    }
+    if (ts.isShorthandPropertyAssignment(prop) && prop.name.text === targetKey) {
+      return prop.name;
+    }
+  }
+  return null;
+}
+
+function collectObjectLiteralKeys(
+  ts: TsAstLike,
+  obj: TsAstObjectLiteralExpression,
+  scope: AstScope,
+  visited = new Set<TsAstNode>()
+): string[] {
+  if (visited.has(obj)) return [];
+  visited.add(obj);
+  const keys: string[] = [];
+  for (const prop of obj.properties) {
+    if (ts.isPropertyAssignment(prop)) {
+      const name = tsAstPropertyKeyName(ts, prop.name);
+      if (name) keys.push(name);
+      continue;
+    }
+    if (ts.isShorthandPropertyAssignment(prop)) {
+      keys.push(prop.name.text);
+      continue;
+    }
+    if (ts.isSpreadAssignment(prop)) {
+      const spreadObj = resolveObjectLiteral(ts, prop.expression, scope);
+      if (spreadObj) {
+        keys.push(...collectObjectLiteralKeys(ts, spreadObj, scope, visited));
+      }
+    }
+  }
+  return keys;
+}
+
+function extractArrayStringLiterals(
+  ts: TsAstLike,
+  node: TsAstNode,
+  scope: AstScope,
+  visited = new Set<TsAstNode>()
+): string[] {
+  const arr = resolveArrayLiteral(ts, node, scope);
+  if (!arr || visited.has(arr)) return [];
+  visited.add(arr);
+  const out: string[] = [];
+  for (const element of arr.elements) {
+    if (ts.isSpreadElement(element)) {
+      out.push(...extractArrayStringLiterals(ts, element.expression, scope, visited));
+      continue;
+    }
+    const resolved = resolveAstTarget(ts, element, scope);
+    if (ts.isStringLiteral(resolved) || ts.isNoSubstitutionTemplateLiteral(resolved)) {
+      if (resolved.text) out.push(resolved.text);
+    }
+  }
+  return out;
+}
+
+function walkReleaseCallsAst(
+  ts: TsAstLike,
+  sourceFile: TsAstSourceFile,
+  onRelease: (entry: {
+    call: TsAstNode;
+    receiverExpr: TsAstNode;
+    xiObj: TsAstObjectLiteralExpression;
+    scope: AstScope;
+  }) => void
+): void {
+  walkAstWithScope(ts, sourceFile, new Map(), (node, scope) => {
+    if (!ts.isCallExpression(node) || node.arguments.length === 0) return;
+    if (!ts.isPropertyAccessExpression(node.expression)) return;
+    const method = node.expression.name.text;
+    if (method !== 'release' && method !== 'proposeRelease') return;
+    const xiObj = resolveObjectLiteral(ts, node.arguments[0]!, scope);
+    if (!xiObj) return;
+    onRelease({ call: node, receiverExpr: node.expression.expression, xiObj, scope });
+  });
+}
+
+/** Count primitive keys in `.release({ ... })` / `.proposeRelease({ ... })` object literals. */
 export function extractArkOrderReleaseKeyCountsFromSource(
   file: string,
-  content: string
+  content: string,
+  options: ArkOrderAstOptions = {}
 ): ResolvedArkOrderReleaseKeyCountFact[] {
+  const ast = parseArkOrderAst(file, content, options);
+  if (ast) {
+    const { ts, sourceFile } = ast;
+    const facts: ResolvedArkOrderReleaseKeyCountFact[] = [];
+    walkReleaseCallsAst(ts, sourceFile, ({ call, xiObj }) => {
+      let keyCount = 0;
+      let hasSpread = false;
+      for (const prop of xiObj.properties) {
+        if (ts.isSpreadAssignment(prop)) {
+          hasSpread = true;
+        } else {
+          keyCount += 1;
+        }
+      }
+      if (keyCount === 0 && !hasSpread) return;
+      facts.push({
+        file,
+        line: tsAstNodeLine(sourceFile, call),
+        keyCount,
+        ...(hasSpread ? { incomplete: true } : {}),
+      });
+    });
+    return facts;
+  }
+
   const source = stripCommentsPreservingLines(content);
   const facts: ResolvedArkOrderReleaseKeyCountFact[] = [];
   const re = /\.release\s*\(\s*\{([^}]*)\}/g;
@@ -460,8 +691,25 @@ export function extractArkOrderXiTtlKeysFromSource(
   content: string,
   options: ArkOrderPlaneReceiverOptions = {}
 ): ResolvedArkOrderXiTtlFact[] {
-  const source = stripCommentsPreservingLines(content);
   const context = planeReceiverContext(file, content, options);
+  const ast = parseArkOrderAst(file, content, options);
+  if (ast) {
+    const { ts, sourceFile } = ast;
+    const facts: ResolvedArkOrderXiTtlFact[] = [];
+    walkReleaseCallsAst(ts, sourceFile, ({ call, receiverExpr, xiObj, scope }) => {
+      if (!isPlaneReceiver(astReceiverIdentifier(ts, receiverExpr), context)) return;
+      const line = tsAstNodeLine(sourceFile, call);
+      const seen = new Set<string>();
+      for (const key of collectObjectLiteralKeys(ts, xiObj, scope)) {
+        if (!XI_TTL_KEY_RE.test(key) || seen.has(key)) continue;
+        seen.add(key);
+        facts.push({ file, line, key });
+      }
+    });
+    return facts;
+  }
+
+  const source = stripCommentsPreservingLines(content);
   const facts: ResolvedArkOrderXiTtlFact[] = [];
   const re = /\.(?:release|proposeRelease)\s*\(\s*\{([^}]*)\}/g;
   let match: RegExpExecArray | null;
@@ -486,6 +734,14 @@ function stringLiterals(body: string): string[] {
   return out;
 }
 
+function isCreateOrderPlaneCall(ts: TsAstLike, node: TsAstNode): boolean {
+  if (!ts.isCallExpression(node)) return false;
+  const callee = unwrapTsAstExpression(ts, node.expression);
+  if (ts.isIdentifier(callee)) return callee.text === ARKORDER_PLANE_FACTORY;
+  if (ts.isPropertyAccessExpression(callee)) return callee.name.text === ARKORDER_PLANE_FACTORY;
+  return false;
+}
+
 /**
  * Direct evidence only: in a file that calls createOrderPlane, a literal
  * `allowedKinds: [...]` entry that a literal `cannotObserve: [...]` denies. Computed
@@ -494,8 +750,51 @@ function stringLiterals(body: string): string[] {
  */
 export function extractArkOrderBudgetLeaksFromSource(
   file: string,
-  content: string
+  content: string,
+  options: ArkOrderAstOptions = {}
 ): ResolvedArkOrderBudgetLeakFact[] {
+  const ast = parseArkOrderAst(file, content, options);
+  if (ast) {
+    const { ts, sourceFile } = ast;
+    const facts: ResolvedArkOrderBudgetLeakFact[] = [];
+    const seen = new Set<string>();
+    walkAstWithScope(ts, sourceFile, new Map(), (node, scope) => {
+      if (!isCreateOrderPlaneCall(ts, node) || !ts.isCallExpression(node)) return;
+      if (node.arguments.length === 0) return;
+      const planeOpts = resolveObjectLiteral(ts, node.arguments[0]!, scope);
+      if (!planeOpts) return;
+      const budgetExpr = objectPropertyValue(ts, planeOpts, 'informationBudget');
+      if (!budgetExpr) return;
+      const budgetObj = resolveObjectLiteral(ts, budgetExpr, scope);
+      if (!budgetObj) return;
+      const cannotObserveExpr = objectPropertyValue(ts, budgetObj, 'cannotObserve');
+      if (!cannotObserveExpr) return;
+      const denied = new Set(extractArrayStringLiterals(ts, cannotObserveExpr, scope));
+      if (denied.size === 0) return;
+      const projectorExpr = objectPropertyValue(ts, planeOpts, 'projector');
+      if (!projectorExpr) return;
+      const projectorNode = resolveAstTarget(ts, projectorExpr, scope);
+      walkAstWithScope(ts, projectorNode, scope, (inner, innerScope) => {
+        let allowedExpr: TsAstNode | null = null;
+        if (ts.isPropertyAssignment(inner) && tsAstPropertyKeyName(ts, inner.name) === 'allowedKinds') {
+          allowedExpr = inner.initializer;
+        } else if (ts.isShorthandPropertyAssignment(inner) && inner.name.text === 'allowedKinds') {
+          allowedExpr = inner.name;
+        }
+        if (!allowedExpr) return;
+        const line = tsAstNodeLine(sourceFile, inner);
+        for (const kind of extractArrayStringLiterals(ts, allowedExpr, innerScope)) {
+          if (!denied.has(kind)) continue;
+          const stamp = `${line}:${kind}`;
+          if (seen.has(stamp)) continue;
+          seen.add(stamp);
+          facts.push({ file, line, kind });
+        }
+      });
+    });
+    return facts;
+  }
+
   const source = stripCommentsPreservingLines(content);
   if (!/\bcreateOrderPlane\b/.test(source)) return [];
   const denied = new Set<string>();

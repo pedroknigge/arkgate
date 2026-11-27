@@ -144,6 +144,7 @@ export class InMemoryEventBuffer implements EventBufferStore {
   async clear(): Promise<void> {
     this.records.clear();
     this.evictedPendingIds.clear();
+    this.evictedPendingCount = 0;
   }
 }
 

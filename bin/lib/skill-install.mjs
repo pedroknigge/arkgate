@@ -566,7 +566,30 @@ function isInstalledSkillStale(installedContent, templateContent, packageVersion
   return installed === null || isVersionOlder(installed, packageVersion);
 }
 
+function readAgentSkillTemplates() {
+  const dir = path.join(__packageRoot, 'templates', 'agent-skills');
+  let entries;
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return null;
+  }
+  const results = [];
+  for (const entry of entries) {
+    if (!entry.isDirectory() || !/^[a-z0-9-]+$/.test(entry.name)) continue;
+    const skillPath = path.join(dir, entry.name, 'SKILL.md');
+    if (fs.existsSync(skillPath)) {
+      results.push([entry.name, skillPath]);
+    }
+  }
+  return results.length > 0 ? results.sort((a, b) => a[0].localeCompare(b[0])) : null;
+}
+
 export function skillTemplates() {
+  const agentSkills = readAgentSkillTemplates();
+  if (agentSkills) {
+    return agentSkills.map(([name, skillPath]) => [name, fs.readFileSync(skillPath, 'utf8')]);
+  }
   const dir = path.join(__packageRoot, 'templates', 'skills');
   // A missing/mispackaged templates dir would otherwise install zero skills with
   // exit 0 — warn so a packaging regression (e.g. "templates" dropped from the
@@ -695,6 +718,10 @@ export function pruneHomeArkSkillDuplicates(root, skillNames = skillTemplateName
 // Skill names only, silent on a missing templates dir — for the freshness
 // advisory below, which must not print packaging warnings on every check run.
 export function skillTemplateNames() {
+  const agentSkills = readAgentSkillTemplates();
+  if (agentSkills) {
+    return agentSkills.map(([name]) => name);
+  }
   const dir = path.join(__packageRoot, 'templates', 'skills');
   let entries;
   try {
