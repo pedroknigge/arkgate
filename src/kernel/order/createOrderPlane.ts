@@ -215,7 +215,7 @@ export function createOrderPlane(options: CreateOrderPlaneOptions): OrderPlane {
         // ξ changes only through the valve (proposeRelease -> apply).
         assertUnvalvedRelease(current, candidate.xi);
         // Only a Release this plane's own verbs could reach: the current version
-        // (refreshSigma) or the next one (a same-ξ release()). No rollback, no jump.
+        // (refreshSigma) or the next one (proposeRelease -> apply). No rollback, no jump.
         if (candidate.version < current.version || candidate.version > current.version + 1) {
           throw new ArkOrderError(
             'ARKORDER_UNVALVED_RELEASE',

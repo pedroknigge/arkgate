@@ -127,6 +127,69 @@ export class Order {
     expect(findings.some((f) => f.message.includes('decrease'))).toBe(false);
   });
 
+  it('AR06 evaluates public entrypoints through private mutating helpers (no private-helper false positive)', () => {
+    const source = `
+export class CityRegistration {
+  private version = 0;
+  private name = '';
+  private events: unknown[] = [];
+  private bump() { this.version = this.version + 1; }
+  private record(event: unknown) { this.events.push(event); }
+  private bumpAndRecord() { this.version = this.version + 1; this.record({ type: 'Bumped' }); }
+  register(next: string) {
+    this.name = next;
+    this.bump();
+    this.record({ type: 'Registered' });
+  }
+  rename(next: string) {
+    this.name = next;
+    this.bumpAndRecord();
+  }
+  close() {
+    this.bump();
+  }
+}
+`;
+    const arkRules = effective([
+      { id: 'events', sensor: 'domain-event-on-mutation', mode: 'enforced' },
+    ]);
+    const findingsFor = (classShapes: ReturnType<typeof extractClassShapesFromSource>) =>
+      evaluateArkRuleSensors({
+        arkRules,
+        classShapes,
+        files: ['src/domain/city-registration.ts'],
+      }).map((finding) => finding.message);
+
+    const astMessages = findingsFor(
+      extractClassShapesFromSource('src/domain/city-registration.ts', source, { ts })
+    );
+    const lexerMessages = findingsFor(
+      extractClassShapesFromSource('src/domain/city-registration.ts', source)
+    );
+    const cliAstMessages = evaluateCliArkRuleSensors({
+      arkRules,
+      classShapes: extractCliClassShapesFromSource('src/domain/city-registration.ts', source, {
+        ts,
+      }),
+      files: ['src/domain/city-registration.ts'],
+    }).map((finding) => finding.message);
+    const cliLexerMessages = evaluateCliArkRuleSensors({
+      arkRules,
+      classShapes: extractCliClassShapesFromSource('src/domain/city-registration.ts', source),
+      files: ['src/domain/city-registration.ts'],
+    }).map((finding) => finding.message);
+
+    expect(cliAstMessages).toEqual(astMessages);
+    expect(cliLexerMessages).toEqual(lexerMessages);
+
+    for (const messages of [astMessages, lexerMessages]) {
+      expect(messages.some((message) => message.includes('CityRegistration.bump'))).toBe(false);
+      expect(messages.some((message) => message.includes('CityRegistration.register'))).toBe(false);
+      expect(messages.some((message) => message.includes('CityRegistration.rename'))).toBe(false);
+      expect(messages.some((message) => message.includes('CityRegistration.close'))).toBe(true);
+    }
+  });
+
   it('evaluates orchestration-only, thin-adapter, and no-anemic-model (AR07)', () => {
     const anemicShapes = extractClassShapesFromSource(
       'src/domain/customer.ts',

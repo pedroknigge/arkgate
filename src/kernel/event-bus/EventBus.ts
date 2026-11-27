@@ -62,6 +62,8 @@ import { nextRuntimeId } from '../runtimeIds';
 interface InternalSubscription {
   intentName: string;
   handler: EventHandler<IntentName, unknown>;
+  ordinal: number;
+  subscriberId?: string;
 }
 
 function nextInterceptorRegistrationId(): string {
@@ -71,6 +73,7 @@ function nextInterceptorRegistrationId(): string {
 export class EventBusImpl<Context = unknown> implements EventBus {
   private readonly subscriptions: InternalSubscription[] = [];
   private readonly subscriptionsByIntent = new Map<string, InternalSubscription[]>();
+  private nextSubscriptionOrdinal = 0;
   private readonly interceptors: RegisteredInterceptor[] = [];
   private readonly interceptorsByIntent = new Map<string, RegisteredInterceptor[]>();
   private readonly recording: RecordingBuffers;
@@ -398,7 +401,8 @@ export class EventBusImpl<Context = unknown> implements EventBus {
 
   subscribe<N extends IntentName, P>(
     intent: N | IntentCreator<N, P>,
-    handler: EventHandler<N, P>
+    handler: EventHandler<N, P>,
+    subscriberId?: string
   ): Unsubscribe {
     const intentName =
       typeof intent === 'string' ? intent : (intent as IntentCreator<N, P>).name;
@@ -409,10 +413,14 @@ export class EventBusImpl<Context = unknown> implements EventBus {
       intentRegistry: this.intentRegistry,
     });
 
+    const id = typeof subscriberId === 'string' ? subscriberId.trim() : '';
     const sub: InternalSubscription = {
       intentName,
       handler: handler as EventHandler<IntentName, unknown>,
+      ordinal: this.nextSubscriptionOrdinal,
+      ...(id ? { subscriberId: id } : {}),
     };
+    this.nextSubscriptionOrdinal += 1;
 
     this.subscriptions.push(sub);
     const subscriptionsForIntent = this.subscriptionsByIntent.get(intentName) ?? [];
@@ -522,6 +530,20 @@ export class EventBusImpl<Context = unknown> implements EventBus {
 
   listSubscribedIntents(): string[] {
     return [...this.subscriptionsByIntent.keys()].sort();
+  }
+
+  getSubscribers(): Array<{ intent: string; subscriber: string }> {
+    return this.subscriptions.map((sub) => {
+      const handlerName = typeof sub.handler.name === 'string' ? sub.handler.name : '';
+      return {
+        intent: sub.intentName,
+        subscriber:
+          sub.subscriberId ??
+          (handlerName.length > 0
+            ? handlerName
+            : `anonymous:${sub.intentName}:${sub.ordinal}`),
+      };
+    });
   }
 
   /** Release all subscriptions, interceptors, and trace sinks for kernel teardown. */

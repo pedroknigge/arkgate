@@ -350,7 +350,7 @@ export function evaluateArkOrderEditorSensors(input: {
     planeRootHits: [],
     xiFieldWrites: extractArkOrderXiFieldWritesFromSource(input.file, input.source, xiKeys),
     ingestWritesXi: extractArkOrderIngestWritesXiFromSource(input.file, input.source),
-    releaseKeyCounts: extractArkOrderReleaseKeyCountsFromSource(input.file, input.source, astOpts),
+    releaseKeyCounts: extractArkOrderReleaseKeyCountsFromSource(input.file, input.source, receivers),
     xiTtlKeys: extractArkOrderXiTtlKeysFromSource(input.file, input.source, receivers),
     budgetLeaks: extractArkOrderBudgetLeaksFromSource(input.file, input.source, astOpts),
     dependencies: extractArkOrderModuleImportsFromSource(input.file, input.source),

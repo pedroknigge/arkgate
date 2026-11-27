@@ -987,6 +987,34 @@ describe('Phase 4.1 — wireOrderPlane (ArkOrder <-> ArkRun bridge)', () => {
     ).toThrow(UnregisteredIntentError);
   });
 
+  it('keeps the largest decisionTape cap when two wires share one kernel', async () => {
+    const ark = track(createStrictArkKernel({ strictEventContracts: false }));
+    ark.registry.define('Application.OrderBridge');
+    const planeA = makeOrderPlane();
+    const planeB = makeOrderPlane();
+    planeA.release({ tier: 'free' }, { maxSeats: 10 });
+    planeB.release({ tier: 'free' }, { maxSeats: 10 });
+
+    const bridgeA = wireOrderPlane(ark, planeA, {
+      source: 'Application.OrderBridge',
+      maxDecisionTapeSize: 5,
+    });
+    const bridgeB = wireOrderPlane(ark, planeB, {
+      source: 'Application.OrderBridge',
+      maxDecisionTapeSize: 2,
+    });
+
+    for (let i = 1; i <= 5; i += 1) {
+      await bridgeA.ingest({ kind: 'SeatAdded', payload: { seats: i } });
+    }
+    await bridgeB.ingest({ kind: 'SeatAdded', payload: { seats: 6 } });
+
+    const tape = ark.getDecisionTape();
+    expect(tape).toHaveLength(5);
+    expect(bridgeB.getDecisionTape()).toHaveLength(5);
+    expect(tape.at(-1)?.event.payload?.seats).toBe(6);
+  });
+
   it('performs explicit audited restore() via proposeRelease -> apply and records audit + decisionTape', async () => {
     const ark = track(createStrictArkKernel({ strictEventContracts: false }));
     ark.registry.define('Application.OrderBridge');

@@ -79,4 +79,25 @@ describe('RN13 ArkRun requestGraph (kernel)', () => {
       InvalidArkRunGraphQueryError
     );
   });
+
+  it('projects named eventBus subscriptions as observed reactsTo edges', () => {
+    const ark = createStrictArkKernel({
+      instanceId: 'kernel-rn13-subscribers',
+      strictEventContracts: false,
+    });
+    const OrderPlaced = ark.registry.define<'Domain.Order.Placed', { id: string }>(
+      'Domain.Order.Placed'
+    );
+    ark.eventBus.subscribe(OrderPlaced, () => {}, 'Application.OrderProjector');
+
+    const process = ark.requestGraph({ slice: 'process' });
+    expect(process.edges).toContainEqual(
+      expect.objectContaining({
+        from: 'Domain.Order.Placed',
+        to: 'Application.OrderProjector',
+        kind: 'reactsTo',
+        origin: 'observed',
+      })
+    );
+  });
 });

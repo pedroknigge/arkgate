@@ -121,6 +121,11 @@ export type ClassShapeFact = {
   hasPublicSetters: boolean;
   hasPublicConstructor: boolean;
   hasStaticFactory: boolean;
+  /**
+   * Methods that mutate state directly or through `this.<helper>()` calls.
+   * AR06 evaluates public/protected entries; private helpers are marked covered
+   * so the finding points at the public caller that must record or guard.
+   */
   mutatingMethods: readonly {
     name: string;
     referencesGuardOrPublish: boolean;
@@ -917,6 +922,94 @@ function methodBodyHasGuardOrPublishAst(ts: TsAstLike, body: TsAstNode): boolean
   return found;
 }
 
+type MethodVisibility = 'public' | 'private' | 'protected';
+
+type ScannedMethodFacts = {
+  name: string;
+  visibility: MethodVisibility;
+  directMutates: boolean;
+  directGuard: boolean;
+  calls: readonly string[];
+};
+
+/**
+ * Collect `this.<method>(...)` calls that can run in the method's own body.
+ * Nested functions and classes are skipped: a dead closure must not make a
+ * public mutator look guarded (same boundary rule as the direct guard scan).
+ */
+function methodBodyCallsThisAst(ts: TsAstLike, body: TsAstNode): string[] {
+  const calls = new Set<string>();
+  const visit = (node: TsAstNode): void => {
+    if (
+      node !== body &&
+      (isNestedFunctionOrClassBoundary(ts, node) || node.kind === ts.SyntaxKind.ArrowFunction)
+    ) {
+      return;
+    }
+    if (ts.isCallExpression(node)) {
+      const callee = unwrapTsAstExpression(ts, node.expression);
+      if (ts.isPropertyAccessExpression(callee)) {
+        const receiver = unwrapTsAstExpression(ts, callee.expression);
+        if (receiver.kind === ts.SyntaxKind.ThisKeyword) {
+          const name = callee.name.text;
+          if (name) calls.add(name);
+        }
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(body);
+  return [...calls];
+}
+
+function methodBodyCallsThisLexical(body: string): string[] {
+  const code = maskStringsAndComments(body);
+  const calls = new Set<string>();
+  const re = /\bthis\s*\.\s*([A-Za-z_$][\w$]*)\s*(?:\?\.)?\s*\(/g;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(code)) !== null) {
+    const name = match[1];
+    if (name) calls.add(name);
+  }
+  return [...calls];
+}
+
+/**
+ * AR06 is an entrypoint rule, not a per-method rule. A private helper that only
+ * mutates state is part of a public method's implementation; the public method
+ * is the thing that must record or guard. Propagate mutation and guard evidence
+ * through `this.<method>()` calls, then evaluate public/protected entrypoints.
+ * Private helpers are marked covered so they do not emit a duplicate finding
+ * next to the caller that actually has to change.
+ */
+function buildMutatingMethodsFromFacts(
+  facts: readonly ScannedMethodFacts[]
+): Array<{ name: string; referencesGuardOrPublish: boolean }> {
+  const mutates = new Set(facts.filter((fact) => fact.directMutates).map((fact) => fact.name));
+  const guards = new Set(facts.filter((fact) => fact.directGuard).map((fact) => fact.name));
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const fact of facts) {
+      if (!mutates.has(fact.name) && fact.calls.some((called) => mutates.has(called))) {
+        mutates.add(fact.name);
+        changed = true;
+      }
+      if (!guards.has(fact.name) && fact.calls.some((called) => guards.has(called))) {
+        guards.add(fact.name);
+        changed = true;
+      }
+    }
+  }
+  return facts
+    .filter((fact) => mutates.has(fact.name))
+    .map((fact) => ({
+      name: fact.name,
+      referencesGuardOrPublish:
+        fact.visibility === 'private' ? true : guards.has(fact.name),
+    }));
+}
+
 function extractClassShapesWithAst(
   file: string,
   ts: TsAstLike,
@@ -934,7 +1027,7 @@ function extractClassShapesWithAst(
         let hasPublicConstructor = false;
         let hasStaticFactory = false;
         let methodCount = 0;
-        const mutatingMethods: Array<{ name: string; referencesGuardOrPublish: boolean }> = [];
+        const methodFacts: ScannedMethodFacts[] = [];
 
         for (const member of node.members) {
           if (ts.isPropertyDeclaration(member)) {
@@ -984,14 +1077,25 @@ function extractClassShapesWithAst(
             if (memberName === 'constructor' || CONTROL_FLOW_METHOD_NAMES.has(memberName)) {
               continue;
             }
-            if (!methodBodyMutatesThisAst(ts, member.body, memberName)) continue;
-            mutatingMethods.push({
+            const visibility: MethodVisibility = hasAstModifier(
+              member,
+              ts.SyntaxKind.PrivateKeyword
+            )
+              ? 'private'
+              : hasAstModifier(member, ts.SyntaxKind.ProtectedKeyword)
+                ? 'protected'
+                : 'public';
+            methodFacts.push({
               name: memberName,
-              referencesGuardOrPublish: methodBodyHasGuardOrPublishAst(ts, member.body),
+              visibility,
+              directMutates: methodBodyMutatesThisAst(ts, member.body, memberName),
+              directGuard: methodBodyHasGuardOrPublishAst(ts, member.body),
+              calls: methodBodyCallsThisAst(ts, member.body),
             });
           }
         }
 
+        const mutatingMethods = buildMutatingMethodsFromFacts(methodFacts);
         const hasPublicMutableFields = publicMutableFieldCount > 0;
         const dataOnly =
           methodCount <= 1 && publicMutableFieldCount >= 2 && hasPublicMutableFields;
@@ -1100,19 +1204,27 @@ export function extractClassShapesFromSource(
         body
       );
 
-    const mutatingMethods: Array<{ name: string; referencesGuardOrPublish: boolean }> = [];
+    const methodFacts: ScannedMethodFacts[] = [];
     for (const member of scanned.members) {
       if (member.kind !== 'method') continue;
       if (member.name === 'constructor') continue;
       if (member.modifiers.includes('static')) continue;
       if (member.modifiers.includes('get') || member.modifiers.includes('set')) continue;
       if (CONTROL_FLOW_METHOD_NAMES.has(member.name)) continue;
-      if (!methodAssignsThis(member.name, member.body)) continue;
-      mutatingMethods.push({
+      const visibility: MethodVisibility = member.modifiers.includes('private')
+        ? 'private'
+        : member.modifiers.includes('protected')
+          ? 'protected'
+          : 'public';
+      methodFacts.push({
         name: member.name,
-        referencesGuardOrPublish: referencesGuardOrPublish(member.body),
+        visibility,
+        directMutates: methodAssignsThis(member.name, member.body),
+        directGuard: referencesGuardOrPublish(member.body),
+        calls: methodBodyCallsThisLexical(member.body),
       });
     }
+    const mutatingMethods = buildMutatingMethodsFromFacts(methodFacts);
 
     const methodCount = scanned.members.filter((member) => member.kind === 'method').length;
     const dataOnly =

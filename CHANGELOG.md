@@ -5,6 +5,27 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+## 4.9.2 — 2026-11-27
+
+Patch release — consumer upgrade unblock, ArkOrder precision, ArkRun graph/tape fixes, ESLint AST parity, and a green-CI publish guard. No `schemaVersion` bump. No required config migration. Does not close `K01` / `Z09`. This does **not** turn `arkOrder` on.
+
+**Status: released.** `npm view arkgate@4.9.2 version`.
+
+### Fixed
+
+- **`domain-event-on-mutation` evaluates entrypoints, not isolated helpers (consumer regression).** The 4.9.0 AST rewrite checked every mutating method by itself, so a private helper such as `CityRegistration.bump()` was flagged even when every public caller recorded an event, and a public method such as `rename()` was flagged when it recorded through a private helper. The sensor now builds the intra-class `this.<helper>()` call graph, propagates mutation and guard/publish evidence, and evaluates public/protected entrypoints. Private helpers are covered by their caller; an unguarded public method that mutates only through a private helper is now flagged (a previous false negative). Consumer finding counts can shift: re-run `ark-check` after upgrading and triage remaining public entrypoints; do not baseline them.
+- **ArkOrder release key counts require a plane receiver.** `lock.release({ ...8 keys })` / `other.release(...)` no longer produce `ARKORDER_TOO_MANY_PARAMS`. Local `const` spreads are expanded (`plane.release({ ...XI })`), unknown spreads stay `incomplete`, and a known lower bound above `maxXiKeys` still fails closed. The editor path and the full resolver both pass declared `arkOrder.planeRoots`.
+- **Shared ArkRun `decisionTape` no longer shrinks.** Two `wireOrderPlane` bridges on one kernel now keep the largest requested cap; a later wire cannot silently truncate an earlier wire's records. The kernel `maxDecisionTapeSize` remains the hard ceiling.
+- **`kernel.requestGraph()` sees runtime subscribers.** `eventBus.subscribe(intent, handler, subscriberId?)` accepts an optional stable id; `getSubscribers()` projects named handlers, and anonymous handlers get a stable `anonymous:<intent>:<ordinal>` label. They appear as observed `reactsTo` edges in the process slice.
+- **ESLint ArkRules uses the same AST as CLI/hook.** The editor rule loads the project TypeScript (or ArkGate's `typescript-ark-host` fallback) and calls `extractClassShapesFromSource` with the compiler API. A dead closure that mentions `record`/`throw` no longer masks a mutator, matching `ark-check`.
+- **Removed dead `pendingTimers` state** from `createArkKernel` and corrected the `restore()` comment that still mentioned a same-ξ `release()`.
+
+### Changed
+
+- **Z07 bounded feedback restored headroom.** Full mode runs the pure lane first, then two independent single-fork serial lanes (runtime and adapter parity). The adapter parity test reuses a fresh `dist/` instead of running a second `tsup` build inside the corpus. Full wall dropped from ~35.7 s on `main` to under 20 s locally, under the existing 40 s budget; the cap was not raised.
+- **Publish npm is fail-closed on red CI.** Real publishes now require the tag commit's `ci.yml` run to be `success` (`actions: read`); dry runs skip the guard. This closes the 4.9.1 path that published while `main` was red.
+- **Additive API:** `EventBus.subscribe` accepts an optional third `subscriberId`; `EventBus.getSubscribers?()` is optional. Existing two-argument subscriptions are unchanged.
+
 ## 4.9.1 — 2026-11-27
 
 Patch release — CLI runtime minimization, dead-code removal, and repo-shape walk speedup across `bin/ark-shared.mjs`, `bin/ark-check-runtime.mjs`, and `bin/lib/check-args.mjs`. No `schemaVersion` bump. No required config migration. Does not close `K01` / `Z09`. This does **not** turn `arkOrder` on.

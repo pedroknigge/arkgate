@@ -8,6 +8,7 @@
  * need resolved import layers.
  */
 import fs from 'node:fs';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import {
   deriveArkRuleFileHints,
@@ -17,6 +18,7 @@ import {
 } from '../domain/arkRuleSensors';
 import { layerForRelativePath } from '../domain/layerMatch';
 import type { ArkConfig } from '../domain/configTypes';
+import type { TsAstLike } from '../domain/sourcePolicy';
 import { findConfigPath, loadArkContract } from './contractLoad';
 import {
   editorSourceText,
@@ -40,10 +42,48 @@ function readUtf8(file: string): string {
   }
 }
 
-function classShapesFor(relFile: string, content: string): ClassShapeFact[] {
+const typeScriptByProject = new Map<string, TsAstLike | null>();
+
+function loadTypeScriptFrom(requireFrom: NodeRequire): TsAstLike | null {
+  for (const specifier of ['typescript', 'typescript-ark-host']) {
+    try {
+      const candidate = requireFrom(specifier) as TsAstLike;
+      if (candidate && typeof candidate.createSourceFile === 'function') return candidate;
+    } catch {
+      /* try the next host */
+    }
+  }
+  return null;
+}
+
+function projectTypeScript(configPath: string): TsAstLike | null {
+  if (typeScriptByProject.has(configPath)) return typeScriptByProject.get(configPath) ?? null;
+  let loaded: TsAstLike | null = null;
+  try {
+    const requireFromProject = createRequire(configPath);
+    loaded = loadTypeScriptFrom(requireFromProject);
+    if (!loaded) {
+      // Match bin/lib/typescript-host.mjs: if the project has no usable
+      // TypeScript, fall back to ArkGate's own typescript-ark-host dependency.
+      const arkgatePackage = requireFromProject.resolve('arkgate/package.json');
+      loaded = loadTypeScriptFrom(createRequire(arkgatePackage));
+    }
+  } catch {
+    loaded = null;
+  }
+  typeScriptByProject.set(configPath, loaded);
+  return loaded;
+}
+
+function classShapesFor(
+  relFile: string,
+  content: string,
+  configPath: string
+): ClassShapeFact[] {
   if (!/\.(tsx?|mts|cts)$/i.test(relFile)) return [];
   try {
-    return extractClassShapesFromSource(relFile, content);
+    const ts = projectTypeScript(configPath);
+    return extractClassShapesFromSource(relFile, content, ts ? { ts } : undefined);
   } catch {
     return [];
   }
@@ -87,7 +127,7 @@ export function createArkRulesStructureRule(sourceIsInAnalysisScope: ScopeCheck)
           const content = editorSourceText(context) ?? readUtf8(absFile);
           const violations = evaluateArkRuleSensors({
             arkRules: contract.arkRules,
-            classShapes: classShapesFor(relFile, content),
+            classShapes: classShapesFor(relFile, content, configPath),
             files: [relFile],
             layerForFile: (candidate) =>
               candidate === relFile ? fromLayer : layerForRelativePath(candidate, config.layers),

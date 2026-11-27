@@ -77,6 +77,10 @@ export interface ArkRunComponentContainer {
   resolve<T = unknown, Input = unknown>(id: string, input?: Input): T;
   resolveSingleton<T = unknown>(id: string): T;
   has(id: string): boolean;
+  /**
+   * True only after a singleton has been materialized. A registered singleton
+   * that has not been resolved yet returns false; use `has(id)` for registration.
+   */
   hasSingleton(id: string): boolean;
   /**
    * Test-only component factory replacement. Requires `{ allowOverrides: true }`

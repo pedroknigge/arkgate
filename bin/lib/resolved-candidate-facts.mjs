@@ -1489,6 +1489,7 @@ export function resolveCandidateFacts({
         }
         try {
           for (const fact of extractArkOrderReleaseKeyCountsFromSource(candidate.path, content, {
+            planeRoots: planeRootPatterns,
             ts,
             sourceFile,
           })) {
