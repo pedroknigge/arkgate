@@ -873,12 +873,6 @@ function methodBodyMutatesThisAst(
   return mutates;
 }
 
-/**
- * AST-backed verification for `domain-event-on-mutation`: requires a real CallExpression
- * naming a domain invariant/publish verb or `this.<events>.push(...)`, or a real
- * ThrowStatement inside the method's own body (rejects `const record = 1`, comments,
- * strings, and uninvoked nested closures).
- */
 /** Leftmost identifier of a property-access chain: `a.b.c` → `a`. */
 function leftmostReceiverIdentifier(ts: TsAstLike, expression: TsAstNode): string | null {
   let current = unwrapTsAstExpression(ts, expression);
@@ -888,6 +882,12 @@ function leftmostReceiverIdentifier(ts: TsAstLike, expression: TsAstNode): strin
   return ts.isIdentifier(current) ? current.text : null;
 }
 
+/**
+ * AST-backed verification for `domain-event-on-mutation`: requires a real CallExpression
+ * naming a domain invariant/publish verb or `this.<events>.push(...)`, or a real
+ * ThrowStatement inside the method's own body (rejects `const record = 1`, comments,
+ * strings, and uninvoked nested closures).
+ */
 function methodBodyHasGuardOrPublishAst(ts: TsAstLike, body: TsAstNode): boolean {
   let found = false;
   const visit = (node: TsAstNode): void => {
