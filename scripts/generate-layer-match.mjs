@@ -12,24 +12,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { transformSync } from 'esbuild';
 import ts from 'typescript';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..');
 const CANONICAL = path.join(root, 'src/domain/layerMatch.ts');
 const DERIVED = path.join(root, 'bin/ark-layer-match.mjs');
-
-const GENERATED_BANNER = `/**
- * GENERATED FILE — do not edit by hand.
- *
- * Canonical algorithm: src/domain/layerMatch.ts
- * Regenerate: node scripts/generate-layer-match.mjs
- * Drift check: node scripts/generate-layer-match.mjs --check
- *
- * Pure layer-glob matching for ark.config.json (CLI load path).
- * CLI-only layerForFile (Node path resolution) is appended below the pure core.
- */
-`;
 
 /** CLI-only helper: absolute path → layer via the pure relative matcher. */
 const LAYER_FOR_FILE_APPENDIX = `
@@ -74,7 +63,14 @@ function buildDerivedSource(canonicalTs) {
 
   // Pure core first (no node:path). CLI helper import + layerForFile last.
   const pure = stripLeadingBlockComment(outputText).trimEnd() + '\n';
-  return `${GENERATED_BANNER}\n${pure}\n${LAYER_FOR_FILE_APPENDIX}`;
+  const { code } = transformSync(`${pure}\n${LAYER_FOR_FILE_APPENDIX}`, {
+    loader: 'js',
+    format: 'esm',
+    minify: true,
+    target: 'es2022',
+    legalComments: 'none',
+  });
+  return `// GENERATED FILE — do not edit by hand. Canonical: src/domain/layerMatch.ts; regenerate: npm run generate:layer-match\n${code}`;
 }
 
 function normalizeNewlines(s) {

@@ -138,6 +138,7 @@
     "docs/threat-model.md",
     "tests/fixtures/ts-consumer",
     "templates",
+    "!templates/skills",
     "server.json",
     "README.md",
     "CHANGELOG.md",

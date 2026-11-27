@@ -1041,3 +1041,95 @@ describe('Phase 4.1 — wireOrderPlane (ArkOrder <-> ArkRun bridge)', () => {
     await expect(emptyBridge.restore({ tier: 'free' })).rejects.toBeInstanceOf(ArkOrderError);
   });
 });
+
+describe('Phase 3.1 + 3.4 integration — kernel.requestGraph() unified origins & startInspector() SSE push', () => {
+  it('unifies declared component edges with runtime observed edges and tags declared/observed/both', async () => {
+    const ark = track(createStrictArkKernel({ strictEventContracts: false }));
+    const { OrderPlaced, source } = setupOrder(ark);
+    const OrderShadowed = ark.registry.define('Domain.Order.Shadowed');
+
+    ark.register({
+      id: source,
+      raises: ['Domain.Order.Placed'],
+      factory: () => ({}),
+    });
+    ark.register({
+      id: 'Application.BillingService',
+      reactsTo: ['Domain.Order.Placed'],
+      factory: () => ({}),
+    });
+    ark.register({
+      id: 'Application.UnusedListener',
+      reactsTo: ['Domain.Order.Shadowed'],
+      factory: () => ({}),
+    });
+
+    ark.eventBus.subscribe(OrderPlaced, () => {});
+    await ark.send(OrderPlaced, { id: 'o-1' }, { source, transport: 'localBlocking' });
+    await ark.send(OrderShadowed, { id: 'o-2' }, { source, transport: 'localBlocking' });
+
+    const graph = ark.requestGraph({ slice: 'process' });
+    const raisedDeclaredAndObserved = graph.edges.find(
+      (e) => e.from === source && e.to === 'Domain.Order.Placed' && e.kind === 'raises'
+    );
+    const raisedObservedOnly = graph.edges.find(
+      (e) => e.from === source && e.to === 'Domain.Order.Shadowed' && e.kind === 'raises'
+    );
+    const reactsDeclaredOnly = graph.edges.find(
+      (e) =>
+        e.from === 'Domain.Order.Shadowed' &&
+        e.to === 'Application.UnusedListener' &&
+        e.kind === 'reactsTo'
+    );
+
+    expect(raisedDeclaredAndObserved?.origin).toBe('both');
+    expect(raisedObservedOnly?.origin).toBe('observed');
+    expect(reactsDeclaredOnly?.origin).toBe('declared');
+  });
+
+  it('pushes real-time trace SSE events from kernel.startInspector() and closes on kernel.dispose()', async () => {
+    const ark = track(createStrictArkKernel({ strictEventContracts: false }));
+    const { OrderPlaced, source } = setupOrder(ark);
+    const handle = await ark.startInspector({ host: '127.0.0.1', port: 0, nodeEnv: 'test' });
+
+    const consoleRes = await fetch(handle.consoleUrl!);
+    expect(consoleRes.status).toBe(200);
+    const csp = consoleRes.headers.get('content-security-policy') ?? '';
+    const nonceMatch = csp.match(/'nonce-([^']+)'/);
+    expect(nonceMatch).not.toBeNull();
+    const html = await consoleRes.text();
+    expect(html).toContain(`nonce="${nonceMatch![1]}"`);
+
+    const abort = new AbortController();
+    const sseRes = await fetch(handle.eventsUrl, { signal: abort.signal });
+    expect(sseRes.status).toBe(200);
+    const reader = sseRes.body!.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    const readUntil = async (needle: string): Promise<string> => {
+      const deadline = Date.now() + 2000;
+      while (!buffer.includes(needle)) {
+        if (Date.now() > deadline) {
+          throw new Error(`Timed out waiting for "${needle}" in SSE stream: ${buffer}`);
+        }
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+      }
+      return buffer;
+    };
+
+    await readUntil('event: snapshot');
+    const startedAt = Date.now();
+    await ark.send(OrderPlaced, { id: 'sse-1' }, { source, transport: 'localBlocking' });
+    const stream = await readUntil('event: trace');
+    expect(Date.now() - startedAt).toBeLessThan(800);
+    expect(stream).toContain('Domain.Order.Placed');
+
+    abort.abort();
+    await reader.cancel().catch(() => {});
+    await ark.dispose();
+    await expect(fetch(handle.snapshotUrl)).rejects.toThrow();
+  });
+});

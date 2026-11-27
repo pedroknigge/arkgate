@@ -3,9 +3,9 @@
   "packages": {
     "gate": {
       "path": ".",
-      "maxPackedBytes": 2028406,
-      "maxUnpackedBytes": 7240756,
-      "maxFiles": 304,
+      "maxPackedBytes": 1635000,
+      "maxUnpackedBytes": 5685000,
+      "maxFiles": 316,
       "measuredCandidate": {
         "sha": "4e9ffdc19b8e86709c4d3a79ad07dcfc29654ea9",
         "ciCandidateSha": "4e9ffdc19b8e86709c4d3a79ad07dcfc29654ea9",
@@ -19,8 +19,8 @@
     },
     "runtime": {
       "path": "packages/runtime",
-      "maxPackedBytes": 328223,
-      "maxUnpackedBytes": 1222438,
+      "maxPackedBytes": 348000,
+      "maxUnpackedBytes": 1276000,
       "maxFiles": 20,
       "measuredCandidate": {
         "sha": "0782aa5066f8b42cc70c2b9691c243ff33d6dd10",

@@ -288,7 +288,12 @@ export function createArkKernel(options: CreateArkKernelOptions = {}): ArkKernel
           kernelInstanceId: instanceId,
           components: components.snapshotComponents(),
         },
-        query
+        query,
+        {
+          dependencyGraph: graph,
+          eventBus,
+          observability,
+        }
       );
     },
     getInspectorSnapshot(bind) {
@@ -318,6 +323,7 @@ export function createArkKernel(options: CreateArkKernelOptions = {}): ArkKernel
       const inspectorSource: ArkRunInspectorSource = {
         getInspectorSnapshot: (bind) => kernel.getInspectorSnapshot(bind),
         requestGraph: (query) => kernel.requestGraph(query),
+        subscribeTrace: (listener) => kernel.subscribeTrace(listener),
         async listInspectorOutbox() {
           const [pending, failed] = await Promise.all([
             eventBuffer.list('pending'),

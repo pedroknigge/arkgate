@@ -1,153 +1,19 @@
-/**
- * GENERATED FILE — do not edit by hand.
- *
- * Canonical algorithm: src/domain/agentProjectionFormatters.ts
- * Regenerate: node scripts/generate-cli-pure.mjs
- * Drift check: node scripts/generate-cli-pure.mjs --check
- *
- * Pure CLI helper (bin/lib/agent-projection-formatters.mjs). Zero Node I/O.
- */
-
-import { AGENT_PROJECTION_END_MARKER, AGENT_PROJECTION_ENFORCEMENT_SURFACES, AGENT_PROJECTION_NON_ENFORCEMENT_LABEL, ARK_AGENT_PROJECTION_SCHEMA_VERSION, } from './agent-projection-types.mjs';
-/** FNV-1a identity — portable, no Node crypto (same family as stableHash). */
-export function agentProjectionContentIdentity(body) {
-    const normalized = String(body ?? '').replace(/\r\n/g, '\n');
-    let hash = 0x811c9dc5;
-    for (let index = 0; index < normalized.length; index += 1) {
-        hash ^= normalized.charCodeAt(index);
-        hash = Math.imul(hash, 0x01000193);
-    }
-    return `fnv1a-${(hash >>> 0).toString(16).padStart(8, '0')}`;
-}
-export function normalizeNewlines(text) {
-    return String(text ?? '').replace(/\r\n/g, '\n');
-}
-export function ensureTrailingNewline(text) {
-    const normalized = normalizeNewlines(text);
-    return normalized.endsWith('\n') ? normalized : `${normalized}\n`;
-}
-export function safeVersion(version) {
-    if (typeof version !== 'string' || version.trim().length === 0)
-        return 'unknown';
-    // Avoid breaking HTML comments / markdown with control chars.
-    return version.trim().replace(/[>\s]/g, '');
-}
-function resolveProfile(profile) {
-    return profile === 'compact' ? 'compact' : 'full';
-}
-/**
- * Build the managed begin marker line (includes version + nonAuthoritative stamp).
- */
-export function buildAgentProjectionBeginMarker(facts) {
-    const version = safeVersion(facts.arkgateVersion);
-    const schema = typeof facts.schemaVersion === 'string' && facts.schemaVersion.trim()
-        ? facts.schemaVersion.trim()
-        : ARK_AGENT_PROJECTION_SCHEMA_VERSION;
-    return `<!-- arkgate:agent-projection:begin schema=${schema} arkgateVersion=${version} nonAuthoritative=true -->`;
-}
-/**
- * Layer placement rows for the projection (compact markdown table).
- */
-export function formatAgentProjectionLayers(layers) {
-    if (!Array.isArray(layers) || layers.length === 0) {
-        return '_No project layers loaded — read `ark.config.json` or run `ark start` / `ark_manifest`._';
-    }
-    const rows = layers
-        .map((layer) => {
-        const name = layer.name?.trim() || 'Unknown';
-        const patternList = layer.patterns ?? [];
-        const prefixList = layer.intentPrefixes ?? [];
-        const patterns = patternList.map((pattern) => `\`${pattern}\``).join(', ') || '—';
-        const prefixes = prefixList.map((prefix) => `\`${prefix}\``).join(', ') || '—';
-        return `| ${name} | ${patterns} | ${prefixes} |`;
-    })
-        .join('\n');
-    return `| Layer | Patterns | Intent prefixes |
+// GENERATED FILE — do not edit by hand. Canonical: src/domain/agentProjectionFormatters.ts -> bin/lib/agent-projection-formatters.mjs; regenerate: npm run generate:cli-pure
+import{AGENT_PROJECTION_END_MARKER as k,AGENT_PROJECTION_ENFORCEMENT_SURFACES as g,AGENT_PROJECTION_NON_ENFORCEMENT_LABEL as y,ARK_AGENT_PROJECTION_SCHEMA_VERSION as h}from"./agent-projection-types.mjs";function A(e){const n=String(e??"").replace(/\r\n/g,`
+`);let t=2166136261;for(let o=0;o<n.length;o+=1)t^=n.charCodeAt(o),t=Math.imul(t,16777619);return`fnv1a-${(t>>>0).toString(16).padStart(8,"0")}`}function C(e){return String(e??"").replace(/\r\n/g,`
+`)}function $(e){const n=C(e);return n.endsWith(`
+`)?n:`${n}
+`}function d(e){return typeof e!="string"||e.trim().length===0?"unknown":e.trim().replace(/[>\s]/g,"")}function m(e){return e==="compact"?"compact":"full"}function w(e){const n=d(e.arkgateVersion);return`<!-- arkgate:agent-projection:begin schema=${typeof e.schemaVersion=="string"&&e.schemaVersion.trim()?e.schemaVersion.trim():h} arkgateVersion=${n} nonAuthoritative=true -->`}function u(e){return!Array.isArray(e)||e.length===0?"_No project layers loaded \u2014 read `ark.config.json` or run `ark start` / `ark_manifest`._":`| Layer | Patterns | Intent prefixes |
 |-------|----------|-----------------|
-${rows}`;
-}
-/**
- * Catalog short-list bullets (ruleId + title). Empty list → pointer only.
- */
-export function formatAgentProjectionCatalogShortList(entries, docsPath) {
-    const path = docsPath.trim() || 'docs/diagnostics.md';
-    if (!Array.isArray(entries) || entries.length === 0) {
-        return `Full public codes: \`${path}\` (and package \`DIAGNOSTIC_CATALOG\`).`;
-    }
-    const lines = entries
-        .filter((entry) => entry && typeof entry.ruleId === 'string' && entry.ruleId.length > 0)
-        .map((entry) => {
-        const title = typeof entry.title === 'string' && entry.title.trim() ? entry.title.trim() : entry.ruleId;
-        return `- \`${entry.ruleId}\` — ${title}`;
-    });
-    return `${lines.join('\n')}
+${e.map(t=>{const o=t.name?.trim()||"Unknown",r=t.patterns??[],i=t.intentPrefixes??[],s=r.map(a=>`\`${a}\``).join(", ")||"\u2014",c=i.map(a=>`\`${a}\``).join(", ")||"\u2014";return`| ${o} | ${s} | ${c} |`}).join(`
+`)}`}function j(e,n){const t=n.trim()||"docs/diagnostics.md";return!Array.isArray(e)||e.length===0?`Full public codes: \`${t}\` (and package \`DIAGNOSTIC_CATALOG\`).`:`${e.filter(r=>r&&typeof r.ruleId=="string"&&r.ruleId.length>0).map(r=>{const i=typeof r.title=="string"&&r.title.trim()?r.title.trim():r.ruleId;return`- \`${r.ruleId}\` \u2014 ${i}`}).join(`
+`)}
 
-Full catalog: \`${path}\` (\`#RULE_ID\` anchors).`;
-}
-/**
- * Projection **body** only (no begin/end markers). Used for content-identity.
- */
-export function buildAgentProjectionBody(facts) {
-    const version = safeVersion(facts.arkgateVersion);
-    const profile = resolveProfile(facts.profile);
-    const checkCommand = typeof facts.checkCommand === 'string' && facts.checkCommand.trim()
-        ? facts.checkCommand.trim()
-        : 'ark-check --strict-config';
-    const docsPath = typeof facts.diagnosticsDocsPath === 'string' && facts.diagnosticsDocsPath.trim()
-        ? facts.diagnosticsDocsPath.trim()
-        : 'docs/diagnostics.md';
-    const hostRaw = typeof facts.host === 'string' ? facts.host.trim().toLowerCase() : '';
-    const host = hostRaw && hostRaw !== 'unknown' ? hostRaw : null;
-    const layers = Array.isArray(facts.layers) ? facts.layers : [];
-    const catalog = Array.isArray(facts.catalogShortList) ? facts.catalogShortList : [];
-    const lines = [
-        '## ArkGate agent contract projection',
-        '',
-        AGENT_PROJECTION_NON_ENFORCEMENT_LABEL,
-        '',
-        'Contener · Guiar · Ordenar — contain the write, guide the next step, order leftover mess. Skills never enforce.',
-        '',
-        `- **arkgateVersion:** \`${version}\` (must match the installed package; regenerate with \`ark agents-md --write\` after upgrade)`,
-        `- **projectionSchema:** \`${ARK_AGENT_PROJECTION_SCHEMA_VERSION}\``,
-        `- **profile:** \`${profile}\`${host ? ` · **host:** \`${host}\`` : ''}`,
-        `- **after edits:** \`${checkCommand}\``,
-        '',
-    ];
-    if (profile === 'compact') {
-        lines.push('### Primary path', '', '1. Run doctor (`ark-check --doctor`) — what is wrong and what to do first. Prefer the project-local CLI; do not wait on MCP “still connecting”.', '2. Name leftover work in plain language; never “done” on green imports alone while leftover design work remains.', '3. Identity handshake is optional when the CLI already resolved the project root. Call `ark_identity` only when using MCP evidence.', '4. Read the rules file with `ark_manifest` (same expectation) or the local `ark.config.json`. `ark://manifest` is compatibility-only / unverified.', '5. Place files inside configured layers; validate; run the check command above on violations — fix the import, do not weaken the rules file.', '6. Single door: illegal imports → fix; leftover design work → map then one small refactor with user OK.', '', '### Layers (summary)', '', formatAgentProjectionLayers(layers), '');
-    }
-    else {
-        lines.push('### Contract layers', '', formatAgentProjectionLayers(layers), '', 'When creating a **new** kind of code that no layer covers, update `ark.config.json` first (`/ark-adopt`), then place the file.', '', '### Diagnostic codes (short list)', '', formatAgentProjectionCatalogShortList(catalog, docsPath), '', '### Session truth', '', '- Machine snapshot: `ark status --json` (or MCP `ark_status`) — identity, activation honesty, last check, residual counts. **Not a score.**', '- Authoritative contract: local `ark.config.json` / CLI, or `ark_manifest` after a matched `ark_identity` handshake. Identity is optional when CLI already resolved the root.', '- Host docs: the same projection schema is merged into `AGENTS.md` and `CLAUDE.md` (`ark agents-md --write`).', '');
-    }
-    lines.push('### Enforcement surfaces (authoritative)', '', AGENT_PROJECTION_ENFORCEMENT_SURFACES.map((surface) => `- \`${surface}\``).join('\n'), '');
-    return lines.join('\n').replace(/\n{3,}/g, '\n\n').trimEnd() + '\n';
-}
-/**
- * Full managed block: begin marker + body + end marker.
- */
-export function buildAgentProjectionBlock(facts) {
-    const body = buildAgentProjectionBody(facts);
-    const begin = buildAgentProjectionBeginMarker({
-        arkgateVersion: facts.arkgateVersion,
-        schemaVersion: ARK_AGENT_PROJECTION_SCHEMA_VERSION,
-    });
-    return `${begin}\n${body}${AGENT_PROJECTION_END_MARKER}\n`;
-}
-/**
- * Machine meta for CLI `--json` / tests (never a gate input).
- */
-export function buildAgentProjectionMeta(facts) {
-    const body = buildAgentProjectionBody(facts);
-    const layers = Array.isArray(facts.layers) ? facts.layers : [];
-    const catalog = Array.isArray(facts.catalogShortList) ? facts.catalogShortList : [];
-    return {
-        schemaVersion: ARK_AGENT_PROJECTION_SCHEMA_VERSION,
-        arkgateVersion: safeVersion(facts.arkgateVersion),
-        nonAuthoritative: true,
-        enforcementSurfaces: [...AGENT_PROJECTION_ENFORCEMENT_SURFACES],
-        contentIdentity: agentProjectionContentIdentity(body),
-        layerCount: layers.length,
-        catalogCodeCount: catalog.filter((entry) => entry?.ruleId).length,
-        profile: resolveProfile(facts.profile),
-    };
-}
+Full catalog: \`${t}\` (\`#RULE_ID\` anchors).`}function p(e){const n=d(e.arkgateVersion),t=m(e.profile),o=typeof e.checkCommand=="string"&&e.checkCommand.trim()?e.checkCommand.trim():"ark-check --strict-config",r=typeof e.diagnosticsDocsPath=="string"&&e.diagnosticsDocsPath.trim()?e.diagnosticsDocsPath.trim():"docs/diagnostics.md",i=typeof e.host=="string"?e.host.trim().toLowerCase():"",s=i&&i!=="unknown"?i:null,c=Array.isArray(e.layers)?e.layers:[],a=Array.isArray(e.catalogShortList)?e.catalogShortList:[],l=["## ArkGate agent contract projection","",y,"","Contener \xB7 Guiar \xB7 Ordenar \u2014 contain the write, guide the next step, order leftover mess. Skills never enforce.","",`- **arkgateVersion:** \`${n}\` (must match the installed package; regenerate with \`ark agents-md --write\` after upgrade)`,`- **projectionSchema:** \`${h}\``,`- **profile:** \`${t}\`${s?` \xB7 **host:** \`${s}\``:""}`,`- **after edits:** \`${o}\``,""];return t==="compact"?l.push("### Primary path","","1. Run doctor (`ark-check --doctor`) \u2014 what is wrong and what to do first. Prefer the project-local CLI; do not wait on MCP \u201Cstill connecting\u201D.","2. Name leftover work in plain language; never \u201Cdone\u201D on green imports alone while leftover design work remains.","3. Identity handshake is optional when the CLI already resolved the project root. Call `ark_identity` only when using MCP evidence.","4. Read the rules file with `ark_manifest` (same expectation) or the local `ark.config.json`. `ark://manifest` is compatibility-only / unverified.","5. Place files inside configured layers; validate; run the check command above on violations \u2014 fix the import, do not weaken the rules file.","6. Single door: illegal imports \u2192 fix; leftover design work \u2192 map then one small refactor with user OK.","","### Layers (summary)","",u(c),""):l.push("### Contract layers","",u(c),"","When creating a **new** kind of code that no layer covers, update `ark.config.json` first (`/ark-adopt`), then place the file.","","### Diagnostic codes (short list)","",j(a,r),"","### Session truth","","- Machine snapshot: `ark status --json` (or MCP `ark_status`) \u2014 identity, activation honesty, last check, residual counts. **Not a score.**","- Authoritative contract: local `ark.config.json` / CLI, or `ark_manifest` after a matched `ark_identity` handshake. Identity is optional when CLI already resolved the root.","- Host docs: the same projection schema is merged into `AGENTS.md` and `CLAUDE.md` (`ark agents-md --write`).",""),l.push("### Enforcement surfaces (authoritative)","",g.map(f=>`- \`${f}\``).join(`
+`),""),l.join(`
+`).replace(/\n{3,}/g,`
+
+`).trimEnd()+`
+`}function P(e){const n=p(e);return`${w({arkgateVersion:e.arkgateVersion,schemaVersion:h})}
+${n}${k}
+`}function _(e){const n=p(e),t=Array.isArray(e.layers)?e.layers:[],o=Array.isArray(e.catalogShortList)?e.catalogShortList:[];return{schemaVersion:h,arkgateVersion:d(e.arkgateVersion),nonAuthoritative:!0,enforcementSurfaces:[...g],contentIdentity:A(n),layerCount:t.length,catalogCodeCount:o.filter(r=>r?.ruleId).length,profile:m(e.profile)}}export{A as agentProjectionContentIdentity,w as buildAgentProjectionBeginMarker,P as buildAgentProjectionBlock,p as buildAgentProjectionBody,_ as buildAgentProjectionMeta,$ as ensureTrailingNewline,j as formatAgentProjectionCatalogShortList,u as formatAgentProjectionLayers,C as normalizeNewlines,d as safeVersion};
