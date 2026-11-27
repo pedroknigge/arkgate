@@ -15,6 +15,7 @@ export const ARK_RUN_GRAPH_SLICES = ['process', 'technical'] as const;
 export const ARK_RUN_GRAPH_NODE_KINDS = ['component', 'interaction'] as const;
 export const ARK_RUN_GRAPH_PROCESS_EDGE_KINDS = ['raises', 'reactsTo', 'sends'] as const;
 export const ARK_RUN_GRAPH_TECHNICAL_EDGE_KINDS = ['uses'] as const;
+export const ARK_RUN_GRAPH_EDGE_ORIGINS = ['declared', 'observed', 'both'] as const;
 
 export type ArkRunGraphSlice = (typeof ARK_RUN_GRAPH_SLICES)[number];
 export type ArkRunGraphNodeKind = (typeof ARK_RUN_GRAPH_NODE_KINDS)[number];
@@ -25,6 +26,7 @@ export type ArkRunGraphTechnicalEdgeKind =
 export type ArkRunGraphEdgeKind =
   | ArkRunGraphProcessEdgeKind
   | ArkRunGraphTechnicalEdgeKind;
+export type ArkRunGraphEdgeOrigin = (typeof ARK_RUN_GRAPH_EDGE_ORIGINS)[number];
 
 export class InvalidArkRunGraphQueryError extends Error {
   readonly option:
@@ -98,6 +100,42 @@ export type ArkRunGraphEdge = {
   from: string;
   to: string;
   kind: ArkRunGraphEdgeKind;
+  origin: ArkRunGraphEdgeOrigin;
+};
+
+type ArkRunGraphObservedEdgeInput = {
+  from: string;
+  to: string;
+  kind?: ArkRunGraphEdgeKind;
+};
+
+type ArkRunGraphSubscriberInput = {
+  intent: string;
+  subscriber: string;
+};
+
+/**
+ * Optional runtime evidence unified with static component declarations.
+ * Structural shapes keep DomainModel independent of Kernel imports.
+ */
+export type ArkRunGraphRuntimeSources = {
+  dependencyGraph?: {
+    getEdges(): ReadonlyArray<{ from: string; to: string; kind?: string }>;
+  };
+  eventBus?: {
+    getHistory?(): ReadonlyArray<{
+      event: { intent: string; metadata?: { source?: string } };
+    }>;
+    getSubscribers?(): ReadonlyArray<ArkRunGraphSubscriberInput>;
+  };
+  observability?: {
+    report(): {
+      declaredProductions?: ReadonlyArray<{ from: string; to: string }>;
+      observedProductions?: ReadonlyArray<{ from: string; to: string }>;
+    };
+  };
+  subscribers?: ReadonlyArray<ArkRunGraphSubscriberInput>;
+  observedEdges?: ReadonlyArray<ArkRunGraphObservedEdgeInput>;
 };
 
 export type ArkRunGraph = {
@@ -124,6 +162,18 @@ const MATCH_KEYS = new Set([
   'tags',
   'groups',
   'architectureKinds',
+]);
+const MERMAID_RESERVED_IDS = new Set([
+  'end',
+  'subgraph',
+  'graph',
+  'flowchart',
+  'class',
+  'classdef',
+  'style',
+  'linkstyle',
+  'click',
+  'direction',
 ]);
 
 function compare(left: string, right: string): number {
@@ -334,6 +384,10 @@ function interactionNode(id: string): ArkRunGraphNode {
   return { id, kind: 'interaction' };
 }
 
+function inferredComponentNode(id: string): ArkRunGraphNode {
+  return { id, kind: 'component' };
+}
+
 function addNode(nodes: Map<string, ArkRunGraphNode>, node: ArkRunGraphNode): void {
   const existing = nodes.get(node.id);
   if (!existing || (existing.kind === 'interaction' && node.kind === 'component')) {
@@ -341,49 +395,199 @@ function addNode(nodes: Map<string, ArkRunGraphNode>, node: ArkRunGraphNode): vo
   }
 }
 
+function ensureNode(
+  nodes: Map<string, ArkRunGraphNode>,
+  id: string,
+  fallbackKind: ArkRunGraphNodeKind
+): void {
+  if (nodes.has(id)) return;
+  nodes.set(id, fallbackKind === 'component' ? inferredComponentNode(id) : interactionNode(id));
+}
+
+function nonEmptyName(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function mergeOrigin(
+  existing: ArkRunGraphEdgeOrigin,
+  incoming: 'declared' | 'observed'
+): ArkRunGraphEdgeOrigin {
+  if (existing === 'both' || existing === incoming) return existing;
+  return 'both';
+}
+
 function addEdge(
-  edges: ArkRunGraphEdge[],
-  seen: Set<string>,
+  edges: Map<string, ArkRunGraphEdge>,
   from: string,
   to: string,
-  kind: ArkRunGraphEdgeKind
+  kind: ArkRunGraphEdgeKind,
+  origin: 'declared' | 'observed'
 ): void {
   const key = `${from}\0${kind}\0${to}`;
-  if (seen.has(key)) return;
-  seen.add(key);
-  edges.push({ from, to, kind });
+  const existing = edges.get(key);
+  if (existing) {
+    existing.origin = mergeOrigin(existing.origin, origin);
+    return;
+  }
+  edges.set(key, { from, to, kind, origin });
+}
+
+function addRuntimeEdge(
+  nodes: Map<string, ArkRunGraphNode>,
+  edges: Map<string, ArkRunGraphEdge>,
+  fromInput: unknown,
+  toInput: unknown,
+  kind: ArkRunGraphEdgeKind,
+  origin: 'declared' | 'observed'
+): void {
+  const from = nonEmptyName(fromInput);
+  const to = nonEmptyName(toInput);
+  if (!from || !to) return;
+  if (kind === 'reactsTo') {
+    ensureNode(nodes, from, 'interaction');
+    ensureNode(nodes, to, 'component');
+  } else {
+    ensureNode(nodes, from, 'component');
+    ensureNode(nodes, to, 'interaction');
+  }
+  addEdge(edges, from, to, kind, origin);
+}
+
+function appendSubscribers(
+  nodes: Map<string, ArkRunGraphNode>,
+  edges: Map<string, ArkRunGraphEdge>,
+  list: ReadonlyArray<ArkRunGraphSubscriberInput> | undefined
+): void {
+  if (!Array.isArray(list)) return;
+  for (const entry of list) {
+    if (!entry || typeof entry !== 'object') continue;
+    addRuntimeEdge(nodes, edges, entry.intent, entry.subscriber, 'reactsTo', 'observed');
+  }
+}
+
+function mergeRuntimeSources(
+  nodes: Map<string, ArkRunGraphNode>,
+  edges: Map<string, ArkRunGraphEdge>,
+  slice: ArkRunGraphSlice,
+  runtimeSources: ArkRunGraphRuntimeSources | undefined
+): void {
+  if (!runtimeSources || typeof runtimeSources !== 'object') return;
+
+  if (runtimeSources.dependencyGraph && typeof runtimeSources.dependencyGraph.getEdges === 'function') {
+    const depEdges = runtimeSources.dependencyGraph.getEdges();
+    if (Array.isArray(depEdges)) {
+      for (const edge of depEdges) {
+        if (!edge || typeof edge !== 'object') continue;
+        if (slice === 'technical') {
+          if (edge.kind === 'declared') {
+            addRuntimeEdge(nodes, edges, edge.from, edge.to, 'uses', 'declared');
+          }
+          continue;
+        }
+        if (edge.kind === 'observed') {
+          addRuntimeEdge(nodes, edges, edge.from, edge.to, 'raises', 'observed');
+        } else if (edge.kind === 'produces') {
+          addRuntimeEdge(nodes, edges, edge.from, edge.to, 'raises', 'declared');
+        }
+      }
+    }
+  }
+
+  if (slice === 'process' && runtimeSources.eventBus && typeof runtimeSources.eventBus === 'object') {
+    if (typeof runtimeSources.eventBus.getHistory === 'function') {
+      const history = runtimeSources.eventBus.getHistory();
+      if (Array.isArray(history)) {
+        for (const record of history) {
+          const event = record && typeof record === 'object' ? record.event : undefined;
+          if (!event || typeof event !== 'object') continue;
+          addRuntimeEdge(
+            nodes,
+            edges,
+            event.metadata?.source,
+            event.intent,
+            'raises',
+            'observed'
+          );
+        }
+      }
+    }
+    if (typeof runtimeSources.eventBus.getSubscribers === 'function') {
+      appendSubscribers(nodes, edges, runtimeSources.eventBus.getSubscribers());
+    }
+  }
+
+  if (slice === 'process' && runtimeSources.observability && typeof runtimeSources.observability.report === 'function') {
+    const report = runtimeSources.observability.report();
+    if (report && typeof report === 'object') {
+      if (Array.isArray(report.declaredProductions)) {
+        for (const flow of report.declaredProductions) {
+          if (!flow || typeof flow !== 'object') continue;
+          addRuntimeEdge(nodes, edges, flow.from, flow.to, 'raises', 'declared');
+        }
+      }
+      if (Array.isArray(report.observedProductions)) {
+        for (const flow of report.observedProductions) {
+          if (!flow || typeof flow !== 'object') continue;
+          addRuntimeEdge(nodes, edges, flow.from, flow.to, 'raises', 'observed');
+        }
+      }
+    }
+  }
+
+  if (slice === 'process') {
+    appendSubscribers(nodes, edges, runtimeSources.subscribers);
+  }
+
+  if (Array.isArray(runtimeSources.observedEdges)) {
+    for (const edge of runtimeSources.observedEdges) {
+      if (!edge || typeof edge !== 'object') continue;
+      const kind: ArkRunGraphEdgeKind =
+        edge.kind ?? (slice === 'technical' ? 'uses' : 'raises');
+      if (slice === 'technical' && kind === 'uses') {
+        addRuntimeEdge(nodes, edges, edge.from, edge.to, 'uses', 'observed');
+      } else if (
+        slice === 'process' &&
+        (kind === 'raises' || kind === 'reactsTo' || kind === 'sends')
+      ) {
+        addRuntimeEdge(nodes, edges, edge.from, edge.to, kind, 'observed');
+      }
+    }
+  }
 }
 
 function buildSlice(
   components: readonly ArkRunInformationPackageComponent[],
-  slice: ArkRunGraphSlice
+  slice: ArkRunGraphSlice,
+  runtimeSources?: ArkRunGraphRuntimeSources
 ): { nodes: Map<string, ArkRunGraphNode>; edges: ArkRunGraphEdge[] } {
   const nodes = new Map<string, ArkRunGraphNode>();
-  const edges: ArkRunGraphEdge[] = [];
-  const seen = new Set<string>();
+  const edges = new Map<string, ArkRunGraphEdge>();
   for (const component of components) {
     addNode(nodes, componentNode(component));
     if (slice === 'technical') {
       for (const target of component.uses) {
         addNode(nodes, nodes.get(target) ?? interactionNode(target));
-        addEdge(edges, seen, component.id, target, 'uses');
+        addEdge(edges, component.id, target, 'uses', 'declared');
       }
       continue;
     }
     for (const event of component.raises) {
       addNode(nodes, nodes.get(event) ?? interactionNode(event));
-      addEdge(edges, seen, component.id, event, 'raises');
+      addEdge(edges, component.id, event, 'raises', 'declared');
     }
     for (const event of component.reactsTo) {
       addNode(nodes, nodes.get(event) ?? interactionNode(event));
-      addEdge(edges, seen, event, component.id, 'reactsTo');
+      addEdge(edges, event, component.id, 'reactsTo', 'declared');
     }
     for (const target of component.sends) {
       addNode(nodes, nodes.get(target) ?? interactionNode(target));
-      addEdge(edges, seen, component.id, target, 'sends');
+      addEdge(edges, component.id, target, 'sends', 'declared');
     }
   }
-  return { nodes, edges };
+  mergeRuntimeSources(nodes, edges, slice, runtimeSources);
+  return { nodes, edges: [...edges.values()] };
 }
 
 function adjacency(edges: readonly ArkRunGraphEdge[]): Map<string, string[]> {
@@ -400,7 +604,14 @@ function adjacency(edges: readonly ArkRunGraphEdge[]): Map<string, string[]> {
   return map;
 }
 
+/**
+ * 0-1 BFS neighborhood: crossing an `interaction` node costs 0; entering a
+ * `component` node costs 1. One degree from a component therefore crosses
+ * connecting events to reach directly reacting components without pulling in
+ * dangling interactions past the boundary.
+ */
 function neighborhood(
+  nodes: ReadonlyMap<string, ArkRunGraphNode>,
   available: ReadonlySet<string>,
   seeds: readonly string[],
   degrees: number | null,
@@ -408,61 +619,95 @@ function neighborhood(
 ): Set<string> {
   const present = seeds.filter((id) => available.has(id));
   if (present.length === 0) return new Set();
-  const keep = new Set<string>();
-  const queue: Array<{ id: string; depth: number }> = present.map((id) => ({
-    id,
-    depth: 0,
-  }));
-  while (queue.length > 0) {
-    const next = queue.shift();
-    if (!next || keep.has(next.id)) continue;
-    keep.add(next.id);
+  const dist = new Map<string, number>();
+  const front: Array<{ id: string; depth: number }> = [];
+  const back: Array<{ id: string; depth: number }> = [];
+  let backHead = 0;
+
+  for (const id of present) {
+    if (dist.has(id)) continue;
+    dist.set(id, 0);
+    back.push({ id, depth: 0 });
+  }
+
+  while (front.length > 0 || backHead < back.length) {
+    const next = front.length > 0 ? front.pop() : back[backHead++];
+    if (!next) continue;
+    if (dist.get(next.id) !== next.depth) continue;
     if (degrees !== null && next.depth >= degrees) continue;
     for (const neighbor of neighbors.get(next.id) ?? []) {
-      if (!keep.has(neighbor) && available.has(neighbor)) {
-        queue.push({ id: neighbor, depth: next.depth + 1 });
+      if (!available.has(neighbor)) continue;
+      const stepCost = nodes.get(neighbor)?.kind === 'interaction' ? 0 : 1;
+      const nextDepth = next.depth + stepCost;
+      if (degrees !== null && nextDepth > degrees) continue;
+      const prev = dist.get(neighbor);
+      if (prev !== undefined && prev <= nextDepth) continue;
+      dist.set(neighbor, nextDepth);
+      if (stepCost === 0) {
+        front.push({ id: neighbor, depth: nextDepth });
+      } else {
+        back.push({ id: neighbor, depth: nextDepth });
       }
     }
   }
-  return keep;
+  return new Set(dist.keys());
 }
 
 function mermaidSafeId(id: string): string {
   const safe = id.replace(/[^A-Za-z0-9_]/g, '_');
-  return /^[A-Za-z_]/.test(safe) ? safe : `n_${safe}`;
+  const prefixed = /^[A-Za-z_]/.test(safe) ? safe : `n_${safe}`;
+  return MERMAID_RESERVED_IDS.has(prefixed.toLowerCase()) ? `n_${prefixed}` : prefixed;
 }
 
 function mermaidLabel(text: string): string {
-  return text.replace(/\\/g, '\\\\').replace(/"/g, '#quot;').replace(/]/g, '#93;');
+  return text
+    .replace(/[\r\n]+/g, ' ')
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '#quot;')
+    .replace(/]/g, '#93;');
 }
 
-function uniqueMermaidIds(ids: readonly string[]): Map<string, string> {
+function allocateMermaidId(raw: string, used: Set<string>): string {
+  const base = mermaidSafeId(raw);
+  let candidate = base;
+  let n = 2;
+  while (used.has(candidate)) {
+    candidate = `${base}_${n}`;
+    n += 1;
+  }
+  used.add(candidate);
+  return candidate;
+}
+
+function uniqueMermaidIds(ids: readonly string[]): {
+  map: Map<string, string>;
+  used: Set<string>;
+} {
   const used = new Set<string>();
   const map = new Map<string, string>();
   for (const id of ids) {
-    const base = mermaidSafeId(id);
-    let candidate = base;
-    let n = 2;
-    while (used.has(candidate)) {
-      candidate = `${base}_${n}`;
-      n += 1;
-    }
-    used.add(candidate);
-    map.set(id, candidate);
+    map.set(id, allocateMermaidId(id, used));
   }
-  return map;
+  return { map, used };
+}
+
+function mermaidEdgeArrow(origin: ArkRunGraphEdgeOrigin): '-->' | '-.->' | '==>' {
+  if (origin === 'observed') return '-.->';
+  if (origin === 'both') return '==>';
+  return '-->';
 }
 
 /**
  * Render a closed ArkRun graph as Mermaid flowchart text.
  * Process slices are left-to-right; technical slices are top-down.
+ * Edge arrows distinguish declared (`-->`), observed (`-.->`), and both (`==>`).
  */
 export function formatArkRunGraphMermaid(
   graph: Pick<ArkRunGraph, 'slice' | 'nodes' | 'edges'>
 ): string {
   const direction = graph.slice === 'technical' ? 'TD' : 'LR';
   const ids = graph.nodes.map((node) => node.id);
-  const mermaidIds = uniqueMermaidIds(ids);
+  const { map: mermaidIds, used } = uniqueMermaidIds(ids);
   const groups = uniqueSorted(
     graph.nodes.map((node) => node.group).filter((group): group is string => Boolean(group))
   );
@@ -473,7 +718,7 @@ export function formatArkRunGraphMermaid(
     lines.push(`${indent}${id}["${label}"]`);
   };
   for (const group of groups) {
-    const groupId = mermaidSafeId(`group_${group}`);
+    const groupId = allocateMermaidId(`group_${group}`, used);
     lines.push(`  subgraph ${groupId}["${mermaidLabel(group)}"]`);
     for (const node of graph.nodes) {
       if (node.group === group) emitNode(node, '    ');
@@ -486,7 +731,9 @@ export function formatArkRunGraphMermaid(
   for (const edge of graph.edges) {
     const from = mermaidIds.get(edge.from) ?? mermaidSafeId(edge.from);
     const to = mermaidIds.get(edge.to) ?? mermaidSafeId(edge.to);
-    lines.push(`  ${from} -->|${edge.kind}| ${to}`);
+    const origin: ArkRunGraphEdgeOrigin = edge.origin ?? 'declared';
+    const arrow = mermaidEdgeArrow(origin);
+    lines.push(`  ${from} ${arrow}|${edge.kind}: ${origin}| ${to}`);
   }
   return lines.join('\n');
 }
@@ -516,6 +763,7 @@ function filterGraph(
   );
   if (query.nodeIds.length > 0) {
     keep = neighborhood(
+      nodes,
       keep,
       query.nodeIds,
       query.degreesOfSeparation,
@@ -539,16 +787,18 @@ function filterGraph(
 
 /**
  * Slice the information package into a process or technical graph.
- * Optional nodeIds + degreesOfSeparation keep a neighborhood; include/exclude
- * are closed token or field queries. Never a score.
+ * Optional nodeIds + degreesOfSeparation keep a 0-1 BFS neighborhood;
+ * optional runtimeSources unify static declarations with observed runtime flows.
+ * Never a score.
  */
 export function requestArkRunGraph(
   pkgInput: unknown = {},
-  queryInput: unknown = {}
+  queryInput: unknown = {},
+  runtimeSources?: ArkRunGraphRuntimeSources
 ): ArkRunGraph {
   const pkg = asPackage(pkgInput);
   const query = closeArkRunGraphQuery(queryInput);
-  const built = buildSlice(pkg.components, query.slice);
+  const built = buildSlice(pkg.components, query.slice, runtimeSources);
   const sliced = filterGraph(built.nodes, built.edges, query);
   const graph: ArkRunGraph = {
     schemaVersion: ARK_RUN_GRAPH_SCHEMA_VERSION,
