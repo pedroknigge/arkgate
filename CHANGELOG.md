@@ -5,6 +5,25 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+## 4.9.0 — 2026-11-27
+
+Minor release — 4-phase correctness, static AST precision, ArkRun evolution, and build deduplication across `arkgate`, `arkgate/order`, and `arkgate/runtime`. No `schemaVersion` bump. Does not close `K01` / `Z09`. This does **not** turn `arkOrder` on.
+
+**Status: released.** `npm view arkgate@4.9.0 version`.
+
+### Fixed
+- **ArkRun (`arkgate/runtime`):** `broker` → `local` fallback honors `ephemeral: true` (`awaitHandlers`); `createLenientArkKernel()` respects lenient registry/naming/source defaults; `deprecated` event contracts emit `warnings` and `event.contractDeprecated` trace/audit without failing `ok: true`; `actualType(null)` returns `'null'` (with optional `nullable: true`); `InMemoryEventBuffer.clear()` resets `evictedPendingCount`; `createArkKernel({ workflowStore })` wires durable stores and classifies them in `hardening.durability.stores`; `/graph` returns `500` JSON instead of throwing and SSE guards broken client writes.
+- **ArkOrder (`arkgate/order`):** `assertXiSchema` enforces `xiSchema.required`; calling `release()` on an initialized plane fails closed with `ARKORDER_UNVALVED_RELEASE`; `proposePatternChange` uses exact structural `xiRecordsEqual` instead of 32-bit FNV-1a hash; ArkRun, ArkOrder, and ArkRules share one canonical `isDomainRoleLayer` helper in `src/domain/sourcePolicy.ts` (including `entity`/`entities`/`aggregate`/`aggregates`).
+- **ArkGate write-gate & safety:** PreToolUse `Write`/`Edit`/`MultiEdit`/`ApplyPatch` on `ark.config.json` and referenced `arkrules/*.json` runs policy-delta classification and blocks unacknowledged weakenings with exit `2` (`POLICY_WEAKENING_BLOCKED`); removed hardcoded `projectPackageName === 'arkgate'` safety exemption in `src/kernel/resolvedAnalysis.ts`.
+
+### Added
+- **TypeScript AST extractors (with lexical fallback):** migrated `src/domain/arkOrderFacts.ts` (shorthand properties, quoted keys, URLs/ternaries, spread `incomplete`, local `const` object resolution) and `domain-event-on-mutation` in `src/domain/arkRuleSensors.ts` to TS AST checks.
+- **ArkRun evolution:** unified declared + runtime observed edges (`origin: 'declared' | 'observed' | 'both'`), 0-1 BFS `neighborhood()` (`interaction` cost `0`, `component` cost `1`), Mermaid reserved keyword escaping; bidirectional `broker.onInbound(deliver)` without broker echo + `Promise.allSettled` `AggregateError` aggregation; `ComponentRegistry` `(kernel, input)` factories, `has()`, `hasSingleton()`, gated `replaceForTest` / `ArkTestHarness.override()`, and `kernel.dispose()`; real-time push SSE over `traceSinks` with bounded `maxEvents` ring buffer and safe read-only loopback `/console` with per-startup random CSP nonce; composable `wireOrderPlane(kernel, plane, ...)` bridge with bounded `decisionTape` and audited `restore()`.
+
+### Changed
+- **Resident hook speed:** `residentRuntimeIdentity` uses fast `package.json` version + `stat(package.json, dist/index.js)` inside `node_modules` (full SHA-256 hash retained for local dev checkouts and `ARK_RESIDENT_STRICT_HASH=1`).
+- **Build & tarball deduplication:** unified `tsup.config.ts` with `splitting: true` across all five public entries, minified generated CLI mirrors (`generate-cli-pure`, `generate-layer-match`), and deduplicated `templates/skills/` in the published tarball via `templates/agent-skills/*/SKILL.md` (tarball unpacked size reduced from 7.20 MB to 5.68 MB, packed from 2.01 MB to 1.62 MB; zero-build git installs preserved).
+
 ## 4.8.33 — 2026-11-24
 
 Weekly ship. No `schemaVersion` bump. Does not close `K01` / `Z09`. This does **not** turn `arkOrder` on.

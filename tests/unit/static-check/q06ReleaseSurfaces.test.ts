@@ -10,7 +10,7 @@ import { version } from '../../../src/version.ts';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 /** Tree package identity. */
-const CURRENT = '4.8.33';
+const CURRENT = '4.9.0';
 /** Version confirmed on npm `latest`. */
 const PUBLISHED_LATEST = '4.8.11';
 
@@ -140,7 +140,7 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
 
   it('keeps 4.8.11 published on npm latest and 4.8.10 as prior', () => {
     expect(PUBLISHED_LATEST).toBe('4.8.11');
-    expect(CURRENT).toBe('4.8.33');
+    expect(CURRENT).toBe('4.9.0');
     expect(read('docs/releases/4.8.9.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.8.9.md')).toMatch(/arkgate@4\.8\.9/);
     expect(read('docs/releases/4.8.9.md')).not.toMatch(/\*\*Status:\*\*\s*prepared/i);
@@ -774,7 +774,28 @@ describe('CHANGELOG + release note cover 4.8.33 weekly ship', () => {
     expect(read('docs/README.md')).toMatch(/Current release:.*4\.8\.33/s);
     expect(read('docs/README.md')).toMatch(/Prior published:.*4\.8\.32/s);
     expect(read('ROADMAP.md')).toMatch(/\| 327 \| `RL832` \| `done`/);
-    expect(read('ROADMAP.md')).toMatch(/\| 328 \| `RL833` \| `doing`/);
+    expect(read('ROADMAP.md')).toMatch(/\| 328 \| `RL833` \| `done`/);
+  });
+});
+
+describe('CHANGELOG + release note cover 4.9.0 minor release', () => {
+  it('records the release without asserting registry state (#314)', () => {
+    const changelog = changelogText();
+    const section = changelogSection(changelog, '4.9.0', '4.8.33');
+    expect(section).toMatch(/Status:\s*released/i);
+    expect(section).toMatch(/npm view arkgate@4\.9\.0 version/);
+    expect(section).not.toMatch(/npm `latest` is/);
+    expect(section).not.toMatch(/latest remains/);
+    expect(section).toMatch(/POLICY_WEAKENING_BLOCKED/);
+    expect(section).toMatch(/wireOrderPlane/);
+    expect(section).toMatch(/Does not close\s*`K01`\s*\/\s*`Z09`/);
+    expect(section).toMatch(/does \*\*not\*\* turn `arkOrder` on/);
+    expect(section).not.toMatch(/Status:\s*prepared/i);
+    expect(fs.existsSync(path.join(REPO, 'docs/releases/4.9.0.md'))).toBe(false);
+    expect(read('docs/README.md')).toMatch(/Current release:.*4\.9\.0/s);
+    expect(read('docs/README.md')).toMatch(/Prior published:.*4\.8\.33/s);
+    expect(read('ROADMAP.md')).toMatch(/\| 328 \| `RL833` \| `done`/);
+    expect(read('ROADMAP.md')).toMatch(/\| 329 \| `RL900` \| `doing`/);
   });
 });
 
@@ -1870,7 +1891,7 @@ describe('CHANGELOG + release note cover 3.9.1 patch hygiene', () => {
       screen.indexOf('Write. Check. Ship.')
     );
     expect(screen).toMatch(/\*\*Contener · Guiar · Ordenar\*\*/);
-    expect(screen).toMatch(/npx arkgate@4\.8\.33 start/);
+    expect(screen).toMatch(/npx arkgate@4\.9\.0 start/);
     expect(screen).toMatch(/✖ LAYER_IMPORT_VIOLATION  src\/domain\/order\.ts:1/);
     expect(screen).toMatch(/fail-open/);
     expect(screen).toMatch(/needs a refactor/);
