@@ -359,8 +359,15 @@ describe('hook enforces the extra planes CI enforces on the same file', () => {
     const deleted = hook(root, patch(['*** Delete File: arkrules/DomainModel.json']));
     expect(deleted.status).toBe(2);
     expect(deleted.stderr).toMatch(/would be deleted/);
-    // A valid replacement (e.g. demoting to advisory in a law change) is not blocked here.
-    expect(hook(root, write(root, 'arkrules/DomainModel.json', rulesFile('advisory'))).status).toBe(0);
+    // Demoting an enforced ArkRule to advisory weakens the contract: blocked without session, allowed with session.
+    const demoteBlocked = hook(root, write(root, 'arkrules/DomainModel.json', rulesFile('advisory')));
+    expect(demoteBlocked.status).toBe(2);
+    expect(demoteBlocked.stderr).toMatch(/POLICY_WEAKENING_BLOCKED/);
+    expect(
+      hook(root, write(root, 'arkrules/DomainModel.json', rulesFile('advisory')), {
+        env: { ARK_CONTRACT_SESSION: '1' },
+      }).status
+    ).toBe(0);
     // Unreferenced JSON is not law.
     expect(hook(root, write(root, 'arkrules/Other.json', '{ broken')).status).toBe(0);
     // The enforced rule still blocks after the denied tamper attempt.
@@ -433,6 +440,340 @@ describe('hook enforces the extra planes CI enforces on the same file', () => {
         write(advisoryRoot, 'src/domain/x.ts', "import { createOrderPlane } from 'arkgate/order';\nexport const z = createOrderPlane;\n")
       ).status
     ).toBe(0);
+  });
+});
+
+describe('G-01: PreToolUse hook blocks contract weakening without contract session or matching ack', () => {
+  const ARKRULES_CONFIG = {
+    ...BASE_CONFIG,
+    arkRules: { DomainModel: 'arkrules/DomainModel.json' },
+  };
+  const rulesFile = (mode: 'enforced' | 'advisory', extra: unknown[] = []) =>
+    JSON.stringify(
+      {
+        schemaVersion: '1.0',
+        layer: 'DomainModel',
+        structure: [
+          { id: 'DM-PRIV-1', sensor: 'aggregate-private-state', mode },
+          ...extra,
+        ],
+        invariants: [],
+      },
+      null,
+      2
+    );
+
+  it('blocks Edit changing allowed:false to allowed:true without ARK_CONTRACT_SESSION and allows with session', () => {
+    const root = project(JSON.stringify(BASE_CONFIG, null, 2));
+    const editWeakening = {
+      tool_name: 'Edit',
+      tool_input: {
+        file_path: path.join(root, 'ark.config.json'),
+        old_string: '"allowed": false',
+        new_string: '"allowed": true',
+      },
+    };
+    const denied = hook(root, editWeakening, { env: { ARK_CONTRACT_SESSION: '' } });
+    expect(denied.status).toBe(2);
+    expect(denied.stderr).toMatch(/POLICY_WEAKENING_BLOCKED/);
+    expect(denied.stderr).toMatch(/ARK_CONTRACT_SESSION=1/);
+    expect(denied.stderr).not.toMatch(/Move the import or run \/ark-place/);
+
+    // Adversarial falsy env values must not bypass the gate.
+    for (const falsy of ['0', 'false', 'no', 'off']) {
+      const attempt = hook(root, editWeakening, { env: { ARK_CONTRACT_SESSION: falsy } });
+      expect(attempt.status).toBe(2);
+      expect(attempt.stderr).toMatch(/POLICY_WEAKENING_BLOCKED/);
+    }
+
+    // Explicit contract session allows intentional weakening.
+    const allowed = hook(root, editWeakening, { env: { ARK_CONTRACT_SESSION: '1' } });
+    expect(allowed.status).toBe(0);
+  });
+
+  it('blocks MultiEdit, Write, ApplyPatch, relative-path, and symlink weakening edits', () => {
+    const strictConfig = {
+      ...BASE_CONFIG,
+      layers: [
+        { name: 'DomainModel', patterns: ['src/domain/**'], forbiddenGlobals: ['fetch'] },
+        { name: 'Infrastructure', patterns: ['src/infra/**'] },
+      ],
+      safety: { maxAnyCasts: 0, maxTsSuppressions: 0, allowInMemory: false },
+    };
+    const root = project(JSON.stringify(strictConfig, null, 2));
+
+    // MultiEdit removing forbiddenGlobals and enabling allowInMemory.
+    const multi = hook(
+      root,
+      {
+        tool_name: 'MultiEdit',
+        tool_input: {
+          file_path: path.join(root, 'ark.config.json'),
+          edits: [
+            { old_string: '"fetch"', new_string: '' },
+            { old_string: '"allowInMemory": false', new_string: '"allowInMemory": true' },
+          ],
+        },
+      },
+      { env: { ARK_CONTRACT_SESSION: '' } }
+    );
+    expect(multi.status).toBe(2);
+    expect(multi.stderr).toMatch(/POLICY_WEAKENING_BLOCKED/);
+
+    // Write removing the denied rule completely.
+    const dropRule = hook(
+      root,
+      write(root, 'ark.config.json', JSON.stringify({ ...strictConfig, rules: [] })),
+      { env: { ARK_CONTRACT_SESSION: '' } }
+    );
+    expect(dropRule.status).toBe(2);
+    expect(dropRule.stderr).toMatch(/POLICY_WEAKENING_BLOCKED/);
+
+    // ApplyPatch weakening ark.config.json.
+    const patchWeak = hook(
+      root,
+      patch([
+        '*** Update File: ark.config.json',
+        '@@',
+        '-      "allowed": false',
+        '+      "allowed": true',
+      ]),
+      { env: { ARK_CONTRACT_SESSION: '' } }
+    );
+    expect(patchWeak.status).toBe(2);
+    expect(patchWeak.stderr).toMatch(/POLICY_WEAKENING_BLOCKED/);
+
+    // Relative file_path invoked from an unrelated cwd still resolves against --root.
+    const outsideCwd = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-rel-cwd-'));
+    cleanup.push(outsideCwd);
+    const relResult = spawnSync(
+      process.execPath,
+      [mcpBin, '--hook', '--root', root, '--config', 'ark.config.json'],
+      {
+        cwd: outsideCwd,
+        input: JSON.stringify({
+          tool_name: 'Edit',
+          tool_input: {
+            file_path: 'ark.config.json',
+            old_string: '"allowed": false',
+            new_string: '"allowed": true',
+          },
+        }),
+        encoding: 'utf8',
+        env: { ...process.env, ARK_CONTRACT_SESSION: '' },
+      }
+    );
+    expect(relResult.status).toBe(2);
+    expect(relResult.stderr).toMatch(/POLICY_WEAKENING_BLOCKED/);
+
+    // Symlinked path to ark.config.json cannot bypass the law-file check.
+    const linkParent = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-law-link-'));
+    cleanup.push(linkParent);
+    const link = path.join(linkParent, 'alias');
+    fs.symlinkSync(root, link);
+    const symResult = hook(
+      root,
+      {
+        tool_name: 'Edit',
+        tool_input: {
+          file_path: path.join(link, 'ark.config.json'),
+          old_string: '"allowed": false',
+          new_string: '"allowed": true',
+        },
+      },
+      { env: { ARK_CONTRACT_SESSION: '' } }
+    );
+    expect(symResult.status).toBe(2);
+    expect(symResult.stderr).toMatch(/POLICY_WEAKENING_BLOCKED/);
+  });
+
+  it('allows strengthening and neutral edits without ARK_CONTRACT_SESSION', () => {
+    const root = project(JSON.stringify(BASE_CONFIG, null, 2));
+
+    // Neutral edit: reformat JSON with identical semantics.
+    expect(
+      hook(root, write(root, 'ark.config.json', JSON.stringify(BASE_CONFIG)), {
+        env: { ARK_CONTRACT_SESSION: '' },
+      }).status
+    ).toBe(0);
+
+    // Strengthening edit: add a new denied edge + forbiddenGlobals.
+    const stronger = {
+      ...BASE_CONFIG,
+      layers: [
+        { name: 'DomainModel', patterns: ['src/domain/**'], forbiddenGlobals: ['fetch'] },
+        { name: 'Infrastructure', patterns: ['src/infra/**'] },
+      ],
+      rules: [
+        ...BASE_CONFIG.rules,
+        { from: 'Infrastructure', to: 'DomainModel', allowed: false },
+      ],
+    };
+    expect(
+      hook(root, write(root, 'ark.config.json', JSON.stringify(stronger, null, 2)), {
+        env: { ARK_CONTRACT_SESSION: '' },
+      }).status
+    ).toBe(0);
+
+    // Strengthening a referenced ArkRules file (promoting advisory -> enforced) is allowed.
+    const rulesRoot = project(ARKRULES_CONFIG, {
+      'arkrules/DomainModel.json': rulesFile('advisory'),
+    });
+    expect(
+      hook(rulesRoot, write(rulesRoot, 'arkrules/DomainModel.json', rulesFile('enforced')), {
+        env: { ARK_CONTRACT_SESSION: '' },
+      }).status
+    ).toBe(0);
+  });
+
+  it('blocks weakening referenced arkrules/*.json (single and array form) and unlinking arkRules', () => {
+    const arrayConfig = {
+      ...BASE_CONFIG,
+      arkRules: { DomainModel: ['arkrules/DomainModel.json', 'arkrules/DomainModelExtra.json'] },
+    };
+    const extraRules = JSON.stringify(
+      {
+        schemaVersion: '1.0',
+        layer: 'DomainModel',
+        structure: [{ id: 'DM-PRIV-2', sensor: 'aggregate-private-state', mode: 'enforced' }],
+        invariants: [],
+      },
+      null,
+      2
+    );
+    const root = project(JSON.stringify(arrayConfig, null, 2), {
+      'arkrules/DomainModel.json': rulesFile('enforced'),
+      'arkrules/DomainModelExtra.json': extraRules,
+    });
+
+    // Demoting a rule in the second array-referenced file is blocked.
+    const demoteExtra = hook(
+      root,
+      {
+        tool_name: 'Edit',
+        tool_input: {
+          file_path: path.join(root, 'arkrules/DomainModelExtra.json'),
+          old_string: '"mode": "enforced"',
+          new_string: '"mode": "advisory"',
+        },
+      },
+      { env: { ARK_CONTRACT_SESSION: '' } }
+    );
+    expect(demoteExtra.status).toBe(2);
+    expect(demoteExtra.stderr).toMatch(/POLICY_WEAKENING_BLOCKED/);
+
+    // Removing a rule from arkrules/DomainModel.json is blocked.
+    const emptyRules = JSON.stringify({
+      schemaVersion: '1.0',
+      layer: 'DomainModel',
+      structure: [],
+      invariants: [],
+    });
+    const removeRule = hook(root, write(root, 'arkrules/DomainModel.json', emptyRules), {
+      env: { ARK_CONTRACT_SESSION: '' },
+    });
+    expect(removeRule.status).toBe(2);
+    expect(removeRule.stderr).toMatch(/POLICY_WEAKENING_BLOCKED/);
+
+    // Removing the arkRules reference from ark.config.json is blocked.
+    const dropRef = hook(root, write(root, 'ark.config.json', JSON.stringify(BASE_CONFIG)), {
+      env: { ARK_CONTRACT_SESSION: '' },
+    });
+    expect(dropRef.status).toBe(2);
+    expect(dropRef.stderr).toMatch(/POLICY_WEAKENING_BLOCKED/);
+
+    // Allowed when ARK_CONTRACT_SESSION=1 is explicitly set.
+    expect(
+      hook(root, write(root, 'arkrules/DomainModel.json', emptyRules), {
+        env: { ARK_CONTRACT_SESSION: '1' },
+      }).status
+    ).toBe(0);
+  });
+
+  it('honors a valid hash-bound --policy-ack and rejects forged or incomplete acknowledgements', async () => {
+    const { analyzePolicyDelta } = await import('../../../bin/lib/analysis-engine.mjs');
+    const weakened = {
+      ...BASE_CONFIG,
+      rules: [{ from: 'DomainModel', to: 'Infrastructure', allowed: true }],
+    };
+    const delta = analyzePolicyDelta({ baseConfig: BASE_CONFIG, candidateConfig: weakened });
+    const root = project(JSON.stringify(BASE_CONFIG, null, 2), {
+      'docs/adr/0001-relax-edge.md': '# ADR 0001\nRelax DomainModel -> Infrastructure edge.\n',
+    });
+
+    const validAckPath = path.join(root, 'valid-ack.json');
+    fs.writeFileSync(
+      validAckPath,
+      JSON.stringify({
+        schemaVersion: '1.0',
+        basePolicyHash: delta.basePolicyHash,
+        candidatePolicyHash: delta.candidatePolicyHash,
+        findingIds: delta.blockingFindingIds,
+        reason: 'Reviewed exception documented in ADR 0001',
+        adrPath: 'docs/adr/0001-relax-edge.md',
+      })
+    );
+
+    const forgedAckPath = path.join(root, 'forged-ack.json');
+    fs.writeFileSync(
+      forgedAckPath,
+      JSON.stringify({
+        schemaVersion: '1.0',
+        basePolicyHash: delta.basePolicyHash,
+        candidatePolicyHash: 'fnv1a-00000000',
+        findingIds: delta.blockingFindingIds,
+        reason: 'Wrong candidate hash',
+        adrPath: 'docs/adr/0001-relax-edge.md',
+      })
+    );
+
+    const noAdrAckPath = path.join(root, 'no-adr-ack.json');
+    fs.writeFileSync(
+      noAdrAckPath,
+      JSON.stringify({
+        schemaVersion: '1.0',
+        basePolicyHash: delta.basePolicyHash,
+        candidatePolicyHash: delta.candidatePolicyHash,
+        findingIds: delta.blockingFindingIds,
+        reason: 'Missing ADR path',
+      })
+    );
+
+    const payload = write(root, 'ark.config.json', JSON.stringify(weakened, null, 2));
+    const runWithAck = (ackFile: string) =>
+      spawnSync(
+        process.execPath,
+        [mcpBin, '--hook', '--root', root, '--config', 'ark.config.json', '--policy-ack', ackFile],
+        {
+          input: JSON.stringify(payload),
+          encoding: 'utf8',
+          env: { ...process.env, ARK_CONTRACT_SESSION: '' },
+        }
+      );
+
+    expect(runWithAck(forgedAckPath).status).toBe(2);
+    expect(runWithAck(forgedAckPath).stderr).toMatch(/POLICY_WEAKENING_BLOCKED/);
+    expect(runWithAck(noAdrAckPath).status).toBe(2);
+    expect(runWithAck(noAdrAckPath).stderr).toMatch(/POLICY_WEAKENING_BLOCKED/);
+    expect(runWithAck(validAckPath).status).toBe(0);
+
+    // Grok-style payload emits host deny envelope on stdout as well.
+    const grokDenied = hook(
+      root,
+      {
+        toolName: 'write',
+        toolInput: {
+          file_path: path.join(root, 'ark.config.json'),
+          content: JSON.stringify(weakened, null, 2),
+        },
+      },
+      { env: { ARK_CONTRACT_SESSION: '' } }
+    );
+    expect(grokDenied.status).toBe(2);
+    expect(JSON.parse(grokDenied.stdout.trim().split('\n')[0])).toMatchObject({
+      decision: 'deny',
+      reason: expect.stringMatching(/POLICY_WEAKENING_BLOCKED/),
+    });
   });
 });
 

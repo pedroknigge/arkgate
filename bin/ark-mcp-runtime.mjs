@@ -23,14 +23,18 @@ import {
   resolveIncludeRoots,
   isScanExcludedRelative,
 } from './ark-shared.mjs';
-import { effectiveCapabilityDeny, stableSerialize } from './lib/analysis-engine.mjs';
+import { analyzePolicyDelta, effectiveCapabilityDeny, stableSerialize } from './lib/analysis-engine.mjs';
 import { createImportTargetResolver } from './lib/import-resolve.mjs';
 import { validateWithAutoPatch, resolveImportFileAbs } from './lib/auto-patch.mjs';
 import { composePrepareWrite } from './lib/prepare-write.mjs';
 import { placementDescriptionFields } from './lib/layer-description.mjs';
 import { sliceRuleIdsForFile } from './ark-layer-match.mjs';
 import { loadArkConfigContract } from './lib/config-contract.mjs';
-import { loadEffectiveArkRulesFromDisk } from './lib/effective-contract-load.mjs';
+import {
+  directoryArkRulesReader,
+  loadEffectiveArkRules,
+  loadEffectiveArkRulesFromDisk,
+} from './lib/effective-contract-load.mjs';
 import { loadArkRulesContract } from './lib/arkrules-contract.mjs';
 import { buildRulesInventoryPayload } from './lib/rules-under-contract.mjs';
 import { ARK_ANALYSIS_RESULT_SCHEMA, createAdapterResult } from './lib/adapter-contract.mjs';
@@ -123,6 +127,7 @@ import {
 import { attachPolicyAdrNote } from './lib/adr-path.mjs';
 import {
   candidateArkRulesMatchProject,
+  readPolicyAcknowledgement,
   resolvePolicyDeltaArkRules,
 } from './lib/policy-delta-io.mjs';
 
@@ -190,6 +195,7 @@ function parseArgs(argv) {
       args.configExplicit = true;
     } else if (a === '--manifest') args.manifest = argv[++i];
     else if (a === '--tsconfig') args.tsconfig = argv[++i];
+    else if (a === '--policy-ack') args.policyAck = argv[++i];
   }
   // Env can enable repair without rewriting host templates (ARK_HOOK_REPAIR=1).
   if (envTruthy('ARK_HOOK_REPAIR')) {
@@ -467,9 +473,12 @@ function referencedArkRulesFiles(args, config) {
   const refs = config?.arkRules;
   const out = new Map();
   if (!refs || typeof refs !== 'object') return out;
-  for (const [layer, rel] of Object.entries(refs)) {
-    if (typeof rel !== 'string' || rel.length === 0) continue;
-    out.set(canonicalPathLoose(path.resolve(args.root, rel)), { layer, rel });
+  for (const [layer, raw] of Object.entries(refs)) {
+    const rels = typeof raw === 'string' ? [raw] : Array.isArray(raw) ? raw : [];
+    for (const rel of rels) {
+      if (typeof rel !== 'string' || rel.length === 0) continue;
+      out.set(canonicalPathLoose(path.resolve(args.root, rel)), { layer, rel });
+    }
   }
   return out;
 }
@@ -485,32 +494,43 @@ function lawFileLabel(args, absolute) {
  * file it references, with content the contract loader rejects (or deletes it) would
  * switch enforcement off for every later write. Deny it up front with the loader's
  * reason. `content: null` / `delete: true` is a deletion.
+ *
+ * Valid replacements are also classified by policy delta: weakening edits require an
+ * explicit contract session (`ARK_CONTRACT_SESSION=1`) or a matching `--policy-ack`.
  */
-function lawFileWriteDeny(args, config, writes) {
+function lawFileWriteDeny(args, config, writes, { contractSession = false } = {}) {
   const configPath = canonicalPathLoose(configuredConfigPath(args));
   const arkRulesFiles = referencedArkRulesFiles(args, config);
+  let candidateConfig;
+  let lawTargetLabel = null;
+  const writeOverlay = new Map();
+
   for (const write of writes) {
     if (typeof write?.filePath !== 'string') continue;
     const target = canonicalPathLoose(path.resolve(args.root, write.filePath));
+    const deleting = write.delete === true || write.content === null;
+    if (!deleting && typeof write.content === 'string') {
+      writeOverlay.set(target, write.content);
+    }
     const isConfig = target === configPath;
     const arkRulesRef = isConfig ? undefined : arkRulesFiles.get(target);
     if (!isConfig && !arkRulesRef) continue;
-    const deleting = write.delete === true || write.content === null;
     if (!deleting && typeof write.content !== 'string') continue;
+    const file = isConfig ? lawFileLabel(args, configPath) : arkRulesRef.rel;
+    if (lawTargetLabel === null) lawTargetLabel = file;
     let reason = null;
     if (deleting) {
       reason = 'the file would be deleted';
     } else {
       try {
         const parsed = JSON.parse(write.content);
-        if (isConfig) loadArkConfigContract(parsed, configPath);
+        if (isConfig) candidateConfig = loadArkConfigContract(parsed, configPath).config;
         else loadArkRulesContract(parsed, arkRulesRef.rel, arkRulesRef.layer);
       } catch (error) {
         reason = error instanceof Error ? error.message : String(error);
       }
     }
     if (reason === null) continue;
-    const file = isConfig ? lawFileLabel(args, configPath) : arkRulesRef.rel;
     return {
       file,
       message: formatWriteGateDeny({
@@ -523,7 +543,77 @@ function lawFileWriteDeny(args, config, writes) {
       }),
     };
   }
-  return null;
+
+  if (lawTargetLabel === null || !fs.existsSync(configPath)) return null;
+
+  const nextConfig = candidateConfig ?? config;
+  const canonicalRoot = canonicalPathLoose(args.root);
+  const diskReader = directoryArkRulesReader(canonicalRoot);
+  const candidateReader = (rel) => {
+    const canonical = canonicalPathLoose(path.resolve(canonicalRoot, ...rel.split('/')));
+    if (writeOverlay.has(canonical)) {
+      return { ok: true, content: writeOverlay.get(canonical) };
+    }
+    return diskReader(rel);
+  };
+  const baseLoaded = loadEffectiveArkRules(config, diskReader, { missingAsEmpty: true });
+  const candidateLoaded = loadEffectiveArkRules(nextConfig, candidateReader, {
+    missingAsEmpty: true,
+  });
+  if (candidateLoaded.errors.length > 0) {
+    const detail = candidateLoaded.errors
+      .map((issue) => `${issue.path}: ${issue.message}`)
+      .join('; ');
+    return {
+      file: lawTargetLabel,
+      message: formatWriteGateDeny({
+        file: lawTargetLabel,
+        reason: `this write would leave ${lawTargetLabel} unloadable, which switches the write gate off: ${detail}`,
+        ruleId: 'WRITE_GATE_UNAVAILABLE',
+        nextAction:
+          'Write a complete, valid contract and referenced ArkRules files (same schema ark-check loads).',
+      }),
+    };
+  }
+
+  const ackPath = args.policyAck || process.env.ARK_POLICY_ACK || undefined;
+  let acknowledgement;
+  if (ackPath) {
+    try {
+      acknowledgement = readPolicyAcknowledgement(args.root, ackPath);
+    } catch {
+      acknowledgement = undefined;
+    }
+  }
+  const delta = attachPolicyAdrNote(
+    analyzePolicyDelta({
+      baseConfig: config,
+      candidateConfig: nextConfig,
+      baseArkRules: baseLoaded.arkRules,
+      candidateArkRules: candidateLoaded.arkRules,
+      acknowledgement,
+    }),
+    { root: args.root, acknowledgement, failClosed: true }
+  );
+  if (delta.classification !== 'weakening') return null;
+  if (contractSession || (delta.acknowledged && delta.valid)) return null;
+
+  const weakeningFindings = delta.findings.filter((f) => f.classification === 'weakening');
+  const summary = weakeningFindings
+    .slice(0, 3)
+    .map((f) => `${f.path}: ${f.message}`)
+    .join('; ');
+  const extraCount = weakeningFindings.length > 3 ? ` (+${weakeningFindings.length - 3} more)` : '';
+  return {
+    file: lawTargetLabel,
+    message: formatWriteGateDeny({
+      file: lawTargetLabel,
+      reason: `this write weakens the architecture contract (${summary || 'policy weakening detected'}${extraCount})`,
+      ruleId: 'POLICY_WEAKENING_BLOCKED',
+      nextAction:
+        'Keep the existing rule in place, or re-run with ARK_CONTRACT_SESSION=1 (or a matching --policy-ack).',
+    }),
+  };
 }
 
 function designDeltaViolations(delta) {
@@ -572,6 +662,10 @@ function runHookPayload(payload, gate, config, args, ts, attemptContext, output 
       payload,
       attemptContext?.grokHookEvent ?? Boolean(process.env.GROK_HOOK_EVENT)
     );
+  const effectiveContractSession =
+    typeof attemptContext?.contractSession === 'boolean'
+      ? attemptContext.contractSession
+      : contractSessionFrom({});
   if (toolName === 'ApplyPatch') {
     // Current Codex CLI/Desktop hook schema uses tool_input.command. Keep the
     // historical fields for older clients and existing integration fixtures.
@@ -598,7 +692,8 @@ function runHookPayload(payload, gate, config, args, ts, attemptContext, output 
         filePath: change.filePath,
         content: change.delete === true ? null : change.content,
         delete: change.delete === true,
-      }))
+      })),
+      { contractSession: effectiveContractSession }
     );
     if (lawDeny) {
       emitHostDeny(output, { antigravityStyle, cursorStyle, grokStyle, ...lawDeny });
@@ -606,10 +701,6 @@ function runHookPayload(payload, gate, config, args, ts, attemptContext, output 
       return;
     }
     const patchChangeSet = classifyChangeSet(patchWrites.map((change) => String(change.path)));
-    const effectiveContractSession =
-      typeof attemptContext?.contractSession === 'boolean'
-        ? attemptContext.contractSession
-        : contractSessionFrom({});
     const patchLawGate = evaluateTeamGate({
       changeSet: patchChangeSet,
       contractSession: effectiveContractSession,
@@ -839,11 +930,19 @@ function runHookPayload(payload, gate, config, args, ts, attemptContext, output 
   }
   if (typeof rawFilePath === 'string' && !SOURCE_FILE.test(rawFilePath)) {
     // Law files are not source, but a write that leaves ark.config.json or a referenced
-    // ArkRules file unloadable would silently switch the gate off for every later write.
-    const source = proposedSource(toolName, toolInput);
+    // ArkRules file unloadable (or weakens the contract without session/ack) must be denied.
+    const resolvedLawPath = path.isAbsolute(rawFilePath)
+      ? rawFilePath
+      : path.resolve(args.root, rawFilePath);
+    const source = proposedSource(toolName, { ...toolInput, file_path: resolvedLawPath });
     const lawDeny =
       typeof source === 'string'
-        ? lawFileWriteDeny(args, config, [{ filePath: rawFilePath, content: source }])
+        ? lawFileWriteDeny(
+            args,
+            config,
+            [{ filePath: resolvedLawPath, content: source }],
+            { contractSession: effectiveContractSession }
+          )
         : null;
     if (lawDeny) {
       emitHostDeny(output, { antigravityStyle, cursorStyle, grokStyle, ...lawDeny });
@@ -1215,6 +1314,7 @@ function arkRulesInputPaths(root, config) {
   const refs = config?.arkRules;
   if (!refs || typeof refs !== 'object') return [];
   return Object.values(refs)
+    .flatMap((value) => (Array.isArray(value) ? value : [value]))
     .filter((value) => typeof value === 'string' && value.length > 0)
     .map((value) => path.resolve(root, value));
 }

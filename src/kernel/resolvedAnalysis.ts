@@ -148,7 +148,7 @@ function evaluateSafety(
       kind: fact.kind === 'dynamic-require' ? ('require' as const) : ('import' as const),
     }));
   const inMemoryProductionStores =
-    safety.allowInMemory === true || facts.projectPackageName === 'arkgate'
+    safety.allowInMemory === true
       ? []
       : facts.safetyUses
           .filter((fact) => fact.kind === 'in-memory-store')
