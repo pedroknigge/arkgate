@@ -20,10 +20,14 @@ export function buildCiMergeBoundary(input = {}) {
     ? writePath.inventory.hosts
     : {};
   const perHost = {};
+  // Runtime observation is evidence about ONE session: only the active host fired (#404).
+  // Copying the shared boolean into every host marked siblings 'observed' on zero evidence.
+  const activeHost = writePath.enforcementState?.activeHost;
+  const runtimeObserved = Boolean(writePath.enforcementState?.localWrite?.runtimeObserved);
   for (const [host, record] of Object.entries(inventory)) {
     const caps = record?.capabilities && typeof record.capabilities === 'object' ? record.capabilities : {};
     const configured = Boolean(record?.configured || caps['hard-write'] || caps['advisory-write']);
-    const fired = Boolean(writePath.enforcementState?.localWrite?.runtimeObserved);
+    const fired = runtimeObserved && activeHost === host;
     const hard = caps['hard-write'] === true;
     perHost[host] = {
       configured,

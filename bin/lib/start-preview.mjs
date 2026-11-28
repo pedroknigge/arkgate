@@ -309,8 +309,14 @@ export function renderStartPreview(preview, options = {}) {
     const percent = preview.projectedCoverage?.percent;
     if (preview.claimedClean === false) {
       console.log('The first check would fail. Projected coverage is not a clean result.');
-      for (const row of preview.firstCheck?.arkCreated ?? []) {
-        console.log(`  ${row.ruleId}  ${row.file}`);
+      if (preview.firstCheck?.arkCreated?.length > 0) {
+        for (const row of preview.firstCheck.arkCreated) {
+          console.log(`  ${row.ruleId}  ${row.file}`);
+        }
+      } else if (Number.isInteger(preview.firstCheck?.violationCount)) {
+        console.log(
+          `  ${preview.firstCheck.violationCount} finding(s) the generated contract already reports on this tree.`
+        );
       }
     } else if (percent != null) {
       const note = preview.containmentNote;
@@ -635,26 +641,41 @@ function observeShadowFirstCheck(shadowRoot, helpers) {
       ruleId: String(row.ruleId ?? ''),
       message: String(row.message ?? ''),
     }));
-  return { ok: run.status === 0 && parsed.ok === true, arkCreated };
+  return { ok: run.status === 0 && parsed.ok === true, arkCreated, violationCount: violations.length };
 }
 
 /**
  * Apply may write the plan and still must not call coverage a clean result when
- * the first check would fail on a root tool config Ark placed in a layer.
+ * the first check would fail — on a root tool config Ark placed in a layer, or on
+ * any other finding the generated contract already has on this tree (#387: bun
+ * dogfood showed 440 self-made violations under `claimedClean: true`).
  */
 export function annotateApplyHonesty(preview, firstCheck) {
   const arkCreated = Array.isArray(firstCheck?.arkCreated) ? firstCheck.arkCreated : [];
-  const claimedClean = arkCreated.length === 0;
+  const claimedClean = arkCreated.length === 0 && firstCheck?.ok !== false;
   const unresolvedDecisions = [...(preview?.unresolvedDecisions ?? [])];
   if (!claimedClean) {
     const names = arkCreated.map((row) => `${row.file} (${row.ruleId})`).join(', ');
     unresolvedDecisions.push(
       `The first check would fail on ${names}. A root tool config was placed in a governed layer. Projected coverage is not a clean result.`
     );
+  } else if (firstCheck?.ok === false) {
+    // #387: findings the init contract already carries that Ark did not place —
+    // name the count instead of calling the day-one result clean.
+    const count = Number.isInteger(firstCheck?.violationCount) ? firstCheck.violationCount : null;
+    unresolvedDecisions.push(
+      count != null
+        ? `The first check would fail with ${count} finding(s) the generated contract already reports on this tree. Projected coverage is not a clean result.`
+        : 'The first check would fail on the generated contract. Projected coverage is not a clean result.'
+    );
   }
   return {
     ...preview,
-    firstCheck: { ok: firstCheck?.ok ?? null, arkCreated },
+    firstCheck: {
+      ok: firstCheck?.ok ?? null,
+      arkCreated,
+      violationCount: firstCheck?.violationCount ?? null,
+    },
     claimedClean,
     unresolvedDecisions,
   };

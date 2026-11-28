@@ -536,6 +536,20 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
     'Fix the reported input (repair ark.config.json or the ArkRules file, or run `npm run build` / reinstall arkgate from npm), then retry the same write. Do not remove the hook to get past it.'
   ),
   entry(
+    'WRITE_GATE_INPUT_TRUNCATED',
+    'preflight',
+    'Host truncated the write input',
+    'The host passed toolInputTruncated: this write reached the gate as a fragment, so the gate cannot judge the full content — a denied edge can hide inside the missing tail. A fragment is never validated as if complete; the hook denies fail-closed (#396).',
+    'Re-send the write with the full input — a smaller diff or a split edit — then retry. Do not weaken ark.config.json to get past it.'
+  ),
+  entry(
+    'WRITE_GATE_STALE_GLOBAL',
+    'preflight',
+    'Wrong arkgate version running the gate',
+    'The running arkgate-mcp is not the copy this project expects (a stale global fell through in a worktree without node_modules). A gate running the wrong version denies with schema noise instead of enforcing this repo\'s contract, so the hook refuses fail-closed (#395).',
+    'Install the project\'s arkgate (the package manager\'s install command in this worktree) or remove the stale global copy, then retry the same write. Do not remove the hook to get past it.'
+  ),
+  entry(
     'DESIGN_SMELL_REGRESSION',
     'preflight',
     'Design smell regression on base-relative ratchet',

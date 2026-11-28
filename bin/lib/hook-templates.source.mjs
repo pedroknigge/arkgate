@@ -179,6 +179,10 @@ export function grokHooks(root) {
       PreToolUse: [
         {
           matcher: 'Write|Edit|MultiEdit|write|search_replace',
+          // #396: fail closed like Cursor — a checker crash/timeout must not pass the
+          // write. The launcher's exit-2 path already covers contract-load failures;
+          // this covers the hook invocation itself.
+          failClosed: true,
           hooks: [
             {
               type: 'command',

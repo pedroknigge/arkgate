@@ -8,6 +8,10 @@ export { ArkOrderError } from '../../domain/arkOrderError';
 export {
   hashReleasePayload,
   hashReleasePayload as hashOf,
+  hashXiIdentity,
+  hashXiIdentity as xiHashOf,
+  hashSigmaIdentity,
+  hashSigmaIdentity as sigmaHashOf,
   ingestTravelAction,
 } from '../../domain/arkOrderInvariants';
 export { CAPACITY_OPS, DEFAULT_MAX_XI_KEYS } from '../../domain/arkOrderTypes';

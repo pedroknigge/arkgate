@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node bin/ark-mcp.mjs --hook --hook-repair --root . --root-env CLAUDE_PROJECT_DIR --config ark.config.json"
+            "command": "node bin/ark-mcp.mjs --hook --hook-repair --fail-on-new-smells --root . --root-env CLAUDE_PROJECT_DIR --config ark.config.json"
           }
         ]
       }

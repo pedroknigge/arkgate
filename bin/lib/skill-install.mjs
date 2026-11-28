@@ -92,10 +92,11 @@ export function detectActiveAgentHost(env = process.env) {
   ) {
     return 'codex';
   }
-  // Google Antigravity / agy CLI
+  // Google Antigravity / agy CLI (ANTIGRAVITY_AGENT — agent-session signal, #402)
   if (
     envTruthy(env.ANTIGRAVITY) ||
     envTruthy(env.AGY) ||
+    envTruthy(env.ANTIGRAVITY_AGENT) ||
     env.ANTIGRAVITY_WORKSPACE ||
     env.AGY_WORKSPACE ||
     /antigravity/i.test(String(env.TERM_PROGRAM ?? ''))

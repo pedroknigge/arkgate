@@ -5,7 +5,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 /** The three package managers Ark emits commands for. */
-const LOCKFILES = { pnpm: 'pnpm-lock.yaml', yarn: 'yarn.lock', npm: 'package-lock.json' };
+const LOCKFILES = { pnpm: 'pnpm-lock.yaml', yarn: 'yarn.lock', npm: 'package-lock.json', bun: 'bun.lock' };
+/** Bun can ship either textual `bun.lock` (1.2+) or binary `bun.lockb`. */
+const BUN_LOCKFILES = ['bun.lock', 'bun.lockb'];
 
 function readPackageJson(root) {
   const file = path.join(root, 'package.json');
@@ -35,7 +37,19 @@ function declaredPackageManager(root) {
       ? pkg.devEngines.packageManager.name
       : undefined);
   const name = raw?.trim().toLowerCase();
-  return name === 'pnpm' || name === 'yarn' || name === 'npm' ? name : undefined;
+  return name === 'pnpm' || name === 'yarn' || name === 'npm' || name === 'bun' ? name : undefined;
+}
+
+/**
+ * Bun is detected but not driven: `bun install` never runs from start (#415 — npm in a
+ * bun workspace dies on EUNSUPPORTEDPROTOCOL `catalog:`). A bun repo must not pass as
+ * npm: bun.lock / bun.lockb anywhere in the root, or a `packageManager` / devEngines
+ * declaration naming bun. Returns 'bun' | null.
+ */
+export function detectBunPackageManager(root) {
+  if (declaredPackageManager(root) === 'bun') return 'bun';
+  if (BUN_LOCKFILES.some((file) => fs.existsSync(path.join(root, file)))) return 'bun';
+  return null;
 }
 
 /** Lockfiles present in the project root, in { pnpm, yarn, npm } key order. */
@@ -59,6 +73,11 @@ export function presentLockfiles(root) {
 export function detectPackageManager(root) {
   const declared = declaredPackageManager(root);
   if (declared) return declared;
+  // A binary bun.lockb alone never shows up in LOCKFILES above; only claim bun when no
+  // pnpm/yarn/npm lockfile also claims the root (existing tie logic keeps npm's win).
+  if (BUN_LOCKFILES.some((file) => fs.existsSync(path.join(root, file)))) {
+    if (presentLockfiles(root).length === 0) return 'bun';
+  }
   const locks = presentLockfiles(root);
   if (locks.length <= 1) return locks[0] ?? 'npm';
   if (locks.includes('npm')) return 'npm';
@@ -69,7 +88,7 @@ export function detectPackageManager(root) {
 // when the repo has un-approved native build scripts (sharp, esbuild, tailwind oxide, …) —
 // the common state of real pnpm apps. Skip that gate so Ark's emitted commands still run.
 const PNPM_EXEC = 'pnpm --config.verify-deps-before-run=false exec';
-const RUNNER_BY_PM = { pnpm: PNPM_EXEC, yarn: 'yarn', npm: 'npx' };
+const RUNNER_BY_PM = { pnpm: PNPM_EXEC, yarn: 'yarn', npm: 'npx', bun: 'bunx' };
 
 /**
  * The command prefix that runs an INSTALLED package binary, matched to the project's
@@ -128,6 +147,63 @@ export function pinnedArkgateRunner(version) {
 }
 
 /**
+ * Honest fail-closed signal for the fall-through case (#395): a fresh worktree without
+ * `node_modules/arkgate` lets `<runner> arkgate-mcp` answer from a stale global whose
+ * version does not satisfy the project's pin. A gate running the wrong version is not
+ * containing anything — the hook refuses loudly instead of denying with schema noise.
+ *
+ * Deliberately narrow: when the local install EXISTS, the project runner resolves it and
+ * a direct invocation of another binary is deliberate (test harness, self-host dev) — the
+ * running version is not evidence of a fall-through, so no deny. Returns the warning
+ * message, or null when there is nothing to compare.
+ */
+export function staleGlobalArkgateWarning(root) {
+  const running = shippedArkgateVersion();
+  if (!running) return null;
+  if (fs.existsSync(path.join(root, 'node_modules', 'arkgate', 'package.json'))) return null;
+  const pkg = readPackageJson(root);
+  const declaredRaw =
+    typeof pkg?.dependencies?.arkgate === 'string'
+      ? pkg.dependencies.arkgate
+      : typeof pkg?.devDependencies?.arkgate === 'string'
+        ? pkg.devDependencies.arkgate
+        : null;
+  if (!declaredRaw) return null;
+  const declared = declaredRaw.match(/(\d+\.\d+\.\d+)/)?.[1] ?? null;
+  if (!declared) return null; // file:/link:/workspace:/dist-tag — not numerically comparable
+  if (arkgateSpecSatisfiesRange(declaredRaw, running)) return null;
+  return [
+    `Ark architecture gate denied fail-closed: the running arkgate-mcp is ${running}, but this project pins ${declaredRaw} and has no local install in this worktree.`,
+    'A gate running the wrong version is not containing anything — it denies with schema noise instead of enforcing this repo\'s contract.',
+    `Fix: install the project's arkgate (the package manager's install command in this worktree), then retry the same write.`,
+    '[WRITE_GATE_STALE_GLOBAL]',
+  ].join('\n');
+}
+
+/** `^X.Y.Z` / `~X.Y.Z` / exact — enough for pin-shaped specs; anything else fails closed. */
+function arkgateSpecSatisfiesRange(spec, version) {
+  const declared = spec.match(/(\d+)\.(\d+)\.(\d+)/);
+  const running = version.match(/(\d+)\.(\d+)\.(\d+)/);
+  if (!declared || !running) return false;
+  const d = declared.slice(1).map(Number);
+  const r = running.slice(1).map(Number);
+  if (spec.startsWith('^')) {
+    return d[0] === r[0] && cmp(r, d) >= 0;
+  }
+  if (spec.startsWith('~')) {
+    return d[0] === r[0] && d[1] === r[1] && cmp(r, d) >= 0;
+  }
+  return cmp(r, d) === 0;
+}
+
+function cmp(left, right) {
+  for (let index = 0; index < left.length; index += 1) {
+    if (left[index] !== right[index]) return left[index] > right[index] ? 1 : -1;
+  }
+  return 0;
+}
+
+/**
  * Number of npx arguments before the bin: 0 for `npx <bin>`, more for the pinned form
  * (`npx -y -p arkgate@x <bin>`, `--yes`, `--package arkgate@x`, `--package=arkgate@x`).
  */
@@ -173,6 +249,7 @@ export function execCommandParts(root, bin, binArgs = []) {
     };
   }
   if (runner === 'yarn') return { command: 'yarn', args: [bin, ...binArgs] };
+  if (runner === 'bunx') return { command: 'bunx', args: [bin, ...binArgs] };
   // Pinned form (`npx -y -p arkgate@x`) keeps its prefix as real argv entries.
   return { command: 'npx', args: [...runner.split(' ').slice(1), bin, ...binArgs] };
 }
@@ -245,6 +322,11 @@ function normalizeArkgateInstallSpec(versionSpec) {
 export function packageInstallArgv(root, versionSpec = 'latest') {
   const pkgSpec = normalizeArkgateInstallSpec(versionSpec);
   const pm = detectPackageManager(root);
+  if (pm === 'bun') {
+    // #415: start never DRIVES bun install (EUNSUPPORTEDPROTOCOL on `catalog:` workspaces),
+    // but if a bun repo reaches this path the emitted command must still be bun's.
+    return ['bun', ['add', '-d', pkgSpec]];
+  }
   if (pm === 'pnpm') {
     const args = ['add', '-D', pkgSpec];
     if (isPnpmWorkspaceRoot(root)) args.push('-w');
@@ -261,6 +343,7 @@ export function packageInstallArgv(root, versionSpec = 'latest') {
 /** Package-manager aware "install a dev dependency" hint (e.g. for a missing typescript). */
 export function installDevHint(root, pkg) {
   const pm = detectPackageManager(root);
+  if (pm === 'bun') return `bun add -d ${pkg}`;
   if (pm === 'pnpm') {
     return isPnpmWorkspaceRoot(root) ? `pnpm add -D ${pkg} -w` : `pnpm add -D ${pkg}`;
   }

@@ -663,6 +663,27 @@ function runHookPayload(payload, gate, config, args, ts, attemptContext, output 
     typeof attemptContext?.contractSession === 'boolean'
       ? attemptContext.contractSession
       : contractSessionFrom({});
+  // #396: a host-truncated tool_input is a FRAGMENT, not the write. Validating it as if
+  // complete can hide the denied edge inside the missing tail. The only honest verdict
+  // for a fragment is fail-closed deny; the agent re-sends the full write.
+  if (payload?.toolInputTruncated === true || payload?.tool_input_truncated === true) {
+    const file =
+      typeof toolInput?.file_path === 'string'
+        ? toolInput.file_path
+        : typeof toolInput?.filePath === 'string'
+          ? toolInput.filePath
+          : null;
+    const message = formatWriteGateDeny({
+      file,
+      reason:
+        'the host truncated this tool input (toolInputTruncated), so the gate cannot judge the full write',
+      ruleId: 'WRITE_GATE_INPUT_TRUNCATED',
+      nextAction: 'Re-send the write with the full input (a smaller diff or a split edit), then retry.',
+    });
+    emitHostDeny(output, { antigravityStyle, cursorStyle, grokStyle, message, file });
+    output.status(2);
+    return;
+  }
   if (toolName === 'ApplyPatch') {
     // Current Codex CLI/Desktop hook schema uses tool_input.command. Keep the
     // historical fields for older clients and existing integration fixtures.

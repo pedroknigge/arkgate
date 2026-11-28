@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "hooks": {
+    "preToolUse": [
+      {
+        "command": "node bin/ark-mcp.mjs --hook --hook-repair --fail-on-new-smells --root . --root-env CURSOR_PROJECT_DIR --config ark.config.json",
+        "matcher": "Write|StrReplace",
+        "failClosed": true,
+        "timeout": 30
+      }
+    ]
+  }
+}

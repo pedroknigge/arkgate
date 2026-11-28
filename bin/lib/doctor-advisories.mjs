@@ -255,9 +255,12 @@ function classificationFromCoverage(cov) {
  * `activeViolations` must already exclude frozen baseline keys (report residual parity).
  * `facts.importGraph` is the scan's importer index; `view.details` (Details / report) adds
  * the unused-exports tier and copies across a wall. `view.changed` (a changed-files scope)
- * keeps copies across a wall `not-run`.
+ * keeps copies across a wall `not-run`. `view.warnings` (advisory findings) joins the
+ * extra-plane residual: in advisory mode ARKRUN_* and ARKORDER_* findings live here, and
+ * a residual that reads 0 while they exist is a lie.
  */
 export function computeDoctorAdvisories(root, config, cov, rules, files, ts, parseHealth, facts, activeViolations, view = {}) {
+  const extraPlaneFindings = [...(activeViolations ?? []), ...(view?.warnings ?? [])];
   const physicalCohesion = computePhysicalCohesion(root, files);
   const decisionMemory = computeReshapeDecisionMemory(root, files);
   physicalCohesion.reshapeDecisions = decisionMemory.summary;
@@ -304,7 +307,7 @@ export function computeDoctorAdvisories(root, config, cov, rules, files, ts, par
     rulesUnderContract,
     config,
     classification,
-    activeViolations,
+    extraPlaneFindings,
     { root }
   );
   const prototypeShortcuts = collectPrototypeShortcutsResidual({

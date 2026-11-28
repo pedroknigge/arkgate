@@ -216,10 +216,23 @@ describe('hook judges aliased spellings of the same workspace', () => {
     }
   );
 
-  it('still allows a path that is truly outside the root', () => {
+  it('judges a write into another governed tree by that tree’s own contract (#397)', () => {
     const root = project(BASE_CONFIG);
     const other = project(BASE_CONFIG);
-    expect(hook(root, write(other, 'src/domain/c.ts', BAD_IMPORT)).status).toBe(0);
+    // The written file's tree is the authority: the hook discovers `other`'s config
+    // from the payload path and enforces `other`'s rules on the write, so a session
+    // rooted in one checkout cannot push a violating write into a sibling checkout.
+    const out = hook(root, write(other, 'src/domain/c.ts', BAD_IMPORT));
+    expect(out.status).toBe(2);
+    expect(out.stderr).toMatch(/LAYER_IMPORT_VIOLATION/);
+  });
+
+  it('still allows a write that no Ark project governs', () => {
+    const root = project(BASE_CONFIG);
+    const bare = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-hook-bare-'));
+    cleanup.push(bare);
+    fs.mkdirSync(path.join(bare, 'src'), { recursive: true });
+    expect(hook(root, write(bare, 'src/c.ts', BAD_IMPORT)).status).toBe(0);
   });
 });
 

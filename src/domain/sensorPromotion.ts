@@ -228,6 +228,8 @@ type AmbiguityFields = {
   declarationsWithThisId: number;
   /** True when more than one does — the count and any write are ambiguous. */
   ambiguousId: boolean;
+  /** Files declaring this id, when it is shared across documents (#field 4.9.4). */
+  declaredIn?: string[];
 };
 
 type StructureRuleRow = AmbiguityFields & {
@@ -291,6 +293,16 @@ function locate(id: string, sourceFile: string | null): string {
   return sourceFile ? `Rule ${JSON.stringify(id)} (declared in ${sourceFile})` : `Rule ${JSON.stringify(id)}`;
 }
 
+/**
+ * Shared ids read as ambiguous on purpose — the --apply refusal already refuses to
+ * guess. The map row names the sibling documents so `--sensors` alone explains it
+ * (#field 4.9.4: `thin-adapter` declared in three layer files read as noise).
+ */
+function ambiguityGuidance(fields: AmbiguityFields): string {
+  if (!fields.ambiguousId || !fields.declaredIn || fields.declaredIn.length < 2) return '';
+  return ` The id is declared in ${fields.declaredIn.join(', ')} — ids are unique per ArkRules document: rename one, or promote by editing that file directly.`;
+}
+
 export function buildSensorMap(input: {
   structure?: readonly DeclaredStructureRule[];
   invariants?: readonly DeclaredInvariantRule[];
@@ -300,12 +312,24 @@ export function buildSensorMap(input: {
   // One pass to learn which ids are shared before any row is built: a row that
   // does not know it is one of two cannot warn anybody.
   const idCounts = new Map<string, number>();
+  const idFiles = new Map<string, string[]>();
   for (const rule of [...declaredStructure, ...declaredInvariants]) {
     idCounts.set(rule.id, (idCounts.get(rule.id) ?? 0) + 1);
+    const file = nullable(rule.sourceFile);
+    if (!file) continue;
+    const files = idFiles.get(rule.id) ?? [];
+    if (!files.includes(file)) files.push(file);
+    idFiles.set(rule.id, files);
   }
   const ambiguity = (id: string): AmbiguityFields => {
     const declarationsWithThisId = idCounts.get(id) ?? 1;
-    return { declarationsWithThisId, ambiguousId: declarationsWithThisId > 1 };
+    const files = idFiles.get(id) ?? [];
+    const ambiguousId = declarationsWithThisId > 1;
+    return {
+      declarationsWithThisId,
+      ambiguousId,
+      ...(ambiguousId && files.length > 1 ? { declaredIn: [...files].sort() } : {}),
+    };
   };
 
   const structure: StructureRuleRow[] = declaredStructure.map((rule) => {
@@ -329,7 +353,7 @@ export function buildSensorMap(input: {
       description: nullable(rule.description),
       promotable: sensor.promotable,
       blocker: sensor.blocker,
-      reason,
+      reason: `${reason}${ambiguityGuidance(ambiguity(rule.id))}`,
       ...ambiguity(rule.id),
     };
   });
@@ -348,7 +372,9 @@ export function buildSensorMap(input: {
       description: nullable(rule.description),
       promotable: verdict.ok,
       blocker: verdict.ok ? null : verdict.blocker ?? 'no-coverage-evidence',
-      reason: `${locate(rule.id, sourceFile)}: ${verdict.reason}`,
+      reason: `${locate(rule.id, sourceFile)}: ${verdict.reason}${ambiguityGuidance(
+        ambiguity(rule.id)
+      )}`,
       coverageEvaluated: rule.coverage != null,
       ...ambiguity(rule.id),
     };

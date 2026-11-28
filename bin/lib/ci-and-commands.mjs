@@ -47,6 +47,16 @@ function localPackageManager(root) {
   // Same detection as every emitted command (execRunner): honors the packageManager field and
   // won't let a stray pnpm-lock.yaml hijack an npm project (package-lock.json wins the tie).
   const pm = detectPackageManager(root);
+  if (pm === 'bun') {
+    // #415: wire the existing `bun run` branch so a bun repo gets a bun gate instead of
+    // an npm gate that can never go green. setup-node has no bun cache; omit it.
+    return {
+      cache: null,
+      setup: [],
+      install: 'bun install',
+      run: `bunx ark-check ${checkArgs}`,
+    };
+  }
   if (pm === 'pnpm') {
     return {
       cache: 'pnpm',
