@@ -30,6 +30,7 @@ cannot require the status (403). Not an enrolled cohort.
 | [cohort-retention-checklist.md](cohort-retention-checklist.md) | D30 / D90 retention checklist for consented adopters |
 | [independent-reviewer-manifesto.md](independent-reviewer-manifesto.md) | Reviewer independence rules + open decision on signed identity |
 | [desktop-strict-merge-inventory-20260822.md](desktop-strict-merge-inventory-20260822.md) | Desktop scan of trees with `--strict-merge`. Not enrollment. |
+| [amarilla-arkorder-feedback-20261127.md](amarilla-arkorder-feedback-20261127.md) | Consumer audit feedback (ArkOrder focus, 4.9.3) — implemented as `FB01`–`FB05` in 4.9.4 |
 | ROADMAP `Z09` | Authoritative acceptance thresholds and promotion gate |
 
 ## Promotion gate (copy from ROADMAP)

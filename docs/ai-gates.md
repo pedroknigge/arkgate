@@ -26,7 +26,7 @@ overview: [develop.md](develop.md) · hub: [README.md](README.md).
 | Host | Write-time boundary | Hard merge boundary |
 |------|---------------------|---------------------|
 | **Claude Code** | Hard PreToolUse for listed ops when installed + trusted + (for `hard:true`) runtime-observed | Required `arkgate-check --strict-merge` status |
-| **Grok Build** | Hard PreToolUse for listed ops when installed + trusted + (for `hard:true`) runtime-observed | Required `arkgate-check --strict-merge` status |
+| **Grok Build** | Hard PreToolUse for listed ops when installed + trusted + `failClosed` + (for `hard:true`) runtime-observed | Required `arkgate-check --strict-merge` status |
 | **Google Antigravity** | Hard PreToolUse for listed write tools when installed + trusted + (for `hard:true`) runtime-observed | Required `arkgate-check --strict-merge` status |
 | **Cursor** | Hard preToolUse for Write/StrReplace when installed + trusted + `failClosed` + runtime-observed | Required CI status (same check) |
 | **OpenAI Codex** | Hard PreToolUse for complete local `apply_patch` in CLI/Desktop when installed + trusted + runtime-observed | Required CI status (same check) |
@@ -38,7 +38,10 @@ intentionally narrow: Ark must reconstruct the complete `apply_patch`, and a fre
 must prove the operation. Current Codex CLI and local ChatGPT Desktop/App Server send the patch in
 `tool_input.command`; hosted tools, specialized opt-out paths, shell/direct writes, and incomplete
 patches remain outside that local claim. OpenCode `tool.execute.before` plugins have known subagent
-bypass holes. See
+bypass holes. Two inputs are refused fail-closed on every host: a host-truncated `tool_input`
+(`toolInputTruncated` → `WRITE_GATE_INPUT_TRUNCATED` — a fragment can hide the denied edge), and a
+fall-through to a stale global `arkgate-mcp` whose version does not satisfy the project's pin in a
+worktree without a local install (`WRITE_GATE_STALE_GLOBAL`). See
 the [canonical host support matrix](../README.md#host-enforcement-support) before installing. The
 advisory-local / hard-CI split is a deliberate trade-off: local surfaces optimize feedback speed,
 while a required merge status is the one boundary a repository can make every write path share.
@@ -961,7 +964,7 @@ checker from the ref you pin, so an older ref runs an older checker, and that ch
 config keys (for example `schemaVersion` 1.3, `childSlices`, `sliceIdentity`) with exit 2:
 
 ```yaml
-- uses: pedroknigge/arkgate@v4.9.3 # same version as the arkgate devDependency
+- uses: pedroknigge/arkgate@v4.9.4 # same version as the arkgate devDependency
   with:
     root: .
     config: ark.config.json

@@ -150,6 +150,15 @@ try {
     } else {
       hookRoot = discovered.root;
       args.root = hookRoot;
+      // #395: a stale global arkgate running for a project that pins another version
+      // denies every write with schema noise. Fail closed with the honest cause instead.
+      const { staleGlobalArkgateWarning } = await import('./lib/package-manager.mjs');
+      const stale = staleGlobalArkgateWarning(hookRoot);
+      if (stale) {
+        process.stderr.write(`${stale}\n`);
+        process.exitCode = 2;
+        residentHandled = true;
+      }
     }
     const resident = residentHandled ? null : await tryResidentHook(args, hookInput);
     if (resident) {

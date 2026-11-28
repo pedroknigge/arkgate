@@ -1475,7 +1475,10 @@ export function resolveCandidateFacts({
         }
         try {
           arkOrderXiFieldWrites.push(
-            ...extractArkOrderXiFieldWritesFromSource(candidate.path, content, xiKeys)
+            ...extractArkOrderXiFieldWritesFromSource(candidate.path, content, xiKeys, {
+              ts,
+              sourceFile,
+            })
           );
         } catch {
           // Never fail the resolver for ArkOrder xi-field-write extraction.

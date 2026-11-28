@@ -598,7 +598,11 @@ export function discoverHookRoot({
     source,
   });
   if (path.isAbsolute(config)) return result(base, fs.existsSync(config), 'argv');
-  if (fs.existsSync(path.join(base, config))) return result(base, true, 'argv');
+
+  // #397: the written file's tree is the authority for which contract judges the write.
+  // Walk the payload targets FIRST. Only fall back to the env-derived root when the walk
+  // lands on that same tree; a sibling worktree with its own config must be judged by its
+  // own config, not by the env root's (the old short-circuit hid this walk entirely).
   let payload;
   try {
     payload = JSON.parse(hookInput ?? '');
@@ -620,11 +624,17 @@ export function discoverHookRoot({
     }
   }
   starts.push(base);
+  const baseHasConfig = fs.existsSync(path.join(base, config));
   for (const start of starts) {
     const found = walkUpForConfig(start, config);
-    if (found) return result(found, true, 'payload');
+    if (found) {
+      // Nearest config to the written file wins — same rule ark-check uses for tsconfig
+      // resolution. In-project writes land on the same config the env root held anyway;
+      // sibling worktrees now get judged by their own tree.
+      return result(found, true, 'payload');
+    }
   }
-  return result(base, false, 'none');
+  return result(base, baseHasConfig, baseHasConfig ? 'argv' : 'none');
 }
 
 /**

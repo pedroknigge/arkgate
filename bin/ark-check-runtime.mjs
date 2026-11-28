@@ -824,7 +824,7 @@ function runInit(args) {
       );
     }
     console.log('');
-    console.log('Layers (every layer optional, so the strict check passes before the directories exist):');
+    console.log('Layers (every layer is optional — it enforces once its directories gain files):');
     printLayers(finalConfig.layers);
     if (args.preset === 'monorepo') {
       console.log('');
@@ -862,15 +862,17 @@ function runInit(args) {
     const roots = finalConfig.include?.join(', ') || '(none)';
     console.log(`Multi-package / TS package surface detected (include: ${roots}). Generated a`);
     console.log('cross-package profile matching domain/application/presentation/persistence dirs');
-    console.log('in any package. Every layer is optional, so the strict check passes now and each');
-    console.log('switches on as matching directories gain files. Adjust patterns to your naming:');
+    console.log('in any package. Every layer is optional and switches on as matching directories');
+    console.log('gain files. Adjust patterns to your naming, then run the check — the contract is');
+    console.log('measured on your tree, not assumed clean:');
     printLayers(finalConfig.layers);
     console.log('');
     console.log(`Verify what each layer actually governs: ${arkCommand(args.root, 'ark-check', '--coverage')}`);
   } else if (mode === 'greenfield') {
     console.log('No conventional layer directories found — generated the full 11-layer starter');
-    console.log('profile instead. Every layer is marked optional, so the strict check passes now');
-    console.log('and each layer starts being enforced as soon as its directory gains source files:');
+    console.log('profile instead. Every layer is marked optional and starts being enforced as');
+    console.log('soon as its directory gains source files. Run the check to see what the');
+    console.log('contract reports on your current tree — green is measured, not assumed:');
     printLayers(finalConfig.layers);
     const outside = walk(args.root, [], { root: args.root })
       .map((file) => normalize(path.relative(args.root, file)))
@@ -1545,6 +1547,8 @@ async function main() {
         activeCount: activeViolations.length,
         activeBlockingCount: blockingViolations.length,
         baselineStale: analysisComplete ? reportBaselineStale : null,
+        // #field 4.9.4: advisory findings join the extra-plane residual in HTML too.
+        warnings,
       }
     );
     // DF02 — thin status compass on report snapshot so `ark status` residual ⊆ doctor.

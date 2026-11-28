@@ -5,6 +5,28 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+Patch release in preparation (`RL904`) — closes the P1/P2 findings from the 2026-11-27 open-issue audit. No `schemaVersion` bump. No required config migration. Does not close `K01` / `Z09`. This does **not** turn `arkOrder` on.
+
+### Fixed
+
+- **Grok write gate fails closed (#396).** `grokHooks` emits `failClosed: true` on the PreToolUse entry (same contract as Cursor), and a host-truncated `toolInput` (`toolInputTruncated`) denies with `WRITE_GATE_INPUT_TRUNCATED` instead of being validated as if complete. Contract-load failures already exited 2; these were the two remaining fail-open vectors.
+- **Hook root walks the written file's tree before the env root (#397).** `discoverHookRoot` no longer short-circuits on the env-derived root when it holds a config: the payload walk runs first, so a write into a sibling worktree is judged by that tree's own contract. In-project writes resolve to the same config as before.
+- **A stale global arkgate denies fail-closed (#395).** When a fresh worktree has no local install and the running `arkgate-mcp` version does not satisfy the project's pin, the hook exits 2 with `[WRITE_GATE_STALE_GLOBAL]` and the honest cause instead of denying every write with schema noise from the wrong schema. A local install that the runner resolves (or a direct test-harness invocation over one) is deliberate and never denied.
+- **Day-one honesty (#387).** `start` / `start --apply` no longer report `claimedClean: true` when the shadow first check fails: `start --json` gains `firstCheck.violationCount`, the human apply prints the finding count, and the `--init` copy no longer claims "the strict check passes now" — green is measured, not assumed.
+- **Grok `config.toml` merges instead of overwriting (#406).** The asset is `toml-section` scope (same as Codex): re-install upgrades only the `[mcp_servers.ark]` table and preserves the rest of the user's TOML.
+- **Self-host hooks match the shipped template (#403).** The mother repo's `.claude` and `.codex` PreToolUse hooks carry `--fail-on-new-smells` again, and `.cursor/hooks.json` exists with the fail-closed Cursor contract.
+
+### Changed
+
+- **Bun is detected and honestly refused (#415).** `bun.lock` / `bun.lockb` / `packageManager: bun` no longer pass as npm: start says so, names `bun add -d arkgate@<version>`, and skips the doomed npm install; the generated CI gate uses the existing bun branch (`bun install` + `bunx ark-check`) instead of an npm gate that can never go green.
+- **Install recovery classifies its causes (#411, #388).** Spawn-ENOENT / exit 127 leads with `corepack enable` and the npx fallback instead of repeating the failed command; ERESOLVE names the `--legacy-peer-deps` / `--force` escape hatch.
+- **Host detection: `ANTIGRAVITY_AGENT` (#402 remainder, #401).** The session detector and the resident-doctor env list both know it, and `COMPACT_HOST_FILES` has real `antigravity` / `opencode` entries so compact setup stops reporting a false "compact host registration missing".
+- **`ci-merge-boundary` attributes runtime observation (#404).** `fired` is per host — only the `activeHost` observed in this session — instead of marking every configured host `observed` because any one hook fired.
+- **Doctor extra-plane residual counts advisory findings (field feedback, `amarilla-platform`).** `doctor.arkOrder.residual` / `doctor.arkRun.residual` (and the report/HTML twins) read `0` in advisory mode while `ARKORDER_*` / `ARKRUN_*` sat in `warnings`; advisory findings now join the residual.
+- **`ARKORDER_XI_FIELD_WRITE` is AST-scoped (field feedback).** Evidence is an object literal passed to an ORM write method (including Prisma's `data:` payload), a mutating `entity.key =` / `this.key =` assignment, or a SQL write column (`INSERT INTO … (<key>)`, `UPDATE … SET <key> =`). Type annotations (`role: Role | null` no longer backtracks the lookahead), `SELECT` projections, `Map.set(k, {…})`, and read mappers stopped firing — 3/3 real false positives from the field are gone. Declared `xiKeys` also match their mechanical snake_case ↔ camelCase aliases, so Drizzle/Prisma camelCase writes hit snake_case SQL columns and vice versa.
+- **`arkgate/order` exports `xiHashOf` / `sigmaHashOf`** (aliases of `hashXiIdentity` / `hashSigmaIdentity`) so `ReleaseStore.load()` consumers rehydrate without instantiating a throwaway plane just to compute a hash.
+- **`--sensors` explains shared ids (field feedback).** A row whose id is declared in several layer documents names the sibling files (`declaredIn`) with the rename-or-edit guidance; `--promote --apply` already refused to guess.
+
 ## 4.9.3 — 2026-11-27
 
 Patch release — repairs the 4.9.0 AST regression in `domain-event-on-mutation` so the TypeScript path accepts the guard and publish evidence that 4.8.32's lexical path accepted. No `schemaVersion` bump. No required config migration. Does not close `K01` / `Z09`. This does **not** turn `arkOrder` on.

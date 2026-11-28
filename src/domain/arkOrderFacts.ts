@@ -374,35 +374,169 @@ export function extractArkOrderGenericUpdatesFromSource(
 }
 
 /**
- * Direct evidence: persistence driver import + write token + a declared slow key
- * written as a property. Absence of xiKeys is the caller's problem (sensor stays silent).
+ * Mechanical snake_case / camelCase equivalents of a declared slow key (4.9.4 field
+ * feedback): a Drizzle / Prisma client writes the SQL column `seat_holder_person_id`
+ * as `seatHolderPersonId`, and the reverse for a camelCase declared key in raw SQL.
+ */
+function xiKeyAliases(key: string): string[] {
+  const camel = key.replace(/[_-]+([a-z0-9])/g, (_match, char: string) => char.toUpperCase());
+  const snake = key
+    .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+    .replace(/[-\s]+/g, '_')
+    .toLowerCase();
+  return [...new Set([key, camel, snake].filter(Boolean))];
+}
+
+/**
+ * Direct evidence, scoped to real write sites: an object literal passed to an ORM write
+ * method (`.set|.values|.update|.create|.upsert|.insert` — including its `data:` payload
+ * for Prisma), a mutating `entity.key =` / `this.key =` assignment, or a SQL write column
+ * (`INSERT INTO … (<key>)`, `UPDATE … SET <key> =`). Type annotations, `SELECT`
+ * projections, `Map.set(k, {key})` read-mappers, and repo `return { key: record.key }`
+ * mappers are never evidence (4.9.4 field feedback: 3/3 false positives in a real repo).
+ * The declared key matches its snake_case ↔ camelCase aliases.
  */
 export function extractArkOrderXiFieldWritesFromSource(
   file: string,
   content: string,
-  xiKeys: readonly string[]
+  xiKeys: readonly string[],
+  options: ArkOrderAstOptions = {}
 ): ResolvedArkOrderXiFieldWriteFact[] {
   if (xiKeys.length === 0) return [];
   const source = stripCommentsPreservingLines(content);
   if (!sourceImportsPersistenceDriverText(source) || !sourceHasPersistenceWrite(source)) return [];
-  const facts: ResolvedArkOrderXiFieldWriteFact[] = [];
-  const seen = new Set<string>();
+  const aliasToDeclared = new Map<string, string>();
   for (const key of xiKeys) {
     if (!key) continue;
-    const re = new RegExp(
-      `(?:\\b${escapeRegExp(key)}\\s*:\\s*(?!string\\b|number\\b|boolean\\b|null\\b|[A-Z])|['"]${escapeRegExp(key)}['"]\\s*:|[{\\,]\\s*${escapeRegExp(key)}\\s*[\\,}]|\\.${escapeRegExp(key)}\\s*=)`,
-      'g'
-    );
-    let match: RegExpExecArray | null;
-    while ((match = re.exec(source)) !== null) {
-      const stamp = `${key}:${match.index}`;
-      if (seen.has(stamp)) continue;
-      seen.add(stamp);
-      facts.push({ file, line: lineAt(content, match.index), key });
-      break;
+    for (const alias of xiKeyAliases(key)) aliasToDeclared.set(alias, key);
+  }
+  if (aliasToDeclared.size === 0) return [];
+  const facts: ResolvedArkOrderXiFieldWriteFact[] = [];
+  const seen = new Set<string>();
+  const record = (declared: string, line: number): void => {
+    const stamp = `${declared}:${line}`;
+    if (seen.has(stamp)) return;
+    seen.add(stamp);
+    facts.push({ file, line, key: declared });
+  };
+  const ast = parseArkOrderAst(file, content, options);
+  if (ast) {
+    const { ts, sourceFile } = ast;
+    walkAstWithScope(ts, sourceFile, new Map(), (node, scope) => {
+      if (ts.isCallExpression(node) && node.arguments.length > 0) {
+        const callee = node.expression;
+        const methodName = ts.isPropertyAccessExpression(callee) ? callee.name.text : null;
+        if (!methodName || !ORM_WRITE_METHOD_SET.has(methodName)) return;
+        const line = tsAstNodeLine(sourceFile, node);
+        const literal = resolveObjectLiteral(ts, node.arguments[0]!, scope);
+        if (!literal) return;
+        for (const key of collectObjectLiteralKeys(ts, literal, scope)) {
+          const declared = aliasToDeclared.get(key);
+          if (declared) record(declared, line);
+        }
+        // Prisma writes the payload under `data:`: `{ where, data: { <xiKey> } }`.
+        const dataValue = objectPropertyValue(ts, literal, 'data');
+        const dataLiteral = dataValue ? resolveObjectLiteral(ts, dataValue, scope) : null;
+        if (dataLiteral && dataLiteral !== literal) {
+          for (const key of collectObjectLiteralKeys(ts, dataLiteral, scope)) {
+            const declared = aliasToDeclared.get(key);
+            if (declared) record(declared, line);
+          }
+        }
+        return;
+      }
+      if (ts.isBinaryExpression(node)) {
+        const operator = node.operatorToken?.kind;
+        if (operator !== ts.SyntaxKind.EqualsToken) return;
+        const left = node.left;
+        if (!ts.isPropertyAccessExpression(left)) return;
+        const receiver = unwrapTsAstExpression(ts, left.expression);
+        const entityish =
+          ts.isIdentifier(receiver) ||
+          receiver.kind === ts.SyntaxKind.ThisKeyword ||
+          (ts.isPropertyAccessExpression(receiver) && ts.isIdentifier(receiver.expression));
+        if (!entityish) return;
+        const declared = aliasToDeclared.get(left.name.text);
+        if (declared) record(declared, tsAstNodeLine(sourceFile, node));
+      }
+    });
+  } else {
+    // Lexical fallback (no TS host): the documented provisional path. The value head is
+    // tested in code instead of a lookbehind, so `role: Role | null` no longer backtracks
+    // the `\s*` into a false positive, while quoted / numeric values still count — one
+    // fact per declared key, like before.
+    const recordedDeclared = new Set<string>();
+    for (const [alias, declared] of aliasToDeclared) {
+      if (recordedDeclared.has(declared)) continue;
+      const escaped = escapeRegExp(alias);
+      const re = new RegExp(
+        `(?:\\b${escaped}\\s*:\\s*([A-Za-z_$][\\w$]*|'(?:[^'\\\\]|\\\\.)*'|"(?:[^"\\\\]|\\\\.)*"|\\d[\\w.]*)|['"]${escaped}['"]\\s*:|[{,]\\s*${escaped}\\s*[,}]|\\.${escaped}\\s*=)`,
+        'g'
+      );
+      let match: RegExpExecArray | null;
+      while ((match = re.exec(source)) !== null) {
+        const valueHead = match[1];
+        if (valueHead && !/^['"]/.test(valueHead) && !/^\d/.test(valueHead)) {
+          // Identifier head: an annotation or a primitive keyword is not a value write.
+          const head = valueHead.toLowerCase();
+          if (
+            head === 'string' ||
+            head === 'number' ||
+            head === 'boolean' ||
+            head === 'null' ||
+            head === 'undefined'
+          ) {
+            continue;
+          }
+          if (/^[A-Z]/.test(valueHead)) continue; // type reference — documented false-negative trade-off
+        }
+        recordedDeclared.add(declared);
+        record(declared, lineAt(content, match.index));
+        break;
+      }
     }
   }
+  collectSqlWriteColumnFacts(source, aliasToDeclared, record);
   return facts;
+}
+
+const ORM_WRITE_METHOD_SET = new Set(['set', 'values', 'update', 'create', 'upsert', 'insert']);
+
+const SQL_INSERT_COLUMNS_RE = /\binsert\s+into\s+[\w."'\[\]]+\s*\(([^)]+)\)/gi;
+const SQL_UPDATE_SET_RE =
+  /\bupdate\s+[\w."'\[\]]+\s+set\s+([^;]{0,400}?)(?:;|\n\s*\n|\bwhere\b|\breturning\b|$)/gi;
+const SQL_SET_COLUMN_RE = /(?:^|[(,\s])(["'`]?)([A-Za-z_][\w$]*)\1\s*=/g;
+
+/**
+ * SQL write evidence for the raw-SQL path: only INSERT column lists and UPDATE SET
+ * left-hand sides — never SELECT, never a type annotation. Runs beside the AST facts;
+ * the same declared key dedupes by line.
+ */
+function collectSqlWriteColumnFacts(
+  source: string,
+  aliasToDeclared: ReadonlyMap<string, string>,
+  record: (declared: string, line: number) => void
+): void {
+  let match: RegExpExecArray | null;
+  SQL_INSERT_COLUMNS_RE.lastIndex = 0;
+  while ((match = SQL_INSERT_COLUMNS_RE.exec(source)) !== null) {
+    const line = lineAt(source, match.index);
+    for (const column of String(match[1] ?? '').split(',')) {
+      const declared = aliasToDeclared.get(column.trim().replace(/["'`[\]]/g, ''));
+      if (declared) record(declared, line);
+    }
+  }
+  SQL_UPDATE_SET_RE.lastIndex = 0;
+  while ((match = SQL_UPDATE_SET_RE.exec(source)) !== null) {
+    const line = lineAt(source, match.index);
+    const setClause = String(match[1] ?? '');
+    let columnMatch: RegExpExecArray | null;
+    SQL_SET_COLUMN_RE.lastIndex = 0;
+    while ((columnMatch = SQL_SET_COLUMN_RE.exec(setClause)) !== null) {
+      const declared = aliasToDeclared.get(columnMatch[2] ?? '');
+      if (declared) record(declared, line);
+    }
+  }
 }
 
 /**

@@ -339,6 +339,7 @@ describe('runUpgradeCommand stale guard integration', () => {
   let fakeGlobal: string;
   let stderrSpy: ReturnType<typeof vi.spyOn>;
   let stdoutSpy: ReturnType<typeof vi.spyOn>;
+  let savedHostEnv: NodeJS.ProcessEnv;
 
   beforeEach(() => {
     tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-stale-run-'));
@@ -346,11 +347,30 @@ describe('runUpgradeCommand stale guard integration', () => {
     write(tmp, 'package.json', JSON.stringify({ name: 'consumer', private: true }, null, 2));
     stderrSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     stdoutSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    // The fixtures have no host config dirs, so the host selection falls back to the
+    // session detector. A suite run inside an agent session carries that session's
+    // host markers (OPENCODE, CLAUDE_*, …) in process.env — strip them so the
+    // integration runs in the "no session signal" state it was written for.
+    savedHostEnv = {};
+    for (const key of Object.keys(process.env)) {
+      if (
+        /^(OPENCODE|CLAUDECODE?|CLAUDE_|CURSOR_|CODEX_|GROK_|ANTIGRAVITY|AGY_)/.test(key) ||
+        key === 'AGY' ||
+        key === 'XAI_GROK'
+      ) {
+        savedHostEnv[key] = process.env[key];
+        delete process.env[key];
+      }
+    }
   });
 
   afterEach(() => {
     stderrSpy.mockRestore();
     stdoutSpy.mockRestore();
+    for (const [key, value] of Object.entries(savedHostEnv)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
     fs.rmSync(tmp, { recursive: true, force: true });
     fs.rmSync(fakeGlobal, { recursive: true, force: true });
   });

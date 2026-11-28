@@ -10,7 +10,7 @@ import { version } from '../../../src/version.ts';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 /** Tree package identity. */
-const CURRENT = '4.9.3';
+const CURRENT = '4.9.4';
 /** Version confirmed on npm `latest`. */
 const PUBLISHED_LATEST = '4.8.11';
 
@@ -59,7 +59,7 @@ describe('package budget ceilings retain 10% headroom over the recorded clean ca
       files: 190,
     });
     expect([gate.maxPackedBytes, gate.maxUnpackedBytes, gate.maxFiles]).toEqual([
-      1635000, 5685000, 316,
+      1643195, 5712499, 316,
     ]);
     expect(gate.maxPackedBytes).toBeGreaterThanOrEqual(
       Math.ceil(gate.measuredCandidate.packedBytes * 1.1)
@@ -140,7 +140,7 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
 
   it('keeps 4.8.11 published on npm latest and 4.8.10 as prior', () => {
     expect(PUBLISHED_LATEST).toBe('4.8.11');
-    expect(CURRENT).toBe('4.9.3');
+    expect(CURRENT).toBe('4.9.4');
     expect(read('docs/releases/4.8.9.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.8.9.md')).toMatch(/arkgate@4\.8\.9/);
     expect(read('docs/releases/4.8.9.md')).not.toMatch(/\*\*Status:\*\*\s*prepared/i);
@@ -858,7 +858,7 @@ describe('CHANGELOG + release note cover 4.9.3 patch release', () => {
     expect(fs.existsSync(path.join(REPO, 'docs/releases/4.9.3.md'))).toBe(false);
     expect(read('docs/README.md')).toMatch(/Current release:.*4\.9\.3/s);
     expect(read('docs/README.md')).toMatch(/Prior published:.*4\.9\.2/s);
-    expect(read('ROADMAP.md')).toMatch(/\| 332 \| `RL903` \| `doing`/);
+    expect(read('ROADMAP.md')).toMatch(/\| 332 \| `RL903` \| `done`/);
   });
 });
 

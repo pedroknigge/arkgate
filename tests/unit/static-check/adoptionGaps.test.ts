@@ -197,6 +197,18 @@ args = ["ark-mcp", "--root", "/var/folders/xx/ark-upgrade-tmp123", "--config", "
       CODEX_CI: '',
       CODEX_SESSION_ID: '',
       ARK_ACTIVE_HOST: '',
+      // Newer detector signals (opencode / antigravity) — zeroed so a suite run inside
+      // an agent session does not leak its own host into the doctor fixtures.
+      OPENCODE: '',
+      OPENCODE_SESSION_ID: '',
+      OPENCODE_CONFIG: '',
+      OPENCODE_CLI: '',
+      OPENCODE_TERMINAL: '',
+      ANTIGRAVITY: '',
+      ANTIGRAVITY_AGENT: '',
+      ANTIGRAVITY_WORKSPACE: '',
+      AGY: '',
+      AGY_WORKSPACE: '',
       ...extra,
     };
   }

@@ -164,6 +164,8 @@ const COMPACT_HOST_FILES = {
   grok: ['.grok/config.toml', '.grok/hooks/ark-write-gate.json'],
   cursor: ['.cursor/mcp.json', '.cursor/hooks.json'],
   codex: ['.codex/hooks.json', '.codex/config.toml'],
+  antigravity: ['.agents/hooks.json', '.agents/mcp_config.json'],
+  opencode: ['opencode.json'],
   windsurf: ['.windsurf/rules/ark.md'],
   cline: ['.clinerules/ark.md'],
   copilot: ['.github/copilot-instructions.md'],

@@ -81,6 +81,8 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 | [`UNDECLARED_CANDIDATE_CHANGE`](#UNDECLARED_CANDIDATE_CHANGE) | preflight | Undeclared candidate change |
 | [`ATOMIC_PREFLIGHT_UNAVAILABLE`](#ATOMIC_PREFLIGHT_UNAVAILABLE) | preflight | Atomic preflight unavailable |
 | [`WRITE_GATE_UNAVAILABLE`](#WRITE_GATE_UNAVAILABLE) | preflight | Write gate could not run |
+| [`WRITE_GATE_INPUT_TRUNCATED`](#WRITE_GATE_INPUT_TRUNCATED) | preflight | Host truncated the write input |
+| [`WRITE_GATE_STALE_GLOBAL`](#WRITE_GATE_STALE_GLOBAL) | preflight | Wrong arkgate version running the gate |
 | [`DESIGN_SMELL_REGRESSION`](#DESIGN_SMELL_REGRESSION) | preflight | Design smell regression on base-relative ratchet |
 | [`ANALYSIS_PARSE_INCOMPLETE`](#ANALYSIS_PARSE_INCOMPLETE) | analysis | Parse incomplete |
 | [`LEXICAL_EVIDENCE_INCOMPLETE`](#LEXICAL_EVIDENCE_INCOMPLETE) | analysis | Lexical evidence incomplete |
@@ -701,6 +703,24 @@ Haken slaving: few slow keys (ξ) determine derived fast state. Field ingest nev
 
 - **Why:** The write gate could not load its own inputs (`ark.config.json` missing, unreadable, or invalid; a referenced ArkRules file missing or invalid; or the built library missing), so it cannot judge this governed source write (existing files included), or a write would leave `ark.config.json` or a referenced ArkRules file unloadable. No checker, no write: the hook blocks instead of letting the write through unchecked.
 - **Fix:** Fix the reported input (repair `ark.config.json` or the ArkRules file, or run `npm run build` / reinstall arkgate from npm), then retry the same write. Do not remove the hook to get past it.
+
+<a id="WRITE_GATE_INPUT_TRUNCATED"></a>
+
+### `WRITE_GATE_INPUT_TRUNCATED`
+
+**Host truncated the write input**
+
+- **Why:** The host passed `toolInputTruncated`: this write reached the gate as a fragment, so the gate cannot judge the full content — a denied edge can hide inside the missing tail. A fragment is never validated as if complete; the hook denies fail-closed (#396).
+- **Fix:** Re-send the write with the full input — a smaller diff or a split edit — then retry. Do not weaken `ark.config.json` to get past it.
+
+<a id="WRITE_GATE_STALE_GLOBAL"></a>
+
+### `WRITE_GATE_STALE_GLOBAL`
+
+**Wrong arkgate version running the gate**
+
+- **Why:** The running `arkgate-mcp` is not the copy this project expects (a stale global fell through in a worktree without `node_modules`). A gate running the wrong version denies with schema noise instead of enforcing this repo's contract, so the hook refuses fail-closed (#395).
+- **Fix:** Install the project's arkgate (the package manager's install command in this worktree) or remove the stale global copy, then retry the same write. Do not remove the hook to get past it.
 
 <a id="DESIGN_SMELL_REGRESSION"></a>
 

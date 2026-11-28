@@ -164,7 +164,7 @@ describe('#376 apply honesty', () => {
     expect(text).not.toContain('Projected governed coverage');
   });
 
-  it('still calls coverage clean when the first check fails on product code', () => {
+  it('names the failing first check instead of calling coverage clean (#387)', () => {
     const preview = annotateApplyHonesty(
       {
         projectedCoverage: { percent: 80, classifiedFiles: 8, totalFiles: 10 },
@@ -172,7 +172,12 @@ describe('#376 apply honesty', () => {
       },
       { ok: false, arkCreated: [] }
     );
-    expect(preview.claimedClean).toBe(true);
-    expect(preview.unresolvedDecisions).toEqual([]);
+    // The bun-workspace dogfood showed claimedClean: true while the shadow first
+    // check carried 440 self-made findings — a projected coverage percent is not
+    // a clean result when the check it would gate is red.
+    expect(preview.claimedClean).toBe(false);
+    expect(preview.unresolvedDecisions.join('\n')).toMatch(
+      /The first check would fail.*Projected coverage is not a clean result/
+    );
   });
 });

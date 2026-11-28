@@ -148,7 +148,9 @@ export function buildReportDepthPayload(
     rulesUnderContract,
     config,
     classification,
-    activeViolations, { root }
+    // #field 4.9.4: advisory findings carry the ARKRUN_*/ARKORDER_* residual here.
+    [...(activeViolations ?? []), ...(baselineSplit.warnings ?? [])],
+    { root }
   );
   // Single residual expression (parity with doctor): nextPilot || extractionCard.
   const residualPilot =
