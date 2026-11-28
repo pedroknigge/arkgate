@@ -130,12 +130,12 @@
     },
     {
       "id": "snapshot-invalidation",
-      "note": "4.9.0 fast residentRuntimeIdentity inserted 32 lines above residentEnvironmentIdentity; same residentEnvironmentIdentity + inputState body moved from 115-162 to 147-194.",
+      "note": "4.9.0 fast residentRuntimeIdentity inserted 32 lines above residentEnvironmentIdentity; same residentEnvironmentIdentity + inputState body moved from 115-162 to 147-194. 4.9.4 ANTIGRAVITY*/OPENCODE-era env rows inserted into RESIDENT_DOCTOR_ENV above it moved the same body to 152-199 (retarget, same decisions).",
       "targets": [
         {
           "file": "bin/lib/resident-hook.mjs",
-          "startLine": 147,
-          "endLine": 194
+          "startLine": 152,
+          "endLine": 199
         }
       ]
     },
