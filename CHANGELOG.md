@@ -3,9 +3,11 @@
 All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are documented here or
 in the immutable pre-2.0 archive linked below.
 
-## Unreleased
+## 4.9.4 — 2026-11-27
 
-Patch release in preparation (`RL904`) — closes the P1/P2 findings from the 2026-11-27 open-issue audit. No `schemaVersion` bump. No required config migration. Does not close `K01` / `Z09`. This does **not** turn `arkOrder` on.
+Patch release (`RL904`) — closes the P1/P2 findings from the 2026-11-27 open-issue audit. No `schemaVersion` bump. No required config migration. Does not close `K01` / `Z09`. This does **not** turn `arkOrder` on.
+
+**Status: released.** `npm view arkgate@4.9.4 version`.
 
 ### Fixed
 
